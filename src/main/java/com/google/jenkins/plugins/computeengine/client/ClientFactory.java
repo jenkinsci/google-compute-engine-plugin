@@ -38,7 +38,6 @@ public class ClientFactory {
 
     private static HttpTransport DEFAULT_TRANSPORT;
 
-    private final ItemGroup itemGroup;
     private final HttpTransport transport;
     private final JsonFactory jsonFactory;
     private final GoogleOAuth2Credentials credentials;
@@ -49,7 +48,6 @@ public class ClientFactory {
         if (credentialsId == null) {
             throw new IllegalArgumentException(Messages.ClientFactory_CredentialsIdRequired());
         }
-        this.itemGroup = itemGroup;
 
         try {
             this.transport = getDefaultTransport();
