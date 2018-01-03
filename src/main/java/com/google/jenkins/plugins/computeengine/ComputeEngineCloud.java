@@ -5,6 +5,8 @@ import com.cloudbees.plugins.credentials.CredentialsProvider;
 import com.cloudbees.plugins.credentials.common.StandardCredentials;
 import com.cloudbees.plugins.credentials.common.StandardListBoxModel;
 import com.cloudbees.plugins.credentials.domains.DomainRequirement;
+import com.google.api.services.compute.Compute;
+import com.google.api.services.compute.model.RegionList;
 import com.google.jenkins.plugins.computeengine.client.ClientFactory;
 import com.google.jenkins.plugins.credentials.oauth.GoogleOAuth2Credentials;
 import hudson.Extension;
@@ -97,7 +99,9 @@ public class ComputeEngineCloud extends AbstractCloudImpl {
             try {
                 List<DomainRequirement> domainRequirements = new ArrayList<DomainRequirement>();
                 ClientFactory clientFactory = new ClientFactory(context, domainRequirements, value);
-                return FormValidation.ok();
+                Compute compute = clientFactory.compute();
+                RegionList regions = compute.regions().list("evandbrown17").execute();
+                return FormValidation.ok("%d", regions.getItems().size());
             } catch (IOException ioe) {
                 return FormValidation.error(ioe.getMessage());
             }

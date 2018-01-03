@@ -93,4 +93,10 @@ public class ClientFactory {
     public static synchronized void setDefaultTransport(HttpTransport transport) {
         DEFAULT_TRANSPORT = transport;
     }
+
+    public Compute compute() {
+        return new Compute.Builder(transport, jsonFactory, gcred)
+                .setApplicationName(APPLICATION_NAME)
+                .build();
+    }
 }

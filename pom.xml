@@ -38,13 +38,6 @@
         </developer>
     </developers>
 
-    <!-- Assuming you want to host on @jenkinsci:
-    <scm>
-        <connection>scm:git:git://github.com/jenkinsci/${project.artifactId}-plugin.git</connection>
-        <developerConnection>scm:git:git@github.com:jenkinsci/${project.artifactId}-plugin.git</developerConnection>
-        <url>https://github.com/jenkinsci/${project.artifactId}-plugin</url>
-    </scm>
-    -->
     <repositories>
         <repository>
             <id>repo.jenkins-ci.org</id>
@@ -66,7 +59,7 @@
         <dependency>
             <groupId>com.google.apis</groupId>
             <artifactId>google-api-services-compute</artifactId>
-            <version>beta-rev75-1.23.0</version>
+            <version>v1-rev165-1.22.0</version>
         </dependency>
     </dependencies>
     <build>
