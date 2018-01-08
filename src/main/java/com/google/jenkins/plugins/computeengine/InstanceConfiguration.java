@@ -1,6 +1,7 @@
 package com.google.jenkins.plugins.computeengine;
 
 import com.cloudbees.plugins.credentials.domains.DomainRequirement;
+import com.google.api.services.compute.model.AcceleratorType;
 import com.google.api.services.compute.model.MachineType;
 import com.google.api.services.compute.model.Region;
 import com.google.api.services.compute.model.Zone;
@@ -23,10 +24,16 @@ import java.util.List;
 
 public class InstanceConfiguration implements Describable<InstanceConfiguration> {
     public final String region;
+    public final String zone;
+    public final String machineType;
+    public final String gpuType;
 
     @DataBoundConstructor
-    public InstanceConfiguration(String region) {
+    public InstanceConfiguration(String region, String zone, String machineType, String gpuType) {
         this.region = region;
+        this.zone = zone;
+        this.machineType = machineType;
+        this.gpuType = gpuType;
     }
 
     public Descriptor<InstanceConfiguration> getDescriptor() {
@@ -129,6 +136,37 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
         public FormValidation doCheckMachineType(@QueryParameter String value) {
             if (value.equals("")) {
                 return FormValidation.error("Please select a machine type...");
+            }
+            return FormValidation.ok();
+        }
+
+        public ListBoxModel doFillGpuTypeItems(@AncestorInPath Jenkins context,
+                                            @QueryParameter("zone") final String zone,
+                                            @QueryParameter("credentialsId") @RelativePath("..") final String credentialsId) {
+            ListBoxModel items = new ListBoxModel();
+            items.add("");
+            if (zone == null || zone.isEmpty() || credentialsId == null || credentialsId.isEmpty()) {
+                return items;
+            }
+            try {
+                ClientFactory clientFactory = new ClientFactory(context, new ArrayList<DomainRequirement>(), credentialsId);
+                ComputeClient compute = clientFactory.compute();
+                List<AcceleratorType> acceleratorTypes = compute.getAcceleratorTypes(zone);
+
+                for (AcceleratorType a : acceleratorTypes) {
+                    items.add(a.getName(), a.getSelfLink());
+                }
+                return items;
+            } catch (IOException ioe) {
+                items.clear();
+                items.add("Error retrieving machine types");
+                return items;
+            }
+        }
+
+        public FormValidation doCheckGpuType(@QueryParameter String value) {
+            if (value.equals("")) {
+                return FormValidation.error("GPUs not available in the selected zone...");
             }
             return FormValidation.ok();
         }

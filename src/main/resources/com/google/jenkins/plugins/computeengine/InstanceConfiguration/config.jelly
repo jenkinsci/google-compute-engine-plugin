@@ -1,20 +1,38 @@
 <?jelly escape-by-default='true'?>
-<j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:d="jelly:define" xmlns:l="/lib/layout" xmlns:t="/lib/hudson" xmlns:f="/lib/form">
-  <table width="100%">
-  <f:entry field="region" title="${%Region}">
-     <f:select />
-  </f:entry>
-  <f:entry field="zone" title="${%Zone}">
-     <f:select />
-  </f:entry>
-  <f:entry field="machineType" title="${%Machine Type}">
-     <f:select />
-  </f:entry>
-  <f:slave-mode name="mode" node="${instance}" />
-  <f:entry title="">
-      <div align="right">
-        <f:repeatableDeleteButton />
-      </div>
-  </f:entry>
-  </table>
+<j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:d="jelly:define" xmlns:l="/lib/layout"
+         xmlns:t="/lib/hudson" xmlns:f="/lib/form">
+    <table width="100%">
+        <f:section title="Location">
+            <f:entry field="region" title="${%Region}">
+                <f:select/>
+            </f:entry>
+            <f:entry field="zone" title="${%Zone}">
+                <f:select/>
+            </f:entry>
+        </f:section>
+        <f:section title="Capabilities">
+            <f:entry field="machineType" title="${%Machine Type}">
+                <f:select/>
+            </f:entry>
+                <f:entry field="gpuType" title="${%GPU Type}">
+                    <f:select/>
+                </f:entry>
+                <f:entry field="numGpus" title="${%Number of GPUs}">
+                    <f:textbox />
+                </f:entry>
+        </f:section>
+        <f:section title="Disks">
+
+        </f:section>
+        <f:section title="IAM">
+
+        </f:section>
+        <f:slave-mode name="mode" node="${instance}"/>
+        <f:entry title="">
+            <div align="right">
+                <f:repeatableDeleteButton/>
+            </div>
+        </f:entry>
+
+    </table>
 </j:jelly>

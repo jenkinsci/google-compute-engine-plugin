@@ -1,11 +1,13 @@
 package com.google.jenkins.plugins.computeengine.client;
 
 import com.google.api.services.compute.Compute;
+import com.google.api.services.compute.model.AcceleratorType;
 import com.google.api.services.compute.model.MachineType;
 import com.google.api.services.compute.model.Region;
 import com.google.api.services.compute.model.Zone;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.function.Predicate;
@@ -25,7 +27,6 @@ public class ComputeClient {
     }
 
     /**
-     *
      * @return
      * @throws IOException
      */
@@ -40,7 +41,7 @@ public class ComputeClient {
         regions.sort(Comparator.comparing(Region::getName));
 
         // No deprecated regions
-        regions.removeIf(r-> r.getDeprecated() != null);
+        regions.removeIf(r -> r.getDeprecated() != null);
         return regions;
     }
 
@@ -52,7 +53,7 @@ public class ComputeClient {
                 .getItems();
 
         // Only zones for the region
-        zones.removeIf(z-> !z.getRegion().equals(region));
+        zones.removeIf(z -> !z.getRegion().equals(region));
 
         // Sort by name
         zones.sort(Comparator.comparing(Zone::getName));
@@ -68,7 +69,7 @@ public class ComputeClient {
                 .getItems();
 
         // Only zones for the region
-        machineTypes.removeIf(z-> z.getDeprecated() != null);
+        machineTypes.removeIf(z -> z.getDeprecated() != null);
 
         // Sort by name
         machineTypes.sort(Comparator.comparing(MachineType::getName));
@@ -76,6 +77,28 @@ public class ComputeClient {
     }
 
     public String zoneFromSelfLink(String zoneSelfLink) {
-        return zoneSelfLink.substring(zoneSelfLink.lastIndexOf("/")+1, zoneSelfLink.length());
+        return zoneSelfLink.substring(zoneSelfLink.lastIndexOf("/") + 1, zoneSelfLink.length());
+    }
+
+    public List<AcceleratorType> getAcceleratorTypes(String zone) throws IOException {
+        zone = zoneFromSelfLink(zone);
+
+        List<AcceleratorType> acceleratorTypes = compute
+                .acceleratorTypes()
+                .list(projectId, zone)
+                .execute()
+                .getItems();
+        if (acceleratorTypes == null) {
+            acceleratorTypes = new ArrayList<AcceleratorType>();
+        }
+
+        if (acceleratorTypes.size() > 0) {
+            // Only zones for the region
+            acceleratorTypes.removeIf(z -> z.getDeprecated() != null);
+
+            // Sort by name
+            acceleratorTypes.sort(Comparator.comparing(AcceleratorType::getName));
+        }
+        return acceleratorTypes;
     }
 }
