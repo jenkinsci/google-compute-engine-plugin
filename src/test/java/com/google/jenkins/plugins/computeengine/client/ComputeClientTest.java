@@ -59,4 +59,16 @@ public class ComputeClientTest {
         assertEquals(3, computeClient.getRegions().size());
         assertEquals("eu-central1", computeClient.getRegions().get(0).getName());
     }
+
+    @Test
+    public void zoneSelfLink() {
+        ComputeClient computeClient = new ComputeClient(compute, "test-project");
+        String zone;
+
+        zone = "https://www.googleapis.com/compute/v1/projects/evandbrown17/zones/asia-east1-a";
+        assertEquals("asia-east1-a", computeClient.zoneFromSelfLink(zone));
+
+        zone = "asia-east1-a";
+        assertEquals("asia-east1-a", computeClient.zoneFromSelfLink(zone));
+    }
 }

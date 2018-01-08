@@ -28,6 +28,7 @@ import com.google.api.client.json.jackson2.JacksonFactory;
 import com.google.jenkins.plugins.computeengine.ComputeEngineScopeRequirement;
 import com.google.jenkins.plugins.credentials.oauth.GoogleOAuth2Credentials;
 import com.google.api.services.compute.Compute;
+import com.google.jenkins.plugins.credentials.oauth.GoogleRobotCredentials;
 import hudson.AbortException;
 import hudson.model.ItemGroup;
 import hudson.security.ACL;
@@ -40,7 +41,7 @@ public class ClientFactory {
 
     private final HttpTransport transport;
     private final JsonFactory jsonFactory;
-    private final GoogleOAuth2Credentials credentials;
+    private final GoogleRobotCredentials credentials;
     private final HttpRequestInitializer gcred;
 
     public ClientFactory(ItemGroup itemGroup, List<DomainRequirement> domainRequirements, String credentialsId)
@@ -61,7 +62,7 @@ public class ClientFactory {
 
         this.credentials = CredentialsMatchers.firstOrNull(
                 CredentialsProvider.lookupCredentials(
-                        GoogleOAuth2Credentials.class,
+                        GoogleRobotCredentials.class,
                         itemGroup,
                         ACL.SYSTEM,
                         domainRequirements),
@@ -92,9 +93,11 @@ public class ClientFactory {
         DEFAULT_TRANSPORT = transport;
     }
 
-    public Compute compute() {
-        return new Compute.Builder(transport, jsonFactory, gcred)
-                .setApplicationName(APPLICATION_NAME)
-                .build();
+    public ComputeClient compute() {
+        return new ComputeClient(
+                new Compute.Builder(transport, jsonFactory, gcred)
+                        .setApplicationName(APPLICATION_NAME)
+                        .build(),
+                credentials.getProjectId());
     }
 }

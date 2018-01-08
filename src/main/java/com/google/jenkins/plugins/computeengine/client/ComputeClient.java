@@ -1,7 +1,9 @@
 package com.google.jenkins.plugins.computeengine.client;
 
 import com.google.api.services.compute.Compute;
+import com.google.api.services.compute.model.MachineType;
 import com.google.api.services.compute.model.Region;
+import com.google.api.services.compute.model.Zone;
 
 import java.io.IOException;
 import java.util.Comparator;
@@ -40,5 +42,40 @@ public class ComputeClient {
         // No deprecated regions
         regions.removeIf(r-> r.getDeprecated() != null);
         return regions;
+    }
+
+    public List<Zone> getZones(String region) throws IOException {
+        List<Zone> zones = compute
+                .zones()
+                .list(projectId)
+                .execute()
+                .getItems();
+
+        // Only zones for the region
+        zones.removeIf(z-> !z.getRegion().equals(region));
+
+        // Sort by name
+        zones.sort(Comparator.comparing(Zone::getName));
+        return zones;
+    }
+
+    public List<MachineType> getMachineTypes(String zone) throws IOException {
+        zone = zoneFromSelfLink(zone);
+        List<MachineType> machineTypes = compute
+                .machineTypes()
+                .list(projectId, zone)
+                .execute()
+                .getItems();
+
+        // Only zones for the region
+        machineTypes.removeIf(z-> z.getDeprecated() != null);
+
+        // Sort by name
+        machineTypes.sort(Comparator.comparing(MachineType::getName));
+        return machineTypes;
+    }
+
+    public String zoneFromSelfLink(String zoneSelfLink) {
+        return zoneSelfLink.substring(zoneSelfLink.lastIndexOf("/")+1, zoneSelfLink.length());
     }
 }

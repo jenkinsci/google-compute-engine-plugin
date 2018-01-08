@@ -5,17 +5,16 @@ import com.cloudbees.plugins.credentials.CredentialsProvider;
 import com.cloudbees.plugins.credentials.common.StandardCredentials;
 import com.cloudbees.plugins.credentials.common.StandardListBoxModel;
 import com.cloudbees.plugins.credentials.domains.DomainRequirement;
-import com.google.api.services.compute.Compute;
-import com.google.api.services.compute.model.RegionList;
+import com.google.api.services.compute.model.Region;
 import com.google.jenkins.plugins.computeengine.client.ClientFactory;
+import com.google.jenkins.plugins.computeengine.client.ComputeClient;
 import com.google.jenkins.plugins.credentials.oauth.GoogleOAuth2Credentials;
 import hudson.Extension;
 import hudson.model.Item;
 
 import java.io.IOException;
+import java.util.Collections;
 import java.util.logging.Logger;
-
-import static java.util.logging.Level.INFO;
 
 import hudson.model.Label;
 import hudson.security.ACL;
@@ -51,9 +50,21 @@ public class ComputeEngineCloud extends AbstractCloudImpl {
      */
     private String credentialsId;
 
+    private final List<? extends InstanceConfiguration> templates;
+
     @DataBoundConstructor
-    public ComputeEngineCloud(String name, String projectId, String credentialsId, String instanceCapStr) {
+    public ComputeEngineCloud(
+            String name,
+            String projectId,
+            String credentialsId,
+            String instanceCapStr,
+            List<? extends InstanceConfiguration> templates) {
         super(name, instanceCapStr);
+        if (templates == null) {
+            this.templates = Collections.emptyList();
+        } else {
+            this.templates = templates;
+        }
         setCredentialsId(credentialsId);
         setProjectId(projectId);
     }
@@ -78,8 +89,7 @@ public class ComputeEngineCloud extends AbstractCloudImpl {
         }
 
 
-        public ListBoxModel doFillCredentialsIdItems(@AncestorInPath Jenkins context, @QueryParameter String source,
-                                                     @QueryParameter String value) {
+        public ListBoxModel doFillCredentialsIdItems(@AncestorInPath Jenkins context, @QueryParameter String value) {
             if (context == null || !context.hasPermission(Item.CONFIGURE)) {
                 return new StandardListBoxModel();
             }
@@ -94,14 +104,16 @@ public class ComputeEngineCloud extends AbstractCloudImpl {
                                     domainRequirements));
         }
 
-        public FormValidation doCheckCredentialsId(@AncestorInPath Jenkins context, @QueryParameter String source,
-                                                   @QueryParameter String value) {
+        public FormValidation doCheckCredentialsId(@AncestorInPath Jenkins context, @QueryParameter String value) {
+            if (value == "") {
+                return FormValidation.warning("No credential selected");
+            }
+
             try {
-                List<DomainRequirement> domainRequirements = new ArrayList<DomainRequirement>();
-                ClientFactory clientFactory = new ClientFactory(context, domainRequirements, value);
-                Compute compute = clientFactory.compute();
-                RegionList regions = compute.regions().list("evandbrown17").execute();
-                return FormValidation.ok("%d", regions.getItems().size());
+                ClientFactory clientFactory = new ClientFactory(context, new ArrayList<DomainRequirement>(), value);
+                ComputeClient compute = clientFactory.compute();
+                List<Region> regions = compute.getRegions();
+                return FormValidation.ok("The credential successfully made an API request to Google Compute Engine.");
             } catch (IOException ioe) {
                 return FormValidation.error(ioe.getMessage());
             }
@@ -122,5 +134,9 @@ public class ComputeEngineCloud extends AbstractCloudImpl {
 
     public void setCredentialsId(String credentialsId) {
         this.credentialsId = credentialsId;
+    }
+
+    public List<InstanceConfiguration> getTemplates() {
+        return Collections.unmodifiableList(templates);
     }
 }
