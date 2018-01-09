@@ -159,16 +159,9 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
                 return items;
             } catch (IOException ioe) {
                 items.clear();
-                items.add("Error retrieving machine types");
+                items.add("Error retrieving GPU types");
                 return items;
             }
-        }
-
-        public FormValidation doCheckGpuType(@QueryParameter String value) {
-            if (value.equals("")) {
-                return FormValidation.error("GPUs not available in the selected zone...");
-            }
-            return FormValidation.ok();
         }
     }
 }

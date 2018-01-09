@@ -33,6 +33,5 @@
                 <f:repeatableDeleteButton/>
             </div>
         </f:entry>
-
     </table>
 </j:jelly>
