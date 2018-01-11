@@ -17,6 +17,7 @@ import java.util.Collections;
 import java.util.logging.Logger;
 
 import hudson.model.Label;
+import hudson.model.Node;
 import hudson.security.ACL;
 import hudson.slaves.AbstractCloudImpl;
 import hudson.slaves.NodeProvisioner.PlannedNode;
@@ -40,17 +41,11 @@ public class ComputeEngineCloud extends AbstractCloudImpl {
             Logger.getLogger(ComputeEngineCloud.class.getName());
 
 
-    /**
-     * The Google Cloud Platform project ID for this cloud instance
-     */
-    private String projectId;
+    public final String projectId;
 
-    /**
-     * The Google Service Account key or name as specified in the Jenkins credentials store
-     */
-    private String credentialsId;
+    public final String credentialsId;
 
-    private final List<? extends InstanceConfiguration> templates;
+    public final List<? extends InstanceConfiguration> templates;
 
     @DataBoundConstructor
     public ComputeEngineCloud(
@@ -65,18 +60,40 @@ public class ComputeEngineCloud extends AbstractCloudImpl {
         } else {
             this.templates = templates;
         }
-        setCredentialsId(credentialsId);
-        setProjectId(projectId);
+        this.credentialsId = credentialsId;
+        this.projectId = projectId;
     }
 
     @Override
     public Collection<PlannedNode> provision(Label label, int excessWorkload) {
+        try {
+            List<PlannedNode> r = new ArrayList<PlannedNode>();
+            final InstanceConfiguration config = getTemplate(label);
+        } catch (Exception e) {}
         return null;
     }
 
     @Override
     public boolean canProvision(Label label) {
         return true;
+    }
+
+    /**
+     * Gets {@link InstanceConfiguration} that has the matching {@link Label}.
+     */
+    public InstanceConfiguration getTemplate(Label label) {
+        for (InstanceConfiguration c : templates) {
+            if (c.getMode() == Node.Mode.NORMAL) {
+                if (label == null || label.matches(c.getLabelSet())) {
+                    return c;
+                }
+            } else if (c.getMode() == Node.Mode.EXCLUSIVE) {
+                if (label != null && label.matches(c.getLabelSet())) {
+                    return c;
+                }
+            }
+        }
+        return null;
     }
 
     @Extension
@@ -118,25 +135,5 @@ public class ComputeEngineCloud extends AbstractCloudImpl {
                 return FormValidation.error(ioe.getMessage());
             }
         }
-    }
-
-    public String getProjectId() {
-        return projectId;
-    }
-
-    public void setProjectId(String projectId) {
-        this.projectId = projectId;
-    }
-
-    public String getCredentialsId() {
-        return credentialsId;
-    }
-
-    public void setCredentialsId(String credentialsId) {
-        this.credentialsId = credentialsId;
-    }
-
-    public List<InstanceConfiguration> getTemplates() {
-        return Collections.unmodifiableList(templates);
     }
 }

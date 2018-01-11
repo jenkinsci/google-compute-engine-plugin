@@ -1,5 +1,6 @@
 package com.google.jenkins.plugins.computeengine;
 
+import hudson.Extension;
 import hudson.model.Descriptor;
 import hudson.model.TaskListener;
 import hudson.slaves.AbstractCloudComputer;
@@ -35,5 +36,13 @@ public class ComputeEngineAgent extends AbstractCloudSlave {
   @Override
   protected void _terminate(TaskListener listener) throws IOException, InterruptedException {
 
+  }
+
+  @Extension
+  public static final class DescriptorImpl extends SlaveDescriptor {
+    @Override
+    public String getDisplayName() {
+      return Messages.ComputeEngineAgent_DisplayName();
+    }
   }
 }

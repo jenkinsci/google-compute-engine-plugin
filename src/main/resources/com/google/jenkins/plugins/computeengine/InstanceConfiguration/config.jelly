@@ -2,6 +2,12 @@
 <j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:d="jelly:define" xmlns:l="/lib/layout"
          xmlns:t="/lib/hudson" xmlns:f="/lib/form">
     <table width="100%">
+        <f:section title="General">
+            <f:slave-mode name="mode" node="${instance}"/>
+            <f:entry title="${%Labels}" field="labelString">
+                <f:textbox />
+            </f:entry>
+        </f:section>
         <f:section title="Location">
             <f:entry field="region" title="${%Region}">
                 <f:select/>
@@ -14,24 +20,19 @@
             <f:entry field="machineType" title="${%Machine Type}">
                 <f:select/>
             </f:entry>
-                <f:entry field="gpuType" title="${%GPU Type}">
-                    <f:select/>
-                </f:entry>
-                <f:entry field="numGpus" title="${%Number of GPUs}">
-                    <f:textbox />
-                </f:entry>
+            <f:optionalProperty field="acceleratorConfiguration" title="GPUs">
+                <st:include page="config.jelly" class="${descriptor.clazz}"/>
+            </f:optionalProperty>
         </f:section>
         <f:section title="Disks">
-
         </f:section>
         <f:section title="IAM">
-
         </f:section>
-        <f:slave-mode name="mode" node="${instance}"/>
         <f:entry title="">
             <div align="right">
                 <f:repeatableDeleteButton/>
             </div>
         </f:entry>
+
     </table>
 </j:jelly>
