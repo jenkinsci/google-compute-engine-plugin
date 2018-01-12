@@ -31,6 +31,7 @@ import java.util.List;
 
 import hudson.util.FormValidation;
 import hudson.util.ListBoxModel;
+import hudson.util.StreamTaskListener;
 import jenkins.model.Jenkins;
 import org.kohsuke.stapler.AncestorInPath;
 import org.kohsuke.stapler.DataBoundConstructor;
@@ -42,10 +43,10 @@ public class ComputeEngineCloud extends AbstractCloudImpl {
 
 
     public final String projectId;
-
     public final String credentialsId;
+    public final List<? extends InstanceConfiguration> configurations;
 
-    public final List<? extends InstanceConfiguration> templates;
+    protected transient ComputeClient client;
 
     @DataBoundConstructor
     public ComputeEngineCloud(
@@ -53,28 +54,53 @@ public class ComputeEngineCloud extends AbstractCloudImpl {
             String projectId,
             String credentialsId,
             String instanceCapStr,
-            List<? extends InstanceConfiguration> templates) {
+            List<? extends InstanceConfiguration> configurations) {
         super(name, instanceCapStr);
-        if (templates == null) {
-            this.templates = Collections.emptyList();
+        if (configurations == null) {
+            this.configurations = Collections.emptyList();
         } else {
-            this.templates = templates;
+            this.configurations = configurations;
         }
         this.credentialsId = credentialsId;
         this.projectId = projectId;
     }
 
+    private void readResolve() {
+        try {
+            ClientFactory clientFactory = new ClientFactory(Jenkins.getInstance(), new ArrayList<DomainRequirement>(),
+                    credentialsId);
+        } catch (IOException e) {
+            this.client = null;
+            //TODO: log
+        }
+
+        for(InstanceConfiguration c : configurations) {
+           c.cloud = this;
+       }
+    }
     @Override
     public Collection<PlannedNode> provision(Label label, int excessWorkload) {
         try {
             List<PlannedNode> r = new ArrayList<PlannedNode>();
             final InstanceConfiguration config = getTemplate(label);
+            while(excessWorkload > 0) {
+
+            }
         } catch (Exception e) {}
         return null;
     }
 
+    private synchronized ComputeEngineAgent getAnAgent(InstanceConfiguration config, Label requiredLabel) {
+        try {
+            return config.provision(StreamTaskListener.fromStdout(), requiredLabel);
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
     @Override
     public boolean canProvision(Label label) {
+        //TODO: implement
         return true;
     }
 
@@ -82,7 +108,7 @@ public class ComputeEngineCloud extends AbstractCloudImpl {
      * Gets {@link InstanceConfiguration} that has the matching {@link Label}.
      */
     public InstanceConfiguration getTemplate(Label label) {
-        for (InstanceConfiguration c : templates) {
+        for (InstanceConfiguration c : configurations) {
             if (c.getMode() == Node.Mode.NORMAL) {
                 if (label == null || label.matches(c.getLabelSet())) {
                     return c;

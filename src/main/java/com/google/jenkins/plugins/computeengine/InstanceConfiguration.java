@@ -8,10 +8,7 @@ import com.google.jenkins.plugins.computeengine.client.ClientFactory;
 import com.google.jenkins.plugins.computeengine.client.ComputeClient;
 import hudson.Extension;
 import hudson.RelativePath;
-import hudson.model.Describable;
-import hudson.model.Descriptor;
-import hudson.model.Label;
-import hudson.model.Node;
+import hudson.model.*;
 import hudson.model.labels.LabelAtom;
 import hudson.util.FormValidation;
 import hudson.Util;
@@ -22,6 +19,7 @@ import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.QueryParameter;
 
 import java.io.IOException;
+import java.io.PrintStream;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
@@ -32,8 +30,11 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
     public final String machineType;
     public final String labels;
     public final Node.Mode mode;
-    public transient Set<LabelAtom> labelSet;
     public final AcceleratorConfiguration acceleratorConfiguration;
+
+    public transient Set<LabelAtom> labelSet;
+
+    protected transient ComputeEngineCloud cloud;
 
     @DataBoundConstructor
     public InstanceConfiguration(String region, String zone, String machineType, String labelString,
@@ -62,6 +63,19 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
 
     public Node.Mode getMode() {
         return mode;
+    }
+
+    public ComputeEngineAgent provision(TaskListener listener, Label requiredLabel) throws IOException {
+        PrintStream logger = listener.getLogger();
+        try {
+            ComputeEngineAgent agent = new ComputeEngineAgent(
+                    "name", "desc", "remoteFS", 1, Node.Mode.EXCLUSIVE, null, null,
+                    null, null);
+            return agent;
+        } catch (Descriptor.FormException fe) {
+            //TODO: log
+            return null;
+        }
     }
 
     /**

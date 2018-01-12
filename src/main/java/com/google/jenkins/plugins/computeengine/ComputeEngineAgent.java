@@ -30,7 +30,7 @@ public class ComputeEngineAgent extends AbstractCloudSlave {
 
   @Override
   public AbstractCloudComputer createComputer() {
-    return null;
+    return new ComputeEngineComputer(this);
   }
 
   @Override
