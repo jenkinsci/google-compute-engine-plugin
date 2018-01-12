@@ -12,17 +12,17 @@ import hudson.slaves.RetentionStrategy;
 import java.io.IOException;
 import java.util.List;
 
-public class ComputeEngineAgent extends AbstractCloudSlave {
+public class ComputeEngineInstance extends AbstractCloudSlave {
 
-  public ComputeEngineAgent(String name,
-      String nodeDescription,
-      String remoteFS,
-      int numExecutors,
-      Node.Mode mode,
-      String labelString,
-      ComputerLauncher launcher,
-      RetentionStrategy retentionStrategy,
-      List<? extends NodeProperty<?>> nodeProperties)
+  public ComputeEngineInstance(String name,
+                               String nodeDescription,
+                               String remoteFS,
+                               int numExecutors,
+                               Node.Mode mode,
+                               String labelString,
+                               ComputerLauncher launcher,
+                               RetentionStrategy retentionStrategy,
+                               List<? extends NodeProperty<?>> nodeProperties)
       throws Descriptor.FormException,
       IOException {
     super(name, nodeDescription, remoteFS, numExecutors, mode, labelString, launcher, retentionStrategy, nodeProperties);

@@ -6,15 +6,15 @@ import org.kohsuke.stapler.HttpResponse;
 
 import java.io.IOException;
 
-public class ComputeEngineComputer extends AbstractCloudComputer<ComputeEngineAgent> {
+public class ComputeEngineComputer extends AbstractCloudComputer<ComputeEngineInstance> {
 
-  public ComputeEngineComputer(ComputeEngineAgent slave) {
+  public ComputeEngineComputer(ComputeEngineInstance slave) {
     super(slave);
   }
 
   @Override
-  public ComputeEngineAgent getNode() {
-    return (ComputeEngineAgent)super.getNode();
+  public ComputeEngineInstance getNode() {
+    return (ComputeEngineInstance)super.getNode();
   }
 
   /**

@@ -65,10 +65,10 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
         return mode;
     }
 
-    public ComputeEngineAgent provision(TaskListener listener, Label requiredLabel) throws IOException {
+    public ComputeEngineInstance provision(TaskListener listener, Label requiredLabel) throws IOException {
         PrintStream logger = listener.getLogger();
         try {
-            ComputeEngineAgent agent = new ComputeEngineAgent(
+            ComputeEngineInstance agent = new ComputeEngineInstance(
                     "name", "desc", "remoteFS", 1, Node.Mode.EXCLUSIVE, null, null,
                     null, null);
             return agent;
@@ -99,7 +99,7 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
         public String getHelpFile(String fieldName) {
             String p = super.getHelpFile(fieldName);
             if (p == null)
-                p = Jenkins.getInstance().getDescriptor(ComputeEngineAgent.class).getHelpFile(fieldName);
+                p = Jenkins.getInstance().getDescriptor(ComputeEngineInstance.class).getHelpFile(fieldName);
             return p;
         }
 

@@ -90,7 +90,7 @@ public class ComputeEngineCloud extends AbstractCloudImpl {
         return null;
     }
 
-    private synchronized ComputeEngineAgent getAnAgent(InstanceConfiguration config, Label requiredLabel) {
+    private synchronized ComputeEngineInstance getAnAgent(InstanceConfiguration config, Label requiredLabel) {
         try {
             return config.provision(StreamTaskListener.fromStdout(), requiredLabel);
         } catch (Exception e) {
