@@ -96,11 +96,12 @@ public class ComputeEngineCloud extends AbstractCloudImpl {
            c.cloud = this;
        }
     }
+
     @Override
     public Collection<PlannedNode> provision(Label label, int excessWorkload) {
         try {
             List<PlannedNode> r = new ArrayList<PlannedNode>();
-            final InstanceConfiguration config = getTemplate(label);
+            final InstanceConfiguration config = getInstanceConfig(label);
             while(excessWorkload > 0) {
 
             }
@@ -125,7 +126,7 @@ public class ComputeEngineCloud extends AbstractCloudImpl {
     /**
      * Gets {@link InstanceConfiguration} that has the matching {@link Label}.
      */
-    public InstanceConfiguration getTemplate(Label label) {
+    public InstanceConfiguration getInstanceConfig(Label label) {
         for (InstanceConfiguration c : configurations) {
             if (c.getMode() == Node.Mode.NORMAL) {
                 if (label == null || label.matches(c.getLabelSet())) {
@@ -140,6 +141,35 @@ public class ComputeEngineCloud extends AbstractCloudImpl {
         return null;
     }
 
+    /**
+     * Gets {@link InstanceConfiguration} that has the matching Description.
+     */
+    public InstanceConfiguration getInstanceConfig(String description) {
+        for (InstanceConfiguration c : configurations) {
+            if (c.description.equals(description)) {
+                return c;
+            }
+        }
+        return null;
+    }
+
+    public HttpResponse doProvision(@QueryParameter String configuration) throws ServletException, IOException {
+        checkPermission(PROVISION);
+        if (configuration == null) {
+            throw HttpResponses.error(SC_BAD_REQUEST, "The 'configuration' query parameter is missing");
+        }
+        InstanceConfiguration c = getInstanceConfig(configuration);
+        if (c == null) {
+            throw HttpResponses.error(SC_BAD_REQUEST, "No such Instance Configuration: " + configuration);
+        }
+
+            ComputeEngineInstance node = c.provision(StreamTaskListener.fromStdout(), null);
+            if (node == null)
+                throw HttpResponses.error(SC_BAD_REQUEST, "Could not provision new node.");
+            Jenkins.getInstance().addNode(node);
+
+            return HttpResponses.redirectViaContextPath("/computer/" + node.getNodeName());
+    }
     @Extension
     public static class GoogleCloudDescriptor extends Descriptor<Cloud> {
 

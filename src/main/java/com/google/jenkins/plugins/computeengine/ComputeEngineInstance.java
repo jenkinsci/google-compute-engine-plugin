@@ -10,6 +10,7 @@ import hudson.slaves.ComputerLauncher;
 import hudson.slaves.NodeProperty;
 import hudson.slaves.RetentionStrategy;
 import java.io.IOException;
+import java.util.Collections;
 import java.util.List;
 
 public class ComputeEngineInstance extends AbstractCloudSlave {
@@ -21,11 +22,10 @@ public class ComputeEngineInstance extends AbstractCloudSlave {
                                Node.Mode mode,
                                String labelString,
                                ComputerLauncher launcher,
-                               RetentionStrategy retentionStrategy,
-                               List<? extends NodeProperty<?>> nodeProperties)
+                               RetentionStrategy retentionStrategy)
       throws Descriptor.FormException,
       IOException {
-    super(name, nodeDescription, remoteFS, numExecutors, mode, labelString, launcher, retentionStrategy, nodeProperties);
+    super(name, nodeDescription, remoteFS, numExecutors, mode, labelString, launcher, retentionStrategy, Collections.<NodeProperty<?>> emptyList());
   }
 
   @Override

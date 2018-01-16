@@ -10,6 +10,7 @@ import hudson.Extension;
 import hudson.RelativePath;
 import hudson.model.*;
 import hudson.model.labels.LabelAtom;
+import hudson.slaves.NodeProperty;
 import hudson.util.FormValidation;
 import hudson.Util;
 import hudson.util.ListBoxModel;
@@ -21,6 +22,7 @@ import org.kohsuke.stapler.QueryParameter;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 
@@ -28,6 +30,7 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
     public final String region;
     public final String zone;
     public final String machineType;
+    public final String description;
     public final String labels;
     public final Node.Mode mode;
     public final AcceleratorConfiguration acceleratorConfiguration;
@@ -38,10 +41,12 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
 
     @DataBoundConstructor
     public InstanceConfiguration(String region, String zone, String machineType, String labelString,
-                                 Node.Mode mode, AcceleratorConfiguration acceleratorConfiguration) {
+                                 String description, Node.Mode mode,
+                                 AcceleratorConfiguration acceleratorConfiguration) {
         this.region = region;
         this.zone = zone;
         this.machineType = machineType;
+        this.description = description;
         this.acceleratorConfiguration = acceleratorConfiguration;
         this.mode = mode;
         this.labels = Util.fixNull(labelString);
@@ -69,8 +74,8 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
         PrintStream logger = listener.getLogger();
         try {
             ComputeEngineInstance agent = new ComputeEngineInstance(
-                    "name", "desc", "remoteFS", 1, Node.Mode.EXCLUSIVE, null, null,
-                    null, null);
+                    "name", "desc", "remoteFS", 1, mode, labels, new ComputeEngineLinuxLauncher(),
+                    null);
             return agent;
         } catch (Descriptor.FormException fe) {
             //TODO: log
