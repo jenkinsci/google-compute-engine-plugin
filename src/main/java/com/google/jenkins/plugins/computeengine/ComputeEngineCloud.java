@@ -25,22 +25,29 @@ import hudson.slaves.Cloud;
 import hudson.model.Descriptor;
 
 import javax.annotation.Nonnull;
+import javax.servlet.ServletException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
 import hudson.util.FormValidation;
+import hudson.util.HttpResponses;
 import hudson.util.ListBoxModel;
 import hudson.util.StreamTaskListener;
 import jenkins.model.Jenkins;
 import org.kohsuke.stapler.AncestorInPath;
 import org.kohsuke.stapler.DataBoundConstructor;
+import org.kohsuke.stapler.HttpResponse;
 import org.kohsuke.stapler.QueryParameter;
+
+import static javax.servlet.http.HttpServletResponse.SC_BAD_REQUEST;
+import static javax.servlet.http.HttpServletResponse.SC_INTERNAL_SERVER_ERROR;
 
 public class ComputeEngineCloud extends AbstractCloudImpl {
     private static final Logger logger =
             Logger.getLogger(ComputeEngineCloud.class.getName());
 
+    private static final String CLOUD_PREFIX = "gce-";
 
     public final String projectId;
     public final String credentialsId;
@@ -50,12 +57,12 @@ public class ComputeEngineCloud extends AbstractCloudImpl {
 
     @DataBoundConstructor
     public ComputeEngineCloud(
-            String name,
+            String cloudName,
             String projectId,
             String credentialsId,
             String instanceCapStr,
             List<? extends InstanceConfiguration> configurations) {
-        super(name, instanceCapStr);
+        super(createCloudId(cloudName), instanceCapStr);
         if (configurations == null) {
             this.configurations = Collections.emptyList();
         } else {
@@ -65,6 +72,17 @@ public class ComputeEngineCloud extends AbstractCloudImpl {
         this.projectId = projectId;
     }
 
+    public String getCloudName() {
+        return name.substring(CLOUD_PREFIX.length());
+    }
+    @Override
+    public String getDisplayName() {
+       return getCloudName();
+    }
+
+    private static String createCloudId(String name) {
+        return CLOUD_PREFIX + name.trim();
+    }
     private void readResolve() {
         try {
             ClientFactory clientFactory = new ClientFactory(Jenkins.getInstance(), new ArrayList<DomainRequirement>(),
