@@ -22,22 +22,21 @@
         </f:section>
 
         <f:section title="Boot Disk">
+            <f:entry field="bootDiskSourceImageProject" title="${%Image project}">
+                <f:select/>
+            </f:entry>
+            <f:entry field="bootDiskSourceImageName" title="${%Image name}">
+                <f:select/>
+            </f:entry>
             <f:entry field="bootDiskType" title="${%Disk Type}">
                 <f:select/>
             </f:entry>
-            <f:entry field="bootDiskAutoDeleteStr" title="${%Delete when instance is terminated?}">
+            <f:entry field="bootDiskSizeGb" title="${%Size}">
+                <f:textbox default="${descriptor.defaultBootDiskSizeGb()}" />
+            </f:entry>
+            <f:entry field="bootDiskAutoDeleteStr" title="${%Delete on termination?}">
                 <f:checkbox checked="true" field="bootDiskAutoDeleteStr" />
             </f:entry>
-            <f:entry field="bootDiskSourceImageProject" title="${%Project containing boot image}">
-                <f:select/>
-            </f:entry>
-            <f:entry field="bootDiskSourceImageName" title="${%Boot image}">
-                <f:select/>
-            </f:entry>
-            <!--
-    public final String bootDiskSourceImageName;
-    public Integer bootDiskSizeGb;
-            -->
         </f:section>
 
         <f:section title="Capabilities">
@@ -48,10 +47,13 @@
                 <st:include page="config.jelly" class="${descriptor.clazz}"/>
             </f:optionalProperty>
         </f:section>
-        <f:section title="Disks">
+
+        <f:section title="Network">
         </f:section>
+
         <f:section title="IAM">
         </f:section>
+
         <f:entry title="">
             <div align="right">
                 <f:repeatableDeleteButton/>

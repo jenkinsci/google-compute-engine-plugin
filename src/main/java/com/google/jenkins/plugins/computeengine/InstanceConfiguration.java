@@ -144,6 +144,10 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
             return null;
         }
 
+        public static String defaultBootDiskSizeGb() {
+            return DEFAULT_BOOT_DISK_SIZE_GB.toString();
+        }
+
         @Override
         public String getHelpFile(String fieldName) {
             String p = super.getHelpFile(fieldName);
@@ -287,7 +291,7 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
                                                                @QueryParameter("bootDiskSourceImageProject") final String projectId,
                                                                @QueryParameter("credentialsId") @RelativePath("..") final String credentialsId) {
             ListBoxModel items = new ListBoxModel();
-            if(projectId == null || projectId.isEmpty()) {
+            if (projectId == null || projectId.isEmpty()) {
                 return items;
             }
 
