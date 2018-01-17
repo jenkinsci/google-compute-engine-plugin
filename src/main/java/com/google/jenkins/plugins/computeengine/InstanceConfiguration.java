@@ -1,9 +1,8 @@
 package com.google.jenkins.plugins.computeengine;
 
 import com.cloudbees.plugins.credentials.domains.DomainRequirement;
-import com.google.api.services.compute.model.MachineType;
-import com.google.api.services.compute.model.Region;
-import com.google.api.services.compute.model.Zone;
+import com.google.api.services.compute.Compute;
+import com.google.api.services.compute.model.*;
 import com.google.jenkins.plugins.computeengine.client.ClientFactory;
 import com.google.jenkins.plugins.computeengine.client.ComputeClient;
 import hudson.Extension;
@@ -32,6 +31,11 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
     public final String machineType;
     public final String description;
     public final String labels;
+    public final String bootDiskType;
+    public final Boolean bootDiskAutoDelete;
+    public final String bootDiskSourceImageName;
+    public final String bootDiskSourceImageProject;
+    public Integer bootDiskSizeGb;
     public final Node.Mode mode;
     public final AcceleratorConfiguration acceleratorConfiguration;
 
@@ -39,14 +43,54 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
 
     protected transient ComputeEngineCloud cloud;
 
+    public static final Integer DEFAULT_BOOT_DISK_SIZE_GB = 10;
+
+    static final List<String> KNOW_LINUX_IMAGE_PROJECTS = new ArrayList<String>() {{
+        add("centos-cloud");
+        add("coreos-cloud");
+        add("cos-cloud");
+        add("debian-cloud");
+        add("rhel-cloud");
+        add("suse-cloud");
+        add("suse-sap-cloud");
+        add("ubuntu-os-cloud");
+    }};
+
     @DataBoundConstructor
     public InstanceConfiguration(String region, String zone, String machineType, String labelString,
-                                 String description, Node.Mode mode,
+                                 String description,
+                                 String bootDiskType,
+                                 String bootDiskAutoDeleteStr,
+                                 String bootDiskSourceImageName,
+                                 String bootDiskSourceImageProject,
+                                 String bootDiskSizeGbStr,
+                                 Node.Mode mode,
                                  AcceleratorConfiguration acceleratorConfiguration) {
         this.region = region;
         this.zone = zone;
         this.machineType = machineType;
         this.description = description;
+
+        // Boot disk
+        this.bootDiskType = bootDiskType;
+        this.bootDiskAutoDelete = Boolean.parseBoolean(bootDiskAutoDeleteStr);
+        this.bootDiskSourceImageName = bootDiskSourceImageName;
+        this.bootDiskSourceImageProject = bootDiskSourceImageProject;
+
+        try {
+            this.bootDiskSizeGb = Integer.parseInt(bootDiskSizeGbStr);
+        } catch (NumberFormatException nfe) {
+            this.bootDiskSizeGb = DEFAULT_BOOT_DISK_SIZE_GB;
+        }
+
+
+        // Network
+        //TODO
+
+        // IAM
+        //TODO
+
+        // Other
         this.acceleratorConfiguration = acceleratorConfiguration;
         this.mode = mode;
         this.labels = Util.fixNull(labelString);
@@ -130,7 +174,7 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
 
         public FormValidation doCheckRegion(@QueryParameter String value) {
             if (value.equals("")) {
-                return FormValidation.error("Please select a region...");
+                return FormValidation.warning("Please select a region...");
             }
             return FormValidation.ok();
         }
@@ -161,7 +205,7 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
 
         public FormValidation doCheckZone(@QueryParameter String value) {
             if (value.equals("")) {
-                return FormValidation.error("Please select a zone...");
+                return FormValidation.warning("Please select a zone...");
             }
             return FormValidation.ok();
         }
@@ -192,7 +236,79 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
 
         public FormValidation doCheckMachineType(@QueryParameter String value) {
             if (value.equals("")) {
-                return FormValidation.error("Please select a machine type...");
+                return FormValidation.warning("Please select a machine type...");
+            }
+            return FormValidation.ok();
+        }
+
+        public ListBoxModel doFillBootDiskTypeItems(@AncestorInPath Jenkins context,
+                                                    @QueryParameter("zone") String zone,
+                                                    @QueryParameter("credentialsId") @RelativePath("..") final String credentialsId) {
+            ListBoxModel items = new ListBoxModel();
+            items.add("");
+            if (zone == null || zone.isEmpty() || credentialsId == null || credentialsId.isEmpty()) {
+                return items;
+            }
+            try {
+                ClientFactory clientFactory = new ClientFactory(context, new ArrayList<DomainRequirement>(), credentialsId);
+                ComputeClient compute = clientFactory.compute();
+                List<DiskType> diskTypes = compute.getBootDiskTypes(zone);
+
+                for (DiskType dt : diskTypes) {
+                    items.add(dt.getName(), dt.getSelfLink());
+                }
+                return items;
+            } catch (IOException ioe) {
+                items.clear();
+                items.add("Error retrieving disk types");
+                return items;
+            }
+        }
+
+        public ListBoxModel doFillBootDiskSourceImageProjectItems(@AncestorInPath Jenkins context,
+                                                                  @QueryParameter("projectId") @RelativePath("..") final String projectId) {
+            ListBoxModel items = new ListBoxModel();
+            items.add("");
+            items.add(projectId);
+            for (String v : KNOW_LINUX_IMAGE_PROJECTS) {
+                items.add(v);
+            }
+            return items;
+        }
+
+        public FormValidation doCheckBootDiskSourceImageProject(@QueryParameter String value) {
+            if (value.equals("")) {
+                return FormValidation.warning("Please select source image project...");
+            }
+            return FormValidation.ok();
+        }
+
+        public ListBoxModel doFillBootDiskSourceImageNameItems(@AncestorInPath Jenkins context,
+                                                               @QueryParameter("bootDiskSourceImageProject") final String projectId,
+                                                               @QueryParameter("credentialsId") @RelativePath("..") final String credentialsId) {
+            ListBoxModel items = new ListBoxModel();
+            if(projectId == null || projectId.isEmpty()) {
+                return items;
+            }
+
+            try {
+                ClientFactory clientFactory = new ClientFactory(context, new ArrayList<DomainRequirement>(), credentialsId);
+                ComputeClient compute = clientFactory.compute();
+                List<Image> images = compute.getImages(projectId);
+
+                for (Image i : images) {
+                    items.add(i.getName(), i.getSelfLink());
+                }
+            } catch (IOException ioe) {
+                items.clear();
+                items.add("Error retrieving images for project");
+            }
+            return items;
+        }
+
+        public FormValidation doCheckBootDiskType(@QueryParameter String value) {
+            if (value.equals("")) {
+                return FormValidation.warning("Please select a disk type...");
             }
             return FormValidation.ok();
         }

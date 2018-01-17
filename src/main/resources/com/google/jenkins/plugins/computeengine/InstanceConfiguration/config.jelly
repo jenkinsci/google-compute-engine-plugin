@@ -11,6 +11,7 @@
                 <f:textbox />
             </f:entry>
         </f:section>
+
         <f:section title="Location">
             <f:entry field="region" title="${%Region}">
                 <f:select/>
@@ -19,6 +20,26 @@
                 <f:select/>
             </f:entry>
         </f:section>
+
+        <f:section title="Boot Disk">
+            <f:entry field="bootDiskType" title="${%Disk Type}">
+                <f:select/>
+            </f:entry>
+            <f:entry field="bootDiskAutoDeleteStr" title="${%Delete when instance is terminated?}">
+                <f:checkbox checked="true" field="bootDiskAutoDeleteStr" />
+            </f:entry>
+            <f:entry field="bootDiskSourceImageProject" title="${%Project containing boot image}">
+                <f:select/>
+            </f:entry>
+            <f:entry field="bootDiskSourceImageName" title="${%Boot image}">
+                <f:select/>
+            </f:entry>
+            <!--
+    public final String bootDiskSourceImageName;
+    public Integer bootDiskSizeGb;
+            -->
+        </f:section>
+
         <f:section title="Capabilities">
             <f:entry field="machineType" title="${%Machine Type}">
                 <f:select/>

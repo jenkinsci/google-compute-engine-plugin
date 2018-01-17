@@ -1,10 +1,8 @@
 package com.google.jenkins.plugins.computeengine.client;
 
 import com.google.api.services.compute.Compute;
-import com.google.api.services.compute.model.AcceleratorType;
-import com.google.api.services.compute.model.MachineType;
-import com.google.api.services.compute.model.Region;
-import com.google.api.services.compute.model.Zone;
+import com.google.api.services.compute.ComputeRequest;
+import com.google.api.services.compute.model.*;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -15,7 +13,7 @@ import java.util.function.Predicate;
 /**
  * Client for communicating with the Google Compute API
  *
- *  @see <a href="https://cloud.google.com/compute/">Cloud Engine</a>
+ * @see <a href="https://cloud.google.com/compute/">Cloud Engine</a>
  */
 public class ComputeClient {
     private final Compute compute;
@@ -68,12 +66,56 @@ public class ComputeClient {
                 .execute()
                 .getItems();
 
-        // Only zones for the region
+        // No deprecated items
         machineTypes.removeIf(z -> z.getDeprecated() != null);
 
         // Sort by name
         machineTypes.sort(Comparator.comparing(MachineType::getName));
         return machineTypes;
+    }
+
+    public List<DiskType> getDiskTypes(String zone) throws IOException {
+        zone = zoneFromSelfLink(zone);
+        List<DiskType> diskTypes = compute
+                .diskTypes()
+                .list(projectId, zone)
+                .execute()
+                .getItems();
+
+        // No deprecated items
+        diskTypes.removeIf(z -> z.getDeprecated() != null);
+
+        // Sort by name
+        diskTypes.sort(Comparator.comparing(DiskType::getName));
+        return diskTypes;
+    }
+
+    public List<DiskType> getBootDiskTypes(String zone) throws IOException {
+        List<DiskType> diskTypes = this.getDiskTypes(zone);
+
+        // No local disks
+        diskTypes.removeIf(z -> z.getName().startsWith("local-"));
+
+        return diskTypes;
+    }
+
+    public List<Image> getImages() throws IOException {
+        return getImages(projectId);
+    }
+
+    public List<Image> getImages(String projectId) throws IOException {
+        List<Image> images = compute
+                .images()
+                .list(projectId)
+                .execute()
+                .getItems();
+
+        // No deprecated items
+        images.removeIf(z -> z.getDeprecated() != null);
+
+// Sort by name
+        images.sort(Comparator.comparing(Image::getName));
+        return images;
     }
 
     public String zoneFromSelfLink(String zoneSelfLink) {
@@ -101,4 +143,9 @@ public class ComputeClient {
         }
         return acceleratorTypes;
     }
+
+    /**public Instance createInstance(String zone, Instance i) throws IOException {
+     Compute.Instances.Insert insert = compute.instances().insert(projectId, zone, i);
+     compute.images().list(projectId).execute().getItems();
+     }**/
 }
