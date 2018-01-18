@@ -44,6 +44,7 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
     protected transient ComputeEngineCloud cloud;
 
     public static final Integer DEFAULT_BOOT_DISK_SIZE_GB = 10;
+    public static final String ERROR_NO_SUBNETS = "No subnetworks exist in the given network and region.";
 
     static final List<String> KNOW_LINUX_IMAGE_PROJECTS = new ArrayList<String>() {{
         add("centos-cloud");
@@ -242,6 +243,86 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
             if (value.equals("")) {
                 return FormValidation.warning("Please select a machine type...");
             }
+            return FormValidation.ok();
+        }
+
+        public ListBoxModel doFillNetworkItems(@AncestorInPath Jenkins context,
+                                               @QueryParameter("projectId") @RelativePath("..") final String projectId,
+                                               @QueryParameter("credentialsId") @RelativePath("..") final String credentialsId) {
+            ListBoxModel items = new ListBoxModel();
+            items.add("");
+            if (credentialsId == null || credentialsId.isEmpty()) {
+                return items;
+            }
+            try {
+                ClientFactory clientFactory = new ClientFactory(context, new ArrayList<DomainRequirement>(), credentialsId);
+                ComputeClient compute = clientFactory.compute();
+                List<Network> networks = compute.getNetworks(projectId);
+
+                for (Network n : networks) {
+                    items.add(n.getName(), n.getSelfLink());
+                }
+                return items;
+            } catch (IOException ioe) {
+                items.clear();
+                items.add("Error retrieving networks");
+                return items;
+            }
+        }
+
+        public FormValidation doCheckNetwork(@QueryParameter String value) {
+            if (value.equals("")) {
+                return FormValidation.warning("Please select a network...");
+            }
+            return FormValidation.ok();
+        }
+
+        public ListBoxModel doFillSubnetworkItems(@AncestorInPath Jenkins context,
+                                                  @QueryParameter("region") final String region,
+                                                  @QueryParameter("network") final String network,
+                                                  @QueryParameter("projectId") @RelativePath("..") final String projectId,
+                                                  @QueryParameter("credentialsId") @RelativePath("..") final String credentialsId) {
+            ListBoxModel items = new ListBoxModel();
+            items.add("");
+            if (network == null || network.isEmpty() || region == null || region.isEmpty() || credentialsId == null || credentialsId.isEmpty()) {
+                return items;
+            }
+
+            if(network.endsWith("default")) {
+                items.add(new ListBoxModel.Option("default", "default", true));
+                return items;
+            }
+
+            try {
+                ClientFactory clientFactory = new ClientFactory(context, new ArrayList<DomainRequirement>(), credentialsId);
+                ComputeClient compute = clientFactory.compute();
+                List<Subnetwork> subnetworks = compute.getSubnetworks(projectId, network, region);
+
+                if(subnetworks.size() == 0) {
+                 items.add(new ListBoxModel.Option(ERROR_NO_SUBNETS, ERROR_NO_SUBNETS, true));
+                    return items;
+                }
+
+                for (Subnetwork s : subnetworks) {
+                    items.add(s.getName(), s.getSelfLink());
+                }
+                return items;
+            } catch (IOException ioe) {
+                items.clear();
+                items.add("Error retrieving subnetworks");
+                return items;
+            }
+        }
+
+        public FormValidation doCheckSubnetwork(@QueryParameter String value) {
+            if (value.equals(ERROR_NO_SUBNETS)) {
+
+                return FormValidation.error(ERROR_NO_SUBNETS);
+            }
+            if (value.isEmpty()) {
+                return FormValidation.warning("Please select a subnetwork...");
+            }
+
             return FormValidation.ok();
         }
 

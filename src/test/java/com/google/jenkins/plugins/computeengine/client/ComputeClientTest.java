@@ -62,13 +62,12 @@ public class ComputeClientTest {
 
     @Test
     public void zoneSelfLink() {
-        ComputeClient computeClient = new ComputeClient(compute, "test-project");
         String zone;
 
         zone = "https://www.googleapis.com/compute/v1/projects/evandbrown17/zones/asia-east1-a";
-        assertEquals("asia-east1-a", computeClient.zoneFromSelfLink(zone));
+        assertEquals("asia-east1-a", ComputeClient.zoneFromSelfLink(zone));
 
         zone = "asia-east1-a";
-        assertEquals("asia-east1-a", computeClient.zoneFromSelfLink(zone));
+        assertEquals("asia-east1-a", ComputeClient.zoneFromSelfLink(zone));
     }
 }

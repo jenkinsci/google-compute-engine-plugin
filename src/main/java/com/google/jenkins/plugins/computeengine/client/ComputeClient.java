@@ -1,14 +1,12 @@
 package com.google.jenkins.plugins.computeengine.client;
 
 import com.google.api.services.compute.Compute;
-import com.google.api.services.compute.ComputeRequest;
 import com.google.api.services.compute.model.*;
 
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
-import java.util.function.Predicate;
 
 /**
  * Client for communicating with the Google Compute API
@@ -113,14 +111,11 @@ public class ComputeClient {
         // No deprecated items
         images.removeIf(z -> z.getDeprecated() != null);
 
-// Sort by name
+        // Sort by name
         images.sort(Comparator.comparing(Image::getName));
         return images;
     }
 
-    public String zoneFromSelfLink(String zoneSelfLink) {
-        return zoneSelfLink.substring(zoneSelfLink.lastIndexOf("/") + 1, zoneSelfLink.length());
-    }
 
     public List<AcceleratorType> getAcceleratorTypes(String zone) throws IOException {
         zone = zoneFromSelfLink(zone);
@@ -134,6 +129,7 @@ public class ComputeClient {
             acceleratorTypes = new ArrayList<AcceleratorType>();
         }
 
+        //TODO: do we need to check size?
         if (acceleratorTypes.size() > 0) {
             // Only zones for the region
             acceleratorTypes.removeIf(z -> z.getDeprecated() != null);
@@ -144,8 +140,49 @@ public class ComputeClient {
         return acceleratorTypes;
     }
 
-    /**public Instance createInstance(String zone, Instance i) throws IOException {
-     Compute.Instances.Insert insert = compute.instances().insert(projectId, zone, i);
-     compute.images().list(projectId).execute().getItems();
-     }**/
+    public List<Network> getNetworks(String projectId) throws IOException {
+        List<Network> networks = compute
+                .networks()
+                .list(projectId)
+                .execute()
+                .getItems();
+
+        if (networks == null) {
+            networks = new ArrayList<Network>();
+        }
+        return networks;
+    }
+
+    public List<Network> getNetworks() throws IOException {
+        return getNetworks(projectId);
+    }
+
+    public List<Subnetwork> getSubnetworks(String projectId, String networkSelfLink, String region) throws IOException {
+        region = regionFromSelfLink(region);
+        List<Subnetwork> subnetworks = compute
+                .subnetworks()
+                .list(projectId, region)
+                .execute()
+                .getItems();
+
+        // Only subnetworks in the parent network
+        subnetworks.removeIf(z -> !z.getNetwork().equals(networkSelfLink));
+
+        // Sort by name
+        subnetworks.sort(Comparator.comparing(Subnetwork::getName));
+
+        return subnetworks;
+    }
+
+    public List<Subnetwork> getSubnetworks(String networkSelfLink, String region) throws IOException {
+        return getSubnetworks(projectId, networkSelfLink, region);
+    }
+
+    public static String zoneFromSelfLink(String zoneSelfLink) {
+        return zoneSelfLink.substring(zoneSelfLink.lastIndexOf("/") + 1, zoneSelfLink.length());
+    }
+
+    public static String regionFromSelfLink(String regionSelfLink) {
+        return regionSelfLink.substring(regionSelfLink.lastIndexOf("/") + 1, regionSelfLink.length());
+    }
 }
