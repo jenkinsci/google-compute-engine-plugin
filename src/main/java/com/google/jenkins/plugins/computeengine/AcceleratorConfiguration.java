@@ -32,6 +32,31 @@ public class AcceleratorConfiguration implements Describable<AcceleratorConfigur
         return Jenkins.getInstance().getDescriptor(getClass());
     }
 
+    @Override
+    public boolean equals(Object obj) {
+        if (obj == null) {
+            return false;
+        }
+        if (!AcceleratorConfiguration.class.isAssignableFrom(obj.getClass())) {
+            return false;
+        }
+        final AcceleratorConfiguration other = (AcceleratorConfiguration) obj;
+        return this.gpuType.equals(other.gpuType) && this.gpuCount.equals(other.gpuCount);
+    }
+
+    @Override
+    public int hashCode() {
+        int hash = 3;
+        hash = 53 * hash + (this.gpuType != null ? this.gpuType.hashCode() : 0);
+        hash = 53 * hash + Integer.parseInt(gpuCount);
+        return hash;
+    }
+
+    @Override
+    public String toString() {
+        return this.gpuType + "(" + this.gpuCount + ")";
+    }
+
     @Extension
     public static final class DescriptorImpl extends Descriptor<AcceleratorConfiguration> {
         @Override
@@ -39,17 +64,18 @@ public class AcceleratorConfiguration implements Describable<AcceleratorConfigur
             return null;
         }
 
+        private static ComputeClient computeClient;
+
+        public static void setComputeClient(ComputeClient client) {
+            computeClient = client;
+        }
+
         public ListBoxModel doFillGpuTypeItems(@AncestorInPath Jenkins context,
                                                @QueryParameter("zone") @RelativePath("..") String zone,
                                                @QueryParameter("credentialsId") @RelativePath("../..") final String credentialsId) {
             ListBoxModel items = new ListBoxModel();
-            items.add("");
-            if (zone == null || zone.isEmpty() || credentialsId == null || credentialsId.isEmpty()) {
-                return items;
-            }
             try {
-                ClientFactory clientFactory = new ClientFactory(context, new ArrayList<DomainRequirement>(), credentialsId);
-                ComputeClient compute = clientFactory.compute();
+                ComputeClient compute = computeClient(context, credentialsId);
                 List<AcceleratorType> acceleratorTypes = compute.getAcceleratorTypes(zone);
 
                 for (AcceleratorType a : acceleratorTypes) {
@@ -60,7 +86,19 @@ public class AcceleratorConfiguration implements Describable<AcceleratorConfigur
                 items.clear();
                 items.add("Error retrieving GPU types");
                 return items;
+            } catch (IllegalArgumentException iae) {
+                //TODO: log
+                return null;
             }
+
+        }
+
+        private static ComputeClient computeClient(Jenkins context, String credentialsId) throws IOException {
+            if (computeClient != null) {
+                return computeClient;
+            }
+            ClientFactory clientFactory = new ClientFactory(context, new ArrayList<DomainRequirement>(), credentialsId);
+            return clientFactory.compute();
         }
     }
 }

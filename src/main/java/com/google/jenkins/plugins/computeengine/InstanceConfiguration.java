@@ -257,9 +257,7 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
                                                @QueryParameter("credentialsId") @RelativePath("..") final String credentialsId) {
             ListBoxModel items = new ListBoxModel();
             items.add("");
-            if (credentialsId == null || credentialsId.isEmpty()) {
-                return items;
-            }
+
             try {
                 ComputeClient compute = computeClient(context, credentialsId);
                 List<Network> networks = compute.getNetworks(projectId);
@@ -272,6 +270,9 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
                 items.clear();
                 items.add("Error retrieving networks");
                 return items;
+            } catch (IllegalArgumentException iae) {
+                //TODO: log
+                return null;
             }
         }
 
@@ -288,10 +289,6 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
                                                   @QueryParameter("projectId") @RelativePath("..") final String projectId,
                                                   @QueryParameter("credentialsId") @RelativePath("..") final String credentialsId) {
             ListBoxModel items = new ListBoxModel();
-            items.add("");
-            if (network == null || network.isEmpty() || region == null || region.isEmpty() || credentialsId == null || credentialsId.isEmpty()) {
-                return items;
-            }
 
             if (network.endsWith("default")) {
                 items.add(new ListBoxModel.Option("default", "default", true));
@@ -315,6 +312,9 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
                 items.clear();
                 items.add("Error retrieving subnetworks");
                 return items;
+            } catch (IllegalArgumentException iae) {
+               //TODO: log
+               return null;
             }
         }
 
@@ -334,10 +334,6 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
                                                     @QueryParameter("zone") String zone,
                                                     @QueryParameter("credentialsId") @RelativePath("..") final String credentialsId) {
             ListBoxModel items = new ListBoxModel();
-            items.add("");
-            if (zone == null || zone.isEmpty() || credentialsId == null || credentialsId.isEmpty()) {
-                return items;
-            }
             try {
                 ComputeClient compute = computeClient(context, credentialsId);
                 List<DiskType> diskTypes = compute.getBootDiskTypes(zone);
@@ -350,6 +346,9 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
                 items.clear();
                 items.add("Error retrieving disk types");
                 return items;
+            } catch (IllegalArgumentException iae) {
+                //TODO: log
+                return null;
             }
         }
 
@@ -375,9 +374,6 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
                                                                @QueryParameter("bootDiskSourceImageProject") final String projectId,
                                                                @QueryParameter("credentialsId") @RelativePath("..") final String credentialsId) {
             ListBoxModel items = new ListBoxModel();
-            if (projectId == null || projectId.isEmpty()) {
-                return items;
-            }
 
             try {
                 ComputeClient compute = computeClient(context, credentialsId);
@@ -389,15 +385,11 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
             } catch (IOException ioe) {
                 items.clear();
                 items.add("Error retrieving images for project");
+            } catch (IllegalArgumentException iae) {
+                //TODO: log
+                return null;
             }
             return items;
-        }
-
-        public FormValidation doCheckBootDiskType(@QueryParameter String value) {
-            if (value.equals("")) {
-                return FormValidation.warning("Please select a disk type...");
-            }
-            return FormValidation.ok();
         }
 
         public FormValidation doCheckLabelString(@QueryParameter String value, @QueryParameter Node.Mode mode) {

@@ -1,10 +1,7 @@
 package com.google.jenkins.plugins.computeengine.client;
 
 import com.google.api.services.compute.Compute;
-import com.google.api.services.compute.model.MachineType;
-import com.google.api.services.compute.model.Region;
-import com.google.api.services.compute.model.RegionList;
-import com.google.api.services.compute.model.Zone;
+import com.google.api.services.compute.model.*;
 import com.google.inject.matcher.Matchers;
 import com.google.jenkins.plugins.computeengine.AcceleratorConfiguration;
 import com.google.jenkins.plugins.computeengine.ComputeEngineCloud;
@@ -20,6 +17,7 @@ import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.junit.MockitoJUnitRunner;
 
+import javax.imageio.ImageTypeSpecifier;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -40,7 +38,11 @@ public class InstanceConfigurationTest {
     static final String BOOT_DISK_PROJECT_ID = PROJECT_ID;
     static final String BOOT_DISK_SIZE_GB_STR = "10";
     static final Node.Mode NODE_MODE = Node.Mode.EXCLUSIVE;
-    static final AcceleratorConfiguration ACCELERATOR_CONFIGURATION = new AcceleratorConfiguration("test-gpu", "1");
+    static final String ACCELERATOR_NAME = "test-gpu";
+    static final String ACCELERATOR_COUNT = "1";
+    public final String NETWORK_NAME = "test-network";
+    public final String SUBNETWORK_NAME = "test-subnetwork";
+
 
     @Mock
     public ComputeClient computeClient;
@@ -56,10 +58,26 @@ public class InstanceConfigurationTest {
         zones.add(new Zone().setName(ZONE).setSelfLink(ZONE));
         List<MachineType> machineTypes = new ArrayList<MachineType>();
         machineTypes.add(new MachineType().setName(MACHINE_TYPE).setSelfLink(MACHINE_TYPE));
+        List<DiskType> diskTypes = new ArrayList<DiskType>();
+        diskTypes.add(new DiskType().setName(BOOT_DISK_TYPE).setSelfLink(BOOT_DISK_TYPE));
+        List<Image> imageTypes = new ArrayList<Image>();
+        imageTypes.add(new Image().setName(BOOT_DISK_IMAGE_NAME).setSelfLink(BOOT_DISK_IMAGE_NAME));
+        List<Network> networks = new ArrayList<Network>();
+        networks.add(new Network().setName(NETWORK_NAME).setSelfLink(NETWORK_NAME));
+        List<Subnetwork> subnetworks = new ArrayList<Subnetwork>();
+        subnetworks.add(new Subnetwork().setName(SUBNETWORK_NAME).setSelfLink(SUBNETWORK_NAME));
+        List<AcceleratorType> acceleratorTypes = new ArrayList<AcceleratorType>();
+        acceleratorTypes.add(new AcceleratorType().setName(ACCELERATOR_NAME).setSelfLink(ACCELERATOR_NAME).setMaximumCardsPerInstance(Integer.parseInt(ACCELERATOR_COUNT)));
 
         Mockito.when(computeClient.getRegions()).thenReturn(regions);
         Mockito.when(computeClient.getZones(anyString())).thenReturn(zones);
         Mockito.when(computeClient.getMachineTypes(anyString())).thenReturn(machineTypes);
+        Mockito.when(computeClient.getBootDiskTypes(anyString())).thenReturn(diskTypes);
+        Mockito.when(computeClient.getImages(anyString())).thenReturn(imageTypes);
+        Mockito.when(computeClient.getAcceleratorTypes(anyString())).thenReturn(acceleratorTypes);
+        //Mockito.when(computeClient.getNetworks(anyString())).thenReturn(networks);
+        //Mockito.when(computeClient.getSubnetworks(anyString(), anyString())).thenReturn(subnetworks);
+        //Mockito.when(computeClient.getSubnetworks(anyString(), anyString(), anyString())).thenReturn(subnetworks);
 
         computeClient.setProjectId(PROJECT_ID);
     }
@@ -91,9 +109,10 @@ public class InstanceConfigurationTest {
                 BOOT_DISK_PROJECT_ID,
                 BOOT_DISK_SIZE_GB_STR,
                 NODE_MODE,
-                ACCELERATOR_CONFIGURATION);
+                new AcceleratorConfiguration(ACCELERATOR_NAME, ACCELERATOR_COUNT));
 
         InstanceConfiguration.DescriptorImpl.setComputeClient(computeClient);
+        AcceleratorConfiguration.DescriptorImpl.setComputeClient(computeClient);
 
         List<InstanceConfiguration> configs = new ArrayList<InstanceConfiguration>();
         configs.add(want);
@@ -103,7 +122,7 @@ public class InstanceConfigurationTest {
 
         r.submit(r.createWebClient().goTo("configure").getFormByName("config"));
         InstanceConfiguration got = ((ComputeEngineCloud) r.jenkins.clouds.iterator().next()).getInstanceConfig(CONFIG_DESC);
-        r.assertEqualBeans(want, got, "region,zone,machineType");
+        r.assertEqualBeans(want, got, "region,zone,machineType,bootDiskType,bootDiskSourceImageName,bootDiskSourceImageProject,bootDiskSizeGb,acceleratorConfiguration");
     }
 
 }
