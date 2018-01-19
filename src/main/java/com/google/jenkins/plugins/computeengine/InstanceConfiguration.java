@@ -58,7 +58,10 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
     }};
 
     @DataBoundConstructor
-    public InstanceConfiguration(String region, String zone, String machineType, String labelString,
+    public InstanceConfiguration(String region,
+                                 String zone,
+                                 String machineType,
+                                 String labelString,
                                  String description,
                                  String bootDiskType,
                                  String bootDiskAutoDeleteStr,
@@ -149,6 +152,12 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
             return DEFAULT_BOOT_DISK_SIZE_GB.toString();
         }
 
+        private static ComputeClient computeClient;
+
+        public static void setComputeClient(ComputeClient client) {
+            computeClient = client;
+        }
+
         @Override
         public String getHelpFile(String fieldName) {
             String p = super.getHelpFile(fieldName);
@@ -162,8 +171,7 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
             ListBoxModel items = new ListBoxModel();
             items.add("");
             try {
-                ClientFactory clientFactory = new ClientFactory(context, new ArrayList<DomainRequirement>(), credentialsId);
-                ComputeClient compute = clientFactory.compute();
+                ComputeClient compute = computeClient(context, credentialsId);
                 List<Region> regions = compute.getRegions();
 
                 for (Region r : regions) {
@@ -189,12 +197,8 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
                                             @QueryParameter("credentialsId") @RelativePath("..") final String credentialsId) {
             ListBoxModel items = new ListBoxModel();
             items.add("");
-            if (region == null || region.isEmpty() || credentialsId == null || credentialsId.isEmpty()) {
-                return items;
-            }
             try {
-                ClientFactory clientFactory = new ClientFactory(context, new ArrayList<DomainRequirement>(), credentialsId);
-                ComputeClient compute = clientFactory.compute();
+                ComputeClient compute = computeClient(context, credentialsId);
                 List<Zone> zones = compute.getZones(region);
 
                 for (Zone z : zones) {
@@ -205,6 +209,9 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
                 items.clear();
                 items.add("Error retrieving zones");
                 return items;
+            } catch (IllegalArgumentException iae) {
+                //TODO log
+                return null;
             }
         }
 
@@ -220,12 +227,8 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
                                                    @QueryParameter("credentialsId") @RelativePath("..") final String credentialsId) {
             ListBoxModel items = new ListBoxModel();
             items.add("");
-            if (zone == null || zone.isEmpty() || credentialsId == null || credentialsId.isEmpty()) {
-                return items;
-            }
             try {
-                ClientFactory clientFactory = new ClientFactory(context, new ArrayList<DomainRequirement>(), credentialsId);
-                ComputeClient compute = clientFactory.compute();
+                ComputeClient compute = computeClient(context, credentialsId);
                 List<MachineType> machineTypes = compute.getMachineTypes(zone);
 
                 for (MachineType m : machineTypes) {
@@ -236,6 +239,9 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
                 items.clear();
                 items.add("Error retrieving machine types");
                 return items;
+            } catch (IllegalArgumentException iae) {
+                //TODO log
+                return null;
             }
         }
 
@@ -255,8 +261,7 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
                 return items;
             }
             try {
-                ClientFactory clientFactory = new ClientFactory(context, new ArrayList<DomainRequirement>(), credentialsId);
-                ComputeClient compute = clientFactory.compute();
+                ComputeClient compute = computeClient(context, credentialsId);
                 List<Network> networks = compute.getNetworks(projectId);
 
                 for (Network n : networks) {
@@ -288,18 +293,17 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
                 return items;
             }
 
-            if(network.endsWith("default")) {
+            if (network.endsWith("default")) {
                 items.add(new ListBoxModel.Option("default", "default", true));
                 return items;
             }
 
             try {
-                ClientFactory clientFactory = new ClientFactory(context, new ArrayList<DomainRequirement>(), credentialsId);
-                ComputeClient compute = clientFactory.compute();
+                ComputeClient compute = computeClient(context, credentialsId);
                 List<Subnetwork> subnetworks = compute.getSubnetworks(projectId, network, region);
 
-                if(subnetworks.size() == 0) {
-                 items.add(new ListBoxModel.Option(ERROR_NO_SUBNETS, ERROR_NO_SUBNETS, true));
+                if (subnetworks.size() == 0) {
+                    items.add(new ListBoxModel.Option(ERROR_NO_SUBNETS, ERROR_NO_SUBNETS, true));
                     return items;
                 }
 
@@ -335,8 +339,7 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
                 return items;
             }
             try {
-                ClientFactory clientFactory = new ClientFactory(context, new ArrayList<DomainRequirement>(), credentialsId);
-                ComputeClient compute = clientFactory.compute();
+                ComputeClient compute = computeClient(context, credentialsId);
                 List<DiskType> diskTypes = compute.getBootDiskTypes(zone);
 
                 for (DiskType dt : diskTypes) {
@@ -377,8 +380,7 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
             }
 
             try {
-                ClientFactory clientFactory = new ClientFactory(context, new ArrayList<DomainRequirement>(), credentialsId);
-                ComputeClient compute = clientFactory.compute();
+                ComputeClient compute = computeClient(context, credentialsId);
                 List<Image> images = compute.getImages(projectId);
 
                 for (Image i : images) {
@@ -404,6 +406,14 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
                         + " it's marked to only run jobs that are exclusively tied to itself or a label.");
             }
             return FormValidation.ok();
+        }
+
+        private static ComputeClient computeClient(Jenkins context, String credentialsId) throws IOException {
+            if (computeClient != null) {
+                return computeClient;
+            }
+            ClientFactory clientFactory = new ClientFactory(context, new ArrayList<DomainRequirement>(), credentialsId);
+            return clientFactory.compute();
         }
     }
 }

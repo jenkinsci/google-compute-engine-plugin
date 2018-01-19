@@ -11,6 +11,7 @@ import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
@@ -27,8 +28,7 @@ import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.spy;
 
 @RunWith(MockitoJUnitRunner.class)
-public class ComputeClientTest {
-    @Mock
+public class ComputeClientTest {    @Mock
     public Compute compute;
 
     @Mock
@@ -40,21 +40,35 @@ public class ComputeClientTest {
     @Mock
     public RegionList regionList;
 
+    @InjectMocks
+    ComputeClient computeClient;
+
+    List<Region> listOfRegions;
+
+    @Before
+    public void init() throws Exception {
+        listOfRegions = new ArrayList<Region>();
+
+        // Mock regions
+        Mockito.when(regionList.getItems()).thenReturn(listOfRegions);
+        Mockito.when(regionsListCall.execute()).thenReturn(regionList);
+        Mockito.when(regions.list(InstanceConfigurationTest.PROJECT_ID)).thenReturn(regionsListCall);
+        Mockito.when(compute.regions()).thenReturn(regions);
+
+        // Mock zones
+
+
+        computeClient.setProjectId(InstanceConfigurationTest.PROJECT_ID);
+    }
+
     @Test
     public void getRegions() throws IOException {
-        List<Region> listOfRegions = new ArrayList<Region>();
+        listOfRegions.clear();
         listOfRegions.add(new Region().setName("us-west1"));
         listOfRegions.add(new Region().setName("eu-central1"));
         listOfRegions.add(new Region().setName("us-central1"));
         listOfRegions.add(new Region().setName("us-east1")
                 .setDeprecated(new DeprecationStatus().setDeprecated("DEPRECATED")));
-
-        Mockito.when(regionList.getItems()).thenReturn(listOfRegions);
-        Mockito.when(regionsListCall.execute()).thenReturn(regionList);
-        Mockito.when(regions.list("test-project")).thenReturn(regionsListCall);
-        Mockito.when(compute.regions()).thenReturn(regions);
-
-        ComputeClient computeClient = new ComputeClient(compute, "test-project");
 
         assertEquals(3, computeClient.getRegions().size());
         assertEquals("eu-central1", computeClient.getRegions().get(0).getName());

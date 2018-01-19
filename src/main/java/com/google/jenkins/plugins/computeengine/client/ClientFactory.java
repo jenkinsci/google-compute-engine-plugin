@@ -33,7 +33,9 @@ import hudson.AbortException;
 import hudson.model.ItemGroup;
 import hudson.security.ACL;
 
-/** Creates clients for communicating with Google APIs. */
+/**
+ * Creates clients for communicating with Google APIs.
+ */
 public class ClientFactory {
     public static final String APPLICATION_NAME = "jenkins-google-compute-plugin";
 
@@ -75,7 +77,7 @@ public class ClientFactory {
 
         try {
             this.gcred = credentials.getGoogleCredential(requirement);
-        }catch (GeneralSecurityException e) {
+        } catch (GeneralSecurityException e) {
             throw new AbortException(
                     Messages.ClientFactory_FailedToInitializeHTTPTransport(e.getMessage()));
         }
@@ -94,10 +96,11 @@ public class ClientFactory {
     }
 
     public ComputeClient compute() {
-        return new ComputeClient(
-                new Compute.Builder(transport, jsonFactory, gcred)
-                        .setApplicationName(APPLICATION_NAME)
-                        .build(),
-                credentials.getProjectId());
+        ComputeClient client = new ComputeClient();
+        client.setCompute(new Compute.Builder(transport, jsonFactory, gcred)
+                .setApplicationName(APPLICATION_NAME)
+                .build());
+        client.setProjectId(credentials.getProjectId());
+        return client;
     }
 }

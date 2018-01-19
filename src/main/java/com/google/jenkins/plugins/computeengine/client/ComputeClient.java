@@ -14,11 +14,14 @@ import java.util.List;
  * @see <a href="https://cloud.google.com/compute/">Cloud Engine</a>
  */
 public class ComputeClient {
-    private final Compute compute;
-    private final String projectId;
+    private Compute compute;
+    private String projectId;
 
-    ComputeClient(Compute compute, String projectId) {
+    public void setCompute(Compute compute) {
         this.compute = compute;
+    }
+
+    public void setProjectId(String projectId) {
         this.projectId = projectId;
     }
 
