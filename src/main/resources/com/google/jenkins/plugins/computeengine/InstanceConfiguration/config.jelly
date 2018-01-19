@@ -26,8 +26,8 @@
             <f:entry field="machineType" title="${%Machine Type}">
                 <f:select/>
             </f:entry>
-            <f:entry field="preemptibleStr" title="${%Preemptible?}">
-                <f:checkbox checked="false"/>
+            <f:entry field="preemptible" title="${%Preemptible?}">
+                <f:checkbox/>
             </f:entry>
             <f:entry field="startupScript" title="${%Startup script}">
                <f:textarea />
@@ -47,8 +47,8 @@
             <f:entry field="subnetwork" title="${%Subnetwork}">
                 <f:select/>
             </f:entry>
-            <f:entry field="externalAddressStr" title="${%External IP?}">
-                <f:checkbox checked="false"/>
+            <f:entry field="externalAddress" title="${%External IP?}">
+                <f:checkbox/>
             </f:entry>
         </f:section>
 
@@ -65,8 +65,8 @@
             <f:entry field="bootDiskSizeGb" title="${%Size}">
                 <f:textbox default="${descriptor.defaultBootDiskSizeGb()}"/>
             </f:entry>
-            <f:entry field="bootDiskAutoDeleteStr" title="${%Delete on termination?}">
-                <f:checkbox checked="true"/>
+            <f:entry field="bootDiskAutoDelete" title="${%Delete on termination?}">
+                <f:checkbox/>
             </f:entry>
         </f:section>
 

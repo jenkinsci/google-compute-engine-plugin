@@ -29,13 +29,20 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
     public final String region;
     public final String zone;
     public final String machineType;
+    public final String startupScript;
+    public final boolean preemptible;
     public final String description;
     public final String labels;
     public final String bootDiskType;
-    public final Boolean bootDiskAutoDelete;
+    public final boolean bootDiskAutoDelete;
     public final String bootDiskSourceImageName;
     public final String bootDiskSourceImageProject;
     public Integer bootDiskSizeGb;
+    public final String network;
+    public final String subnetwork;
+    public final boolean externalAddress;
+    public final String networkTags;
+    public final String serviceAccountEmail;
     public final Node.Mode mode;
     public final AcceleratorConfiguration acceleratorConfiguration;
 
@@ -61,26 +68,34 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
     public InstanceConfiguration(String region,
                                  String zone,
                                  String machineType,
+                                 String startupScript,
+                                 boolean preemptible,
                                  String labelString,
                                  String description,
                                  String bootDiskType,
-                                 String bootDiskAutoDeleteStr,
+                                 boolean bootDiskAutoDelete,
                                  String bootDiskSourceImageName,
                                  String bootDiskSourceImageProject,
                                  String bootDiskSizeGbStr,
+                                 String network,
+                                 String subnetwork,
+                                 boolean externalAddress,
+                                 String networkTags,
+                                 String serviceAccountEmail,
                                  Node.Mode mode,
                                  AcceleratorConfiguration acceleratorConfiguration) {
         this.region = region;
         this.zone = zone;
         this.machineType = machineType;
         this.description = description;
+        this.startupScript = startupScript;
+        this.preemptible = preemptible;
 
         // Boot disk
         this.bootDiskType = bootDiskType;
-        this.bootDiskAutoDelete = Boolean.parseBoolean(bootDiskAutoDeleteStr);
+        this.bootDiskAutoDelete = bootDiskAutoDelete;
         this.bootDiskSourceImageName = bootDiskSourceImageName;
         this.bootDiskSourceImageProject = bootDiskSourceImageProject;
-
         try {
             this.bootDiskSizeGb = Integer.parseInt(bootDiskSizeGbStr);
         } catch (NumberFormatException nfe) {
@@ -89,10 +104,13 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
 
 
         // Network
-        //TODO
+        this.network = network;
+        this.subnetwork = subnetwork;
+        this.externalAddress = externalAddress;
+        this.networkTags = Util.fixNull(networkTags);
 
         // IAM
-        //TODO
+        this.serviceAccountEmail = serviceAccountEmail;
 
         // Other
         this.acceleratorConfiguration = acceleratorConfiguration;

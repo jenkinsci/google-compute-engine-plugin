@@ -31,9 +31,11 @@ public class InstanceConfigurationTest {
     static final String ZONE = "us-west1-a";
     static final String LABEL = "LABEL1, LABEL2";
     static final String MACHINE_TYPE = "n1-standard-1";
+    static final String STARTUP_SCRIPT = "#!/bin/bash";
+    static final boolean PREEMPTIBLE = true;
     static final String CONFIG_DESC = "test-config";
     static final String BOOT_DISK_TYPE = "pd-standard";
-    static final String BOOT_DISK_AUTODELETE_STR = "false";
+    static final boolean BOOT_DISK_AUTODELETE = true;
     static final String BOOT_DISK_IMAGE_NAME = "test-image";
     static final String BOOT_DISK_PROJECT_ID = PROJECT_ID;
     static final String BOOT_DISK_SIZE_GB_STR = "10";
@@ -42,6 +44,9 @@ public class InstanceConfigurationTest {
     static final String ACCELERATOR_COUNT = "1";
     public final String NETWORK_NAME = "test-network";
     public final String SUBNETWORK_NAME = "test-subnetwork";
+    public final boolean EXTERNAL_ADDR= true;
+    public final String NETWORK_TAGS = "tag1 tag2";
+    public final String SERVICE_ACCOUNT_EMAIL = "test-service-account";
 
 
     @Mock
@@ -53,20 +58,35 @@ public class InstanceConfigurationTest {
     @Before
     public void init() throws Exception {
         List<Region> regions = new ArrayList<Region>();
+        regions.add(new Region().setName("").setSelfLink(""));
         regions.add(new Region().setName(REGION).setSelfLink(REGION));
+
         List<Zone> zones = new ArrayList<Zone>();
+        zones.add(new Zone().setName("").setSelfLink(""));
         zones.add(new Zone().setName(ZONE).setSelfLink(ZONE));
+
         List<MachineType> machineTypes = new ArrayList<MachineType>();
+        machineTypes.add(new MachineType().setName("").setSelfLink(""));
         machineTypes.add(new MachineType().setName(MACHINE_TYPE).setSelfLink(MACHINE_TYPE));
+
         List<DiskType> diskTypes = new ArrayList<DiskType>();
+        diskTypes.add(new DiskType().setName("").setSelfLink(""));
         diskTypes.add(new DiskType().setName(BOOT_DISK_TYPE).setSelfLink(BOOT_DISK_TYPE));
+
         List<Image> imageTypes = new ArrayList<Image>();
+        imageTypes.add(new Image().setName("").setSelfLink(""));
         imageTypes.add(new Image().setName(BOOT_DISK_IMAGE_NAME).setSelfLink(BOOT_DISK_IMAGE_NAME));
+
         List<Network> networks = new ArrayList<Network>();
+        networks.add(new Network().setName("").setSelfLink(""));
         networks.add(new Network().setName(NETWORK_NAME).setSelfLink(NETWORK_NAME));
+
         List<Subnetwork> subnetworks = new ArrayList<Subnetwork>();
+        subnetworks.add(new Subnetwork().setName("").setSelfLink(""));
         subnetworks.add(new Subnetwork().setName(SUBNETWORK_NAME).setSelfLink(SUBNETWORK_NAME));
+
         List<AcceleratorType> acceleratorTypes = new ArrayList<AcceleratorType>();
+        acceleratorTypes.add(new AcceleratorType().setName("").setSelfLink("").setMaximumCardsPerInstance(0));
         acceleratorTypes.add(new AcceleratorType().setName(ACCELERATOR_NAME).setSelfLink(ACCELERATOR_NAME).setMaximumCardsPerInstance(Integer.parseInt(ACCELERATOR_COUNT)));
 
         Mockito.when(computeClient.getRegions()).thenReturn(regions);
@@ -75,9 +95,8 @@ public class InstanceConfigurationTest {
         Mockito.when(computeClient.getBootDiskTypes(anyString())).thenReturn(diskTypes);
         Mockito.when(computeClient.getImages(anyString())).thenReturn(imageTypes);
         Mockito.when(computeClient.getAcceleratorTypes(anyString())).thenReturn(acceleratorTypes);
-        //Mockito.when(computeClient.getNetworks(anyString())).thenReturn(networks);
-        //Mockito.when(computeClient.getSubnetworks(anyString(), anyString())).thenReturn(subnetworks);
-        //Mockito.when(computeClient.getSubnetworks(anyString(), anyString(), anyString())).thenReturn(subnetworks);
+        Mockito.when(computeClient.getNetworks(anyString())).thenReturn(networks);
+        Mockito.when(computeClient.getSubnetworks(anyString(), anyString(), anyString())).thenReturn(subnetworks);
 
         computeClient.setProjectId(PROJECT_ID);
     }
@@ -85,13 +104,13 @@ public class InstanceConfigurationTest {
     @Test
     public void testClient() throws Exception {
         List<Region> regions = computeClient.getRegions();
-        assert (regions.size() == 1);
-        assert (regions.get(0).getName().equals(REGION));
+        assert (regions.size() == 2);
+        assert (regions.get(1).getName().equals(REGION));
 
         List<Zone> zones = computeClient.getZones(REGION);
-        assert (zones.size() == 1);
-        assert (zones.get(0).getName().equals(ZONE));
-        assert (zones.get(0).getSelfLink().equals(ZONE));
+        assert (zones.size() == 2);
+        assert (zones.get(1).getName().equals(ZONE));
+        assert (zones.get(1).getSelfLink().equals(ZONE));
     }
 
     @Test
@@ -101,13 +120,20 @@ public class InstanceConfigurationTest {
                 REGION,
                 ZONE,
                 MACHINE_TYPE,
+                STARTUP_SCRIPT,
+                PREEMPTIBLE,
                 LABEL,
                 CONFIG_DESC,
                 BOOT_DISK_TYPE,
-                BOOT_DISK_AUTODELETE_STR,
+                BOOT_DISK_AUTODELETE,
                 BOOT_DISK_IMAGE_NAME,
                 BOOT_DISK_PROJECT_ID,
                 BOOT_DISK_SIZE_GB_STR,
+                NETWORK_NAME,
+                SUBNETWORK_NAME,
+                EXTERNAL_ADDR,
+                NETWORK_TAGS,
+                SERVICE_ACCOUNT_EMAIL,
                 NODE_MODE,
                 new AcceleratorConfiguration(ACCELERATOR_NAME, ACCELERATOR_COUNT));
 
@@ -122,7 +148,7 @@ public class InstanceConfigurationTest {
 
         r.submit(r.createWebClient().goTo("configure").getFormByName("config"));
         InstanceConfiguration got = ((ComputeEngineCloud) r.jenkins.clouds.iterator().next()).getInstanceConfig(CONFIG_DESC);
-        r.assertEqualBeans(want, got, "region,zone,machineType,bootDiskType,bootDiskSourceImageName,bootDiskSourceImageProject,bootDiskSizeGb,acceleratorConfiguration");
+        r.assertEqualBeans(want, got, "region,zone,machineType,preemptible,startupScript,bootDiskType,bootDiskSourceImageName,bootDiskSourceImageProject,bootDiskSizeGb,acceleratorConfiguration,network,subnetwork,externalAddress,networkTags,serviceAccountEmail");
     }
 
 }
