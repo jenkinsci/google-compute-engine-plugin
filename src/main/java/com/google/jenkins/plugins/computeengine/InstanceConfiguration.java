@@ -20,24 +20,23 @@ import org.kohsuke.stapler.QueryParameter;
 
 import java.io.IOException;
 import java.io.PrintStream;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.Set;
+import java.lang.reflect.Array;
+import java.util.*;
 
 public class InstanceConfiguration implements Describable<InstanceConfiguration> {
+    public final String description;
+    public final String namePrefix;
     public final String region;
     public final String zone;
     public final String machineType;
     public final String startupScript;
     public final boolean preemptible;
-    public final String description;
     public final String labels;
     public final String bootDiskType;
     public final boolean bootDiskAutoDelete;
     public final String bootDiskSourceImageName;
     public final String bootDiskSourceImageProject;
-    public Integer bootDiskSizeGb;
+    public Long bootDiskSizeGb;
     public final String network;
     public final String subnetwork;
     public final boolean externalAddress;
@@ -50,8 +49,9 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
 
     protected transient ComputeEngineCloud cloud;
 
-    public static final Integer DEFAULT_BOOT_DISK_SIZE_GB = 10;
+    public static final Long DEFAULT_BOOT_DISK_SIZE_GB = 10L;
     public static final String ERROR_NO_SUBNETS = "No subnetworks exist in the given network and region.";
+    public static final String METADATA_STARTUP_SCRIPT_KEY = "startup-script";
 
     static final List<String> KNOW_LINUX_IMAGE_PROJECTS = new ArrayList<String>() {{
         add("centos-cloud");
@@ -65,7 +65,8 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
     }};
 
     @DataBoundConstructor
-    public InstanceConfiguration(String region,
+    public InstanceConfiguration(String namePrefix,
+                                 String region,
                                  String zone,
                                  String machineType,
                                  String startupScript,
@@ -84,6 +85,11 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
                                  String serviceAccountEmail,
                                  Node.Mode mode,
                                  AcceleratorConfiguration acceleratorConfiguration) {
+        // General
+        if (!namePrefix.endsWith(("-"))) {
+            namePrefix += "-";
+        }
+        this.namePrefix = namePrefix;
         this.region = region;
         this.zone = zone;
         this.machineType = machineType;
@@ -97,7 +103,7 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
         this.bootDiskSourceImageName = bootDiskSourceImageName;
         this.bootDiskSourceImageProject = bootDiskSourceImageProject;
         try {
-            this.bootDiskSizeGb = Integer.parseInt(bootDiskSizeGbStr);
+            this.bootDiskSizeGb = Long.parseLong(bootDiskSizeGbStr);
         } catch (NumberFormatException nfe) {
             this.bootDiskSizeGb = DEFAULT_BOOT_DISK_SIZE_GB;
         }
@@ -158,6 +164,95 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
         labelSet = Label.parse(labels);
         return this;
     }
+
+    public Instance instance() {
+        Instance i = new Instance();
+        i.setName(namePrefix);
+        i.setDescription(description);
+        i.setZone(zone);
+        i.setMachineType(machineType);
+        i.setMetadata(metadata());
+        i.setTags(tags());
+        i.setScheduling(scheduling());
+        i.setDisks(disks());
+        i.setGuestAccelerators(accelerators());
+        i.setNetworkInterfaces(networkInterfaces());
+        i.setServiceAccounts(serviceAccounts());
+        return i;
+    }
+
+    private Metadata metadata() {
+        Metadata metadata = new Metadata();
+        List<Metadata.Items> items = new ArrayList<>();
+        items.add(new Metadata.Items().setKey(METADATA_STARTUP_SCRIPT_KEY).setValue(startupScript));
+        metadata.setItems(items);
+        return metadata;
+    }
+
+    private Tags tags() {
+        Tags tags = new Tags();
+        tags.setItems(Arrays.asList(networkTags.split("")));
+        return tags;
+    }
+
+    private Scheduling scheduling() {
+        Scheduling scheduling = new Scheduling();
+        scheduling.setPreemptible(preemptible);
+        return scheduling;
+    }
+
+    private List<AttachedDisk> disks() {
+        AttachedDisk boot = new AttachedDisk();
+        boot.setBoot(true);
+        boot.setAutoDelete(bootDiskAutoDelete);
+        boot.setInitializeParams(new AttachedDiskInitializeParams()
+                .setDiskSizeGb(bootDiskSizeGb)
+                .setDiskType(bootDiskType)
+                .setSourceImage(bootDiskSourceImageName)
+        );
+
+        List<AttachedDisk> disks = new ArrayList<>();
+        disks.add(boot);
+        return disks;
+    }
+
+    private List<AcceleratorConfig> accelerators() {
+        List<AcceleratorConfig> accelerators = new ArrayList<>();
+        accelerators.add(new AcceleratorConfig()
+                .setAcceleratorType(acceleratorConfiguration.gpuType)
+                .setAcceleratorCount(acceleratorConfiguration.gpuCount())
+        );
+
+        return accelerators;
+    }
+
+    private List<NetworkInterface> networkInterfaces() {
+        List<NetworkInterface> networkInterfaces = new ArrayList<>();
+        List<AccessConfig> accessConfigs = new ArrayList<>();
+        if (externalAddress) {
+            accessConfigs.add(new AccessConfig()
+                    .setType("ONE_TO_ONE_NAT")
+                    .setName("External NAT")
+            );
+        }
+
+        networkInterfaces.add(new NetworkInterface()
+                .setNetwork(network)
+                .setAccessConfigs(accessConfigs)
+        );
+        return networkInterfaces;
+    }
+
+    private List<ServiceAccount> serviceAccounts() {
+        List<ServiceAccount> serviceAccounts = new ArrayList<>();
+        serviceAccounts.add(
+                new ServiceAccount()
+                .setEmail(serviceAccountEmail)
+                .setScopes(Arrays.asList(new String[]{"https://www.googleapis.com/auth/cloud-platform"}))
+        );
+        return serviceAccounts;
+    }
+
 
     @Extension
     public static final class DescriptorImpl extends Descriptor<InstanceConfiguration> {
@@ -331,8 +426,8 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
                 items.add("Error retrieving subnetworks");
                 return items;
             } catch (IllegalArgumentException iae) {
-               //TODO: log
-               return null;
+                //TODO: log
+                return null;
             }
         }
 

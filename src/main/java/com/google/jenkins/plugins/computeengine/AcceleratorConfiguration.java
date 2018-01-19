@@ -28,6 +28,10 @@ public class AcceleratorConfiguration implements Describable<AcceleratorConfigur
         this.gpuCount = gpuCount;
     }
 
+    public Integer gpuCount() {
+        return Integer.parseInt(gpuCount);
+    }
+
     public Descriptor<AcceleratorConfiguration> getDescriptor() {
         return Jenkins.getInstance().getDescriptor(getClass());
     }
@@ -42,14 +46,6 @@ public class AcceleratorConfiguration implements Describable<AcceleratorConfigur
         }
         final AcceleratorConfiguration other = (AcceleratorConfiguration) obj;
         return this.gpuType.equals(other.gpuType) && this.gpuCount.equals(other.gpuCount);
-    }
-
-    @Override
-    public int hashCode() {
-        int hash = 3;
-        hash = 53 * hash + (this.gpuType != null ? this.gpuType.hashCode() : 0);
-        hash = 53 * hash + Integer.parseInt(gpuCount);
-        return hash;
     }
 
     @Override

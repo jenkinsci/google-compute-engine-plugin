@@ -1,8 +1,6 @@
 package com.google.jenkins.plugins.computeengine.client;
 
-import com.google.api.services.compute.Compute;
 import com.google.api.services.compute.model.*;
-import com.google.inject.matcher.Matchers;
 import com.google.jenkins.plugins.computeengine.AcceleratorConfiguration;
 import com.google.jenkins.plugins.computeengine.ComputeEngineCloud;
 import com.google.jenkins.plugins.computeengine.InstanceConfiguration;
@@ -26,6 +24,7 @@ import static org.mockito.ArgumentMatchers.anyString;
 
 @RunWith(MockitoJUnitRunner.class)
 public class InstanceConfigurationTest {
+    static final String NAME_PREFIX = "test";
     static final String PROJECT_ID = "test-project";
     static final String REGION = "us-west1";
     static final String ZONE = "us-west1-a";
@@ -44,7 +43,7 @@ public class InstanceConfigurationTest {
     static final String ACCELERATOR_COUNT = "1";
     public final String NETWORK_NAME = "test-network";
     public final String SUBNETWORK_NAME = "test-subnetwork";
-    public final boolean EXTERNAL_ADDR= true;
+    public final boolean EXTERNAL_ADDR = true;
     public final String NETWORK_TAGS = "tag1 tag2";
     public final String SERVICE_ACCOUNT_EMAIL = "test-service-account";
 
@@ -116,7 +115,35 @@ public class InstanceConfigurationTest {
     @Test
     public void testConfigRoundtrip() throws Exception {
 
-        InstanceConfiguration want = new InstanceConfiguration(
+        InstanceConfiguration want = instanceConfiguration();
+
+        InstanceConfiguration.DescriptorImpl.setComputeClient(computeClient);
+        AcceleratorConfiguration.DescriptorImpl.setComputeClient(computeClient);
+
+        List<InstanceConfiguration> configs = new ArrayList<InstanceConfiguration>();
+        configs.add(want);
+
+        ComputeEngineCloud gcp = new ComputeEngineCloud("test", PROJECT_ID, "testCredentialsId", "1", configs);
+        r.jenkins.clouds.add(gcp);
+
+        r.submit(r.createWebClient().goTo("configure").getFormByName("config"));
+        InstanceConfiguration got = ((ComputeEngineCloud) r.jenkins.clouds.iterator().next()).getInstanceConfig(CONFIG_DESC);
+        r.assertEqualBeans(want, got, "namePrefix,region,zone,machineType,preemptible,startupScript,bootDiskType,bootDiskSourceImageName,bootDiskSourceImageProject,bootDiskSizeGb,acceleratorConfiguration,network,subnetwork,externalAddress,networkTags,serviceAccountEmail");
+    }
+
+    @Test
+    public void testInstanceModel() {
+        Instance i = instanceConfiguration().instance();
+        assert (i.getZone().equals(ZONE));
+        assert (i.getMachineType().equals(MACHINE_TYPE));
+        assert (i.getMetadata().getItems().get(0).getKey().equals(InstanceConfiguration.METADATA_STARTUP_SCRIPT_KEY));
+        assert (i.getMetadata().getItems().get(0).getValue().equals(STARTUP_SCRIPT));
+        assert (i.getServiceAccounts().get(0).getEmail().equals(SERVICE_ACCOUNT_EMAIL));
+    }
+
+    private InstanceConfiguration instanceConfiguration() {
+        return new InstanceConfiguration(
+                NAME_PREFIX,
                 REGION,
                 ZONE,
                 MACHINE_TYPE,
@@ -136,19 +163,6 @@ public class InstanceConfigurationTest {
                 SERVICE_ACCOUNT_EMAIL,
                 NODE_MODE,
                 new AcceleratorConfiguration(ACCELERATOR_NAME, ACCELERATOR_COUNT));
-
-        InstanceConfiguration.DescriptorImpl.setComputeClient(computeClient);
-        AcceleratorConfiguration.DescriptorImpl.setComputeClient(computeClient);
-
-        List<InstanceConfiguration> configs = new ArrayList<InstanceConfiguration>();
-        configs.add(want);
-
-        ComputeEngineCloud gcp = new ComputeEngineCloud("test", PROJECT_ID, "testCredentialsId", "1", configs);
-        r.jenkins.clouds.add(gcp);
-
-        r.submit(r.createWebClient().goTo("configure").getFormByName("config"));
-        InstanceConfiguration got = ((ComputeEngineCloud) r.jenkins.clouds.iterator().next()).getInstanceConfig(CONFIG_DESC);
-        r.assertEqualBeans(want, got, "region,zone,machineType,preemptible,startupScript,bootDiskType,bootDiskSourceImageName,bootDiskSourceImageProject,bootDiskSizeGb,acceleratorConfiguration,network,subnetwork,externalAddress,networkTags,serviceAccountEmail");
     }
 
 }
