@@ -63,38 +63,45 @@ public class ComputeEngineCloud extends AbstractCloudImpl {
             String instanceCapStr,
             List<? extends InstanceConfiguration> configurations) {
         super(createCloudId(cloudName), instanceCapStr);
+
         if (configurations == null) {
             this.configurations = Collections.emptyList();
         } else {
             this.configurations = configurations;
         }
+
         this.credentialsId = credentialsId;
         this.projectId = projectId;
+
+        readResolve();
     }
 
     public String getCloudName() {
         return name.substring(CLOUD_PREFIX.length());
     }
+
     @Override
     public String getDisplayName() {
-       return getCloudName();
+        return getCloudName();
     }
 
     private static String createCloudId(String name) {
         return CLOUD_PREFIX + name.trim();
     }
+
     private void readResolve() {
         try {
             ClientFactory clientFactory = new ClientFactory(Jenkins.getInstance(), new ArrayList<DomainRequirement>(),
                     credentialsId);
+            this.client = clientFactory.compute();
         } catch (IOException e) {
             this.client = null;
             //TODO: log
         }
 
-        for(InstanceConfiguration c : configurations) {
-           c.cloud = this;
-       }
+        for (InstanceConfiguration c : configurations) {
+            c.cloud = this;
+        }
     }
 
     @Override
@@ -102,10 +109,11 @@ public class ComputeEngineCloud extends AbstractCloudImpl {
         try {
             List<PlannedNode> r = new ArrayList<PlannedNode>();
             final InstanceConfiguration config = getInstanceConfig(label);
-            while(excessWorkload > 0) {
+            while (excessWorkload > 0) {
 
             }
-        } catch (Exception e) {}
+        } catch (Exception e) {
+        }
         return null;
     }
 
@@ -163,13 +171,14 @@ public class ComputeEngineCloud extends AbstractCloudImpl {
             throw HttpResponses.error(SC_BAD_REQUEST, "No such Instance Configuration: " + configuration);
         }
 
-            ComputeEngineInstance node = c.provision(StreamTaskListener.fromStdout(), null);
-            if (node == null)
-                throw HttpResponses.error(SC_BAD_REQUEST, "Could not provision new node.");
-            Jenkins.getInstance().addNode(node);
+        ComputeEngineInstance node = c.provision(StreamTaskListener.fromStdout(), null);
+        if (node == null)
+            throw HttpResponses.error(SC_BAD_REQUEST, "Could not provision new node.");
+        Jenkins.getInstance().addNode(node);
 
-            return HttpResponses.redirectViaContextPath("/computer/" + node.getNodeName());
+        return HttpResponses.redirectViaContextPath("/computer/" + node.getNodeName());
     }
+
     @Extension
     public static class GoogleCloudDescriptor extends Descriptor<Cloud> {
 

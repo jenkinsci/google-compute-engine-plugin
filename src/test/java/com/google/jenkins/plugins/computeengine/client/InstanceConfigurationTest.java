@@ -134,11 +134,41 @@ public class InstanceConfigurationTest {
     @Test
     public void testInstanceModel() {
         Instance i = instanceConfiguration().instance();
+        // General
+        assert(i.getName().startsWith(NAME_PREFIX));
+        assert (i.getDescription().equals(CONFIG_DESC));
         assert (i.getZone().equals(ZONE));
         assert (i.getMachineType().equals(MACHINE_TYPE));
+
+        // Accelerators
+        assert (i.getGuestAccelerators().get(0).getAcceleratorType().equals(ACCELERATOR_NAME));
+        assert (i.getGuestAccelerators().get(0).getAcceleratorCount().equals(Integer.parseInt(ACCELERATOR_COUNT)));
+
+        // Metadata
         assert (i.getMetadata().getItems().get(0).getKey().equals(InstanceConfiguration.METADATA_STARTUP_SCRIPT_KEY));
         assert (i.getMetadata().getItems().get(0).getValue().equals(STARTUP_SCRIPT));
+
+        // Network
+        assert (i.getNetworkInterfaces().get(0).getNetwork().equals(NETWORK_NAME));
+        assert (i.getNetworkInterfaces().get(0).getSubnetwork().equals(SUBNETWORK_NAME));
+        assert (i.getNetworkInterfaces().get(0).getAccessConfigs().get(0).getType().equals("ONE_TO_ONE_NAT"));
+        assert (i.getNetworkInterfaces().get(0).getAccessConfigs().get(0).getName().equals("External NAT"));
+
+        // Tags
+        assert (i.getTags().getItems().size() == NETWORK_TAGS.split(" ").length);
+        assert (i.getTags().getItems().get(0).equals(NETWORK_TAGS.split(" ")[0]));
+        assert (i.getTags().getItems().get(1).equals(NETWORK_TAGS.split(" ")[1]));
+
+        // IAM
         assert (i.getServiceAccounts().get(0).getEmail().equals(SERVICE_ACCOUNT_EMAIL));
+
+        // Disks
+        assert (i.getDisks().get(0).getAutoDelete().equals(BOOT_DISK_AUTODELETE));
+        assert (i.getDisks().get(0).getBoot().equals(true));
+        assert (i.getDisks().get(0).getInitializeParams().getDiskType().equals(BOOT_DISK_TYPE));
+        assert (i.getDisks().get(0).getInitializeParams().getDiskSizeGb().equals(Long.parseLong(BOOT_DISK_SIZE_GB_STR)));
+        assert (i.getDisks().get(0).getInitializeParams().getSourceImage().equals(BOOT_DISK_IMAGE_NAME));
+
     }
 
     private InstanceConfiguration instanceConfiguration() {

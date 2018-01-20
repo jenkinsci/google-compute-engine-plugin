@@ -1,7 +1,6 @@
 package com.google.jenkins.plugins.computeengine;
 
 import com.cloudbees.plugins.credentials.domains.DomainRequirement;
-import com.google.api.services.compute.Compute;
 import com.google.api.services.compute.model.*;
 import com.google.jenkins.plugins.computeengine.client.ClientFactory;
 import com.google.jenkins.plugins.computeengine.client.ComputeClient;
@@ -9,7 +8,6 @@ import hudson.Extension;
 import hudson.RelativePath;
 import hudson.model.*;
 import hudson.model.labels.LabelAtom;
-import hudson.slaves.NodeProperty;
 import hudson.util.FormValidation;
 import hudson.Util;
 import hudson.util.ListBoxModel;
@@ -20,8 +18,10 @@ import org.kohsuke.stapler.QueryParameter;
 
 import java.io.IOException;
 import java.io.PrintStream;
-import java.lang.reflect.Array;
 import java.util.*;
+
+import org.apache.commons.text.RandomStringGenerator;
+
 
 public class InstanceConfiguration implements Describable<InstanceConfiguration> {
     public final String description;
@@ -145,12 +145,14 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
     public ComputeEngineInstance provision(TaskListener listener, Label requiredLabel) throws IOException {
         PrintStream logger = listener.getLogger();
         try {
+            cloud.client.insertInstance(cloud.projectId, instance());
+            logger.println("Sent insert request");
             ComputeEngineInstance agent = new ComputeEngineInstance(
                     "name", "desc", "remoteFS", 1, mode, labels, new ComputeEngineLinuxLauncher(),
                     null);
             return agent;
         } catch (Descriptor.FormException fe) {
-            //TODO: log
+            logger.printf("Error provisioning instance: %v\n", fe);
             return null;
         }
     }
@@ -167,10 +169,10 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
 
     public Instance instance() {
         Instance i = new Instance();
-        i.setName(namePrefix);
+        i.setName(uniqueName());
         i.setDescription(description);
-        i.setZone(zone);
-        i.setMachineType(machineType);
+        i.setZone(ComputeClient.zoneFromSelfLink(zone));
+        i.setMachineType(stripSelfLinkPrefix(machineType));
         i.setMetadata(metadata());
         i.setTags(tags());
         i.setScheduling(scheduling());
@@ -181,18 +183,34 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
         return i;
     }
 
+    private String uniqueName() {
+        char[][] pairs = {{'a', 'z'}, {'0', '9'}};
+        RandomStringGenerator generator = new RandomStringGenerator.Builder()
+                .withinRange(pairs)
+                .build();
+        String suffix = generator.generate(6);
+
+        return namePrefix + suffix;
+    }
+
     private Metadata metadata() {
-        Metadata metadata = new Metadata();
-        List<Metadata.Items> items = new ArrayList<>();
-        items.add(new Metadata.Items().setKey(METADATA_STARTUP_SCRIPT_KEY).setValue(startupScript));
-        metadata.setItems(items);
-        return metadata;
+        if (notNullOrEmpty(startupScript)) {
+            Metadata metadata = new Metadata();
+            List<Metadata.Items> items = new ArrayList<>();
+            items.add(new Metadata.Items().setKey(METADATA_STARTUP_SCRIPT_KEY).setValue(startupScript));
+            metadata.setItems(items);
+            return metadata;
+        }
+        return null;
     }
 
     private Tags tags() {
-        Tags tags = new Tags();
-        tags.setItems(Arrays.asList(networkTags.split("")));
-        return tags;
+        if (notNullOrEmpty(networkTags)) {
+            Tags tags = new Tags();
+            tags.setItems(Arrays.asList(networkTags.split(" ")));
+            return tags;
+        }
+        return null;
     }
 
     private Scheduling scheduling() {
@@ -217,13 +235,15 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
     }
 
     private List<AcceleratorConfig> accelerators() {
-        List<AcceleratorConfig> accelerators = new ArrayList<>();
-        accelerators.add(new AcceleratorConfig()
-                .setAcceleratorType(acceleratorConfiguration.gpuType)
-                .setAcceleratorCount(acceleratorConfiguration.gpuCount())
-        );
-
-        return accelerators;
+        if (acceleratorConfiguration != null && notNullOrEmpty(acceleratorConfiguration.gpuCount) && notNullOrEmpty(acceleratorConfiguration.gpuType)) {
+            List<AcceleratorConfig> accelerators = new ArrayList<>();
+            accelerators.add(new AcceleratorConfig()
+                    .setAcceleratorType(acceleratorConfiguration.gpuType)
+                    .setAcceleratorCount(acceleratorConfiguration.gpuCount())
+            );
+            return accelerators;
+        }
+        return null;
     }
 
     private List<NetworkInterface> networkInterfaces() {
@@ -235,24 +255,43 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
                     .setName("External NAT")
             );
         }
+        NetworkInterface nic = new NetworkInterface()
+                .setNetwork(stripSelfLinkPrefix(network))
+                .setAccessConfigs(accessConfigs);
 
-        networkInterfaces.add(new NetworkInterface()
-                .setNetwork(network)
-                .setAccessConfigs(accessConfigs)
-        );
+        // Don't include subnetwork name if using default
+        if(!subnetwork.equals("default")) {
+            nic.setSubnetwork(stripSelfLinkPrefix(subnetwork));
+        }
+
+        networkInterfaces.add(nic);
         return networkInterfaces;
     }
 
     private List<ServiceAccount> serviceAccounts() {
-        List<ServiceAccount> serviceAccounts = new ArrayList<>();
-        serviceAccounts.add(
-                new ServiceAccount()
-                .setEmail(serviceAccountEmail)
-                .setScopes(Arrays.asList(new String[]{"https://www.googleapis.com/auth/cloud-platform"}))
-        );
-        return serviceAccounts;
+        if (notNullOrEmpty(serviceAccountEmail)) {
+            List<ServiceAccount> serviceAccounts = new ArrayList<>();
+            serviceAccounts.add(
+                    new ServiceAccount()
+                            .setEmail(serviceAccountEmail)
+                            .setScopes(Arrays.asList(new String[]{"https://www.googleapis.com/auth/cloud-platform"}))
+            );
+            return serviceAccounts;
+        } else {
+            return null;
+        }
     }
 
+    private static boolean notNullOrEmpty(String s) {
+        return s != null && !s.isEmpty();
+    }
+
+    private static String stripSelfLinkPrefix(String s) {
+        if (s.contains("https://www.googleapis.com")) {
+            return s.substring(s.indexOf("/projects/") + 1, s.length());
+        }
+        return s;
+    }
 
     @Extension
     public static final class DescriptorImpl extends Descriptor<InstanceConfiguration> {
