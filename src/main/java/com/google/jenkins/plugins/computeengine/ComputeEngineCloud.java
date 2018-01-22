@@ -10,19 +10,18 @@ import com.google.jenkins.plugins.computeengine.client.ClientFactory;
 import com.google.jenkins.plugins.computeengine.client.ComputeClient;
 import com.google.jenkins.plugins.credentials.oauth.GoogleOAuth2Credentials;
 import hudson.Extension;
-import hudson.model.Item;
+import hudson.model.*;
 
 import java.io.IOException;
 import java.util.Collections;
+import java.util.concurrent.Callable;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 
-import hudson.model.Label;
-import hudson.model.Node;
 import hudson.security.ACL;
 import hudson.slaves.AbstractCloudImpl;
 import hudson.slaves.NodeProvisioner.PlannedNode;
 import hudson.slaves.Cloud;
-import hudson.model.Descriptor;
 
 import javax.annotation.Nonnull;
 import javax.servlet.ServletException;
@@ -41,11 +40,9 @@ import org.kohsuke.stapler.HttpResponse;
 import org.kohsuke.stapler.QueryParameter;
 
 import static javax.servlet.http.HttpServletResponse.SC_BAD_REQUEST;
-import static javax.servlet.http.HttpServletResponse.SC_INTERNAL_SERVER_ERROR;
 
 public class ComputeEngineCloud extends AbstractCloudImpl {
-    private static final Logger logger =
-            Logger.getLogger(ComputeEngineCloud.class.getName());
+    private static final Logger LOGGER = Logger.getLogger(ComputeEngineCloud.class.getName());
 
     private static final String CLOUD_PREFIX = "gce-";
 
@@ -109,8 +106,25 @@ public class ComputeEngineCloud extends AbstractCloudImpl {
         try {
             List<PlannedNode> r = new ArrayList<PlannedNode>();
             final InstanceConfiguration config = getInstanceConfig(label);
+            LOGGER.log(Level.INFO, "Provisioning node from config " + config + " for excess workload of " + excessWorkload + " units of label '" + label + "'");
             while (excessWorkload > 0) {
-
+                if (config == null)
+                    break;
+                final ComputeEngineInstance node = config.provision(StreamTaskListener.fromStdout(), label);
+                Jenkins.getInstance().addNode(node);
+                r.add(new PlannedNode(config.getDisplayName(), Computer.threadPoolForRemoting.submit(new Callable<Node>() {
+                    public Node call() throws Exception {
+                        long startTime = System.currentTimeMillis();
+                        while ((System.currentTimeMillis() - startTime) < config.getLaunchTimeout() * 1000) {
+                            try {
+                                node.toComputer().connect(false).get();
+                            } catch (Exception e) {}
+                        }
+                        LOGGER.log(Level.WARNING, "Failed to connect to node within launch timeout");
+                        return node;
+                    }
+                }), node.getNumExecutors()));
+                excessWorkload -= 1;
             }
         } catch (Exception e) {
         }

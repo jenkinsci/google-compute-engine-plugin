@@ -31,6 +31,7 @@ public class InstanceConfigurationTest {
     static final String LABEL = "LABEL1, LABEL2";
     static final String MACHINE_TYPE = "n1-standard-1";
     static final String STARTUP_SCRIPT = "#!/bin/bash";
+    static final String NUM_EXECUTORS = "1";
     static final boolean PREEMPTIBLE = true;
     static final String CONFIG_DESC = "test-config";
     static final String BOOT_DISK_TYPE = "pd-standard";
@@ -177,6 +178,7 @@ public class InstanceConfigurationTest {
                 REGION,
                 ZONE,
                 MACHINE_TYPE,
+                NUM_EXECUTORS,
                 STARTUP_SCRIPT,
                 PREEMPTIBLE,
                 LABEL,

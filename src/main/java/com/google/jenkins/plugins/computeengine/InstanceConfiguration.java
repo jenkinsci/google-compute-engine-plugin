@@ -29,6 +29,8 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
     public final String region;
     public final String zone;
     public final String machineType;
+    public Integer numExecutors;
+    public final String numExecutorsStr;
     public final String startupScript;
     public final boolean preemptible;
     public final String labels;
@@ -50,6 +52,7 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
     protected transient ComputeEngineCloud cloud;
 
     public static final Long DEFAULT_BOOT_DISK_SIZE_GB = 10L;
+    public static final Integer DEFAULT_NUM_EXECUTORS = 1;
     public static final String ERROR_NO_SUBNETS = "No subnetworks exist in the given network and region.";
     public static final String METADATA_STARTUP_SCRIPT_KEY = "startup-script";
 
@@ -69,6 +72,7 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
                                  String region,
                                  String zone,
                                  String machineType,
+                                 String numExecutorsStr,
                                  String startupScript,
                                  boolean preemptible,
                                  String labelString,
@@ -89,6 +93,7 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
         if (!namePrefix.endsWith(("-"))) {
             namePrefix += "-";
         }
+
         this.namePrefix = namePrefix;
         this.region = region;
         this.zone = zone;
@@ -96,6 +101,12 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
         this.description = description;
         this.startupScript = startupScript;
         this.preemptible = preemptible;
+        this.numExecutorsStr = numExecutorsStr;
+        try {
+            numExecutors = Integer.parseInt(numExecutorsStr);
+        } catch (Exception e) {
+            numExecutors = DEFAULT_NUM_EXECUTORS;
+        }
 
         // Boot disk
         this.bootDiskType = bootDiskType;
@@ -104,7 +115,7 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
         this.bootDiskSourceImageProject = bootDiskSourceImageProject;
         try {
             this.bootDiskSizeGb = Long.parseLong(bootDiskSizeGbStr);
-        } catch (NumberFormatException nfe) {
+        } catch (Exception e) {
             this.bootDiskSizeGb = DEFAULT_BOOT_DISK_SIZE_GB;
         }
 
@@ -142,15 +153,23 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
         return mode;
     }
 
+    public String getDisplayName() {
+        return description;
+    }
+
+    //TODO: Make configurable
+    public int getLaunchTimeout() {
+        return Integer.MAX_VALUE;
+    }
+
     public ComputeEngineInstance provision(TaskListener listener, Label requiredLabel) throws IOException {
         PrintStream logger = listener.getLogger();
         try {
-            cloud.client.insertInstance(cloud.projectId, instance());
+            Instance i = instance();
+            Operation operation = cloud.client.insertInstance(cloud.projectId, i);
             logger.println("Sent insert request");
-            ComputeEngineInstance agent = new ComputeEngineInstance(
-                    "name", "desc", "remoteFS", 1, mode, labels, new ComputeEngineLinuxLauncher(),
-                    null);
-            return agent;
+            ComputeEngineInstance instance = new ComputeEngineInstance(i.getName(), i.getDescription(),"", numExecutors, mode, requiredLabel.getName(), new ComputeEngineComputerLauncher(operation), null, getLaunchTimeout());
+            return instance;
         } catch (Descriptor.FormException fe) {
             logger.printf("Error provisioning instance: %v\n", fe);
             return null;

@@ -29,6 +29,9 @@
             <f:entry field="machineType" title="${%Machine Type}">
                 <f:select/>
             </f:entry>
+            <f:entry title="${%Number of Executors}" field="numExecutorsStr">
+                <f:textbox default="1" />
+            </f:entry>
             <f:entry field="preemptible" title="${%Preemptible?}">
                 <f:checkbox/>
             </f:entry>

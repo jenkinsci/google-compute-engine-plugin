@@ -1,5 +1,6 @@
 package com.google.jenkins.plugins.computeengine;
 
+import com.google.api.services.compute.model.Operation;
 import hudson.Extension;
 import hudson.model.Descriptor;
 import hudson.model.TaskListener;
@@ -14,6 +15,7 @@ import java.util.Collections;
 import java.util.List;
 
 public class ComputeEngineInstance extends AbstractCloudSlave {
+  public Integer launchTimeout;
 
   public ComputeEngineInstance(String name,
                                String nodeDescription,
@@ -22,10 +24,12 @@ public class ComputeEngineInstance extends AbstractCloudSlave {
                                Node.Mode mode,
                                String labelString,
                                ComputerLauncher launcher,
-                               RetentionStrategy retentionStrategy)
+                               RetentionStrategy retentionStrategy,
+                               Integer launchTimeout)
       throws Descriptor.FormException,
       IOException {
     super(name, nodeDescription, remoteFS, numExecutors, mode, labelString, launcher, retentionStrategy, Collections.<NodeProperty<?>> emptyList());
+    this.launchTimeout = launchTimeout;
   }
 
   @Override

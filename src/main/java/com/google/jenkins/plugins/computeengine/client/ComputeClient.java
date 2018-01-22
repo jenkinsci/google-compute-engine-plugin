@@ -177,14 +177,13 @@ public class ComputeClient {
         return subnetworks;
     }
 
-    public Instance insertInstance(Instance i) throws IOException {
+    public Operation insertInstance(Instance i) throws IOException {
         return insertInstance(projectId, i);
     }
 
-    public Instance insertInstance(String projectId, Instance i) throws IOException {
+    public Operation insertInstance(String projectId, Instance i) throws IOException {
         Compute.Instances.Insert request = compute.instances().insert(projectId, i.getZone(), i);
-        request.execute();
-        return i;
+        return request.execute();
     }
 
     public List<Subnetwork> getSubnetworks(String networkSelfLink, String region) throws IOException {
