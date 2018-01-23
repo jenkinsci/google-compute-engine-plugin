@@ -4,10 +4,7 @@ import com.google.api.services.compute.Compute;
 import com.google.api.services.compute.model.*;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.TimeoutException;
 
 /**
@@ -89,6 +86,7 @@ public class ComputeClient {
     }
 
     public List<DiskType> getBootDiskTypes(String projectId, String zone) throws IOException {
+        zone = zoneFromSelfLink(zone);
         List<DiskType> diskTypes = this.getDiskTypes(projectId, zone);
 
         // No local disks
@@ -171,19 +169,22 @@ public class ComputeClient {
     }
 
     public Operation terminateInstance(String projectId, String zone, String InstanceId) throws IOException {
+        zone = zoneFromSelfLink(zone);
         return compute.instances().delete(projectId, zone, InstanceId).execute();
     }
 
     public Operation.Error terminateInstanceWithStatus(String projectId, String zone, String instanceId, String desiredStatus) throws IOException, InterruptedException {
+        zone = zoneFromSelfLink(zone);
         Instance i = getInstance(projectId, zone, instanceId);
-        if(i.getStatus() == desiredStatus) {
+        if (i.getStatus() == desiredStatus) {
             Operation op = compute.instances().delete(projectId, zone, instanceId).execute();
-            return waitForOperationCompletion(projectId, op, 5*60*1000);
+            return waitForOperationCompletion(projectId, op, 5 * 60 * 1000);
         }
         return null;
     }
 
     public Instance getInstance(String projectId, String zone, String instanceId) throws IOException {
+        zone = zoneFromSelfLink(zone);
         return compute.instances().get(projectId, zone, instanceId).execute();
     }
 
@@ -198,6 +199,28 @@ public class ComputeClient {
             }
         }
         return instances;
+    }
+
+    /**
+     * Appends metadata to an instance. Any metadata items with existing keys will be overwritten. Otherwise, metadata
+     * is preserved. This method blocks until the operation completes.
+     * @param projectId
+     * @param zone
+     * @param instanceId
+     * @param items
+     * @throws IOException
+     * @throws InterruptedException
+     */
+    public Operation.Error appendInstanceMetadata(String projectId, String zone, String instanceId, List<Metadata.Items> items) throws IOException, InterruptedException {
+        zone = zoneFromSelfLink(zone);
+        Instance instance = getInstance(projectId, zone, instanceId);
+        Metadata existingMetadata = instance.getMetadata();
+
+        List<Metadata.Items> newMetadataItems = mergeMetadataItems(items, existingMetadata.getItems());
+        existingMetadata.setItems(newMetadataItems);
+
+        Operation op = compute.instances().setMetadata(projectId, zone, instanceId, existingMetadata).execute();
+        return waitForOperationCompletion(projectId, op, 60*1000);
     }
 
     public Operation.Error waitForOperationCompletion(String projectId, Operation operation, long timeout)
@@ -246,5 +269,25 @@ public class ComputeClient {
             sb.append("(labels." + l.getKey() + " eq " + l.getValue() + ") ");
         }
         return sb.toString().trim();
+    }
+
+    public static List<Metadata.Items> mergeMetadataItems(List<Metadata.Items> winner, List<Metadata.Items> loser) {
+        if(loser == null) {
+            loser = new ArrayList<Metadata.Items>();
+        }
+
+        // Remove any existing metadata that has the same key(s) as what we're trying to update/append
+        for (Metadata.Items existing : loser) {
+            boolean duplicate = false;
+            for (Metadata.Items newItem : winner) { // Items to append
+                if (existing.getKey().equals(newItem.getKey())) {
+                    duplicate = true;
+                }
+            }
+            if(!duplicate) {
+                winner.add(existing);
+            }
+        }
+        return winner;
     }
 }

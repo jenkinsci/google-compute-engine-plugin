@@ -56,6 +56,8 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
     public static final Integer DEFAULT_NUM_EXECUTORS = 1;
     public static final String ERROR_NO_SUBNETS = "No subnetworks exist in the given network and region.";
     public static final String METADATA_STARTUP_SCRIPT_KEY = "startup-script";
+    public static final String NAT_TYPE = "ONE_TO_ONE_NAT";
+    public static final String NAT_NAME = "External NAT";
 
     static final List<String> KNOW_LINUX_IMAGE_PROJECTS = new ArrayList<String>() {{
         add("centos-cloud");
@@ -272,8 +274,8 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
         List<AccessConfig> accessConfigs = new ArrayList<>();
         if (externalAddress) {
             accessConfigs.add(new AccessConfig()
-                    .setType("ONE_TO_ONE_NAT")
-                    .setName("External NAT")
+                    .setType(NAT_TYPE)
+                    .setName(NAT_NAME)
             );
         }
         NetworkInterface nic = new NetworkInterface()

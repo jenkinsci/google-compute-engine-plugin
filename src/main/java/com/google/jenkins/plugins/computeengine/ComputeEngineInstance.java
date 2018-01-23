@@ -20,7 +20,7 @@ import java.util.logging.Logger;
 public class ComputeEngineInstance extends AbstractCloudSlave {
     private static final Logger LOGGER = Logger.getLogger(ComputeEngineInstance.class.getName());
 
-    public Integer launchTimeout;
+    public Integer launchTimeout; // Seconds
     public final String zone;
     public final String cloudName;
 
@@ -68,6 +68,9 @@ public class ComputeEngineInstance extends AbstractCloudSlave {
 
     }
 
+    public long getLaunchTimeoutMillis() {
+        return launchTimeout * 1000L;
+    }
     public ComputeEngineCloud getCloud() {
         return (ComputeEngineCloud) Jenkins.getInstance().getCloud(cloudName);
     }

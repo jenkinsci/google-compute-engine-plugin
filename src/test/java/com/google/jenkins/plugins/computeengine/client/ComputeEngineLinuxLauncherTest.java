@@ -21,12 +21,12 @@ public class ComputeEngineLinuxLauncherTest {
     @Test
     public void KeyPairGeneration() throws NoSuchAlgorithmException {
         ComputeEngineLinuxLauncher launcher = new ComputeEngineLinuxLauncher(null, null);
-        KeyPair kp = launcher.generateKeys();
+        ComputeEngineLinuxLauncher.GoogleKeyPair kp = launcher.generateKeys();
 
-        assertNotNull(kp.getPrivate());
-        assertNotNull(kp.getPublic());
+        assertNotNull(kp.privateKey);
+        assertNotNull(kp.publicKey);
 
-        assertEquals("", new String(Base64.encode(kp.getPrivate().getEncoded())));
-        assertEquals("", new String(Base64.encode(kp.getPublic().getEncoded())));
+        assert(kp.privateKey.startsWith(ComputeEngineLinuxLauncher.SSH_PUB_KEY_PREFIX));
+        assert(kp.publicKey.endsWith(ComputeEngineLinuxLauncher.SSH_PUB_KEY_SUFFIX));
     }
 }

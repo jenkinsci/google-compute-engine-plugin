@@ -36,9 +36,9 @@ public abstract class ComputeEngineComputerLauncher extends ComputerLauncher {
         // Wait until the Operation from the Instance insert is complete or fails
         Operation.Error opError = new Operation.Error();
         try {
-            LOGGER.info(String.format("Launch will wait {0}s for operation {1} to complete...", computer.getNode().launchTimeout / 1000, insertOperation.getId()));
+            LOGGER.info(String.format("Launch will wait {0}s for operation {1} to complete...", computer.getNode().launchTimeout, insertOperation.getId()));
             // This call will a null error when the operation is complete, or a relevant error if it fails.
-            opError = cloud.client.waitForOperationCompletion(cloud.projectId, insertOperation, computer.getNode().launchTimeout);
+            opError = cloud.client.waitForOperationCompletion(cloud.projectId, insertOperation, computer.getNode().getLaunchTimeoutMillis());
             if (opError != null) {
                 LOGGER.info(String.format("Launch failed while waiting for operation {0} to complete. Operation error was {1}", insertOperation.getId(), opError.getErrors().get(0).getMessage()));
                 return;
@@ -77,7 +77,7 @@ public abstract class ComputeEngineComputerLauncher extends ComputerLauncher {
             }
 
             // Initiate the next launch phase. This is likely an SSH-based process for Linux hosts.
-            launch(computer, listener, null);
+            launch(computer, listener, computer.refreshInstance());
         } catch (IOException ioe) {
            ioe.printStackTrace(listener.error(ioe.getMessage()));
            ComputeEngineInstance node = (ComputeEngineInstance)slaveComputer.getNode();

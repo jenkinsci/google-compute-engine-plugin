@@ -32,6 +32,11 @@ public class ComputeEngineComputer extends AbstractCloudComputer<ComputeEngineIn
         return instance;
     }
 
+    public Instance refreshInstance() throws IOException {
+        instance = _getInstance();
+        return instance;
+    }
+
     /**
      * Returns the most current status of the Instance as reported by the GCE API
      * @return

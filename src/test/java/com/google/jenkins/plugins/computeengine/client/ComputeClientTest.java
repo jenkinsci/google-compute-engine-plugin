@@ -2,6 +2,7 @@ package com.google.jenkins.plugins.computeengine.client;
 
 import com.google.api.services.compute.Compute;
 import com.google.api.services.compute.model.DeprecationStatus;
+import com.google.api.services.compute.model.Metadata;
 import com.google.api.services.compute.model.Region;
 import com.google.api.services.compute.model.RegionList;
 import org.junit.Before;
@@ -80,5 +81,19 @@ public class ComputeClientTest {    @Mock
 
         String got = ComputeClient.buildLabelsFilterString(labels);
         assertEquals(expect, got);
+    }
+
+    @Test
+    public void mergeMetadataItemsTest() {
+        List<Metadata.Items> newItems = new ArrayList<>();
+        newItems.add(new Metadata.Items().setKey("ssh-keys").setValue("new"));
+
+        List<Metadata.Items> existingItems = new ArrayList<>();
+        existingItems.add(new Metadata.Items().setKey("ssh-keys").setValue("old"));
+        existingItems.add(new Metadata.Items().setKey("no-overwrite").setValue("no-overwrite"));
+
+        List<Metadata.Items> merged = ComputeClient.mergeMetadataItems(newItems, existingItems);
+
+        assertEquals(existingItems.size(), merged.size());
     }
 }
