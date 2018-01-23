@@ -67,12 +67,13 @@ public class AcceleratorConfiguration implements Describable<AcceleratorConfigur
         }
 
         public ListBoxModel doFillGpuTypeItems(@AncestorInPath Jenkins context,
+                                               @QueryParameter("projectId") @RelativePath("../..") final String projectId,
                                                @QueryParameter("zone") @RelativePath("..") String zone,
                                                @QueryParameter("credentialsId") @RelativePath("../..") final String credentialsId) {
             ListBoxModel items = new ListBoxModel();
             try {
                 ComputeClient compute = computeClient(context, credentialsId);
-                List<AcceleratorType> acceleratorTypes = compute.getAcceleratorTypes(zone);
+                List<AcceleratorType> acceleratorTypes = compute.getAcceleratorTypes(projectId, zone);
 
                 for (AcceleratorType a : acceleratorTypes) {
                     items.add(a.getName(), a.getSelfLink());

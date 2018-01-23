@@ -1,31 +1,22 @@
 package com.google.jenkins.plugins.computeengine.client;
 
-import com.google.api.client.json.JsonFactory;
-import com.google.api.client.json.jackson.JacksonFactory;
-import com.google.api.client.testing.http.MockHttpTransport;
 import com.google.api.services.compute.Compute;
 import com.google.api.services.compute.model.DeprecationStatus;
 import com.google.api.services.compute.model.Region;
 import com.google.api.services.compute.model.RegionList;
 import org.junit.Before;
-import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Mockito;
-import org.mockito.MockitoAnnotations;
 import org.mockito.junit.MockitoJUnit;
 import org.mockito.junit.MockitoJUnitRunner;
-import org.mockito.junit.MockitoRule;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.*;
 
 import static org.junit.Assert.assertEquals;
-import static org.mockito.Mockito.doReturn;
-import static org.mockito.Mockito.spy;
 
 @RunWith(MockitoJUnitRunner.class)
 public class ComputeClientTest {    @Mock
@@ -54,11 +45,6 @@ public class ComputeClientTest {    @Mock
         Mockito.when(regionsListCall.execute()).thenReturn(regionList);
         Mockito.when(regions.list(InstanceConfigurationTest.PROJECT_ID)).thenReturn(regionsListCall);
         Mockito.when(compute.regions()).thenReturn(regions);
-
-        // Mock zones
-
-
-        computeClient.setProjectId(InstanceConfigurationTest.PROJECT_ID);
     }
 
     @Test
@@ -70,8 +56,8 @@ public class ComputeClientTest {    @Mock
         listOfRegions.add(new Region().setName("us-east1")
                 .setDeprecated(new DeprecationStatus().setDeprecated("DEPRECATED")));
 
-        assertEquals(3, computeClient.getRegions().size());
-        assertEquals("eu-central1", computeClient.getRegions().get(0).getName());
+        assertEquals(3, computeClient.getRegions(InstanceConfigurationTest.PROJECT_ID).size());
+        assertEquals("eu-central1", computeClient.getRegions(InstanceConfigurationTest.PROJECT_ID).get(0).getName());
     }
 
     @Test
@@ -83,5 +69,16 @@ public class ComputeClientTest {    @Mock
 
         zone = "asia-east1-a";
         assertEquals("asia-east1-a", ComputeClient.zoneFromSelfLink(zone));
+    }
+
+    @Test
+    public void labelsToFilterString() {
+        Map<String, String> labels = new LinkedHashMap<String, String>();
+        labels.put("key1", "value1");
+        labels.put("key2", "value2");
+        String expect = "(labels.key1 eq value1) (labels.key2 eq value2)";
+
+        String got = ComputeClient.buildLabelsFilterString(labels);
+        assertEquals(expect, got);
     }
 }

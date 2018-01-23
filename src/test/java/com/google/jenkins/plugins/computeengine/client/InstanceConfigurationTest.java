@@ -89,25 +89,23 @@ public class InstanceConfigurationTest {
         acceleratorTypes.add(new AcceleratorType().setName("").setSelfLink("").setMaximumCardsPerInstance(0));
         acceleratorTypes.add(new AcceleratorType().setName(ACCELERATOR_NAME).setSelfLink(ACCELERATOR_NAME).setMaximumCardsPerInstance(Integer.parseInt(ACCELERATOR_COUNT)));
 
-        Mockito.when(computeClient.getRegions()).thenReturn(regions);
-        Mockito.when(computeClient.getZones(anyString())).thenReturn(zones);
-        Mockito.when(computeClient.getMachineTypes(anyString())).thenReturn(machineTypes);
-        Mockito.when(computeClient.getBootDiskTypes(anyString())).thenReturn(diskTypes);
+        Mockito.when(computeClient.getRegions(anyString())).thenReturn(regions);
+        Mockito.when(computeClient.getZones(anyString(), anyString())).thenReturn(zones);
+        Mockito.when(computeClient.getMachineTypes(anyString(), anyString())).thenReturn(machineTypes);
+        Mockito.when(computeClient.getBootDiskTypes(anyString(), anyString())).thenReturn(diskTypes);
         Mockito.when(computeClient.getImages(anyString())).thenReturn(imageTypes);
-        Mockito.when(computeClient.getAcceleratorTypes(anyString())).thenReturn(acceleratorTypes);
+        Mockito.when(computeClient.getAcceleratorTypes(anyString(), anyString())).thenReturn(acceleratorTypes);
         Mockito.when(computeClient.getNetworks(anyString())).thenReturn(networks);
         Mockito.when(computeClient.getSubnetworks(anyString(), anyString(), anyString())).thenReturn(subnetworks);
-
-        computeClient.setProjectId(PROJECT_ID);
     }
 
     @Test
     public void testClient() throws Exception {
-        List<Region> regions = computeClient.getRegions();
+        List<Region> regions = computeClient.getRegions(anyString());
         assert (regions.size() == 2);
         assert (regions.get(1).getName().equals(REGION));
 
-        List<Zone> zones = computeClient.getZones(REGION);
+        List<Zone> zones = computeClient.getZones(PROJECT_ID, REGION);
         assert (zones.size() == 2);
         assert (zones.get(1).getName().equals(ZONE));
         assert (zones.get(1).getSelfLink().equals(ZONE));

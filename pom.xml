@@ -72,6 +72,12 @@
             <artifactId>commons-text</artifactId>
             <version>1.2</version>
         </dependency>
+        <dependency>
+            <groupId>com.trilead</groupId>
+            <artifactId>trilead-ssh2</artifactId>
+            <version>1.0.0-build221</version>
+        </dependency>
+
     </dependencies>
     <build>
         <plugins>

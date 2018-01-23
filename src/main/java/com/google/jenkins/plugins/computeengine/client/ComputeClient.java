@@ -7,6 +7,8 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.TimeoutException;
 
 /**
  * Client for communicating with the Google Compute API
@@ -15,21 +17,16 @@ import java.util.List;
  */
 public class ComputeClient {
     private Compute compute;
-    private String projectId;
 
     public void setCompute(Compute compute) {
         this.compute = compute;
-    }
-
-    public void setProjectId(String projectId) {
-        this.projectId = projectId;
     }
 
     /**
      * @return
      * @throws IOException
      */
-    public List<Region> getRegions() throws IOException {
+    public List<Region> getRegions(String projectId) throws IOException {
         List<Region> regions = compute
                 .regions()
                 .list(projectId)
@@ -44,7 +41,7 @@ public class ComputeClient {
         return regions;
     }
 
-    public List<Zone> getZones(String region) throws IOException {
+    public List<Zone> getZones(String projectId, String region) throws IOException {
         List<Zone> zones = compute
                 .zones()
                 .list(projectId)
@@ -59,7 +56,7 @@ public class ComputeClient {
         return zones;
     }
 
-    public List<MachineType> getMachineTypes(String zone) throws IOException {
+    public List<MachineType> getMachineTypes(String projectId, String zone) throws IOException {
         zone = zoneFromSelfLink(zone);
         List<MachineType> machineTypes = compute
                 .machineTypes()
@@ -75,7 +72,7 @@ public class ComputeClient {
         return machineTypes;
     }
 
-    public List<DiskType> getDiskTypes(String zone) throws IOException {
+    public List<DiskType> getDiskTypes(String projectId, String zone) throws IOException {
         zone = zoneFromSelfLink(zone);
         List<DiskType> diskTypes = compute
                 .diskTypes()
@@ -91,17 +88,13 @@ public class ComputeClient {
         return diskTypes;
     }
 
-    public List<DiskType> getBootDiskTypes(String zone) throws IOException {
-        List<DiskType> diskTypes = this.getDiskTypes(zone);
+    public List<DiskType> getBootDiskTypes(String projectId, String zone) throws IOException {
+        List<DiskType> diskTypes = this.getDiskTypes(projectId, zone);
 
         // No local disks
         diskTypes.removeIf(z -> z.getName().startsWith("local-"));
 
         return diskTypes;
-    }
-
-    public List<Image> getImages() throws IOException {
-        return getImages(projectId);
     }
 
     public List<Image> getImages(String projectId) throws IOException {
@@ -120,7 +113,7 @@ public class ComputeClient {
     }
 
 
-    public List<AcceleratorType> getAcceleratorTypes(String zone) throws IOException {
+    public List<AcceleratorType> getAcceleratorTypes(String projectId, String zone) throws IOException {
         zone = zoneFromSelfLink(zone);
 
         List<AcceleratorType> acceleratorTypes = compute
@@ -156,10 +149,6 @@ public class ComputeClient {
         return networks;
     }
 
-    public List<Network> getNetworks() throws IOException {
-        return getNetworks(projectId);
-    }
-
     public List<Subnetwork> getSubnetworks(String projectId, String networkSelfLink, String region) throws IOException {
         region = regionFromSelfLink(region);
         List<Subnetwork> subnetworks = compute
@@ -177,17 +166,70 @@ public class ComputeClient {
         return subnetworks;
     }
 
-    public Operation insertInstance(Instance i) throws IOException {
-        return insertInstance(projectId, i);
-    }
-
     public Operation insertInstance(String projectId, Instance i) throws IOException {
-        Compute.Instances.Insert request = compute.instances().insert(projectId, i.getZone(), i);
-        return request.execute();
+        return compute.instances().insert(projectId, i.getZone(), i).execute();
     }
 
-    public List<Subnetwork> getSubnetworks(String networkSelfLink, String region) throws IOException {
-        return getSubnetworks(projectId, networkSelfLink, region);
+    public Operation terminateInstance(String projectId, String zone, String InstanceId) throws IOException {
+        return compute.instances().delete(projectId, zone, InstanceId).execute();
+    }
+
+    public Operation.Error terminateInstanceWithStatus(String projectId, String zone, String instanceId, String desiredStatus) throws IOException, InterruptedException {
+        Instance i = getInstance(projectId, zone, instanceId);
+        if(i.getStatus() == desiredStatus) {
+            Operation op = compute.instances().delete(projectId, zone, instanceId).execute();
+            return waitForOperationCompletion(projectId, op, 5*60*1000);
+        }
+        return null;
+    }
+
+    public Instance getInstance(String projectId, String zone, String instanceId) throws IOException {
+        return compute.instances().get(projectId, zone, instanceId).execute();
+    }
+
+    public List<Instance> getInstancesWithLabel(String projectId, Map<String, String> labels) throws IOException {
+        Compute.Instances.AggregatedList request = compute.instances().aggregatedList(projectId);
+        request.setFilter(buildLabelsFilterString(labels));
+        Map<String, InstancesScopedList> result = request.execute().getItems();
+        List<Instance> instances = new ArrayList<>();
+        for (InstancesScopedList instancesInZone : result.values()) {
+            if (instancesInZone.getInstances() != null) {
+                instances.addAll(instancesInZone.getInstances());
+            }
+        }
+        return instances;
+    }
+
+    public Operation.Error waitForOperationCompletion(String projectId, Operation operation, long timeout)
+            throws IOException, InterruptedException {
+        long start = System.currentTimeMillis();
+        final long POLL_INTERVAL = 5 * 1000;
+        String zone = operation.getZone();  // null for global/regional operations
+        if (zone != null) {
+            String[] bits = zone.split("/");
+            zone = bits[bits.length - 1];
+        }
+        String status = operation.getStatus();
+        String opId = operation.getName();
+        while (operation != null && !status.equals("DONE")) {
+            Thread.sleep(POLL_INTERVAL);
+            long elapsed = System.currentTimeMillis() - start;
+            if (elapsed >= timeout) {
+                throw new InterruptedException("Timed out waiting for operation to complete");
+            }
+            System.out.println("waiting...");
+            if (zone != null) {
+                Compute.ZoneOperations.Get get = compute.zoneOperations().get(projectId, zone, opId);
+                operation = get.execute();
+            } else {
+                Compute.GlobalOperations.Get get = compute.globalOperations().get(projectId, opId);
+                operation = get.execute();
+            }
+            if (operation != null) {
+                status = operation.getStatus();
+            }
+        }
+        return operation == null ? null : operation.getError();
     }
 
     public static String zoneFromSelfLink(String zoneSelfLink) {
@@ -196,5 +238,13 @@ public class ComputeClient {
 
     public static String regionFromSelfLink(String regionSelfLink) {
         return regionSelfLink.substring(regionSelfLink.lastIndexOf("/") + 1, regionSelfLink.length());
+    }
+
+    public static String buildLabelsFilterString(Map<String, String> labels) {
+        StringBuilder sb = new StringBuilder();
+        for (Map.Entry<String, String> l : labels.entrySet()) {
+            sb.append("(labels." + l.getKey() + " eq " + l.getValue() + ") ");
+        }
+        return sb.toString().trim();
     }
 }

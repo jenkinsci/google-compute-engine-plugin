@@ -34,6 +34,7 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
     public final String startupScript;
     public final boolean preemptible;
     public final String labels;
+    public Map<String, String> googleLabels;
     public final String bootDiskType;
     public final boolean bootDiskAutoDelete;
     public final String bootDiskSourceImageName;
@@ -159,7 +160,7 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
 
     //TODO: Make configurable
     public int getLaunchTimeout() {
-        return Integer.MAX_VALUE;
+        return Integer.MAX_VALUE / 1000;
     }
 
     public ComputeEngineInstance provision(TaskListener listener, Label requiredLabel) throws IOException {
@@ -168,7 +169,7 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
             Instance i = instance();
             Operation operation = cloud.client.insertInstance(cloud.projectId, i);
             logger.println("Sent insert request");
-            ComputeEngineInstance instance = new ComputeEngineInstance(i.getName(), i.getDescription(),"", numExecutors, mode, requiredLabel.getName(), new ComputeEngineComputerLauncher(operation), null, getLaunchTimeout());
+            ComputeEngineInstance instance = new ComputeEngineInstance(cloud.name, i.getName(), i.getZone(), i.getDescription(), "", numExecutors, mode, requiredLabel.getName(), new ComputeEngineLinuxLauncher(cloud.getCloudName(), operation), null, getLaunchTimeout());
             return instance;
         } catch (Descriptor.FormException fe) {
             logger.printf("Error provisioning instance: %v\n", fe);
@@ -189,6 +190,7 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
     public Instance instance() {
         Instance i = new Instance();
         i.setName(uniqueName());
+        i.setLabels(googleLabels);
         i.setDescription(description);
         i.setZone(ComputeClient.zoneFromSelfLink(zone));
         i.setMachineType(stripSelfLinkPrefix(machineType));
@@ -279,7 +281,7 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
                 .setAccessConfigs(accessConfigs);
 
         // Don't include subnetwork name if using default
-        if(!subnetwork.equals("default")) {
+        if (!subnetwork.equals("default")) {
             nic.setSubnetwork(stripSelfLinkPrefix(subnetwork));
         }
 
@@ -338,12 +340,13 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
         }
 
         public ListBoxModel doFillRegionItems(@AncestorInPath Jenkins context,
+                                              @QueryParameter("projectId") @RelativePath("..") final String projectId,
                                               @QueryParameter("credentialsId") @RelativePath("..") final String credentialsId) {
             ListBoxModel items = new ListBoxModel();
             items.add("");
             try {
                 ComputeClient compute = computeClient(context, credentialsId);
-                List<Region> regions = compute.getRegions();
+                List<Region> regions = compute.getRegions(projectId);
 
                 for (Region r : regions) {
                     items.add(r.getName(), r.getSelfLink());
@@ -364,13 +367,14 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
         }
 
         public ListBoxModel doFillZoneItems(@AncestorInPath Jenkins context,
+                                            @QueryParameter("projectId") @RelativePath("..") final String projectId,
                                             @QueryParameter("region") final String region,
                                             @QueryParameter("credentialsId") @RelativePath("..") final String credentialsId) {
             ListBoxModel items = new ListBoxModel();
             items.add("");
             try {
                 ComputeClient compute = computeClient(context, credentialsId);
-                List<Zone> zones = compute.getZones(region);
+                List<Zone> zones = compute.getZones(projectId, region);
 
                 for (Zone z : zones) {
                     items.add(z.getName(), z.getSelfLink());
@@ -394,13 +398,14 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
         }
 
         public ListBoxModel doFillMachineTypeItems(@AncestorInPath Jenkins context,
+                                                   @QueryParameter("projectId") @RelativePath("..") final String projectId,
                                                    @QueryParameter("zone") final String zone,
                                                    @QueryParameter("credentialsId") @RelativePath("..") final String credentialsId) {
             ListBoxModel items = new ListBoxModel();
             items.add("");
             try {
                 ComputeClient compute = computeClient(context, credentialsId);
-                List<MachineType> machineTypes = compute.getMachineTypes(zone);
+                List<MachineType> machineTypes = compute.getMachineTypes(projectId, zone);
 
                 for (MachineType m : machineTypes) {
                     items.add(m.getName(), m.getSelfLink());
@@ -502,12 +507,13 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
         }
 
         public ListBoxModel doFillBootDiskTypeItems(@AncestorInPath Jenkins context,
+                                                    @QueryParameter("projectId") @RelativePath("..") final String projectId,
                                                     @QueryParameter("zone") String zone,
                                                     @QueryParameter("credentialsId") @RelativePath("..") final String credentialsId) {
             ListBoxModel items = new ListBoxModel();
             try {
                 ComputeClient compute = computeClient(context, credentialsId);
-                List<DiskType> diskTypes = compute.getBootDiskTypes(zone);
+                List<DiskType> diskTypes = compute.getBootDiskTypes(projectId, zone);
 
                 for (DiskType dt : diskTypes) {
                     items.add(dt.getName(), dt.getSelfLink());

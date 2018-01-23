@@ -100,7 +100,6 @@ public class ClientFactory {
         client.setCompute(new Compute.Builder(transport, jsonFactory, gcred)
                 .setApplicationName(APPLICATION_NAME)
                 .build());
-        client.setProjectId(credentials.getProjectId());
         return client;
     }
 }
