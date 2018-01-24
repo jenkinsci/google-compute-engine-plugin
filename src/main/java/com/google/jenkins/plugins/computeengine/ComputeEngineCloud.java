@@ -183,13 +183,17 @@ public class ComputeEngineCloud extends AbstractCloudImpl {
 
     @Override
     public boolean canProvision(Label label) {
-        return getInstanceConfig(label) == null;
+        return getInstanceConfig(label) != null;
     }
 
     /**
      * Gets {@link InstanceConfiguration} that has the matching {@link Label}.
      */
     public InstanceConfiguration getInstanceConfig(Label label) {
+        if(configurations == null) {
+            return null;
+        }
+
         for (InstanceConfiguration c : configurations) {
             if (c.getMode() == Node.Mode.NORMAL) {
                 if (label == null || label.matches(c.getLabelSet())) {
