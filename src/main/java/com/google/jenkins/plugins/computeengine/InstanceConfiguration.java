@@ -8,6 +8,7 @@ import hudson.Extension;
 import hudson.RelativePath;
 import hudson.model.*;
 import hudson.model.labels.LabelAtom;
+import hudson.slaves.CloudRetentionStrategy;
 import hudson.util.FormValidation;
 import hudson.Util;
 import hudson.util.ListBoxModel;
@@ -22,24 +23,20 @@ import java.util.*;
 
 import org.apache.commons.text.RandomStringGenerator;
 
-
 public class InstanceConfiguration implements Describable<InstanceConfiguration> {
     public final String description;
     public final String namePrefix;
     public final String region;
     public final String zone;
     public final String machineType;
-    public Integer numExecutors;
     public final String numExecutorsStr;
     public final String startupScript;
     public final boolean preemptible;
     public final String labels;
-    public Map<String, String> googleLabels;
     public final String bootDiskType;
     public final boolean bootDiskAutoDelete;
     public final String bootDiskSourceImageName;
     public final String bootDiskSourceImageProject;
-    public Long bootDiskSizeGb;
     public final String network;
     public final String subnetwork;
     public final boolean externalAddress;
@@ -47,19 +44,28 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
     public final String serviceAccountEmail;
     public final Node.Mode mode;
     public final AcceleratorConfiguration acceleratorConfiguration;
+    public final String retentionTimeMinutesStr;
+    public final String launchTimeoutSecondsStr;
+    public final String bootDiskSizeGbStr;
+
+    public Map<String, String> googleLabels;
+    public Integer numExecutors;
+    public Integer retentionTimeMinutes;
+    public Integer launchTimeoutSeconds;
+    public Long bootDiskSizeGb;
 
     public transient Set<LabelAtom> labelSet;
-
     protected transient ComputeEngineCloud cloud;
 
     public static final Long DEFAULT_BOOT_DISK_SIZE_GB = 10L;
     public static final Integer DEFAULT_NUM_EXECUTORS = 1;
+    public static final Integer DEFAULT_RETENTION_TIME_MINUTES = 1;
+    public static final Integer DEFAULT_LAUNCH_TIMEOUT_SECONDS = 300;
     public static final String ERROR_NO_SUBNETS = "No subnetworks exist in the given network and region.";
     public static final String METADATA_STARTUP_SCRIPT_KEY = "startup-script";
     public static final String NAT_TYPE = "ONE_TO_ONE_NAT";
     public static final String NAT_NAME = "External NAT";
-
-    static final List<String> KNOW_LINUX_IMAGE_PROJECTS = new ArrayList<String>() {{
+    public static final List<String> KNOW_LINUX_IMAGE_PROJECTS = new ArrayList<String>() {{
         add("centos-cloud");
         add("coreos-cloud");
         add("cos-cloud");
@@ -90,13 +96,10 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
                                  boolean externalAddress,
                                  String networkTags,
                                  String serviceAccountEmail,
+                                 String retentionTimeMinutesStr,
+                                 String launchTimeoutSecondsStr,
                                  Node.Mode mode,
                                  AcceleratorConfiguration acceleratorConfiguration) {
-        // General
-        if (!namePrefix.endsWith(("-"))) {
-            namePrefix += "-";
-        }
-
         this.namePrefix = namePrefix;
         this.region = region;
         this.zone = zone;
@@ -104,30 +107,26 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
         this.description = description;
         this.startupScript = startupScript;
         this.preemptible = preemptible;
-        this.numExecutorsStr = numExecutorsStr;
-        try {
-            numExecutors = Integer.parseInt(numExecutorsStr);
-        } catch (Exception e) {
-            numExecutors = DEFAULT_NUM_EXECUTORS;
-        }
+        this.numExecutors = intOrDefault(numExecutorsStr, DEFAULT_NUM_EXECUTORS);
+        this.numExecutorsStr = numExecutors.toString();
+        this.retentionTimeMinutes = intOrDefault(retentionTimeMinutesStr, DEFAULT_RETENTION_TIME_MINUTES);
+        this.retentionTimeMinutesStr = retentionTimeMinutes.toString();
+        this.launchTimeoutSeconds = intOrDefault(launchTimeoutSecondsStr, DEFAULT_LAUNCH_TIMEOUT_SECONDS);
+        this.launchTimeoutSecondsStr = launchTimeoutSeconds.toString();
 
         // Boot disk
         this.bootDiskType = bootDiskType;
         this.bootDiskAutoDelete = bootDiskAutoDelete;
         this.bootDiskSourceImageName = bootDiskSourceImageName;
         this.bootDiskSourceImageProject = bootDiskSourceImageProject;
-        try {
-            this.bootDiskSizeGb = Long.parseLong(bootDiskSizeGbStr);
-        } catch (Exception e) {
-            this.bootDiskSizeGb = DEFAULT_BOOT_DISK_SIZE_GB;
-        }
-
+        this.bootDiskSizeGb = longOrDefault(bootDiskSizeGbStr, DEFAULT_BOOT_DISK_SIZE_GB);
+        this.bootDiskSizeGbStr = bootDiskSizeGb.toString();
 
         // Network
         this.network = network;
         this.subnetwork = subnetwork;
         this.externalAddress = externalAddress;
-        this.networkTags = Util.fixNull(networkTags);
+        this.networkTags = Util.fixNull(networkTags).trim();
 
         // IAM
         this.serviceAccountEmail = serviceAccountEmail;
@@ -138,6 +137,26 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
         this.labels = Util.fixNull(labelString);
 
         readResolve();
+    }
+
+    public static Integer intOrDefault(String toParse, Integer defaultTo) {
+        Integer toReturn;
+        try {
+            toReturn = Integer.parseInt(toParse);
+        } catch (NumberFormatException nfe) {
+            toReturn = defaultTo;
+        }
+        return toReturn;
+    }
+
+    public static Long longOrDefault(String toParse, Long defaultTo) {
+        Long toReturn;
+        try {
+            toReturn = Long.parseLong(toParse);
+        } catch (NumberFormatException nfe) {
+            toReturn = defaultTo;
+        }
+        return toReturn;
     }
 
     public Descriptor<InstanceConfiguration> getDescriptor() {
@@ -171,7 +190,7 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
             Instance i = instance();
             Operation operation = cloud.client.insertInstance(cloud.projectId, i);
             logger.println("Sent insert request");
-            ComputeEngineInstance instance = new ComputeEngineInstance(cloud.name, i.getName(), i.getZone(), i.getDescription(), "./.jenkins-slave", numExecutors, mode, requiredLabel.getName(), new ComputeEngineLinuxLauncher(cloud.getCloudName(), operation), null, getLaunchTimeout());
+            ComputeEngineInstance instance = new ComputeEngineInstance(cloud.name, i.getName(), i.getZone(), i.getDescription(), "./.jenkins-slave", numExecutors, mode, requiredLabel.getName(), new ComputeEngineLinuxLauncher(cloud.getCloudName(), operation), new CloudRetentionStrategy(1), getLaunchTimeout());
             return instance;
         } catch (Descriptor.FormException fe) {
             logger.printf("Error provisioning instance: %v\n", fe);
@@ -318,19 +337,15 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
 
     @Extension
     public static final class DescriptorImpl extends Descriptor<InstanceConfiguration> {
-        @Override
-        public String getDisplayName() {
-            return null;
-        }
-
-        public static String defaultBootDiskSizeGb() {
-            return DEFAULT_BOOT_DISK_SIZE_GB.toString();
-        }
-
         private static ComputeClient computeClient;
 
         public static void setComputeClient(ComputeClient client) {
             computeClient = client;
+        }
+
+        @Override
+        public String getDisplayName() {
+            return null;
         }
 
         @Override
@@ -339,6 +354,38 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
             if (p == null)
                 p = Jenkins.getInstance().getDescriptor(ComputeEngineInstance.class).getHelpFile(fieldName);
             return p;
+        }
+
+        public FormValidation doCheckNetworkTags(@QueryParameter String value) {
+            if (value == null || value.isEmpty()) {
+                return FormValidation.ok();
+            }
+
+            String re = "[a-z]([-a-z0-9]*[a-z0-9])?";
+            for (String tag : value.split(" ")) {
+                if (!tag.matches(re)) {
+                    return FormValidation.error("Tags must be space-delimited and each tag must match regex" + re);
+                }
+            }
+
+            return FormValidation.ok();
+        }
+
+        public FormValidation doCheckNamePrefix(@QueryParameter String value) {
+            if (value == null || value.isEmpty()) {
+                return FormValidation.error("A prefix is required");
+            }
+
+            String re = "[a-z]([-a-z0-9]*[a-z0-9])?";
+            if (!value.matches(re)) {
+                return FormValidation.error("Prefix must match regex " + re);
+            }
+
+            Integer maxLen = 50;
+            if (value.length() > maxLen) {
+                return FormValidation.error("Maximum length is " + maxLen);
+            }
+            return FormValidation.ok();
         }
 
         public ListBoxModel doFillRegionItems(@AncestorInPath Jenkins context,
@@ -363,7 +410,7 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
 
         public FormValidation doCheckRegion(@QueryParameter String value) {
             if (value.equals("")) {
-                return FormValidation.warning("Please select a region...");
+                return FormValidation.error("Please select a region...");
             }
             return FormValidation.ok();
         }
@@ -394,7 +441,7 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
 
         public FormValidation doCheckZone(@QueryParameter String value) {
             if (value.equals("")) {
-                return FormValidation.warning("Please select a zone...");
+                return FormValidation.error("Please select a zone...");
             }
             return FormValidation.ok();
         }
@@ -425,7 +472,7 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
 
         public FormValidation doCheckMachineType(@QueryParameter String value) {
             if (value.equals("")) {
-                return FormValidation.warning("Please select a machine type...");
+                return FormValidation.error("Please select a machine type...");
             }
             return FormValidation.ok();
         }
@@ -456,7 +503,7 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
 
         public FormValidation doCheckNetwork(@QueryParameter String value) {
             if (value.equals("")) {
-                return FormValidation.warning("Please select a network...");
+                return FormValidation.error("Please select a network...");
             }
             return FormValidation.ok();
         }
@@ -502,7 +549,7 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
                 return FormValidation.error(ERROR_NO_SUBNETS);
             }
             if (value.isEmpty()) {
-                return FormValidation.warning("Please select a subnetwork...");
+                return FormValidation.error("Please select a subnetwork...");
             }
 
             return FormValidation.ok();
@@ -544,7 +591,7 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
 
         public FormValidation doCheckBootDiskSourceImageProject(@QueryParameter String value) {
             if (value.equals("")) {
-                return FormValidation.warning("Please select source image project...");
+                return FormValidation.error("Please select source image project...");
             }
             return FormValidation.ok();
         }
@@ -577,6 +624,18 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
                         + " it's marked to only run jobs that are exclusively tied to itself or a label.");
             }
             return FormValidation.ok();
+        }
+
+        public static String defaultRetentionTimeMinutes() {
+            return DEFAULT_RETENTION_TIME_MINUTES.toString();
+        }
+
+        public static String defaultLaunchTimeoutSeconds() {
+            return DEFAULT_LAUNCH_TIMEOUT_SECONDS.toString();
+        }
+
+        public static String defaultBootDiskSizeGb() {
+            return DEFAULT_BOOT_DISK_SIZE_GB.toString();
         }
 
         private static ComputeClient computeClient(Jenkins context, String credentialsId) throws IOException {

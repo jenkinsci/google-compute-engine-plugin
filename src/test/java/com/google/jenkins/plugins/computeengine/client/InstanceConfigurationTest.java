@@ -47,6 +47,9 @@ public class InstanceConfigurationTest {
     public final boolean EXTERNAL_ADDR = true;
     public final String NETWORK_TAGS = "tag1 tag2";
     public final String SERVICE_ACCOUNT_EMAIL = "test-service-account";
+    public final String RETENTION_TIME_MINUTES_STR = "1";
+    public final String LAUNCH_TIMEOUT_SECONDS_STR = "100";
+
 
 
     @Mock
@@ -191,6 +194,8 @@ public class InstanceConfigurationTest {
                 EXTERNAL_ADDR,
                 NETWORK_TAGS,
                 SERVICE_ACCOUNT_EMAIL,
+                RETENTION_TIME_MINUTES_STR,
+                LAUNCH_TIMEOUT_SECONDS_STR,
                 NODE_MODE,
                 new AcceleratorConfiguration(ACCELERATOR_NAME, ACCELERATOR_COUNT));
     }

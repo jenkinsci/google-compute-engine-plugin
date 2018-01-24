@@ -9,6 +9,12 @@
             <f:entry title="${%Description}" field="description">
                 <f:textbox/>
             </f:entry>
+            <f:entry title="${%Node Retention Time (minutes)}" field="retentionTimeMinutesStr">
+                <f:textbox default="${descriptor.defaultRetentionTimeMinutes()}"/>
+            </f:entry>
+            <f:entry title="${%Launch Timeout (seconds)}" field="launchTimeoutSecondsStr">
+                <f:textbox default="${descriptor.defaultLaunchTimeoutSeconds()}"/>
+            </f:entry>
             <f:slave-mode name="mode" node="${instance}"/>
             <f:entry title="${%Labels}" field="labelString">
                 <f:textbox/>
@@ -68,7 +74,7 @@
             <f:entry field="bootDiskType" title="${%Disk Type}">
                 <f:select/>
             </f:entry>
-            <f:entry field="bootDiskSizeGb" title="${%Size}">
+            <f:entry field="bootDiskSizeGbStr" title="${%Size}">
                 <f:textbox default="${descriptor.defaultBootDiskSizeGb()}"/>
             </f:entry>
             <f:entry field="bootDiskAutoDelete" title="${%Delete on termination?}">

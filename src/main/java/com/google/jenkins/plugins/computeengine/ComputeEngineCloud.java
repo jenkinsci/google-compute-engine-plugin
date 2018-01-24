@@ -243,6 +243,12 @@ public class ComputeEngineCloud extends AbstractCloudImpl {
             return Messages.ComputeEngineCloud_DisplayName();
         }
 
+        public FormValidation doCheckProjectId(@QueryParameter String value) {
+            if(value == null || value.isEmpty()) {
+                return FormValidation.error("Project ID is required");
+            }
+            return FormValidation.ok();
+        }
 
         public ListBoxModel doFillCredentialsIdItems(@AncestorInPath Jenkins context, @QueryParameter String value) {
             if (context == null || !context.hasPermission(Item.CONFIGURE)) {
@@ -262,17 +268,18 @@ public class ComputeEngineCloud extends AbstractCloudImpl {
         public FormValidation doCheckCredentialsId(@AncestorInPath Jenkins context,
                                                    @QueryParameter("projectId") String projectId,
                                                    @QueryParameter String value) {
-            if (value == "") {
-                return FormValidation.warning("No credential selected");
-            }
+            if (value.isEmpty())
+                return FormValidation.error("No credential selected");
 
+            if(projectId.isEmpty())
+                return FormValidation.error("Project ID required to validate credential");
             try {
                 ClientFactory clientFactory = new ClientFactory(context, new ArrayList<DomainRequirement>(), value);
                 ComputeClient compute = clientFactory.compute();
                 List<Region> regions = compute.getRegions(projectId);
                 return FormValidation.ok("The credential successfully made an API request to Google Compute Engine.");
             } catch (IOException ioe) {
-                return FormValidation.error(ioe.getMessage());
+                return FormValidation.error("Could not list regions in project " + projectId);
             }
         }
     }
