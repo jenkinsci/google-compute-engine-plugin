@@ -59,8 +59,8 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
 
     public static final Long DEFAULT_BOOT_DISK_SIZE_GB = 10L;
     public static final Integer DEFAULT_NUM_EXECUTORS = 1;
-    public static final Integer DEFAULT_RETENTION_TIME_MINUTES = 1;
     public static final Integer DEFAULT_LAUNCH_TIMEOUT_SECONDS = 300;
+    public static final Integer DEFAULT_RETENTION_TIME_MINUTES = (DEFAULT_LAUNCH_TIMEOUT_SECONDS / 60) + 1;
     public static final String ERROR_NO_SUBNETS = "No subnetworks exist in the given network and region.";
     public static final String METADATA_STARTUP_SCRIPT_KEY = "startup-script";
     public static final String NAT_TYPE = "ONE_TO_ONE_NAT";
