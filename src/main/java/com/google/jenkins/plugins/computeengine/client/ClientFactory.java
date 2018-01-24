@@ -21,6 +21,8 @@ import com.cloudbees.plugins.credentials.CredentialsMatchers;
 import com.cloudbees.plugins.credentials.CredentialsProvider;
 import com.cloudbees.plugins.credentials.domains.DomainRequirement;
 import com.google.api.client.googleapis.javanet.GoogleNetHttpTransport;
+import com.google.api.client.googleapis.services.AbstractGoogleClientRequest;
+import com.google.api.client.googleapis.services.GoogleClientRequestInitializer;
 import com.google.api.client.http.HttpRequestInitializer;
 import com.google.api.client.http.HttpTransport;
 import com.google.api.client.json.JsonFactory;
@@ -98,6 +100,12 @@ public class ClientFactory {
     public ComputeClient compute() {
         ComputeClient client = new ComputeClient();
         client.setCompute(new Compute.Builder(transport, jsonFactory, gcred)
+                .setGoogleClientRequestInitializer(new GoogleClientRequestInitializer() {
+                    @Override
+                    public void initialize(AbstractGoogleClientRequest<?> request) throws IOException {
+                        request.setRequestHeaders((request.getRequestHeaders().setUserAgent(APPLICATION_NAME)));
+                    }
+                })
                 .setApplicationName(APPLICATION_NAME)
                 .build());
         return client;
