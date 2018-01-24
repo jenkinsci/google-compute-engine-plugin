@@ -11,6 +11,7 @@ import hudson.slaves.ComputerLauncher;
 import hudson.slaves.NodeProperty;
 import hudson.slaves.RetentionStrategy;
 import jenkins.model.Jenkins;
+import org.kohsuke.stapler.DataBoundSetter;
 
 import java.io.IOException;
 import java.util.Collections;
@@ -23,6 +24,8 @@ public class ComputeEngineInstance extends AbstractCloudSlave {
     public Integer launchTimeout; // Seconds
     public final String zone;
     public final String cloudName;
+
+    private Boolean connected;
 
     public ComputeEngineInstance(String cloudName,
                                  String name,
@@ -52,22 +55,27 @@ public class ComputeEngineInstance extends AbstractCloudSlave {
     protected void _terminate(TaskListener listener) throws IOException, InterruptedException {
         ComputeEngineCloud cloud = getCloud();
         if (cloud == null || cloud.client == null) {
-            listener.error(String.format("Cloud ({0} or Cloud Client were null", cloud.getCloudName()));
+            listener.error(String.format("Cloud (%s or Cloud Client were null", cloud.getCloudName()));
             return;
         }
 
-        // If the instance is running, attempt to terminate it
-        Operation.Error opError = cloud.client.terminateInstanceWithStatus(cloud.projectId, zone, name, "RUNNING");
-        if(opError != null) {
-            listener.error(String.format("Instance {0} could not be terminated: {1}", name, opError.getErrors().get(0).getMessage()));
-        } else {
-            LOGGER.info(String.format("Instance {0} was successfully terminated", name));
-        }
+        // If the instance is running, attempt to terminate it. This is an asynch call and we
+        // return immediately, hoping for the best.
+        cloud.client.terminateInstanceWithStatus(cloud.projectId, zone, name, "RUNNING");
+    }
+
+    public void onConnected() {
+        this.connected = true;
+    }
+
+    public Boolean getConnected() {
+        return this.connected;
     }
 
     public long getLaunchTimeoutMillis() {
         return launchTimeout * 1000L;
     }
+
     public ComputeEngineCloud getCloud() {
         return (ComputeEngineCloud) Jenkins.getInstance().getCloud(cloudName);
     }

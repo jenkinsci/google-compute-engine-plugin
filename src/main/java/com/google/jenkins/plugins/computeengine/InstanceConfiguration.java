@@ -179,9 +179,8 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
         return description;
     }
 
-    //TODO: Make configurable
-    public int getLaunchTimeout() {
-        return Integer.MAX_VALUE / 1000;
+    public int getLaunchTimeoutMillis() {
+        return launchTimeoutSeconds * 1000;
     }
 
     public ComputeEngineInstance provision(TaskListener listener, Label requiredLabel) throws IOException {
@@ -190,7 +189,7 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
             Instance i = instance();
             Operation operation = cloud.client.insertInstance(cloud.projectId, i);
             logger.println("Sent insert request");
-            ComputeEngineInstance instance = new ComputeEngineInstance(cloud.name, i.getName(), i.getZone(), i.getDescription(), "./.jenkins-slave", numExecutors, mode, requiredLabel.getName(), new ComputeEngineLinuxLauncher(cloud.getCloudName(), operation), new CloudRetentionStrategy(1), getLaunchTimeout());
+            ComputeEngineInstance instance = new ComputeEngineInstance(cloud.name, i.getName(), i.getZone(), i.getDescription(), "./.jenkins-slave", numExecutors, mode, requiredLabel == null ? "" : requiredLabel.getName(), new ComputeEngineLinuxLauncher(cloud.getCloudName(), operation), new CloudRetentionStrategy(retentionTimeMinutes), getLaunchTimeoutMillis());
             return instance;
         } catch (Descriptor.FormException fe) {
             logger.printf("Error provisioning instance: %v\n", fe);
@@ -232,7 +231,12 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
                 .build();
         String suffix = generator.generate(6);
 
-        return namePrefix + suffix;
+        String prefix = namePrefix;
+        if(!prefix.endsWith(("-"))) {
+            prefix += "-";
+        }
+
+        return prefix + suffix;
     }
 
     private Metadata metadata() {
@@ -384,6 +388,13 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
             Integer maxLen = 50;
             if (value.length() > maxLen) {
                 return FormValidation.error("Maximum length is " + maxLen);
+            }
+            return FormValidation.ok();
+        }
+
+        public FormValidation doCheckDescription(@QueryParameter String value) {
+            if (value == null || value.isEmpty()) {
+                return FormValidation.error("A description is required");
             }
             return FormValidation.ok();
         }

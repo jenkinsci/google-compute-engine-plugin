@@ -114,20 +114,20 @@ public class ComputeEngineCloud extends AbstractCloudImpl {
 
     @Override
     public Collection<PlannedNode> provision(Label label, int excessWorkload) {
+        List<PlannedNode> r = new ArrayList<PlannedNode>();
         try {
-            List<PlannedNode> r = new ArrayList<PlannedNode>();
             //TODO: retrieve and iterate a list of InstanceConfiguration that match label
             final InstanceConfiguration config = getInstanceConfig(label);
             LOGGER.log(Level.INFO, "Provisioning node from config " + config + " for excess workload of " + excessWorkload + " units of label '" + label + "'");
             while (excessWorkload > 0) {
                 if (config == null) {
-                    LOGGER.warning(String.format("Could not find instance configuration {0} in cloud {1}", config.getDisplayName(), getCloudName()));
+                    LOGGER.warning(String.format("Could not find instance configuration %s in cloud %s", config.getDisplayName(), getCloudName()));
                     break;
                 }
 
                 Integer availableCapacity = availableNodeCapacity();
                 if (availableCapacity <= 0) {
-                    LOGGER.warning(String.format("Could not provision new nodes to meet excess workload demand ({0}). Cloud provider {1} has reached its configured capacity of {2}", excessWorkload, getCloudName(), getInstanceCap()));
+                    LOGGER.warning(String.format("Could not provision new nodes to meet excess workload demand (%d). Cloud provider %s has reached its configured capacity of %d", excessWorkload, getCloudName(), getInstanceCap()));
                     break;
                 }
 
@@ -136,11 +136,11 @@ public class ComputeEngineCloud extends AbstractCloudImpl {
                 r.add(new PlannedNode(config.getDisplayName(), Computer.threadPoolForRemoting.submit(new Callable<Node>() {
                     public Node call() throws Exception {
                         long startTime = System.currentTimeMillis();
-                        while ((System.currentTimeMillis() - startTime) < config.getLaunchTimeout() * 1000) {
+                        while ((System.currentTimeMillis() - startTime) < config.getLaunchTimeoutMillis()) {
                             try {
                                 node.toComputer().connect(false).get();
-                            } catch (Exception e) {
-                            }
+                            } catch (Exception e) { }
+                            return node;
                         }
                         LOGGER.log(Level.WARNING, "Failed to connect to node within launch timeout");
                         return node;
@@ -149,9 +149,9 @@ public class ComputeEngineCloud extends AbstractCloudImpl {
                 excessWorkload -= 1;
             }
         } catch (Exception e) {
-            LOGGER.log(Level.INFO, "Error provisioning node: {0}", e.getMessage());
+            LOGGER.log(Level.INFO, "Error provisioning node: %s", e.getMessage());
         }
-        return null;
+        return r;
     }
 
     /**
@@ -163,11 +163,12 @@ public class ComputeEngineCloud extends AbstractCloudImpl {
     private synchronized Integer availableNodeCapacity() throws IOException {
         try {
             List<Instance> instances = client.getInstancesWithLabel(projectId, REQUIRED_LABEL);
+            instances.removeIf(z -> !z.getStatus().equals("RUNNING")); // Only count running VMs
             Integer capacity = getInstanceCap() - instances.size();
-            LOGGER.info(String.format("Found capacity for {0} nodes in cloud {1}", capacity, getCloudName()));
+            LOGGER.info(String.format("Found capacity for %d nodes in cloud %s", capacity, getCloudName()));
             return (getInstanceCap() - instances.size());
         } catch (IOException ioe) {
-            LOGGER.warning(String.format("An error occurred counting the number of existing instances in cloud {0}: {1}", getCloudName(), ioe.getMessage()));
+            LOGGER.warning(String.format("An error occurred counting the number of existing instances in cloud %s: %s", getCloudName(), ioe.getMessage()));
             throw ioe;
         }
     }
@@ -182,8 +183,7 @@ public class ComputeEngineCloud extends AbstractCloudImpl {
 
     @Override
     public boolean canProvision(Label label) {
-        //TODO: implement
-        return true;
+        return getInstanceConfig(label) == null;
     }
 
     /**

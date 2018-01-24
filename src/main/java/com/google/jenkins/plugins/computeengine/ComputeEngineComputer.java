@@ -2,6 +2,7 @@ package com.google.jenkins.plugins.computeengine;
 
 import com.google.api.services.compute.model.Instance;
 import hudson.slaves.AbstractCloudComputer;
+import org.kohsuke.stapler.DataBoundSetter;
 import org.kohsuke.stapler.HttpRedirect;
 import org.kohsuke.stapler.HttpResponse;
 
@@ -20,6 +21,23 @@ public class ComputeEngineComputer extends AbstractCloudComputer<ComputeEngineIn
         return (ComputeEngineInstance) super.getNode();
     }
 
+    @DataBoundSetter
+    public void setNumExecutorsStr(String value) {
+        Integer v = InstanceConfiguration.intOrDefault(value, InstanceConfiguration.DEFAULT_NUM_EXECUTORS);
+        getNode().setNumExecutors(v);
+    }
+
+    public void onConnected() {
+        ComputeEngineInstance node = getNode();
+        if (node != null) {
+            node.onConnected();
+        }
+    }
+
+    public String getNumExecutorsStr() {
+        return "computer";
+        //return String.valueOf(super.getNumExecutors());
+    }
     /**
      * Returns a cached representation of the Instance
      *

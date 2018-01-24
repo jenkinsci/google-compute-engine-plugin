@@ -9,11 +9,16 @@ import hudson.slaves.SlaveComputer;
 import jenkins.model.Jenkins;
 
 import java.io.IOException;
+import java.io.PrintStream;
 import java.util.logging.Level;
+import java.util.logging.LogRecord;
 import java.util.logging.Logger;
+import java.util.logging.SimpleFormatter;
 
 public abstract class ComputeEngineComputerLauncher extends ComputerLauncher {
     private static final Logger LOGGER = Logger.getLogger(ComputeEngineComputerLauncher.class.getName());
+ private static final SimpleFormatter sf = new SimpleFormatter();
+
     private final Operation insertOperation;
     private final String cloudName;
 
@@ -27,24 +32,23 @@ public abstract class ComputeEngineComputerLauncher extends ComputerLauncher {
     public void launch(SlaveComputer slaveComputer, TaskListener listener) {
         ComputeEngineComputer computer = (ComputeEngineComputer) slaveComputer;
         ComputeEngineCloud cloud = computer.getCloud();
-        ComputeClient client = cloud.client;
-        if (cloud == null || client == null) {
-            LOGGER.warning(String.format("Could not get compute client from cloud {0}", cloud.getCloudName()));
+        if(cloud == null) {
+            log(LOGGER, Level.SEVERE, listener, String.format("Could not get cloud %s", cloudName));
             return;
         }
 
         // Wait until the Operation from the Instance insert is complete or fails
         Operation.Error opError = new Operation.Error();
         try {
-            LOGGER.info(String.format("Launch will wait {0}s for operation {1} to complete...", computer.getNode().launchTimeout, insertOperation.getId()));
+            LOGGER.info(String.format("Launch will wait %d for operation %s to complete...", computer.getNode().launchTimeout, insertOperation.getId()));
             // This call will a null error when the operation is complete, or a relevant error if it fails.
             opError = cloud.client.waitForOperationCompletion(cloud.projectId, insertOperation, computer.getNode().getLaunchTimeoutMillis());
             if (opError != null) {
-                LOGGER.info(String.format("Launch failed while waiting for operation {0} to complete. Operation error was {1}", insertOperation.getId(), opError.getErrors().get(0).getMessage()));
+                LOGGER.info(String.format("Launch failed while waiting for operation %s to complete. Operation error was %s", insertOperation.getId(), opError.getErrors().get(0).getMessage()));
                 return;
             }
         } catch (Exception e) {
-            LOGGER.info(String.format("Launch failed while waiting for operation {0} to complete. Operation error was {1}", insertOperation.getId(), opError.getErrors().get(0).getMessage()));
+            LOGGER.info(String.format("Launch failed while waiting for operation %s to complete. Operation error was %s", insertOperation.getId(), opError.getErrors().get(0).getMessage()));
             return;
         }
 
@@ -55,22 +59,22 @@ public abstract class ComputeEngineComputerLauncher extends ComputerLauncher {
                 switch (computer.getInstanceStatus()) {
                     case "PROVISIONING":
                     case "STAGING":
-                        cloud.log(LOGGER, Level.FINEST, listener, String.format("Instance {0} is being prepared...", computer.getName()));
+                        cloud.log(LOGGER, Level.FINEST, listener, String.format("Instance %s is being prepared...", computer.getName()));
                         break;
                     case "RUNNING":
-                        cloud.log(LOGGER, Level.FINEST, listener, String.format("Instance {0} is running and ready...", computer.getName()));
+                        cloud.log(LOGGER, Level.FINEST, listener, String.format("Instance %s is running and ready...", computer.getName()));
                         break OUTER;
                     case "STOPPING":
                     case "SUSPENDING":
-                        cloud.log(LOGGER, Level.FINEST, listener, String.format("Instance {0} is being shut down...", computer.getName()));
+                        cloud.log(LOGGER, Level.FINEST, listener, String.format("Instance %s is being shut down...", computer.getName()));
                         break;
                     //TODO: Although the plugin doesn't put instances in the STOPPED or SUSPENDED states, it should handle them if they are placed in that state out-of-band.
                     case "STOPPED":
                     case "SUSPENDED":
-                        cloud.log(LOGGER, Level.FINEST, listener, String.format("Instance {0} was unexpectedtly stopped or suspended...", computer.getName()));
+                        cloud.log(LOGGER, Level.FINEST, listener, String.format("Instance %s was unexpectedtly stopped or suspended...", computer.getName()));
                         return;
                     case "TERMINATED":
-                        cloud.log(LOGGER, Level.FINEST, listener, String.format("Instance {0} is being shut down...", computer.getName()));
+                        cloud.log(LOGGER, Level.FINEST, listener, String.format("Instance %s is being shut down...", computer.getName()));
                         return;
                 }
                 Thread.sleep(5000);
@@ -85,7 +89,7 @@ public abstract class ComputeEngineComputerLauncher extends ComputerLauncher {
                try {
                    node.terminate();
                } catch(Exception e) {
-                    listener.error(String.format("Failed to terminate node {0}", node.getDisplayName()));
+                    listener.error(String.format("Failed to terminate node %s", node.getDisplayName()));
                }
            }
         } catch (InterruptedException ie) {
@@ -96,4 +100,19 @@ public abstract class ComputeEngineComputerLauncher extends ComputerLauncher {
 
     protected abstract void launch(ComputeEngineComputer computer, TaskListener listener, Instance inst)
             throws IOException, InterruptedException;
+
+    public static void log(Logger logger, Level level, TaskListener listener, String message) {
+        log(logger, level, listener, message, null);
+    }
+
+    public static void log(Logger logger, Level level, TaskListener listener, String message, Throwable exception) {
+        logger.log(level, message, exception);
+        if (listener != null) {
+            if (exception != null)
+                message += " Exception: " + exception;
+            LogRecord lr = new LogRecord(level, message);
+            PrintStream printStream = listener.getLogger();
+            printStream.print(sf.format(lr));
+        }
+    }
 }

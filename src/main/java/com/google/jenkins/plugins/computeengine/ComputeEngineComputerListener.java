@@ -1,4 +1,17 @@
 package com.google.jenkins.plugins.computeengine;
 
-public class ComputeEngineComputerListener {
+import com.google.api.services.compute.Compute;
+import hudson.Extension;
+import hudson.model.Computer;
+import hudson.model.TaskListener;
+import hudson.slaves.ComputerListener;
+
+@Extension
+public class ComputeEngineComputerListener extends ComputerListener {
+  @Override
+    public void onOnline(Computer c, TaskListener listener) {
+      if(c instanceof ComputeEngineComputer) {
+        ((ComputeEngineComputer) c).onConnected();
+      }
+  }
 }
