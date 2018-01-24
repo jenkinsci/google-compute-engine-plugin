@@ -2,7 +2,9 @@ package com.google.jenkins.plugins.computeengine;
 
 import com.google.api.services.compute.model.*;
 import com.google.jenkins.plugins.computeengine.client.ComputeClient;
+import com.google.jenkins.plugins.computeengine.ssh.GoogleKeyPair;
 import hudson.ProxyConfiguration;
+import hudson.Util;
 import hudson.model.TaskListener;
 
 import java.io.IOException;
@@ -12,23 +14,16 @@ import com.trilead.ssh2.HTTPProxyData;
 import com.trilead.ssh2.SCPClient;
 import com.trilead.ssh2.ServerHostKeyVerifier;
 import com.trilead.ssh2.Session;
+import hudson.remoting.Channel;
 import jenkins.model.Jenkins;
 
+import java.io.PrintStream;
 import java.net.InetSocketAddress;
 import java.net.Proxy;
-import java.security.KeyPairGenerator;
-import java.security.KeyPair;
-import java.security.PrivateKey;
-import java.security.PublicKey;
-import java.security.KeyFactory;
-import java.security.spec.*;
-import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
-import java.util.Base64;
 import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import java.util.Base64;
 
 public class ComputeEngineLinuxLauncher extends ComputeEngineComputerLauncher {
     private static final Logger LOGGER = Logger.getLogger(ComputeEngineLinuxLauncher.class.getName());
@@ -71,30 +66,62 @@ public class ComputeEngineLinuxLauncher extends ComputeEngineComputerLauncher {
 
     protected void launch(ComputeEngineComputer computer, TaskListener listener, Instance inst)
             throws IOException, InterruptedException {
+        final Connection bootstrapConn;
+        final Connection conn;
+        Connection cleanupConn = null; // java's code path analysis for final
+        // doesn't work that well.
+        boolean successful = false;
+        PrintStream logger = listener.getLogger();
+        logInfo(computer, listener, "Launching instance: " + computer.getNode().getNodeName());
         try {
             GoogleKeyPair kp = setupSshKeys(computer);
             boolean isBootstrapped = bootstrap(kp, computer, listener);
-            if (!isBootstrapped) {
-                logWarning(computer, listener, "Error connecting to SSH");
+            if (isBootstrapped) {
+                // connect fresh as ROOT
+                logInfo(computer, listener, "connect fresh as root");
+                cleanupConn = connectToSsh(computer, listener);
+                if (!cleanupConn.authenticateWithPublicKey(SSH_USER, kp.getPrivateKey().toCharArray(), "")) {
+                    logWarning(computer, listener, "Authentication failed");
+                    return; // failed to connect
+                }
+            } else {
+                logWarning(computer, listener, "bootstrapresult failed");
                 return;
             }
-            logInfo(computer, listener, "SSH auth successful!");
+            conn = cleanupConn;
+
+            SCPClient scp = conn.createSCPClient();
+            String tmpDir = "/tmp";
+            logInfo(computer, listener, "Copying slave.jar to: " + tmpDir);
+            scp.put(Jenkins.getInstance().getJnlpJars("slave.jar").readFully(), "slave.jar", tmpDir);
+
+            //TODO: allow jvmopt configuration
+            String launchString = "java -jar " + tmpDir + "/slave.jar -slaveLog slavelog.txt -agentLog agentlog.txt";
+
+            logInfo(computer, listener, "Launching Jenkins agent via plugin SSH: " + launchString);
+            final Session sess = conn.openSession();
+            sess.execCommand(launchString);
+            computer.setChannel(sess.getStdout(), sess.getStdin(), logger, new Channel.Listener() {
+                @Override
+                public void onClosed(Channel channel, IOException cause) {
+                    sess.close();
+                    conn.close();
+                }
+            });
         } catch (Exception e) {
             logException(computer, listener, "Error getting exception", e);
         }
-        //TODO: SSH stuff
     }
 
-    private GoogleKeyPair setupSshKeys(ComputeEngineComputer computer) throws NoSuchAlgorithmException, IOException,
-            InterruptedException {
+    private GoogleKeyPair setupSshKeys(ComputeEngineComputer computer) throws Exception { //TODO: better exceptions
         //TODO: is it possible to get a null cloud or client?
         ComputeEngineCloud cloud = computer.getCloud();
         ComputeClient client = cloud.client;
         ComputeEngineInstance instance = computer.getNode();
 
-        GoogleKeyPair kp = generateKeys();
+        GoogleKeyPair kp = GoogleKeyPair.generate();
         List<Metadata.Items> items = new ArrayList<>();
-        items.add(new Metadata.Items().setKey(SSH_METADATA_KEY).setValue(kp.publicKey));
+        items.add(new Metadata.Items().setKey(SSH_METADATA_KEY).setValue(kp.getPublicKey()));
         client.appendInstanceMetadata(cloud.projectId, instance.zone, instance.getNodeName(), items);
         return kp;
     }
@@ -112,7 +139,7 @@ public class ComputeEngineLinuxLauncher extends ComputeEngineComputerLauncher {
                 logInfo(computer, listener, "Authenticating as " + SSH_USER);
                 try {
                     bootstrapConn = connectToSsh(computer, listener);
-                    isAuthenticated = bootstrapConn.authenticateWithPublicKey(SSH_USER, kp.privateKey.toCharArray(), "");
+                    isAuthenticated = bootstrapConn.authenticateWithPublicKey(SSH_USER, kp.getPrivateKey().toCharArray(), "");
                 } catch (IOException e) {
                     logException(computer, listener, "Exception trying to authenticate", e);
                     bootstrapConn.close();
@@ -197,22 +224,5 @@ public class ComputeEngineLinuxLauncher extends ComputeEngineComputerLauncher {
                 Thread.sleep(5000);
             }
         }
-    }
-
-    public GoogleKeyPair generateKeys() throws NoSuchAlgorithmException {
-        // Get the public/private key pair
-        KeyPairGenerator kpg = KeyPairGenerator.getInstance("RSA");
-        kpg.initialize(2048);
-        return new GoogleKeyPair(kpg.genKeyPair());
-    }
-
-    public class GoogleKeyPair {
-       public final String privateKey;
-       public final String publicKey;
-
-       GoogleKeyPair(KeyPair kp) {
-           this.privateKey = "-----BEGIN RSA PRIVATE KEY-----\n" + new String(Base64.getMimeEncoder().encodeToString( kp.getPrivate().getEncoded())) + "\n-----END RSA PRIVATE KEY-----";
-           this.publicKey = SSH_PUB_KEY_PREFIX + new String(Base64.getEncoder().encodeToString( kp.getPublic().getEncoded())) + SSH_PUB_KEY_SUFFIX;
-       }
     }
 }

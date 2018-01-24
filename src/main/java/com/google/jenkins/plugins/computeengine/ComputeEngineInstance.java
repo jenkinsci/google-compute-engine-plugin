@@ -51,7 +51,7 @@ public class ComputeEngineInstance extends AbstractCloudSlave {
     @Override
     protected void _terminate(TaskListener listener) throws IOException, InterruptedException {
         ComputeEngineCloud cloud = getCloud();
-        if (cloud != null || cloud.client != null) {
+        if (cloud == null || cloud.client == null) {
             listener.error(String.format("Cloud ({0} or Cloud Client were null", cloud.getCloudName()));
             return;
         }
@@ -60,12 +60,9 @@ public class ComputeEngineInstance extends AbstractCloudSlave {
         Operation.Error opError = cloud.client.terminateInstanceWithStatus(cloud.projectId, zone, name, "RUNNING");
         if(opError != null) {
             listener.error(String.format("Instance {0} could not be terminated: {1}", name, opError.getErrors().get(0).getMessage()));
-            return;
         } else {
             LOGGER.info(String.format("Instance {0} was successfully terminated", name));
         }
-
-
     }
 
     public long getLaunchTimeoutMillis() {

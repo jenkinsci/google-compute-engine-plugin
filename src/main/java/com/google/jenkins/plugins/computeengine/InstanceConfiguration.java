@@ -171,7 +171,7 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
             Instance i = instance();
             Operation operation = cloud.client.insertInstance(cloud.projectId, i);
             logger.println("Sent insert request");
-            ComputeEngineInstance instance = new ComputeEngineInstance(cloud.name, i.getName(), i.getZone(), i.getDescription(), "", numExecutors, mode, requiredLabel.getName(), new ComputeEngineLinuxLauncher(cloud.getCloudName(), operation), null, getLaunchTimeout());
+            ComputeEngineInstance instance = new ComputeEngineInstance(cloud.name, i.getName(), i.getZone(), i.getDescription(), "./.jenkins-slave", numExecutors, mode, requiredLabel.getName(), new ComputeEngineLinuxLauncher(cloud.getCloudName(), operation), null, getLaunchTimeout());
             return instance;
         } catch (Descriptor.FormException fe) {
             logger.printf("Error provisioning instance: %v\n", fe);

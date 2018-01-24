@@ -176,7 +176,7 @@ public class ComputeClient {
     public Operation.Error terminateInstanceWithStatus(String projectId, String zone, String instanceId, String desiredStatus) throws IOException, InterruptedException {
         zone = zoneFromSelfLink(zone);
         Instance i = getInstance(projectId, zone, instanceId);
-        if (i.getStatus() == desiredStatus) {
+        if (i.getStatus().equals(desiredStatus)) {
             Operation op = compute.instances().delete(projectId, zone, instanceId).execute();
             return waitForOperationCompletion(projectId, op, 5 * 60 * 1000);
         }

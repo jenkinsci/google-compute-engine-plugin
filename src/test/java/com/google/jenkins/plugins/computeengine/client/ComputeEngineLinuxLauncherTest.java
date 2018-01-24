@@ -14,19 +14,7 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertEquals;
 
-@RunWith(MockitoJUnitRunner.class)
+//@RunWith(MockitoJUnitRunner.class)
 public class ComputeEngineLinuxLauncherTest {
     private static final Logger LOGGER = Logger.getLogger(ComputeEngineLinuxLauncherTest.class.getName());
-
-    @Test
-    public void KeyPairGeneration() throws NoSuchAlgorithmException {
-        ComputeEngineLinuxLauncher launcher = new ComputeEngineLinuxLauncher(null, null);
-        ComputeEngineLinuxLauncher.GoogleKeyPair kp = launcher.generateKeys();
-
-        assertNotNull(kp.privateKey);
-        assertNotNull(kp.publicKey);
-
-        assert(kp.privateKey.startsWith(ComputeEngineLinuxLauncher.SSH_PUB_KEY_PREFIX));
-        assert(kp.publicKey.endsWith(ComputeEngineLinuxLauncher.SSH_PUB_KEY_SUFFIX));
-    }
 }
