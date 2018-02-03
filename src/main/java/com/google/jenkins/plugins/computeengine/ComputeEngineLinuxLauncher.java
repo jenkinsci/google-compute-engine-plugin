@@ -96,7 +96,7 @@ public class ComputeEngineLinuxLauncher extends ComputeEngineComputerLauncher {
             scp.put(Jenkins.getInstance().getJnlpJars("slave.jar").readFully(), "slave.jar", tmpDir);
 
             //TODO: allow jvmopt configuration
-            String launchString = "java -jar " + tmpDir + "/slave.jar -slaveLog slavelog.txt -agentLog agentlog.txt";
+            String launchString = "java -jar " + tmpDir + "/slave.jar";
 
             logInfo(computer, listener, "Launching Jenkins agent via plugin SSH: " + launchString);
             final Session sess = conn.openSession();
