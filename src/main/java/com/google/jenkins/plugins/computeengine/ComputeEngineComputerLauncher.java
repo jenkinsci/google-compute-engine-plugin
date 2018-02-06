@@ -60,7 +60,10 @@ public abstract class ComputeEngineComputerLauncher extends ComputerLauncher {
                 LOGGER.info(String.format("Launch failed while waiting for operation %s to complete. Operation error was %s", insertOperation.getId(), opError.getErrors().get(0).getMessage()));
                 return;
             }
-        } catch (Exception e) {
+        } catch (IOException ioe) {
+            LOGGER.info(String.format("Launch failed while waiting for operation %s to complete. Operation error was %s", insertOperation.getId(), opError.getErrors().get(0).getMessage()));
+            return;
+        } catch (InterruptedException ie) {
             LOGGER.info(String.format("Launch failed while waiting for operation %s to complete. Operation error was %s", insertOperation.getId(), opError.getErrors().get(0).getMessage()));
             return;
         }

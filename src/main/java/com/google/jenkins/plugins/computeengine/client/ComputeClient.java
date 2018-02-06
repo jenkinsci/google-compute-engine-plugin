@@ -262,6 +262,10 @@ public class ComputeClient {
 
     public Operation.Error waitForOperationCompletion(String projectId, Operation operation, long timeout)
             throws IOException, InterruptedException {
+        if(operation == null) {
+            throw new IllegalArgumentException("Operation can not be null");
+        }
+
         long start = System.currentTimeMillis();
         final long POLL_INTERVAL = 5 * 1000;
         String zone = operation.getZone();  // null for global/regional operations
@@ -271,7 +275,7 @@ public class ComputeClient {
         }
         String status = operation.getStatus();
         String opId = operation.getName();
-        while (operation != null && !status.equals("DONE")) {
+        while (!status.equals("DONE")) {
             Thread.sleep(POLL_INTERVAL);
             long elapsed = System.currentTimeMillis() - start;
             if (elapsed >= timeout) {

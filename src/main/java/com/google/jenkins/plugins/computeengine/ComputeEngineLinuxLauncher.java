@@ -179,7 +179,7 @@ public class ComputeEngineLinuxLauncher extends ComputeEngineComputerLauncher {
                 }
                 Instance instance = computer.refreshInstance();
 
-                String host = new String();
+                String host = "";
 
                 // If host has a public address, use it
                 NetworkInterface nic = instance.getNetworkInterfaces().get(0);

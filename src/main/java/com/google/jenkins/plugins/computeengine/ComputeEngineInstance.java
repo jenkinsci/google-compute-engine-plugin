@@ -46,7 +46,7 @@ public class ComputeEngineInstance extends AbstractCloudSlave {
     protected void _terminate(TaskListener listener) throws IOException, InterruptedException {
         ComputeEngineCloud cloud = getCloud();
         if (cloud == null || cloud.client == null) {
-            listener.error(String.format("Cloud (%s or Cloud Client were null", cloud.getCloudName()));
+            listener.error(String.format("Cloud or Cloud Client were null"));
             return;
         }
 

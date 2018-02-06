@@ -27,6 +27,7 @@ import org.kohsuke.stapler.HttpResponse;
 import org.kohsuke.stapler.QueryParameter;
 
 import javax.annotation.Nonnull;
+import javax.naming.NoInitialContextException;
 import javax.servlet.ServletException;
 import java.io.IOException;
 import java.io.PrintStream;
@@ -132,11 +133,6 @@ public class ComputeEngineCloud extends AbstractCloudImpl {
             final InstanceConfiguration config = getInstanceConfig(label);
             LOGGER.log(Level.INFO, "Provisioning node from config " + config + " for excess workload of " + excessWorkload + " units of label '" + label + "'");
             while (excessWorkload > 0) {
-                if (config == null) {
-                    LOGGER.warning(String.format("Could not find instance configuration %s in cloud %s", config.getDisplayName(), getCloudName()));
-                    break;
-                }
-
                 Integer availableCapacity = availableNodeCapacity();
                 if (availableCapacity <= 0) {
                     LOGGER.warning(String.format("Could not provision new nodes to meet excess workload demand (%d). Cloud provider %s has reached its configured capacity of %d", excessWorkload, getCloudName(), getInstanceCap()));
@@ -161,8 +157,10 @@ public class ComputeEngineCloud extends AbstractCloudImpl {
                 }), node.getNumExecutors()));
                 excessWorkload -= 1;
             }
-        } catch (Exception e) {
-            LOGGER.log(Level.INFO, "Error provisioning node: %s", e.getMessage());
+        } catch (IOException ioe) {
+            LOGGER.log(Level.INFO, "Error provisioning node: %s", ioe.getMessage());
+        }catch (NoConfigurationException nce) {
+            LOGGER.log(Level.INFO, String.format("An instance configuration could not be found to provision a node for label %s: %s", label.getName(), nce.getMessage()));
         }
         return r;
     }
@@ -196,15 +194,20 @@ public class ComputeEngineCloud extends AbstractCloudImpl {
 
     @Override
     public boolean canProvision(Label label) {
-        return getInstanceConfig(label) != null;
+         try {
+             getInstanceConfig(label);
+             return true;
+         } catch (NoConfigurationException nce) {
+             return false;
+         }
     }
 
     /**
      * Gets {@link InstanceConfiguration} that has the matching {@link Label}.
      */
-    public InstanceConfiguration getInstanceConfig(Label label) {
+    public InstanceConfiguration getInstanceConfig(Label label) throws NoConfigurationException {
         if (configurations == null) {
-            return null;
+            throw new NoConfigurationException(String.format("Cloud %s does not have any defined instance configurations.", this.getCloudName()));
         }
 
         for (InstanceConfiguration c : configurations) {
@@ -218,7 +221,7 @@ public class ComputeEngineCloud extends AbstractCloudImpl {
                 }
             }
         }
-        return null;
+        throw new NoConfigurationException(String.format("Cloud %s does not have any matching instance configurations.", this.getCloudName()));
     }
 
     /**
@@ -293,7 +296,7 @@ public class ComputeEngineCloud extends AbstractCloudImpl {
             try {
                 ClientFactory clientFactory = new ClientFactory(context, new ArrayList<DomainRequirement>(), value);
                 ComputeClient compute = clientFactory.compute();
-                List<Region> regions = compute.getRegions(projectId);
+                compute.getRegions(projectId);
                 return FormValidation.ok("The credential successfully made an API request to Google Compute Engine.");
             } catch (IOException ioe) {
                 return FormValidation.error("Could not list regions in project " + projectId);

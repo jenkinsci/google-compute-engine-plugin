@@ -17,6 +17,7 @@ import org.kohsuke.stapler.QueryParameter;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 public class AcceleratorConfiguration implements Describable<AcceleratorConfiguration> {
     public final String gpuType;
@@ -34,6 +35,11 @@ public class AcceleratorConfiguration implements Describable<AcceleratorConfigur
 
     public Descriptor<AcceleratorConfiguration> getDescriptor() {
         return Jenkins.getInstance().getDescriptor(getClass());
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(gpuType, gpuCount);
     }
 
     @Override
@@ -67,11 +73,6 @@ public class AcceleratorConfiguration implements Describable<AcceleratorConfigur
             }
             ClientFactory clientFactory = new ClientFactory(context, new ArrayList<DomainRequirement>(), credentialsId);
             return clientFactory.compute();
-        }
-
-        @Override
-        public String getDisplayName() {
-            return null;
         }
 
         public ListBoxModel doFillGpuTypeItems(@AncestorInPath Jenkins context,

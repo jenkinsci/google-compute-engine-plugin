@@ -31,7 +31,7 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
     public static final String METADATA_STARTUP_SCRIPT_KEY = "startup-script";
     public static final String NAT_TYPE = "ONE_TO_ONE_NAT";
     public static final String NAT_NAME = "External NAT";
-    public static final List<String> KNOW_LINUX_IMAGE_PROJECTS = new ArrayList<String>() {{
+    public static final List<String> KNOWN_LINUX_IMAGE_PROJECTS = Collections.unmodifiableList(new ArrayList<String>() {{
         add("centos-cloud");
         add("coreos-cloud");
         add("cos-cloud");
@@ -40,7 +40,7 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
         add("suse-cloud");
         add("suse-sap-cloud");
         add("ubuntu-os-cloud");
-    }};
+    }});
     public final String description;
     public final String namePrefix;
     public final String region;
@@ -199,7 +199,7 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
             ComputeEngineInstance instance = new ComputeEngineInstance(cloud.name, i.getName(), i.getZone(), i.getDescription(), "./.jenkins-slave", numExecutors, mode, requiredLabel == null ? "" : requiredLabel.getName(), new ComputeEngineLinuxLauncher(cloud.getCloudName(), operation), new CloudRetentionStrategy(retentionTimeMinutes), getLaunchTimeoutMillis());
             return instance;
         } catch (Descriptor.FormException fe) {
-            logger.printf("Error provisioning instance: %v\n", fe);
+            logger.printf("Error provisioning instance: %s", fe.getMessage());
             return null;
         }
     }
@@ -361,11 +361,6 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
             }
             ClientFactory clientFactory = new ClientFactory(context, new ArrayList<DomainRequirement>(), credentialsId);
             return clientFactory.compute();
-        }
-
-        @Override
-        public String getDisplayName() {
-            return null;
         }
 
         @Override
@@ -610,7 +605,7 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
             ListBoxModel items = new ListBoxModel();
             items.add("");
             items.add(projectId);
-            for (String v : KNOW_LINUX_IMAGE_PROJECTS) {
+            for (String v : KNOWN_LINUX_IMAGE_PROJECTS) {
                 items.add(v);
             }
             return items;
