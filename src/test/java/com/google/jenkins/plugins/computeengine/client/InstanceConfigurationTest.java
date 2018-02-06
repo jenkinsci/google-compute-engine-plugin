@@ -10,16 +10,13 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.jvnet.hudson.test.JenkinsRule;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.junit.MockitoJUnitRunner;
 
-import javax.imageio.ImageTypeSpecifier;
 import java.util.ArrayList;
 import java.util.List;
 
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 
 @RunWith(MockitoJUnitRunner.class)
@@ -49,7 +46,6 @@ public class InstanceConfigurationTest {
     public final String SERVICE_ACCOUNT_EMAIL = "test-service-account";
     public final String RETENTION_TIME_MINUTES_STR = "1";
     public final String LAUNCH_TIMEOUT_SECONDS_STR = "100";
-
 
 
     @Mock
@@ -137,7 +133,7 @@ public class InstanceConfigurationTest {
     public void testInstanceModel() {
         Instance i = instanceConfiguration().instance();
         // General
-        assert(i.getName().startsWith(NAME_PREFIX));
+        assert (i.getName().startsWith(NAME_PREFIX));
         assert (i.getDescription().equals(CONFIG_DESC));
         assert (i.getZone().equals(ZONE));
         assert (i.getMachineType().equals(MACHINE_TYPE));

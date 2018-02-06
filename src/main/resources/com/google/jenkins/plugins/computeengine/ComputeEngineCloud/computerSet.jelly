@@ -1,11 +1,11 @@
 <?jelly escape-by-default='true'?>
-<j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler"  xmlns:f="/lib/form">
+<j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:f="/lib/form">
     <j:if test="${it.hasPermission(it.PROVISION)}">
         <tr>
-            <td />
+            <td/>
             <td colspan="${monitors.size()+1}">
                 <f:form action="${rootURL}/cloud/${it.name}/provision" method="post" name="provision">
-                    <input type="submit" class="gce-provision-button" value="${%Provision via} ${it.displayName}" />
+                    <input type="submit" class="gce-provision-button" value="${%Provision via} ${it.displayName}"/>
                     <select name="configuration">
                         <j:forEach var="c" items="${it.configurations}">
                             <option value="${c.description}">${c.description}</option>

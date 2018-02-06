@@ -3,20 +3,13 @@ package com.google.jenkins.plugins.computeengine;
 import com.google.api.services.compute.model.*;
 import com.google.jenkins.plugins.computeengine.client.ComputeClient;
 import com.google.jenkins.plugins.computeengine.ssh.GoogleKeyPair;
+import com.trilead.ssh2.*;
 import hudson.ProxyConfiguration;
-import hudson.Util;
 import hudson.model.TaskListener;
-
-import java.io.IOException;
-
-import com.trilead.ssh2.Connection;
-import com.trilead.ssh2.HTTPProxyData;
-import com.trilead.ssh2.SCPClient;
-import com.trilead.ssh2.ServerHostKeyVerifier;
-import com.trilead.ssh2.Session;
 import hudson.remoting.Channel;
 import jenkins.model.Jenkins;
 
+import java.io.IOException;
 import java.io.PrintStream;
 import java.net.InetSocketAddress;
 import java.net.Proxy;
@@ -26,19 +19,20 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 public class ComputeEngineLinuxLauncher extends ComputeEngineComputerLauncher {
-    private static final Logger LOGGER = Logger.getLogger(ComputeEngineLinuxLauncher.class.getName());
-
     public static final String SSH_USER = "jenkins";
     public static final String SSH_METADATA_KEY = "ssh-keys";
     public static final String SSH_PUB_KEY_PREFIX = SSH_USER + ":ssh-rsa ";
     public static final String SSH_PUB_KEY_SUFFIX = " " + SSH_USER;
-
-    private static int bootstrapAuthTries = 30;
-    private static int bootstrapAuthSleepMs = 15000;
-
     //TODO: make this configurable
     public static final Integer SSH_PORT = 22;
     public static final Integer SSH_TIMEOUT = 10000;
+    private static final Logger LOGGER = Logger.getLogger(ComputeEngineLinuxLauncher.class.getName());
+    private static int bootstrapAuthTries = 30;
+    private static int bootstrapAuthSleepMs = 15000;
+
+    public ComputeEngineLinuxLauncher(String cloudName, Operation insertOperation) {
+        super(cloudName, insertOperation);
+    }
 
     protected void log(Level level, ComputeEngineComputer computer, TaskListener listener, String message) {
         ComputeEngineCloud cloud = computer.getCloud();
@@ -58,10 +52,6 @@ public class ComputeEngineLinuxLauncher extends ComputeEngineComputerLauncher {
 
     protected void logWarning(ComputeEngineComputer computer, TaskListener listener, String message) {
         log(Level.WARNING, computer, listener, message);
-    }
-
-    public ComputeEngineLinuxLauncher(String cloudName, Operation insertOperation) {
-        super(cloudName, insertOperation);
     }
 
     protected void launch(ComputeEngineComputer computer, TaskListener listener, Instance inst)
@@ -95,6 +85,12 @@ public class ComputeEngineLinuxLauncher extends ComputeEngineComputerLauncher {
             logInfo(computer, listener, "Copying slave.jar to: " + tmpDir);
             scp.put(Jenkins.getInstance().getJnlpJars("slave.jar").readFully(), "slave.jar", tmpDir);
 
+            // Confirm Java is installed
+            if (!testCommand(computer, conn, "java -fullversion", logger, listener)) {
+                logWarning(computer, listener, "Java is not installed.");
+            }
+
+
             //TODO: allow jvmopt configuration
             String launchString = "java -jar " + tmpDir + "/slave.jar";
 
@@ -111,6 +107,13 @@ public class ComputeEngineLinuxLauncher extends ComputeEngineComputerLauncher {
         } catch (Exception e) {
             logException(computer, listener, "Error getting exception", e);
         }
+    }
+
+    private boolean testCommand(ComputeEngineComputer computer, Connection conn, String checkCommand, PrintStream logger, TaskListener listener)
+            throws IOException, InterruptedException {
+        logInfo(computer, listener, "Verifying: " + checkCommand);
+        return conn.exec(checkCommand, logger) == 0;
+
     }
 
     private GoogleKeyPair setupSshKeys(ComputeEngineComputer computer) throws Exception { //TODO: better exceptions

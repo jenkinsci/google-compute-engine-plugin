@@ -13,10 +13,6 @@
  */
 package com.google.jenkins.plugins.computeengine.client;
 
-import java.io.IOException;
-import java.security.GeneralSecurityException;
-import java.util.List;
-
 import com.cloudbees.plugins.credentials.CredentialsMatchers;
 import com.cloudbees.plugins.credentials.CredentialsProvider;
 import com.cloudbees.plugins.credentials.domains.DomainRequirement;
@@ -27,13 +23,16 @@ import com.google.api.client.http.HttpRequestInitializer;
 import com.google.api.client.http.HttpTransport;
 import com.google.api.client.json.JsonFactory;
 import com.google.api.client.json.jackson2.JacksonFactory;
-import com.google.jenkins.plugins.computeengine.ComputeEngineScopeRequirement;
-import com.google.jenkins.plugins.credentials.oauth.GoogleOAuth2Credentials;
 import com.google.api.services.compute.Compute;
+import com.google.jenkins.plugins.computeengine.ComputeEngineScopeRequirement;
 import com.google.jenkins.plugins.credentials.oauth.GoogleRobotCredentials;
 import hudson.AbortException;
 import hudson.model.ItemGroup;
 import hudson.security.ACL;
+
+import java.io.IOException;
+import java.security.GeneralSecurityException;
+import java.util.List;
 
 /**
  * Creates clients for communicating with Google APIs.

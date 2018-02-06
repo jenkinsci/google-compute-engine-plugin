@@ -12,24 +12,10 @@ import com.google.jenkins.plugins.computeengine.client.ComputeClient;
 import com.google.jenkins.plugins.credentials.oauth.GoogleOAuth2Credentials;
 import hudson.Extension;
 import hudson.model.*;
-
-import java.io.IOException;
-import java.io.PrintStream;
-import java.util.*;
-import java.util.concurrent.Callable;
-import java.util.logging.Level;
-import java.util.logging.LogRecord;
-import java.util.logging.Logger;
-import java.util.logging.SimpleFormatter;
-
 import hudson.security.ACL;
 import hudson.slaves.AbstractCloudImpl;
-import hudson.slaves.NodeProvisioner.PlannedNode;
 import hudson.slaves.Cloud;
-
-import javax.annotation.Nonnull;
-import javax.servlet.ServletException;
-
+import hudson.slaves.NodeProvisioner.PlannedNode;
 import hudson.util.FormValidation;
 import hudson.util.HttpResponses;
 import hudson.util.ListBoxModel;
@@ -39,6 +25,17 @@ import org.kohsuke.stapler.AncestorInPath;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.HttpResponse;
 import org.kohsuke.stapler.QueryParameter;
+
+import javax.annotation.Nonnull;
+import javax.servlet.ServletException;
+import java.io.IOException;
+import java.io.PrintStream;
+import java.util.*;
+import java.util.concurrent.Callable;
+import java.util.logging.Level;
+import java.util.logging.LogRecord;
+import java.util.logging.Logger;
+import java.util.logging.SimpleFormatter;
 
 import static javax.servlet.http.HttpServletResponse.SC_BAD_REQUEST;
 
@@ -80,6 +77,25 @@ public class ComputeEngineCloud extends AbstractCloudImpl {
         readResolve();
     }
 
+    private static String createCloudId(String name) {
+        return CLOUD_PREFIX + name.trim();
+    }
+
+    public static void log(Logger logger, Level level, TaskListener listener, String message) {
+        log(logger, level, listener, message, null);
+    }
+
+    public static void log(Logger logger, Level level, TaskListener listener, String message, Throwable exception) {
+        logger.log(level, message, exception);
+        if (listener != null) {
+            if (exception != null)
+                message += " Exception: " + exception;
+            LogRecord lr = new LogRecord(level, message);
+            PrintStream printStream = listener.getLogger();
+            printStream.print(sf.format(lr));
+        }
+    }
+
     public String getCloudName() {
         return name.substring(CLOUD_PREFIX.length());
     }
@@ -87,10 +103,6 @@ public class ComputeEngineCloud extends AbstractCloudImpl {
     @Override
     public String getDisplayName() {
         return getCloudName();
-    }
-
-    private static String createCloudId(String name) {
-        return CLOUD_PREFIX + name.trim();
     }
 
     private void readResolve() {
@@ -139,7 +151,8 @@ public class ComputeEngineCloud extends AbstractCloudImpl {
                         while ((System.currentTimeMillis() - startTime) < config.getLaunchTimeoutMillis()) {
                             try {
                                 node.toComputer().connect(false).get();
-                            } catch (Exception e) { }
+                            } catch (Exception e) {
+                            }
                             return node;
                         }
                         LOGGER.log(Level.WARNING, "Failed to connect to node within launch timeout");
@@ -190,7 +203,7 @@ public class ComputeEngineCloud extends AbstractCloudImpl {
      * Gets {@link InstanceConfiguration} that has the matching {@link Label}.
      */
     public InstanceConfiguration getInstanceConfig(Label label) {
-        if(configurations == null) {
+        if (configurations == null) {
             return null;
         }
 
@@ -248,7 +261,7 @@ public class ComputeEngineCloud extends AbstractCloudImpl {
         }
 
         public FormValidation doCheckProjectId(@QueryParameter String value) {
-            if(value == null || value.isEmpty()) {
+            if (value == null || value.isEmpty()) {
                 return FormValidation.error("Project ID is required");
             }
             return FormValidation.ok();
@@ -275,7 +288,7 @@ public class ComputeEngineCloud extends AbstractCloudImpl {
             if (value.isEmpty())
                 return FormValidation.error("No credential selected");
 
-            if(projectId.isEmpty())
+            if (projectId.isEmpty())
                 return FormValidation.error("Project ID required to validate credential");
             try {
                 ClientFactory clientFactory = new ClientFactory(context, new ArrayList<DomainRequirement>(), value);
@@ -285,21 +298,6 @@ public class ComputeEngineCloud extends AbstractCloudImpl {
             } catch (IOException ioe) {
                 return FormValidation.error("Could not list regions in project " + projectId);
             }
-        }
-    }
-
-    public static void log(Logger logger, Level level, TaskListener listener, String message) {
-        log(logger, level, listener, message, null);
-    }
-
-    public static void log(Logger logger, Level level, TaskListener listener, String message, Throwable exception) {
-        logger.log(level, message, exception);
-        if (listener != null) {
-            if (exception != null)
-                message += " Exception: " + exception;
-            LogRecord lr = new LogRecord(level, message);
-            PrintStream printStream = listener.getLogger();
-            printStream.print(sf.format(lr));
         }
     }
 }

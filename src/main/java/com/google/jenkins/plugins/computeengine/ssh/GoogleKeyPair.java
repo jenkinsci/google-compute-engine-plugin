@@ -15,6 +15,11 @@ public class GoogleKeyPair {
         this.privateKey = privateKey;
     }
 
+    public static GoogleKeyPair generate() throws Exception {
+        Map<String, String> keys = SshKeys.generate();
+        return new GoogleKeyPair(keys.get("public"), keys.get("private"));
+    }
+
     public String getPublicKey() {
         return publicKey;
     }
@@ -26,10 +31,5 @@ public class GoogleKeyPair {
     @Override
     public String toString() {
         return "Public key:\n" + publicKey + "\n\nPrivate key:\n" + privateKey;
-    }
-
-    public static GoogleKeyPair generate() throws Exception {
-        Map<String, String> keys = SshKeys.generate();
-        return new GoogleKeyPair(keys.get("public"), keys.get("private"));
     }
 }

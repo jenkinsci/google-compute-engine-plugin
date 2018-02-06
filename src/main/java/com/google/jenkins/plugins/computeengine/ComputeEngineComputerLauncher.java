@@ -2,11 +2,9 @@ package com.google.jenkins.plugins.computeengine;
 
 import com.google.api.services.compute.model.Instance;
 import com.google.api.services.compute.model.Operation;
-import com.google.jenkins.plugins.computeengine.client.ComputeClient;
 import hudson.model.TaskListener;
 import hudson.slaves.ComputerLauncher;
 import hudson.slaves.SlaveComputer;
-import jenkins.model.Jenkins;
 
 import java.io.IOException;
 import java.io.PrintStream;
@@ -17,7 +15,7 @@ import java.util.logging.SimpleFormatter;
 
 public abstract class ComputeEngineComputerLauncher extends ComputerLauncher {
     private static final Logger LOGGER = Logger.getLogger(ComputeEngineComputerLauncher.class.getName());
- private static final SimpleFormatter sf = new SimpleFormatter();
+    private static final SimpleFormatter sf = new SimpleFormatter();
 
     private final Operation insertOperation;
     private final String cloudName;
@@ -28,11 +26,26 @@ public abstract class ComputeEngineComputerLauncher extends ComputerLauncher {
         this.insertOperation = insertOperation;
     }
 
+    public static void log(Logger logger, Level level, TaskListener listener, String message) {
+        log(logger, level, listener, message, null);
+    }
+
+    public static void log(Logger logger, Level level, TaskListener listener, String message, Throwable exception) {
+        logger.log(level, message, exception);
+        if (listener != null) {
+            if (exception != null)
+                message += " Exception: " + exception;
+            LogRecord lr = new LogRecord(level, message);
+            PrintStream printStream = listener.getLogger();
+            printStream.print(sf.format(lr));
+        }
+    }
+
     @Override
     public void launch(SlaveComputer slaveComputer, TaskListener listener) {
         ComputeEngineComputer computer = (ComputeEngineComputer) slaveComputer;
         ComputeEngineCloud cloud = computer.getCloud();
-        if(cloud == null) {
+        if (cloud == null) {
             log(LOGGER, Level.SEVERE, listener, String.format("Could not get cloud %s", cloudName));
             return;
         }
@@ -83,15 +96,15 @@ public abstract class ComputeEngineComputerLauncher extends ComputerLauncher {
             // Initiate the next launch phase. This is likely an SSH-based process for Linux hosts.
             launch(computer, listener, computer.refreshInstance());
         } catch (IOException ioe) {
-           ioe.printStackTrace(listener.error(ioe.getMessage()));
-           ComputeEngineInstance node = (ComputeEngineInstance)slaveComputer.getNode();
-           if(node != null) {
-               try {
-                   node.terminate();
-               } catch(Exception e) {
+            ioe.printStackTrace(listener.error(ioe.getMessage()));
+            ComputeEngineInstance node = (ComputeEngineInstance) slaveComputer.getNode();
+            if (node != null) {
+                try {
+                    node.terminate();
+                } catch (Exception e) {
                     listener.error(String.format("Failed to terminate node %s", node.getDisplayName()));
-               }
-           }
+                }
+            }
         } catch (InterruptedException ie) {
 
         }
@@ -100,19 +113,4 @@ public abstract class ComputeEngineComputerLauncher extends ComputerLauncher {
 
     protected abstract void launch(ComputeEngineComputer computer, TaskListener listener, Instance inst)
             throws IOException, InterruptedException;
-
-    public static void log(Logger logger, Level level, TaskListener listener, String message) {
-        log(logger, level, listener, message, null);
-    }
-
-    public static void log(Logger logger, Level level, TaskListener listener, String message, Throwable exception) {
-        logger.log(level, message, exception);
-        if (listener != null) {
-            if (exception != null)
-                message += " Exception: " + exception;
-            LogRecord lr = new LogRecord(level, message);
-            PrintStream printStream = listener.getLogger();
-            printStream.print(sf.format(lr));
-        }
-    }
 }

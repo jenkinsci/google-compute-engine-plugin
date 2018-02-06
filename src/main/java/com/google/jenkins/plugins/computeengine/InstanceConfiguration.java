@@ -6,13 +6,14 @@ import com.google.jenkins.plugins.computeengine.client.ClientFactory;
 import com.google.jenkins.plugins.computeengine.client.ComputeClient;
 import hudson.Extension;
 import hudson.RelativePath;
+import hudson.Util;
 import hudson.model.*;
 import hudson.model.labels.LabelAtom;
 import hudson.slaves.CloudRetentionStrategy;
 import hudson.util.FormValidation;
-import hudson.Util;
 import hudson.util.ListBoxModel;
 import jenkins.model.Jenkins;
+import org.apache.commons.text.RandomStringGenerator;
 import org.kohsuke.stapler.AncestorInPath;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.QueryParameter;
@@ -21,9 +22,25 @@ import java.io.IOException;
 import java.io.PrintStream;
 import java.util.*;
 
-import org.apache.commons.text.RandomStringGenerator;
-
 public class InstanceConfiguration implements Describable<InstanceConfiguration> {
+    public static final Long DEFAULT_BOOT_DISK_SIZE_GB = 10L;
+    public static final Integer DEFAULT_NUM_EXECUTORS = 1;
+    public static final Integer DEFAULT_LAUNCH_TIMEOUT_SECONDS = 300;
+    public static final Integer DEFAULT_RETENTION_TIME_MINUTES = (DEFAULT_LAUNCH_TIMEOUT_SECONDS / 60) + 1;
+    public static final String ERROR_NO_SUBNETS = "No subnetworks exist in the given network and region.";
+    public static final String METADATA_STARTUP_SCRIPT_KEY = "startup-script";
+    public static final String NAT_TYPE = "ONE_TO_ONE_NAT";
+    public static final String NAT_NAME = "External NAT";
+    public static final List<String> KNOW_LINUX_IMAGE_PROJECTS = new ArrayList<String>() {{
+        add("centos-cloud");
+        add("coreos-cloud");
+        add("cos-cloud");
+        add("debian-cloud");
+        add("rhel-cloud");
+        add("suse-cloud");
+        add("suse-sap-cloud");
+        add("ubuntu-os-cloud");
+    }};
     public final String description;
     public final String namePrefix;
     public final String region;
@@ -47,34 +64,13 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
     public final String retentionTimeMinutesStr;
     public final String launchTimeoutSecondsStr;
     public final String bootDiskSizeGbStr;
-
     public Map<String, String> googleLabels;
     public Integer numExecutors;
     public Integer retentionTimeMinutes;
     public Integer launchTimeoutSeconds;
     public Long bootDiskSizeGb;
-
     public transient Set<LabelAtom> labelSet;
     protected transient ComputeEngineCloud cloud;
-
-    public static final Long DEFAULT_BOOT_DISK_SIZE_GB = 10L;
-    public static final Integer DEFAULT_NUM_EXECUTORS = 1;
-    public static final Integer DEFAULT_LAUNCH_TIMEOUT_SECONDS = 300;
-    public static final Integer DEFAULT_RETENTION_TIME_MINUTES = (DEFAULT_LAUNCH_TIMEOUT_SECONDS / 60) + 1;
-    public static final String ERROR_NO_SUBNETS = "No subnetworks exist in the given network and region.";
-    public static final String METADATA_STARTUP_SCRIPT_KEY = "startup-script";
-    public static final String NAT_TYPE = "ONE_TO_ONE_NAT";
-    public static final String NAT_NAME = "External NAT";
-    public static final List<String> KNOW_LINUX_IMAGE_PROJECTS = new ArrayList<String>() {{
-        add("centos-cloud");
-        add("coreos-cloud");
-        add("cos-cloud");
-        add("debian-cloud");
-        add("rhel-cloud");
-        add("suse-cloud");
-        add("suse-sap-cloud");
-        add("ubuntu-os-cloud");
-    }};
 
     @DataBoundConstructor
     public InstanceConfiguration(String namePrefix,
@@ -159,6 +155,17 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
         return toReturn;
     }
 
+    private static boolean notNullOrEmpty(String s) {
+        return s != null && !s.isEmpty();
+    }
+
+    private static String stripSelfLinkPrefix(String s) {
+        if (s.contains("https://www.googleapis.com")) {
+            return s.substring(s.indexOf("/projects/") + 1, s.length());
+        }
+        return s;
+    }
+
     public Descriptor<InstanceConfiguration> getDescriptor() {
         return Jenkins.getInstance().getDescriptor(getClass());
     }
@@ -232,7 +239,7 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
         String suffix = generator.generate(6);
 
         String prefix = namePrefix;
-        if(!prefix.endsWith(("-"))) {
+        if (!prefix.endsWith(("-"))) {
             prefix += "-";
         }
 
@@ -328,23 +335,32 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
         }
     }
 
-    private static boolean notNullOrEmpty(String s) {
-        return s != null && !s.isEmpty();
-    }
-
-    private static String stripSelfLinkPrefix(String s) {
-        if (s.contains("https://www.googleapis.com")) {
-            return s.substring(s.indexOf("/projects/") + 1, s.length());
-        }
-        return s;
-    }
-
     @Extension
     public static final class DescriptorImpl extends Descriptor<InstanceConfiguration> {
         private static ComputeClient computeClient;
 
         public static void setComputeClient(ComputeClient client) {
             computeClient = client;
+        }
+
+        public static String defaultRetentionTimeMinutes() {
+            return DEFAULT_RETENTION_TIME_MINUTES.toString();
+        }
+
+        public static String defaultLaunchTimeoutSeconds() {
+            return DEFAULT_LAUNCH_TIMEOUT_SECONDS.toString();
+        }
+
+        public static String defaultBootDiskSizeGb() {
+            return DEFAULT_BOOT_DISK_SIZE_GB.toString();
+        }
+
+        private static ComputeClient computeClient(Jenkins context, String credentialsId) throws IOException {
+            if (computeClient != null) {
+                return computeClient;
+            }
+            ClientFactory clientFactory = new ClientFactory(context, new ArrayList<DomainRequirement>(), credentialsId);
+            return clientFactory.compute();
         }
 
         @Override
@@ -635,26 +651,6 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
                         + " it's marked to only run jobs that are exclusively tied to itself or a label.");
             }
             return FormValidation.ok();
-        }
-
-        public static String defaultRetentionTimeMinutes() {
-            return DEFAULT_RETENTION_TIME_MINUTES.toString();
-        }
-
-        public static String defaultLaunchTimeoutSeconds() {
-            return DEFAULT_LAUNCH_TIMEOUT_SECONDS.toString();
-        }
-
-        public static String defaultBootDiskSizeGb() {
-            return DEFAULT_BOOT_DISK_SIZE_GB.toString();
-        }
-
-        private static ComputeClient computeClient(Jenkins context, String credentialsId) throws IOException {
-            if (computeClient != null) {
-                return computeClient;
-            }
-            ClientFactory clientFactory = new ClientFactory(context, new ArrayList<DomainRequirement>(), credentialsId);
-            return clientFactory.compute();
         }
     }
 }

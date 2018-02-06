@@ -4,8 +4,10 @@ import com.google.api.services.compute.Compute;
 import com.google.api.services.compute.model.*;
 
 import java.io.IOException;
-import java.util.*;
-import java.util.concurrent.TimeoutException;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.List;
+import java.util.Map;
 
 /**
  * Client for communicating with the Google Compute API
@@ -14,6 +16,42 @@ import java.util.concurrent.TimeoutException;
  */
 public class ComputeClient {
     private Compute compute;
+
+    public static String zoneFromSelfLink(String zoneSelfLink) {
+        return zoneSelfLink.substring(zoneSelfLink.lastIndexOf("/") + 1, zoneSelfLink.length());
+    }
+
+    public static String regionFromSelfLink(String regionSelfLink) {
+        return regionSelfLink.substring(regionSelfLink.lastIndexOf("/") + 1, regionSelfLink.length());
+    }
+
+    public static String buildLabelsFilterString(Map<String, String> labels) {
+        StringBuilder sb = new StringBuilder();
+        for (Map.Entry<String, String> l : labels.entrySet()) {
+            sb.append("(labels." + l.getKey() + " eq " + l.getValue() + ") ");
+        }
+        return sb.toString().trim();
+    }
+
+    public static List<Metadata.Items> mergeMetadataItems(List<Metadata.Items> winner, List<Metadata.Items> loser) {
+        if (loser == null) {
+            loser = new ArrayList<Metadata.Items>();
+        }
+
+        // Remove any existing metadata that has the same key(s) as what we're trying to update/append
+        for (Metadata.Items existing : loser) {
+            boolean duplicate = false;
+            for (Metadata.Items newItem : winner) { // Items to append
+                if (existing.getKey().equals(newItem.getKey())) {
+                    duplicate = true;
+                }
+            }
+            if (!duplicate) {
+                winner.add(existing);
+            }
+        }
+        return winner;
+    }
 
     public void setCompute(Compute compute) {
         this.compute = compute;
@@ -110,7 +148,6 @@ public class ComputeClient {
         return images;
     }
 
-
     public List<AcceleratorType> getAcceleratorTypes(String projectId, String zone) throws IOException {
         zone = zoneFromSelfLink(zone);
 
@@ -203,6 +240,7 @@ public class ComputeClient {
     /**
      * Appends metadata to an instance. Any metadata items with existing keys will be overwritten. Otherwise, metadata
      * is preserved. This method blocks until the operation completes.
+     *
      * @param projectId
      * @param zone
      * @param instanceId
@@ -219,7 +257,7 @@ public class ComputeClient {
         existingMetadata.setItems(newMetadataItems);
 
         Operation op = compute.instances().setMetadata(projectId, zone, instanceId, existingMetadata).execute();
-        return waitForOperationCompletion(projectId, op, 60*1000);
+        return waitForOperationCompletion(projectId, op, 60 * 1000);
     }
 
     public Operation.Error waitForOperationCompletion(String projectId, Operation operation, long timeout)
@@ -252,41 +290,5 @@ public class ComputeClient {
             }
         }
         return operation.getError();
-    }
-
-    public static String zoneFromSelfLink(String zoneSelfLink) {
-        return zoneSelfLink.substring(zoneSelfLink.lastIndexOf("/") + 1, zoneSelfLink.length());
-    }
-
-    public static String regionFromSelfLink(String regionSelfLink) {
-        return regionSelfLink.substring(regionSelfLink.lastIndexOf("/") + 1, regionSelfLink.length());
-    }
-
-    public static String buildLabelsFilterString(Map<String, String> labels) {
-        StringBuilder sb = new StringBuilder();
-        for (Map.Entry<String, String> l : labels.entrySet()) {
-            sb.append("(labels." + l.getKey() + " eq " + l.getValue() + ") ");
-        }
-        return sb.toString().trim();
-    }
-
-    public static List<Metadata.Items> mergeMetadataItems(List<Metadata.Items> winner, List<Metadata.Items> loser) {
-        if(loser == null) {
-            loser = new ArrayList<Metadata.Items>();
-        }
-
-        // Remove any existing metadata that has the same key(s) as what we're trying to update/append
-        for (Metadata.Items existing : loser) {
-            boolean duplicate = false;
-            for (Metadata.Items newItem : winner) { // Items to append
-                if (existing.getKey().equals(newItem.getKey())) {
-                    duplicate = true;
-                }
-            }
-            if(!duplicate) {
-                winner.add(existing);
-            }
-        }
-        return winner;
     }
 }

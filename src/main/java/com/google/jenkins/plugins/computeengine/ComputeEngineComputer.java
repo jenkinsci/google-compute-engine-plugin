@@ -21,12 +21,6 @@ public class ComputeEngineComputer extends AbstractCloudComputer<ComputeEngineIn
         return (ComputeEngineInstance) super.getNode();
     }
 
-    @DataBoundSetter
-    public void setNumExecutorsStr(String value) {
-        Integer v = InstanceConfiguration.intOrDefault(value, InstanceConfiguration.DEFAULT_NUM_EXECUTORS);
-        getNode().setNumExecutors(v);
-    }
-
     public void onConnected() {
         ComputeEngineInstance node = getNode();
         if (node != null) {
@@ -38,6 +32,13 @@ public class ComputeEngineComputer extends AbstractCloudComputer<ComputeEngineIn
         return "computer";
         //return String.valueOf(super.getNumExecutors());
     }
+
+    @DataBoundSetter
+    public void setNumExecutorsStr(String value) {
+        Integer v = InstanceConfiguration.intOrDefault(value, InstanceConfiguration.DEFAULT_NUM_EXECUTORS);
+        getNode().setNumExecutors(v);
+    }
+
     /**
      * Returns a cached representation of the Instance
      *
@@ -57,6 +58,7 @@ public class ComputeEngineComputer extends AbstractCloudComputer<ComputeEngineIn
 
     /**
      * Returns the most current status of the Instance as reported by the GCE API
+     *
      * @return
      * @throws IOException
      */

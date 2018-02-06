@@ -55,15 +55,23 @@ public class AcceleratorConfiguration implements Describable<AcceleratorConfigur
 
     @Extension
     public static final class DescriptorImpl extends Descriptor<AcceleratorConfiguration> {
-        @Override
-        public String getDisplayName() {
-            return null;
-        }
-
         private static ComputeClient computeClient;
 
         public static void setComputeClient(ComputeClient client) {
             computeClient = client;
+        }
+
+        private static ComputeClient computeClient(Jenkins context, String credentialsId) throws IOException {
+            if (computeClient != null) {
+                return computeClient;
+            }
+            ClientFactory clientFactory = new ClientFactory(context, new ArrayList<DomainRequirement>(), credentialsId);
+            return clientFactory.compute();
+        }
+
+        @Override
+        public String getDisplayName() {
+            return null;
         }
 
         public ListBoxModel doFillGpuTypeItems(@AncestorInPath Jenkins context,
@@ -88,14 +96,6 @@ public class AcceleratorConfiguration implements Describable<AcceleratorConfigur
                 return null;
             }
 
-        }
-
-        private static ComputeClient computeClient(Jenkins context, String credentialsId) throws IOException {
-            if (computeClient != null) {
-                return computeClient;
-            }
-            ClientFactory clientFactory = new ClientFactory(context, new ArrayList<DomainRequirement>(), credentialsId);
-            return clientFactory.compute();
         }
     }
 }

@@ -13,10 +13,10 @@
  */
 package com.google.jenkins.plugins.computeengine;
 
+import com.google.jenkins.plugins.credentials.oauth.GoogleOAuth2ScopeRequirement;
+
 import java.util.Collection;
 import java.util.Collections;
-
-import com.google.jenkins.plugins.credentials.oauth.GoogleOAuth2ScopeRequirement;
 
 public class ComputeEngineScopeRequirement extends GoogleOAuth2ScopeRequirement {
     @Override

@@ -1,30 +1,21 @@
 package com.google.jenkins.plugins.computeengine;
 
-import com.google.api.services.compute.model.Operation;
 import hudson.Extension;
 import hudson.model.Descriptor;
-import hudson.model.TaskListener;
-import hudson.slaves.AbstractCloudComputer;
-import hudson.slaves.AbstractCloudSlave;
 import hudson.model.Node;
-import hudson.slaves.ComputerLauncher;
-import hudson.slaves.NodeProperty;
-import hudson.slaves.RetentionStrategy;
+import hudson.model.TaskListener;
+import hudson.slaves.*;
 import jenkins.model.Jenkins;
-import org.kohsuke.stapler.DataBoundSetter;
 
 import java.io.IOException;
 import java.util.Collections;
-import java.util.List;
 import java.util.logging.Logger;
 
 public class ComputeEngineInstance extends AbstractCloudSlave {
     private static final Logger LOGGER = Logger.getLogger(ComputeEngineInstance.class.getName());
-
-    public Integer launchTimeout; // Seconds
     public final String zone;
     public final String cloudName;
-
+    public Integer launchTimeout; // Seconds
     private Boolean connected;
 
     public ComputeEngineInstance(String cloudName,
