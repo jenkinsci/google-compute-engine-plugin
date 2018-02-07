@@ -96,7 +96,7 @@ public abstract class ComputeEngineComputerLauncher extends ComputerLauncher {
                     //TODO: Although the plugin doesn't put instances in the STOPPED or SUSPENDED states, it should handle them if they are placed in that state out-of-band.
                     case "STOPPED":
                     case "SUSPENDED":
-                        cloud.log(LOGGER, Level.FINEST, listener, String.format("Instance %s was unexpectedtly stopped or suspended...", computer.getName()));
+                        cloud.log(LOGGER, Level.FINEST, listener, String.format("Instance %s was unexpectedly stopped or suspended...", computer.getName()));
                         return;
                     case "TERMINATED":
                         cloud.log(LOGGER, Level.FINEST, listener, String.format("Instance %s is being shut down...", computer.getName()));

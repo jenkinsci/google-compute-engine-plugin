@@ -21,8 +21,7 @@ import java.util.logging.Logger;
 public class ComputeEngineLinuxLauncher extends ComputeEngineComputerLauncher {
     public static final String SSH_USER = "jenkins";
     public static final String SSH_METADATA_KEY = "ssh-keys";
-    public static final String SSH_PUB_KEY_PREFIX = SSH_USER + ":ssh-rsa ";
-    public static final String SSH_PUB_KEY_SUFFIX = " " + SSH_USER;
+
     //TODO: make this configurable
     public static final Integer SSH_PORT = 22;
     public static final Integer SSH_TIMEOUT = 10000;

@@ -5,6 +5,7 @@ import com.google.api.services.compute.model.DeprecationStatus;
 import com.google.api.services.compute.model.Metadata;
 import com.google.api.services.compute.model.Region;
 import com.google.api.services.compute.model.RegionList;
+import com.google.jenkins.plugins.computeengine.InstanceConfigurationTest;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;

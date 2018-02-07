@@ -1,9 +1,10 @@
-package com.google.jenkins.plugins.computeengine.client;
+package com.google.jenkins.plugins.computeengine;
 
 import com.google.api.services.compute.model.*;
 import com.google.jenkins.plugins.computeengine.AcceleratorConfiguration;
 import com.google.jenkins.plugins.computeengine.ComputeEngineCloud;
 import com.google.jenkins.plugins.computeengine.InstanceConfiguration;
+import com.google.jenkins.plugins.computeengine.client.ComputeClient;
 import hudson.model.Node;
 import org.junit.Before;
 import org.junit.Rule;
@@ -21,24 +22,24 @@ import static org.mockito.ArgumentMatchers.anyString;
 
 @RunWith(MockitoJUnitRunner.class)
 public class InstanceConfigurationTest {
-    static final String NAME_PREFIX = "test";
-    static final String PROJECT_ID = "test-project";
-    static final String REGION = "us-west1";
-    static final String ZONE = "us-west1-a";
-    static final String LABEL = "LABEL1, LABEL2";
-    static final String MACHINE_TYPE = "n1-standard-1";
-    static final String STARTUP_SCRIPT = "#!/bin/bash";
-    static final String NUM_EXECUTORS = "1";
-    static final boolean PREEMPTIBLE = true;
-    static final String CONFIG_DESC = "test-config";
-    static final String BOOT_DISK_TYPE = "pd-standard";
-    static final boolean BOOT_DISK_AUTODELETE = true;
-    static final String BOOT_DISK_IMAGE_NAME = "test-image";
-    static final String BOOT_DISK_PROJECT_ID = PROJECT_ID;
-    static final String BOOT_DISK_SIZE_GB_STR = "10";
-    static final Node.Mode NODE_MODE = Node.Mode.EXCLUSIVE;
-    static final String ACCELERATOR_NAME = "test-gpu";
-    static final String ACCELERATOR_COUNT = "1";
+    public static final String NAME_PREFIX = "test";
+    public static final String PROJECT_ID = "test-project";
+    public static final String REGION = "us-west1";
+    public static final String ZONE = "us-west1-a";
+    public static final String LABEL = "LABEL1, LABEL2";
+    public static final String MACHINE_TYPE = "n1-standard-1";
+    public static final String STARTUP_SCRIPT = "#!/bin/bash";
+    public static final String NUM_EXECUTORS = "1";
+    public static final boolean PREEMPTIBLE = true;
+    public static final String CONFIG_DESC = "test-config";
+    public static final String BOOT_DISK_TYPE = "pd-standard";
+    public static final boolean BOOT_DISK_AUTODELETE = true;
+    public static final String BOOT_DISK_IMAGE_NAME = "test-image";
+    public static final String BOOT_DISK_PROJECT_ID = PROJECT_ID;
+    public static final String BOOT_DISK_SIZE_GB_STR = "10";
+    public static final Node.Mode NODE_MODE = Node.Mode.EXCLUSIVE;
+    public static final String ACCELERATOR_NAME = "test-gpu";
+    public static final String ACCELERATOR_COUNT = "1";
     public final String NETWORK_NAME = "test-network";
     public final String SUBNETWORK_NAME = "test-subnetwork";
     public final boolean EXTERNAL_ADDR = true;

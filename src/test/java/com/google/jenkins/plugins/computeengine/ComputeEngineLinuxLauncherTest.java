@@ -1,4 +1,4 @@
-package com.google.jenkins.plugins.computeengine.client;
+package com.google.jenkins.plugins.computeengine;
 
 import java.util.logging.Logger;
 

@@ -1,4 +1,4 @@
-package com.google.jenkins.plugins.computeengine.client;
+package com.google.jenkins.plugins.computeengine;
 
 import com.google.jenkins.plugins.computeengine.ssh.GoogleKeyPair;
 import org.junit.Test;
@@ -9,7 +9,6 @@ import java.util.logging.Logger;
 
 import static org.junit.Assert.assertNotNull;
 
-@RunWith(MockitoJUnitRunner.class)
 public class GoogleKeyPairTest {
     private static final Logger LOGGER = Logger.getLogger(GoogleKeyPairTest.class.getName());
 
