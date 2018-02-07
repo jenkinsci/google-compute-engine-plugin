@@ -35,15 +35,21 @@ public class ComputeEngineLinuxLauncher extends ComputeEngineComputerLauncher {
     }
 
     protected void log(Level level, ComputeEngineComputer computer, TaskListener listener, String message) {
-        ComputeEngineCloud cloud = computer.getCloud();
-        if (cloud != null)
+        try {
+            ComputeEngineCloud cloud = computer.getCloud();
             cloud.log(LOGGER, level, listener, message);
+        } catch (CloudNotFoundException cnfe) {
+            //TODO: figure out how to log without a handle to the cloud
+        }
     }
 
     protected void logException(ComputeEngineComputer computer, TaskListener listener, String message, Throwable exception) {
-        ComputeEngineCloud cloud = computer.getCloud();
-        if (cloud != null)
+        try {
+            ComputeEngineCloud cloud = computer.getCloud();
             cloud.log(LOGGER, Level.WARNING, listener, message, exception);
+        } catch (CloudNotFoundException cnfe) {
+            //TODO: figure out how to log without a handle to the cloud
+        }
     }
 
     protected void logInfo(ComputeEngineComputer computer, TaskListener listener, String message) {
@@ -56,13 +62,19 @@ public class ComputeEngineLinuxLauncher extends ComputeEngineComputerLauncher {
 
     protected void launch(ComputeEngineComputer computer, TaskListener listener, Instance inst)
             throws IOException, InterruptedException {
+        ComputeEngineInstance node = computer.getNode();
+        if(node == null) {
+            logWarning(computer, listener, "Could not get node from computer");
+            return;
+        }
+
         final Connection bootstrapConn;
         final Connection conn;
         Connection cleanupConn = null; // java's code path analysis for final
         // doesn't work that well.
         boolean successful = false;
         PrintStream logger = listener.getLogger();
-        logInfo(computer, listener, "Launching instance: " + computer.getNode().getNodeName());
+        logInfo(computer, listener, "Launching instance: " + node.getNodeName());
         try {
             GoogleKeyPair kp = setupSshKeys(computer);
             boolean isBootstrapped = bootstrap(kp, computer, listener);
@@ -116,16 +128,23 @@ public class ComputeEngineLinuxLauncher extends ComputeEngineComputerLauncher {
 
     }
 
-    private GoogleKeyPair setupSshKeys(ComputeEngineComputer computer) throws Exception { //TODO: better exceptions
-        //TODO: is it possible to get a null cloud or client?
+    private GoogleKeyPair setupSshKeys(ComputeEngineComputer computer) throws CloudNotFoundException, IOException, InterruptedException {
+        if(computer == null) {
+            throw new IllegalArgumentException("A null ComputeEngineComputer was provided");
+        }
+
+        ComputeEngineInstance node = computer.getNode();
+        if(node == null) {
+            throw new IllegalArgumentException("A ComputeEngineComputer with no node was provided");
+        }
+
         ComputeEngineCloud cloud = computer.getCloud();
         ComputeClient client = cloud.client;
-        ComputeEngineInstance instance = computer.getNode();
 
         GoogleKeyPair kp = GoogleKeyPair.generate();
         List<Metadata.Items> items = new ArrayList<>();
         items.add(new Metadata.Items().setKey(SSH_METADATA_KEY).setValue(kp.getPublicKey()));
-        client.appendInstanceMetadata(cloud.projectId, instance.zone, instance.getNodeName(), items);
+        client.appendInstanceMetadata(cloud.projectId, node.zone, node.getNodeName(), items);
         return kp;
     }
 
@@ -166,7 +185,12 @@ public class ComputeEngineLinuxLauncher extends ComputeEngineComputerLauncher {
     }
 
     private Connection connectToSsh(ComputeEngineComputer computer, TaskListener listener) throws Exception {
-        final long timeout = computer.getNode().getLaunchTimeoutMillis();
+        ComputeEngineInstance node = computer.getNode();
+        if(node == null) {
+            throw new IllegalArgumentException("A ComputeEngineComputer with no node was provided");
+        }
+
+        final long timeout = node.getLaunchTimeoutMillis();
         final long startTime = System.currentTimeMillis();
         while (true) {
             try {

@@ -44,15 +44,17 @@ public class ComputeEngineInstance extends AbstractCloudSlave {
 
     @Override
     protected void _terminate(TaskListener listener) throws IOException, InterruptedException {
-        ComputeEngineCloud cloud = getCloud();
-        if (cloud == null || cloud.client == null) {
-            listener.error(String.format("Cloud or Cloud Client were null"));
+        try {
+            ComputeEngineCloud cloud = getCloud();
+            // If the instance is running, attempt to terminate it. This is an asynch call and we
+            // return immediately, hoping for the best.
+            cloud.client.terminateInstanceWithStatus(cloud.projectId, zone, name, "RUNNING");
+        } catch (CloudNotFoundException cnfe) {
+            listener.error(cnfe.getMessage());
             return;
         }
 
-        // If the instance is running, attempt to terminate it. This is an asynch call and we
-        // return immediately, hoping for the best.
-        cloud.client.terminateInstanceWithStatus(cloud.projectId, zone, name, "RUNNING");
+
     }
 
     public void onConnected() {
@@ -67,8 +69,11 @@ public class ComputeEngineInstance extends AbstractCloudSlave {
         return launchTimeout * 1000L;
     }
 
-    public ComputeEngineCloud getCloud() {
-        return (ComputeEngineCloud) Jenkins.getInstance().getCloud(cloudName);
+    public ComputeEngineCloud getCloud() throws CloudNotFoundException {
+        ComputeEngineCloud cloud = (ComputeEngineCloud) Jenkins.getInstance().getCloud(cloudName);
+        if (cloud == null)
+            throw new CloudNotFoundException(String.format("Could not find cloud %s in Jenkins configuration", cloudName));
+        return cloud;
     }
 
     @Extension

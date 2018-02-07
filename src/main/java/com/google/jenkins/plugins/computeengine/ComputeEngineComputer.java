@@ -2,10 +2,12 @@ package com.google.jenkins.plugins.computeengine;
 
 import com.google.api.services.compute.model.Instance;
 import hudson.slaves.AbstractCloudComputer;
+import hudson.slaves.Cloud;
 import org.kohsuke.stapler.DataBoundSetter;
 import org.kohsuke.stapler.HttpRedirect;
 import org.kohsuke.stapler.HttpResponse;
 
+import javax.annotation.CheckForNull;
 import java.io.IOException;
 
 public class ComputeEngineComputer extends AbstractCloudComputer<ComputeEngineInstance> {
@@ -36,7 +38,10 @@ public class ComputeEngineComputer extends AbstractCloudComputer<ComputeEngineIn
     @DataBoundSetter
     public void setNumExecutorsStr(String value) {
         Integer v = InstanceConfiguration.intOrDefault(value, InstanceConfiguration.DEFAULT_NUM_EXECUTORS);
-        getNode().setNumExecutors(v);
+        ComputeEngineInstance node = getNode();
+        if(node != null) {
+            node.setNumExecutors(v);
+        }
     }
 
     /**
@@ -68,16 +73,24 @@ public class ComputeEngineComputer extends AbstractCloudComputer<ComputeEngineIn
     }
 
     private Instance _getInstance() throws IOException {
-        ComputeEngineInstance node = getNode();
-        ComputeEngineCloud cloud = getCloud();
+        try {
+            ComputeEngineInstance node = getNode();
+            ComputeEngineCloud cloud = getCloud();
 
-        return cloud.client.getInstance(cloud.projectId, node.zone, node.getNodeName());
+            if (node != null) {
+                return cloud.client.getInstance(cloud.projectId, node.zone, node.getNodeName());
+            } else {
+                return null;
+            }
+        } catch (CloudNotFoundException cnfe) {
+            return null;
+        }
     }
 
-    protected ComputeEngineCloud getCloud() {
+    protected ComputeEngineCloud getCloud() throws CloudNotFoundException {
         ComputeEngineInstance node = getNode();
         if (node == null)
-            return null;
+            throw new CloudNotFoundException("Could not retrieve cloud from empty node");
 
         return node.getCloud();
     }
@@ -88,9 +101,10 @@ public class ComputeEngineComputer extends AbstractCloudComputer<ComputeEngineIn
     @Override
     public HttpResponse doDoDelete() throws IOException {
         checkPermission(DELETE);
-        if (getNode() != null) {
+        ComputeEngineInstance node = getNode();
+        if (node != null) {
             try {
-                getNode().terminate();
+                node.terminate();
             } catch (InterruptedException ie) {
                 //TODO: log
             }

@@ -145,8 +145,12 @@ public class ComputeEngineCloud extends AbstractCloudImpl {
                     public Node call() throws Exception {
                         long startTime = System.currentTimeMillis();
                         while ((System.currentTimeMillis() - startTime) < config.getLaunchTimeoutMillis()) {
+                            Computer c;
                             try {
-                                node.toComputer().connect(false).get();
+                                c = node.toComputer();
+                                if(c != null) {
+                                    c.connect(false).get();
+                                }
                             } catch (Exception e) {
                             }
                             return node;

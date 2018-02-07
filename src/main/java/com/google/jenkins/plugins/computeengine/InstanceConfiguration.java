@@ -366,8 +366,11 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
         @Override
         public String getHelpFile(String fieldName) {
             String p = super.getHelpFile(fieldName);
-            if (p == null)
-                p = Jenkins.getInstance().getDescriptor(ComputeEngineInstance.class).getHelpFile(fieldName);
+            if (p == null) {
+                Descriptor d = Jenkins.getInstance().getDescriptor(ComputeEngineInstance.class);
+                if(d != null)
+                    p = d.getHelpFile(fieldName);
+            }
             return p;
         }
 

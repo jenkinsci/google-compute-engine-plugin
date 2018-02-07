@@ -44,18 +44,27 @@ public abstract class ComputeEngineComputerLauncher extends ComputerLauncher {
     @Override
     public void launch(SlaveComputer slaveComputer, TaskListener listener) {
         ComputeEngineComputer computer = (ComputeEngineComputer) slaveComputer;
-        ComputeEngineCloud cloud = computer.getCloud();
-        if (cloud == null) {
+        ComputeEngineCloud cloud;
+
+        try {
+            cloud = computer.getCloud();
+        } catch(CloudNotFoundException cnfe) {
             log(LOGGER, Level.SEVERE, listener, String.format("Could not get cloud %s", cloudName));
+            return;
+        }
+
+        ComputeEngineInstance node = computer.getNode();
+        if(node == null) {
+            log(LOGGER, Level.SEVERE, listener, String.format("Could not get node from computer"));
             return;
         }
 
         // Wait until the Operation from the Instance insert is complete or fails
         Operation.Error opError = new Operation.Error();
         try {
-            LOGGER.info(String.format("Launch will wait %d for operation %s to complete...", computer.getNode().launchTimeout, insertOperation.getId()));
+            LOGGER.info(String.format("Launch will wait %d for operation %s to complete...", node.launchTimeout, insertOperation.getId()));
             // This call will a null error when the operation is complete, or a relevant error if it fails.
-            opError = cloud.client.waitForOperationCompletion(cloud.projectId, insertOperation, computer.getNode().getLaunchTimeoutMillis());
+            opError = cloud.client.waitForOperationCompletion(cloud.projectId, insertOperation, node.getLaunchTimeoutMillis());
             if (opError != null) {
                 LOGGER.info(String.format("Launch failed while waiting for operation %s to complete. Operation error was %s", insertOperation.getId(), opError.getErrors().get(0).getMessage()));
                 return;
@@ -100,7 +109,7 @@ public abstract class ComputeEngineComputerLauncher extends ComputerLauncher {
             launch(computer, listener, computer.refreshInstance());
         } catch (IOException ioe) {
             ioe.printStackTrace(listener.error(ioe.getMessage()));
-            ComputeEngineInstance node = (ComputeEngineInstance) slaveComputer.getNode();
+            node = (ComputeEngineInstance) slaveComputer.getNode();
             if (node != null) {
                 try {
                     node.terminate();

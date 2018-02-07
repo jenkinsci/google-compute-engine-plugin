@@ -15,7 +15,7 @@ public class GoogleKeyPair {
         this.privateKey = privateKey;
     }
 
-    public static GoogleKeyPair generate() throws Exception {
+    public static GoogleKeyPair generate() {
         Map<String, String> keys = SshKeys.generate();
         return new GoogleKeyPair(keys.get("public"), keys.get("private"));
     }
