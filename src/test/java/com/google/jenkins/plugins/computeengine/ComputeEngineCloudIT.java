@@ -3,7 +3,6 @@ package com.google.jenkins.plugins.computeengine;
 import com.cloudbees.plugins.credentials.*;
 import com.cloudbees.plugins.credentials.domains.Domain;
 import com.cloudbees.plugins.credentials.impl.UsernamePasswordCredentialsImpl;
-import com.google.jenkins.plugins.credentials.oauth.GoogleOAuth2Credentials;
 import com.google.jenkins.plugins.credentials.oauth.GoogleRobotPrivateKeyCredentials;
 import com.google.jenkins.plugins.credentials.oauth.ServiceAccountConfig;
 import org.junit.Before;
@@ -11,11 +10,10 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.jvnet.hudson.test.JenkinsRule;
 
-import java.io.IOException;
-import java.security.PrivateKey;
 import java.util.List;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
 
 public class ComputeEngineCloudIT {
 
@@ -24,7 +22,14 @@ public class ComputeEngineCloudIT {
 
     @Before
     public void init() throws Exception {
-        Credentials c = (Credentials) new UsernamePasswordCredentialsImpl(CredentialsScope.GLOBAL,java.util.UUID.randomUUID().toString(), "description", "user", "password");
+        String projectId = System.getenv("GOOGLE_PROJECT_ID");
+        assertNotNull("GOOGLE_PROJECT_ID env var must be set", projectId);
+
+        String serviceAccountKeyJson = System.getenv("GOOGLE_CREDENTIALS");
+        assertNotNull("GOOGLE_CREDENTIALS env var must be set", serviceAccountKeyJson);
+
+        ServiceAccountConfig sac = new StringJsonServiceAccountConfig(serviceAccountKeyJson);
+        Credentials c = (Credentials) new GoogleRobotPrivateKeyCredentials(projectId, sac, null);
 
         CredentialsStore store = new SystemCredentialsProvider.ProviderImpl().getStore(r.jenkins);
         store.addCredentials(Domain.global(), c);
