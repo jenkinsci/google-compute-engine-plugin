@@ -141,7 +141,7 @@ public class ComputeEngineCloud extends AbstractCloudImpl {
 
                 final ComputeEngineInstance node = config.provision(StreamTaskListener.fromStdout(), label);
                 Jenkins.getInstance().addNode(node);
-                r.add(new PlannedNode(config.getDisplayName(), Computer.threadPoolForRemoting.submit(new Callable<Node>() {
+                r.add(new PlannedNode(node.getNodeName(), Computer.threadPoolForRemoting.submit(new Callable<Node>() {
                     public Node call() throws Exception {
                         long startTime = System.currentTimeMillis();
                         while ((System.currentTimeMillis() - startTime) < config.getLaunchTimeoutMillis()) {
@@ -162,9 +162,9 @@ public class ComputeEngineCloud extends AbstractCloudImpl {
                 excessWorkload -= 1;
             }
         } catch (IOException ioe) {
-            LOGGER.log(Level.INFO, "Error provisioning node: %s", ioe.getMessage());
+            LOGGER.log(Level.WARNING, "Error provisioning node", ioe);
         }catch (NoConfigurationException nce) {
-            LOGGER.log(Level.INFO, String.format("An instance configuration could not be found to provision a node for label %s: %s", label.getName(), nce.getMessage()));
+            LOGGER.log(Level.INFO, String.format("An instance configuration could not be found to provision a node for label %s", label.getName()), nce.getMessage());
         }
         return r;
     }
