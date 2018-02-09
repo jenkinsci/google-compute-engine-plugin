@@ -15,6 +15,7 @@ public class ComputeEngineInstance extends AbstractCloudSlave {
     private static final Logger LOGGER = Logger.getLogger(ComputeEngineInstance.class.getName());
     public final String zone;
     public final String cloudName;
+    public final String sshUser;
     public Integer launchTimeout; // Seconds
     private Boolean connected;
 
@@ -22,6 +23,7 @@ public class ComputeEngineInstance extends AbstractCloudSlave {
                                  String name,
                                  String zone,
                                  String nodeDescription,
+                                 String sshUser,
                                  String remoteFS,
                                  int numExecutors,
                                  Node.Mode mode,
@@ -35,6 +37,7 @@ public class ComputeEngineInstance extends AbstractCloudSlave {
         this.launchTimeout = launchTimeout;
         this.zone = zone;
         this.cloudName = cloudName;
+        this.sshUser = sshUser;
     }
 
     @Override

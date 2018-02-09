@@ -27,6 +27,7 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
     public static final Integer DEFAULT_NUM_EXECUTORS = 1;
     public static final Integer DEFAULT_LAUNCH_TIMEOUT_SECONDS = 300;
     public static final Integer DEFAULT_RETENTION_TIME_MINUTES = (DEFAULT_LAUNCH_TIMEOUT_SECONDS / 60) + 1;
+    public static final String DEFAULT_RUN_AS_USER = "jenkins";
     public static final String ERROR_NO_SUBNETS = "No subnetworks exist in the given network and region.";
     public static final String METADATA_STARTUP_SCRIPT_KEY = "startup-script";
     public static final String NAT_TYPE = "ONE_TO_ONE_NAT";
@@ -50,6 +51,7 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
     public final String startupScript;
     public final boolean preemptible;
     public final String labels;
+    public final String runAsUser;
     public final String bootDiskType;
     public final boolean bootDiskAutoDelete;
     public final String bootDiskSourceImageName;
@@ -95,7 +97,8 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
                                  String retentionTimeMinutesStr,
                                  String launchTimeoutSecondsStr,
                                  Node.Mode mode,
-                                 AcceleratorConfiguration acceleratorConfiguration) {
+                                 AcceleratorConfiguration acceleratorConfiguration,
+                                 String runAsUser) {
         this.namePrefix = namePrefix;
         this.region = region;
         this.zone = zone;
@@ -131,6 +134,7 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
         this.acceleratorConfiguration = acceleratorConfiguration;
         this.mode = mode;
         this.labels = Util.fixNull(labelString);
+        this.runAsUser = runAsUser;
 
         readResolve();
     }
@@ -196,7 +200,7 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
             Instance i = instance();
             Operation operation = cloud.client.insertInstance(cloud.projectId, i);
             logger.println("Sent insert request");
-            ComputeEngineInstance instance = new ComputeEngineInstance(cloud.name, i.getName(), i.getZone(), i.getDescription(), "./.jenkins-slave", numExecutors, mode, requiredLabel == null ? "" : requiredLabel.getName(), new ComputeEngineLinuxLauncher(cloud.getCloudName(), operation), new CloudRetentionStrategy(retentionTimeMinutes), getLaunchTimeoutMillis());
+            ComputeEngineInstance instance = new ComputeEngineInstance(cloud.name, i.getName(), i.getZone(), i.getDescription(), runAsUser,"./.jenkins-slave", numExecutors, mode, requiredLabel == null ? "" : requiredLabel.getName(), new ComputeEngineLinuxLauncher(cloud.getCloudName(), operation), new CloudRetentionStrategy(retentionTimeMinutes), getLaunchTimeoutMillis());
             return instance;
         } catch (Descriptor.FormException fe) {
             logger.printf("Error provisioning instance: %s", fe.getMessage());
@@ -355,6 +359,10 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
             return DEFAULT_BOOT_DISK_SIZE_GB.toString();
         }
 
+        public static String defaultRunAsUser() {
+            return DEFAULT_RUN_AS_USER.toString();
+        }
+
         private static ComputeClient computeClient(Jenkins context, String credentialsId) throws IOException {
             if (computeClient != null) {
                 return computeClient;
@@ -368,7 +376,7 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
             String p = super.getHelpFile(fieldName);
             if (p == null) {
                 Descriptor d = Jenkins.getInstance().getDescriptor(ComputeEngineInstance.class);
-                if(d != null)
+                if (d != null)
                     p = d.getHelpFile(fieldName);
             }
             return p;

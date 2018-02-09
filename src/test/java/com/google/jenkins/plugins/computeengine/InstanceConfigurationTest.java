@@ -40,6 +40,7 @@ public class InstanceConfigurationTest {
     public static final Node.Mode NODE_MODE = Node.Mode.EXCLUSIVE;
     public static final String ACCELERATOR_NAME = "test-gpu";
     public static final String ACCELERATOR_COUNT = "1";
+    public static final String RUN_AS_USER = "jenkins";
     public final String NETWORK_NAME = "test-network";
     public final String SUBNETWORK_NAME = "test-subnetwork";
     public final boolean EXTERNAL_ADDR = true;
@@ -194,7 +195,8 @@ public class InstanceConfigurationTest {
                 RETENTION_TIME_MINUTES_STR,
                 LAUNCH_TIMEOUT_SECONDS_STR,
                 NODE_MODE,
-                new AcceleratorConfiguration(ACCELERATOR_NAME, ACCELERATOR_COUNT));
+                new AcceleratorConfiguration(ACCELERATOR_NAME, ACCELERATOR_COUNT),
+                RUN_AS_USER);
     }
 
 }

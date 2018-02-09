@@ -58,6 +58,7 @@ public class ComputeEngineCloudIT {
     private static final Node.Mode NODE_MODE = Node.Mode.EXCLUSIVE;
     private static final String ACCELERATOR_NAME = "";
     private static final String ACCELERATOR_COUNT = "";
+    private static final String RUN_AS_USER = "jenkins";
     private final String NETWORK_NAME = "default";
     private final String SUBNETWORK_NAME = "default";
     private final boolean EXTERNAL_ADDR = true;
@@ -149,7 +150,8 @@ public class ComputeEngineCloudIT {
                 RETENTION_TIME_MINUTES_STR,
                 LAUNCH_TIMEOUT_SECONDS_STR,
                 NODE_MODE,
-                new AcceleratorConfiguration(ACCELERATOR_NAME, ACCELERATOR_COUNT));
+                new AcceleratorConfiguration(ACCELERATOR_NAME, ACCELERATOR_COUNT),
+                RUN_AS_USER);
     }
 
 

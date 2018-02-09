@@ -14,8 +14,9 @@ public class GoogleKeyPairTest {
 
     @Test
     public void KeyPairGeneration() throws Exception {
-        GoogleKeyPair gkp = GoogleKeyPair.generate();
+        GoogleKeyPair gkp = GoogleKeyPair.generate("user");
         assertNotNull(gkp.toString());
+        assert(gkp.getPublicKey().contains("user"));
     }
 }
 

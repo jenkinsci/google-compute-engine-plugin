@@ -19,6 +19,9 @@
             <f:entry title="${%Labels}" field="labelString">
                 <f:textbox/>
             </f:entry>
+            <f:entry title="${%Run as user}" field="runAsUser">
+                <f:textbox default="${descriptor.defaultRunAsUser()}"/>
+            </f:entry>
         </f:section>
 
         <f:section title="Location">

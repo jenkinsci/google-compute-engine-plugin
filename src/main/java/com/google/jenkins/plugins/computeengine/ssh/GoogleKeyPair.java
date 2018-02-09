@@ -5,19 +5,20 @@ import org.jclouds.ssh.SshKeys;
 import java.util.Map;
 
 public class GoogleKeyPair {
-    private static final String user = "jenkins";
 
     private final String privateKey;
     private final String publicKey;
+    private final String user;
 
-    private GoogleKeyPair(String publicKey, String privateKey) {
+    private GoogleKeyPair(String publicKey, String privateKey, String user) {
         this.publicKey = user + ":" + publicKey + " " + user;
         this.privateKey = privateKey;
+        this.user = user;
     }
 
-    public static GoogleKeyPair generate() {
+    public static GoogleKeyPair generate(String user) {
         Map<String, String> keys = SshKeys.generate();
-        return new GoogleKeyPair(keys.get("public"), keys.get("private"));
+        return new GoogleKeyPair(keys.get("public"), keys.get("private"), user);
     }
 
     public String getPublicKey() {
