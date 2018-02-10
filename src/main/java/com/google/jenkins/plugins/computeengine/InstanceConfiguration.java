@@ -194,6 +194,13 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
         return launchTimeoutSeconds * 1000;
     }
 
+    public void appendLabels(Map<String, String> labels) {
+        if(googleLabels == null) {
+            googleLabels = new HashMap<>();
+        }
+        googleLabels.putAll(labels);
+    }
+
     public ComputeEngineInstance provision(TaskListener listener, Label requiredLabel) throws IOException {
         PrintStream logger = listener.getLogger();
         try {

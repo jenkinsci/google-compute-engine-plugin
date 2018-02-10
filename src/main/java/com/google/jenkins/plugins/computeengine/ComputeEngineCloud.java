@@ -118,10 +118,7 @@ public class ComputeEngineCloud extends AbstractCloudImpl {
 
         for (InstanceConfiguration c : configurations) {
             c.cloud = this;
-            if (c.googleLabels == null) {
-                c.googleLabels = new HashMap<>();
-            }
-            c.googleLabels.putAll(REQUIRED_LABEL);
+            c.appendLabels(REQUIRED_LABEL);
         }
     }
 
@@ -144,7 +141,9 @@ public class ComputeEngineCloud extends AbstractCloudImpl {
                 r.add(new PlannedNode(node.getNodeName(), Computer.threadPoolForRemoting.submit(new Callable<Node>() {
                     public Node call() throws Exception {
                         long startTime = System.currentTimeMillis();
+                        LOGGER.log(Level.INFO, String.format("Waiting %dms for node %s to connect", config.getLaunchTimeoutMillis(), node.getNodeName()));
                         while ((System.currentTimeMillis() - startTime) < config.getLaunchTimeoutMillis()) {
+                            LOGGER.log(Level.INFO, String.format("%dms elapsed waiting for node %s to connect", System.currentTimeMillis() - startTime, node.getNodeName()));
                             Computer c;
                             try {
                                 c = node.toComputer();
@@ -152,6 +151,7 @@ public class ComputeEngineCloud extends AbstractCloudImpl {
                                     c.connect(false).get();
                                 }
                             } catch (Exception e) {
+                                LOGGER.log(Level.INFO, String.format("Exception waiting for node %s to connect", node.getNodeName()), e);
                             }
                             return node;
                         }
