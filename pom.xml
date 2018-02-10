@@ -113,6 +113,10 @@
                         </goals>
                     </execution>
                 </executions>
+                <configuration>
+                    <disableXmlReport>true</disableXmlReport>
+                    <useFile>false</useFile>
+                </configuration>
             </plugin>
             <plugin>
                 <artifactId>maven-surefire-plugin</artifactId>

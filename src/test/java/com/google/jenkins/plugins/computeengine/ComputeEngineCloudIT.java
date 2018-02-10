@@ -6,23 +6,24 @@ import com.cloudbees.plugins.credentials.SystemCredentialsProvider;
 import com.cloudbees.plugins.credentials.domains.Domain;
 import com.cloudbees.plugins.credentials.domains.DomainRequirement;
 import com.google.api.services.compute.model.Instance;
+import com.google.api.services.compute.model.Operation;
 import com.google.jenkins.plugins.computeengine.client.ClientFactory;
 import com.google.jenkins.plugins.computeengine.client.ComputeClient;
 import com.google.jenkins.plugins.credentials.oauth.GoogleRobotPrivateKeyCredentials;
+import com.google.jenkins.plugins.credentials.oauth.JsonServiceAccountConfig;
 import com.google.jenkins.plugins.credentials.oauth.ServiceAccountConfig;
 import hudson.model.Node;
 import hudson.model.labels.LabelAtom;
 import hudson.slaves.NodeProvisioner;
-import jenkins.model.Jenkins;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.*;
 import org.jvnet.hudson.test.JenkinsRule;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.*;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.logging.LogManager;
 import java.util.logging.Logger;
 import java.util.logging.SimpleFormatter;
@@ -64,24 +65,28 @@ public class ComputeEngineCloudIT {
     private static final String RUN_AS_USER = "jenkins";
 
     private static Map<String, String> INTEGRATION_LABEL;
+
     static {
         INTEGRATION_LABEL = new HashMap<String, String>();
         INTEGRATION_LABEL.put("integration", "delete");
     }
-    private final String NETWORK_NAME = format("projects/%s/global/networks/default");
-    private final String SUBNETWORK_NAME = "default";
-    private final boolean EXTERNAL_ADDR = true;
-    private final String NETWORK_TAGS = "ssh";
-    private final String SERVICE_ACCOUNT_EMAIL = "";
-    private final String RETENTION_TIME_MINUTES_STR = "";
-    private final String LAUNCH_TIMEOUT_SECONDS_STR = "";
 
-    private Logger cloudLogger;
-    private StreamHandler sh;
-    private ByteArrayOutputStream logOutput;
+    private static final String NETWORK_NAME = format("projects/%s/global/networks/default");
+    private static final String SUBNETWORK_NAME = "default";
+    private static final boolean EXTERNAL_ADDR = true;
+    private static final String NETWORK_TAGS = "ssh";
+    private static final String SERVICE_ACCOUNT_EMAIL = "";
+    private static final String RETENTION_TIME_MINUTES_STR = "";
+    private static final String LAUNCH_TIMEOUT_SECONDS_STR = "";
 
-    private ComputeClient client;
-    private String projectId;
+    private static Logger cloudLogger;
+    private static Logger clientLogger;
+    private static StreamHandler sh;
+    private static ByteArrayOutputStream logOutput;
+
+    private static ComputeClient client;
+    private static String projectId;
+
 
     private static String format(String s) {
         String projectId = System.getenv("GOOGLE_PROJECT_ID");
@@ -91,12 +96,16 @@ public class ComputeEngineCloudIT {
         return String.format(s, projectId);
     }
 
-    @Rule
-    public JenkinsRule r = new JenkinsRule();
+    @ClassRule
+    public static JenkinsRule r = new JenkinsRule();
 
-    @Before
-    public void init() throws Exception {
+    @BeforeClass
+    public static void init() throws Exception {
         log.info("init");
+        logOutput = new ByteArrayOutputStream();
+        sh = new StreamHandler(logOutput, new SimpleFormatter());
+
+        // Add a service account credential
         projectId = System.getenv("GOOGLE_PROJECT_ID");
         assertNotNull("GOOGLE_PROJECT_ID env var must be set", projectId);
 
@@ -109,30 +118,37 @@ public class ComputeEngineCloudIT {
         CredentialsStore store = new SystemCredentialsProvider.ProviderImpl().getStore(r.jenkins);
         store.addCredentials(Domain.global(), c);
 
-        ClientFactory clientFactory = new ClientFactory(Jenkins.getInstance(), new ArrayList<DomainRequirement>(),
-                    projectId);
-        this.client = clientFactory.compute();
-
+        // Add Cloud plugin
         List<InstanceConfiguration> configs = new ArrayList<>();
         configs.add(validInstanceConfiguration1());
-
         ComputeEngineCloud gcp = new ComputeEngineCloud(CLOUD_NAME, projectId, projectId, "2", configs);
+
+        // Capture log output to make sense of most failures
+        cloudLogger = LogManager.getLogManager().getLogger("com.google.jenkins.plugins.computeengine.ComputeEngineCloud");
+        if (cloudLogger != null)
+            cloudLogger.addHandler(sh);
 
         assertEquals(0, r.jenkins.clouds.size());
         r.jenkins.clouds.add(gcp);
         assertEquals(1, r.jenkins.clouds.size());
         assertEquals(1, ((ComputeEngineCloud) r.jenkins.clouds.get(0)).configurations.size());
 
-        // We need to capture log output to make sense of most failures
-        cloudLogger = LogManager.getLogManager().getLogger("com.google.jenkins.plugins.computeengine.ComputeEngineCloud");
-        logOutput = new ByteArrayOutputStream();
-        sh = new StreamHandler(logOutput, new SimpleFormatter());
-        cloudLogger.addHandler(sh);
+        // Get a compute client for out-of-band calls to GCE
+        ClientFactory clientFactory = new ClientFactory(r.jenkins, new ArrayList<DomainRequirement>(), projectId);
+        client = clientFactory.compute();
+
+        // Other logging
+        clientLogger = LogManager.getLogManager().getLogger("com.google.jenkins.plugins.computeengine.ComputeClient");
+        if (clientLogger != null)
+            clientLogger.addHandler(sh);
+
+        deleteIntegrationInstances(true);
     }
 
-    @After
-    public void teardown() throws Exception {
+    @AfterClass
+    public static void teardown() throws Exception {
         log.info("teardown");
+        deleteIntegrationInstances(false);
         sh.close();
         log.info(logOutput.toString());
     }
@@ -150,18 +166,19 @@ public class ComputeEngineCloudIT {
         r.assertEqualBeans(want, got, "namePrefix,region,zone,machineType,preemptible,startupScript,bootDiskType,bootDiskSourceImageName,bootDiskSourceImageProject,bootDiskSizeGb,acceleratorConfiguration,network,subnetwork,externalAddress,networkTags,serviceAccountEmail");
     }
 
-    @Test(timeout=300000)
+
+    @Test(timeout = 300000)
     public void testWorkerCreated() throws Exception {
         ComputeEngineCloud cloud = (ComputeEngineCloud) r.jenkins.clouds.get(0);
         Collection<NodeProvisioner.PlannedNode> planned = cloud.provision(new LabelAtom(LABEL), 1);
         sh.flush();
         assertEquals(logOutput.toString(), 1, planned.size());
-
         NodeProvisioner.PlannedNode node = planned.iterator().next();
         Node n = node.future.get();
     }
 
-    private InstanceConfiguration validInstanceConfiguration1() {
+
+    private static InstanceConfiguration validInstanceConfiguration1() {
         InstanceConfiguration ic = new InstanceConfiguration(
                 NAME_PREFIX,
                 REGION,
@@ -187,13 +204,25 @@ public class ComputeEngineCloudIT {
                 NODE_MODE,
                 new AcceleratorConfiguration(ACCELERATOR_NAME, ACCELERATOR_COUNT),
                 RUN_AS_USER);
-       ic.appendLabels(INTEGRATION_LABEL);
+        ic.appendLabels(INTEGRATION_LABEL);
+        return ic;
     }
 
-    private void deleteIntegrationInstances() throws IOException {
+    private static void deleteIntegrationInstances(boolean waitForCompletion) throws IOException {
         List<Instance> instances = client.getInstancesWithLabel(projectId, INTEGRATION_LABEL);
-        for(Instance i : instances) {
+        ExecutorService executor = Executors.newWorkStealingPool();
 
+        instances.parallelStream()
+                .forEach(i -> safeDelete(i.getName(), waitForCompletion));
+    }
+
+    private static void safeDelete(String instanceId, boolean waitForCompletion) {
+        try {
+            Operation op = client.terminateInstance(projectId, ZONE, instanceId);
+            if (waitForCompletion)
+                client.waitForOperationCompletion(projectId, op, 3 * 60 * 1000);
+        } catch (Exception e) {
+            log.warning(String.format("Error deleting instance %s: %s", instanceId, e.getMessage()));
         }
     }
 
