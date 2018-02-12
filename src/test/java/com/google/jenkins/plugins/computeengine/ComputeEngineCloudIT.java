@@ -1,3 +1,19 @@
+/*
+ * Copyright 2018 Google Inc. All Rights Reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package com.google.jenkins.plugins.computeengine;
 
 import com.cloudbees.plugins.credentials.Credentials;
@@ -10,7 +26,6 @@ import com.google.api.services.compute.model.Operation;
 import com.google.jenkins.plugins.computeengine.client.ClientFactory;
 import com.google.jenkins.plugins.computeengine.client.ComputeClient;
 import com.google.jenkins.plugins.credentials.oauth.GoogleRobotPrivateKeyCredentials;
-import com.google.jenkins.plugins.credentials.oauth.JsonServiceAccountConfig;
 import com.google.jenkins.plugins.credentials.oauth.ServiceAccountConfig;
 import hudson.model.Node;
 import hudson.model.labels.LabelAtom;
@@ -21,7 +36,6 @@ import org.jvnet.hudson.test.JenkinsRule;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.*;
-import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.logging.LogManager;
@@ -119,9 +133,7 @@ public class ComputeEngineCloudIT {
         store.addCredentials(Domain.global(), c);
 
         // Add Cloud plugin
-        List<InstanceConfiguration> configs = new ArrayList<>();
-        configs.add(validInstanceConfiguration1());
-        ComputeEngineCloud gcp = new ComputeEngineCloud(CLOUD_NAME, projectId, projectId, "2", configs);
+        ComputeEngineCloud gcp = new ComputeEngineCloud(CLOUD_NAME, projectId, projectId, "10", null);
 
         // Capture log output to make sense of most failures
         cloudLogger = LogManager.getLogManager().getLogger("com.google.jenkins.plugins.computeengine.ComputeEngineCloud");
@@ -131,11 +143,11 @@ public class ComputeEngineCloudIT {
         assertEquals(0, r.jenkins.clouds.size());
         r.jenkins.clouds.add(gcp);
         assertEquals(1, r.jenkins.clouds.size());
-        assertEquals(1, ((ComputeEngineCloud) r.jenkins.clouds.get(0)).configurations.size());
 
         // Get a compute client for out-of-band calls to GCE
         ClientFactory clientFactory = new ClientFactory(r.jenkins, new ArrayList<DomainRequirement>(), projectId);
         client = clientFactory.compute();
+        assertNotNull("ComputeClient can not be null", client);
 
         // Other logging
         clientLogger = LogManager.getLogManager().getLogger("com.google.jenkins.plugins.computeengine.ComputeClient");
@@ -153,30 +165,59 @@ public class ComputeEngineCloudIT {
         log.info(logOutput.toString());
     }
 
+    @After
+    public void after() {
+        ComputeEngineCloud cloud = (ComputeEngineCloud) r.jenkins.clouds.get(0);
+        cloud.configurations.clear();
+    }
+
     @Test
     public void testCredentialsCreated() {
         List<Credentials> creds = new SystemCredentialsProvider.ProviderImpl().getStore(r.jenkins).getCredentials(Domain.global());
         assertEquals(1, creds.size());
     }
 
-    @Test
-    public void testConfigCreated() throws Exception {
-        InstanceConfiguration want = validInstanceConfiguration1();
-        InstanceConfiguration got = ((ComputeEngineCloud) r.jenkins.clouds.get(0)).getInstanceConfig(CONFIG_DESC);
-        r.assertEqualBeans(want, got, "namePrefix,region,zone,machineType,preemptible,startupScript,bootDiskType,bootDiskSourceImageName,bootDiskSourceImageProject,bootDiskSizeGb,acceleratorConfiguration,network,subnetwork,externalAddress,networkTags,serviceAccountEmail");
-    }
-
 
     @Test(timeout = 300000)
     public void testWorkerCreated() throws Exception {
+        //TODO: each test method should probably have its own handler.
+        logOutput.reset();
+
         ComputeEngineCloud cloud = (ComputeEngineCloud) r.jenkins.clouds.get(0);
+        cloud.addConfiguration(validInstanceConfiguration1());
+        // Add a new node
         Collection<NodeProvisioner.PlannedNode> planned = cloud.provision(new LabelAtom(LABEL), 1);
-        sh.flush();
-        assertEquals(logOutput.toString(), 1, planned.size());
-        NodeProvisioner.PlannedNode node = planned.iterator().next();
-        Node n = node.future.get();
+
+        // There should be a planned node
+        assertEquals(logs(), 1, planned.size());
+
+        // Wait for the node creation to finish
+        planned.iterator().next().future.get();
+
+        // There should be no warning logs
+        assertEquals(logs(), false, logs().contains("WARNING"));
     }
 
+    @Test(timeout = 300000)
+    public void testWorkerFailed() throws Exception {
+        //TODO: each test method should probably have its own handler.
+        logOutput.reset();
+
+        ComputeEngineCloud cloud = (ComputeEngineCloud) r.jenkins.clouds.get(0);
+        cloud.addConfiguration(invalidInstanceConfiguration1());
+
+        // Add a new node
+        Collection<NodeProvisioner.PlannedNode> planned = cloud.provision(new LabelAtom(LABEL), 1);
+
+        // There should be a planned node
+        assertEquals(logs(), 1, planned.size());
+
+        // Wait for the node creation to fail
+        planned.iterator().next().future.get();
+
+        // There should be warning logs
+        assertEquals(logs(), true, logs().contains("WARNING"));
+    }
 
     private static InstanceConfiguration validInstanceConfiguration1() {
         InstanceConfiguration ic = new InstanceConfiguration(
@@ -208,10 +249,46 @@ public class ComputeEngineCloudIT {
         return ic;
     }
 
+    /**
+     * This configuration creates an instance with no Java installed.
+     *
+     * @return
+     */
+    private static InstanceConfiguration invalidInstanceConfiguration1() {
+        InstanceConfiguration ic = new InstanceConfiguration(
+                NAME_PREFIX,
+                REGION,
+                ZONE,
+                MACHINE_TYPE,
+                NUM_EXECUTORS,
+                "",
+                PREEMPTIBLE,
+                LABEL,
+                CONFIG_DESC,
+                BOOT_DISK_TYPE,
+                BOOT_DISK_AUTODELETE,
+                BOOT_DISK_IMAGE_NAME,
+                BOOT_DISK_PROJECT_ID,
+                BOOT_DISK_SIZE_GB_STR,
+                NETWORK_NAME,
+                SUBNETWORK_NAME,
+                EXTERNAL_ADDR,
+                NETWORK_TAGS,
+                SERVICE_ACCOUNT_EMAIL,
+                RETENTION_TIME_MINUTES_STR,
+                LAUNCH_TIMEOUT_SECONDS_STR,
+                NODE_MODE,
+                new AcceleratorConfiguration(ACCELERATOR_NAME, ACCELERATOR_COUNT),
+                RUN_AS_USER);
+        ic.appendLabels(INTEGRATION_LABEL);
+        return ic;
+    }
+
     private static void deleteIntegrationInstances(boolean waitForCompletion) throws IOException {
         List<Instance> instances = client.getInstancesWithLabel(projectId, INTEGRATION_LABEL);
         ExecutorService executor = Executors.newWorkStealingPool();
 
+        //TODO: run this in an ExecutorService
         instances.parallelStream()
                 .forEach(i -> safeDelete(i.getName(), waitForCompletion));
     }
@@ -226,5 +303,8 @@ public class ComputeEngineCloudIT {
         }
     }
 
-
+    private static String logs() {
+        sh.flush();
+        return logOutput.toString();
+    }
 }
