@@ -37,20 +37,6 @@ package com.google.jenkins.plugins.computeengine;
         import hudson.Extension;
         import jenkins.model.Jenkins;
 
-/**
- * Provides authentication mechanism for a service account by setting a .json
- * private key file. The .json file structure needs to be:
- * <p>
- * <code>
- *     {
- *       "private_key":"-----BEGIN PRIVATE KEY-----\n
- *                      ...
- *                      \n-----END PRIVATE KEY-----\n",
- *       "client_email":"...@developer.gserviceaccount.com",
- *       ...
- *     }
- * </code>
- */
 public class StringJsonServiceAccountConfig extends ServiceAccountConfig {
     private static final long serialVersionUID = 6818111194672325387L;
     private static final Logger LOGGER =
