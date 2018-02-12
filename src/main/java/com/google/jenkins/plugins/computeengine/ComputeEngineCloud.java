@@ -1,3 +1,19 @@
+/*
+ * Copyright 2018 Google Inc. All Rights Reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package com.google.jenkins.plugins.computeengine;
 
 import com.cloudbees.plugins.credentials.CredentialsMatchers;
@@ -53,7 +69,7 @@ public class ComputeEngineCloud extends AbstractCloudImpl {
 
     public final String projectId;
     public final String credentialsId;
-    public final List<? extends InstanceConfiguration> configurations;
+    public final List<InstanceConfiguration> configurations;
 
     protected transient ComputeClient client;
 
@@ -63,11 +79,11 @@ public class ComputeEngineCloud extends AbstractCloudImpl {
             String projectId,
             String credentialsId,
             String instanceCapStr,
-            List<? extends InstanceConfiguration> configurations) {
+            List<InstanceConfiguration> configurations) {
         super(createCloudId(cloudName), instanceCapStr);
 
         if (configurations == null) {
-            this.configurations = Collections.emptyList();
+            this.configurations = new ArrayList<InstanceConfiguration>();
         } else {
             this.configurations = configurations;
         }
@@ -122,6 +138,11 @@ public class ComputeEngineCloud extends AbstractCloudImpl {
         }
     }
 
+    public void addConfiguration(InstanceConfiguration config) {
+        configurations.add(config);
+        readResolve();
+    }
+
     @Override
     public Collection<PlannedNode> provision(Label label, int excessWorkload) {
         List<PlannedNode> r = new ArrayList<PlannedNode>();
@@ -151,7 +172,7 @@ public class ComputeEngineCloud extends AbstractCloudImpl {
                                     c.connect(false).get();
                                 }
                             } catch (Exception e) {
-                                LOGGER.log(Level.INFO, String.format("Exception waiting for node %s to connect", node.getNodeName()), e);
+                                LOGGER.log(Level.WARNING, String.format("Exception waiting for node %s to connect", node.getNodeName()), e);
                             }
                             return node;
                         }
@@ -164,7 +185,7 @@ public class ComputeEngineCloud extends AbstractCloudImpl {
         } catch (IOException ioe) {
             LOGGER.log(Level.WARNING, "Error provisioning node", ioe);
         }catch (NoConfigurationException nce) {
-            LOGGER.log(Level.INFO, String.format("An instance configuration could not be found to provision a node for label %s", label.getName()), nce.getMessage());
+            LOGGER.log(Level.WARNING, String.format("An instance configuration could not be found to provision a node for label %s", label.getName()), nce.getMessage());
         }
         return r;
     }
