@@ -135,6 +135,7 @@ public class InstanceConfigurationTest {
 
         InstanceConfiguration.DescriptorImpl.setComputeClient(computeClient);
         AcceleratorConfiguration.DescriptorImpl.setComputeClient(computeClient);
+        NetworkConfiguration.NetworkConfigurationDescriptor.setComputeClient(computeClient);
 
         List<InstanceConfiguration> configs = new ArrayList<InstanceConfiguration>();
         configs.add(want);
@@ -144,7 +145,7 @@ public class InstanceConfigurationTest {
 
         r.submit(r.createWebClient().goTo("configure").getFormByName("config"));
         InstanceConfiguration got = ((ComputeEngineCloud) r.jenkins.clouds.iterator().next()).getInstanceConfig(CONFIG_DESC);
-        r.assertEqualBeans(want, got, "namePrefix,region,zone,machineType,preemptible,startupScript,bootDiskType,bootDiskSourceImageName,bootDiskSourceImageProject,bootDiskSizeGb,acceleratorConfiguration,network,subnetwork,externalAddress,networkTags,serviceAccountEmail");
+        r.assertEqualBeans(want, got, "namePrefix,region,zone,machineType,preemptible,startupScript,bootDiskType,bootDiskSourceImageName,bootDiskSourceImageProject,bootDiskSizeGb,acceleratorConfiguration,networkConfiguration,externalAddress,networkTags,serviceAccountEmail");
     }
 
     @Test
@@ -203,8 +204,7 @@ public class InstanceConfigurationTest {
                 BOOT_DISK_IMAGE_NAME,
                 BOOT_DISK_PROJECT_ID,
                 BOOT_DISK_SIZE_GB_STR,
-                NETWORK_NAME,
-                SUBNETWORK_NAME,
+                new AutofilledNetworkConfiguration(NETWORK_NAME, SUBNETWORK_NAME),
                 EXTERNAL_ADDR,
                 NETWORK_TAGS,
                 SERVICE_ACCOUNT_EMAIL,

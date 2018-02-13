@@ -1,0 +1,122 @@
+package com.google.jenkins.plugins.computeengine;
+
+import com.google.api.services.compute.model.Network;
+import com.google.api.services.compute.model.Subnetwork;
+import com.google.jenkins.plugins.computeengine.client.ComputeClient;
+import hudson.Extension;
+import hudson.RelativePath;
+import hudson.util.FormValidation;
+import hudson.util.ListBoxModel;
+import jenkins.model.Jenkins;
+import org.kohsuke.stapler.AncestorInPath;
+import org.kohsuke.stapler.DataBoundConstructor;
+import org.kohsuke.stapler.QueryParameter;
+
+import java.io.IOException;
+import java.util.List;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+
+import static com.google.jenkins.plugins.computeengine.InstanceConfiguration.ERROR_NO_SUBNETS;
+
+public class AutofilledNetworkConfiguration extends NetworkConfiguration {
+    private static final Logger LOGGER = Logger.getLogger(AutofilledNetworkConfiguration.class.getName());
+    @DataBoundConstructor
+    public AutofilledNetworkConfiguration(String network, String subnetwork) {
+        super(network, subnetwork);
+    }
+
+    @Extension
+    public static final class DescriptorImpl extends NetworkConfigurationDescriptor {
+        @Override
+        public String getDisplayName() { return "Choose from list..."; }
+
+        public ListBoxModel doFillNetworkItems(@AncestorInPath Jenkins context,
+                                               @QueryParameter("projectId") @RelativePath("../..") final String projectId,
+                                               @QueryParameter("credentialsId") @RelativePath("../..") final String credentialsId) {
+            ListBoxModel items = new ListBoxModel();
+
+            items.add("");
+
+            try {
+                ComputeClient compute = computeClient(context, credentialsId);
+                List<Network> networks = compute.getNetworks(projectId);
+
+                for (Network n : networks) {
+                    items.add(n.getName(), n.getSelfLink());
+                }
+                return items;
+            } catch (IOException ioe) {
+                String message = "Error retrieving networks";
+                LOGGER.log(Level.SEVERE, message, ioe);
+                items.clear();
+                items.add(message);
+                return items;
+            } catch (IllegalArgumentException iae) {
+                String message = "Error retrieving networks";
+                LOGGER.log(Level.SEVERE, message, iae);
+                items.clear();
+                items.add(message);
+                return null;
+            }
+        }
+
+        public FormValidation doCheckNetwork(@QueryParameter String value) {
+            if (value.equals("")) {
+                return FormValidation.error("Please select a network...");
+            }
+            return FormValidation.ok();
+        }
+
+        public ListBoxModel doFillSubnetworkItems(@AncestorInPath Jenkins context,
+                                                  @QueryParameter("network") final String network,
+                                                  @QueryParameter("region") @RelativePath("..") final String region,
+                                                  @QueryParameter("projectId") @RelativePath("../..") final String projectId,
+                                                  @QueryParameter("credentialsId") @RelativePath("../..") final String credentialsId) {
+            ListBoxModel items = new ListBoxModel();
+
+            if (network.endsWith("default")) {
+                items.add(new ListBoxModel.Option("default", "default", true));
+                return items;
+            }
+
+            try {
+                ComputeClient compute = computeClient(context, credentialsId);
+                List<Subnetwork> subnetworks = compute.getSubnetworks(projectId, network, region);
+
+                if (subnetworks.size() == 0) {
+                    items.add(new ListBoxModel.Option(ERROR_NO_SUBNETS, ERROR_NO_SUBNETS, true));
+                    return items;
+                }
+
+                for (Subnetwork s : subnetworks) {
+                    items.add(s.getName(), s.getSelfLink());
+                }
+                return items;
+            } catch (IOException ioe) {
+                String message = "Error retrieving subnetworks";
+                LOGGER.log(Level.SEVERE, message, ioe);
+                items.clear();
+                items.add(message);
+                return items;
+            } catch (IllegalArgumentException iae) {
+                String message = "Error retrieving subnetworks";
+                LOGGER.log(Level.SEVERE, message, iae);
+                items.clear();
+                items.add(message);
+                return items;
+            }
+        }
+
+        public FormValidation doCheckSubnetwork(@QueryParameter String value) {
+            if (value.equals(ERROR_NO_SUBNETS)) {
+                return FormValidation.error(ERROR_NO_SUBNETS);
+            }
+            if (value.isEmpty()) {
+                return FormValidation.error("Please select a subnetwork...");
+            }
+
+            return FormValidation.ok();
+        }
+    }
+}

@@ -72,8 +72,7 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
     public final boolean bootDiskAutoDelete;
     public final String bootDiskSourceImageName;
     public final String bootDiskSourceImageProject;
-    public final String network;
-    public final String subnetwork;
+    public final NetworkConfiguration networkConfiguration;
     public final boolean externalAddress;
     public final String networkTags;
     public final String serviceAccountEmail;
@@ -105,8 +104,7 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
                                  String bootDiskSourceImageName,
                                  String bootDiskSourceImageProject,
                                  String bootDiskSizeGbStr,
-                                 String network,
-                                 String subnetwork,
+                                 NetworkConfiguration networkConfiguration,
                                  boolean externalAddress,
                                  String networkTags,
                                  String serviceAccountEmail,
@@ -138,8 +136,7 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
         this.bootDiskSizeGbStr = bootDiskSizeGb.toString();
 
         // Network
-        this.network = network;
-        this.subnetwork = subnetwork;
+        this.networkConfiguration = networkConfiguration;
         this.externalAddress = externalAddress;
         this.networkTags = Util.fixNull(networkTags).trim();
 
@@ -336,12 +333,11 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
             );
         }
         NetworkInterface nic = new NetworkInterface()
-                .setNetwork(stripSelfLinkPrefix(network))
                 .setAccessConfigs(accessConfigs);
 
         // Don't include subnetwork name if using default
-        if (!subnetwork.equals("default")) {
-            nic.setSubnetwork(stripSelfLinkPrefix(subnetwork));
+        if (!networkConfiguration.getSubnetwork().equals("default")) {
+            nic.setSubnetwork(stripSelfLinkPrefix(networkConfiguration.getSubnetwork()));
         }
 
         networkInterfaces.add(nic);
@@ -403,6 +399,10 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
                     p = d.getHelpFile(fieldName);
             }
             return p;
+        }
+
+        public List<NetworkConfiguration.NetworkConfigurationDescriptor> getNetworkConfigurationDescriptors() {
+            return Jenkins.getInstance().getDescriptorList(NetworkConfiguration.class);
         }
 
         public FormValidation doCheckNetworkTags(@QueryParameter String value) {
@@ -533,83 +533,7 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
             return FormValidation.ok();
         }
 
-        public ListBoxModel doFillNetworkItems(@AncestorInPath Jenkins context,
-                                               @QueryParameter("projectId") @RelativePath("..") final String projectId,
-                                               @QueryParameter("credentialsId") @RelativePath("..") final String credentialsId) {
-            ListBoxModel items = new ListBoxModel();
-            items.add("");
 
-            try {
-                ComputeClient compute = computeClient(context, credentialsId);
-                List<Network> networks = compute.getNetworks(projectId);
-
-                for (Network n : networks) {
-                    items.add(n.getName(), n.getSelfLink());
-                }
-                return items;
-            } catch (IOException ioe) {
-                items.clear();
-                items.add("Error retrieving networks");
-                return items;
-            } catch (IllegalArgumentException iae) {
-                //TODO: log
-                return null;
-            }
-        }
-
-        public FormValidation doCheckNetwork(@QueryParameter String value) {
-            if (value.equals("")) {
-                return FormValidation.error("Please select a network...");
-            }
-            return FormValidation.ok();
-        }
-
-        public ListBoxModel doFillSubnetworkItems(@AncestorInPath Jenkins context,
-                                                  @QueryParameter("region") final String region,
-                                                  @QueryParameter("network") final String network,
-                                                  @QueryParameter("projectId") @RelativePath("..") final String projectId,
-                                                  @QueryParameter("credentialsId") @RelativePath("..") final String credentialsId) {
-            ListBoxModel items = new ListBoxModel();
-
-            if (network.endsWith("default")) {
-                items.add(new ListBoxModel.Option("default", "default", true));
-                return items;
-            }
-
-            try {
-                ComputeClient compute = computeClient(context, credentialsId);
-                List<Subnetwork> subnetworks = compute.getSubnetworks(projectId, network, region);
-
-                if (subnetworks.size() == 0) {
-                    items.add(new ListBoxModel.Option(ERROR_NO_SUBNETS, ERROR_NO_SUBNETS, true));
-                    return items;
-                }
-
-                for (Subnetwork s : subnetworks) {
-                    items.add(s.getName(), s.getSelfLink());
-                }
-                return items;
-            } catch (IOException ioe) {
-                items.clear();
-                items.add("Error retrieving subnetworks");
-                return items;
-            } catch (IllegalArgumentException iae) {
-                //TODO: log
-                return null;
-            }
-        }
-
-        public FormValidation doCheckSubnetwork(@QueryParameter String value) {
-            if (value.equals(ERROR_NO_SUBNETS)) {
-
-                return FormValidation.error(ERROR_NO_SUBNETS);
-            }
-            if (value.isEmpty()) {
-                return FormValidation.error("Please select a subnetwork...");
-            }
-
-            return FormValidation.ok();
-        }
 
         public ListBoxModel doFillBootDiskTypeItems(@AncestorInPath Jenkins context,
                                                     @QueryParameter("projectId") @RelativePath("..") final String projectId,
