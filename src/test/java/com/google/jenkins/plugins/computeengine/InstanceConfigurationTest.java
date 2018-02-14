@@ -166,7 +166,6 @@ public class InstanceConfigurationTest {
         assert (i.getMetadata().getItems().get(0).getValue().equals(STARTUP_SCRIPT));
 
         // Network
-        assert (i.getNetworkInterfaces().get(0).getNetwork().equals(NETWORK_NAME));
         assert (i.getNetworkInterfaces().get(0).getSubnetwork().equals(SUBNETWORK_NAME));
         assert (i.getNetworkInterfaces().get(0).getAccessConfigs().get(0).getType().equals("ONE_TO_ONE_NAT"));
         assert (i.getNetworkInterfaces().get(0).getAccessConfigs().get(0).getName().equals("External NAT"));
