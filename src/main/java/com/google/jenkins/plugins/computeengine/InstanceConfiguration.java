@@ -382,6 +382,8 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
             return DEFAULT_RUN_AS_USER.toString();
         }
 
+        public static NetworkConfiguration defaultNetworkConfiguration() { return new AutofilledNetworkConfiguration(); }
+
         private static ComputeClient computeClient(Jenkins context, String credentialsId) throws IOException {
             if (computeClient != null) {
                 return computeClient;

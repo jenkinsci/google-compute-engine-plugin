@@ -2,6 +2,7 @@ package com.google.jenkins.plugins.computeengine;
 
 import com.google.api.services.compute.model.Network;
 import com.google.api.services.compute.model.Subnetwork;
+import com.google.common.base.Strings;
 import com.google.jenkins.plugins.computeengine.client.ComputeClient;
 import hudson.Extension;
 import hudson.RelativePath;
@@ -25,11 +26,14 @@ public class AutofilledNetworkConfiguration extends NetworkConfiguration {
     public AutofilledNetworkConfiguration(String network, String subnetwork) {
         super(network, subnetwork);
     }
+    public AutofilledNetworkConfiguration() {
+       super("", "");
+    }
 
     @Extension
     public static final class DescriptorImpl extends NetworkConfigurationDescriptor {
         @Override
-        public String getDisplayName() { return "Network in selected project..."; }
+        public String getDisplayName() { return "Available networks"; }
 
         public ListBoxModel doFillNetworkItems(@AncestorInPath Jenkins context,
                                                @QueryParameter("projectId") @RelativePath("../..") final String projectId,
@@ -75,7 +79,7 @@ public class AutofilledNetworkConfiguration extends NetworkConfiguration {
                                                   @QueryParameter("credentialsId") @RelativePath("../..") final String credentialsId) {
             ListBoxModel items = new ListBoxModel();
 
-            if(network.equals("")) {
+            if(Strings.isNullOrEmpty(network) || Strings.isNullOrEmpty(region) || Strings.isNullOrEmpty(projectId) || Strings.isNullOrEmpty(credentialsId)) {
                 return items;
             }
 

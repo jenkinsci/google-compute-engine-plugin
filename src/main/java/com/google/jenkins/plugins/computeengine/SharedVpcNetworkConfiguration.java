@@ -1,5 +1,6 @@
 package com.google.jenkins.plugins.computeengine;
 
+import com.google.common.base.Strings;
 import hudson.Extension;
 import hudson.RelativePath;
 import hudson.util.FormValidation;
@@ -46,7 +47,7 @@ public class SharedVpcNetworkConfiguration extends NetworkConfiguration {
         }
 
         public FormValidation doCheckRegion(@QueryParameter String value, @QueryParameter("region") @RelativePath("..") final String region) {
-            if(region == null || value == null || ! region.contains(value)) {
+            if(Strings.isNullOrEmpty(region)|| Strings.isNullOrEmpty(value) || ! region.equals(value)) {
                 return FormValidation.error("The region you specify for a shared VPC should match the region selected in the 'Location' section above");
             }
             return FormValidation.ok();
