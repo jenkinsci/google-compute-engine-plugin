@@ -26,6 +26,7 @@ public class AutofilledNetworkConfiguration extends NetworkConfiguration {
     public AutofilledNetworkConfiguration(String network, String subnetwork) {
         super(network, subnetwork);
     }
+
     public AutofilledNetworkConfiguration() {
        super("", "");
     }
@@ -79,7 +80,7 @@ public class AutofilledNetworkConfiguration extends NetworkConfiguration {
                                                   @QueryParameter("credentialsId") @RelativePath("../..") final String credentialsId) {
             ListBoxModel items = new ListBoxModel();
 
-            if(Strings.isNullOrEmpty(network) || Strings.isNullOrEmpty(region) || Strings.isNullOrEmpty(projectId) || Strings.isNullOrEmpty(credentialsId)) {
+            if(Strings.isNullOrEmpty(region)) {
                 return items;
             }
 
