@@ -402,7 +402,9 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
         }
 
         public List<NetworkConfiguration.NetworkConfigurationDescriptor> getNetworkConfigurationDescriptors() {
-            return Jenkins.getInstance().getDescriptorList(NetworkConfiguration.class);
+            List<NetworkConfiguration.NetworkConfigurationDescriptor> d = Jenkins.getInstance().getDescriptorList(NetworkConfiguration.class);
+            d.removeIf(i -> i.clazz.getName().equals("NetworkConfiguration"));
+            return d;
         }
 
         public FormValidation doCheckNetworkTags(@QueryParameter String value) {

@@ -1,0 +1,12 @@
+<?jelly escape-by-default='true'?>
+<j:jelly xmlns:j="jelly:core" xmlns:f="/lib/form">
+    <f:entry field="projectId" title="${%Host project ID}">
+        <f:textbox/>
+    </f:entry>
+    <f:entry field="subnetworkShortName" title="${%Subnetwork}">
+        <f:textbox />
+    </f:entry>
+    <f:entry field="region" title="${%Subnetwork region}">
+        <f:textbox/>
+    </f:entry>
+</j:jelly>

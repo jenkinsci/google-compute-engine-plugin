@@ -29,7 +29,7 @@ public class AutofilledNetworkConfiguration extends NetworkConfiguration {
     @Extension
     public static final class DescriptorImpl extends NetworkConfigurationDescriptor {
         @Override
-        public String getDisplayName() { return "Choose from list..."; }
+        public String getDisplayName() { return "Network in selected project..."; }
 
         public ListBoxModel doFillNetworkItems(@AncestorInPath Jenkins context,
                                                @QueryParameter("projectId") @RelativePath("../..") final String projectId,
@@ -74,6 +74,10 @@ public class AutofilledNetworkConfiguration extends NetworkConfiguration {
                                                   @QueryParameter("projectId") @RelativePath("../..") final String projectId,
                                                   @QueryParameter("credentialsId") @RelativePath("../..") final String credentialsId) {
             ListBoxModel items = new ListBoxModel();
+
+            if(network.equals("")) {
+                return items;
+            }
 
             if (network.endsWith("default")) {
                 items.add(new ListBoxModel.Option("default", "default", true));

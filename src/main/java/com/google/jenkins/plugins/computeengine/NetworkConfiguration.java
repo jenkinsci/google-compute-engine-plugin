@@ -29,8 +29,6 @@ import java.util.ArrayList;
 import java.util.Objects;
 
 public abstract class NetworkConfiguration implements Describable<NetworkConfiguration> {
-    public static final String NETWORK_TEMPLATE = "projects/$PROJECT/global/networks/$NETWORK";
-    public static final String SUBNETWORK_TEMPLATE = "projects/$PROJECT/global/networks/$NETWORK";
     public final String network;
     public final String subnetwork;
 
@@ -73,7 +71,6 @@ public abstract class NetworkConfiguration implements Describable<NetworkConfigu
         return String.format("Network: %s\nSubnetwork: %s", getNetwork(), getSubnetwork());
     }
 
-    @Extension
     public static class NetworkConfigurationDescriptor extends Descriptor<NetworkConfiguration> {
         private static ComputeClient computeClient;
 
