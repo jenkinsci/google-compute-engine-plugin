@@ -72,7 +72,7 @@ public class AcceleratorConfiguration implements Describable<AcceleratorConfigur
 
     @Override
     public String toString() {
-        return this.gpuType + "(" + this.gpuCount + ")";
+        return String.format("%s (%s)", this.gpuType, this.gpuCount);
     }
 
     @Extension
