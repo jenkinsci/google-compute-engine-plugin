@@ -71,12 +71,10 @@ public abstract class NetworkConfiguration implements Describable<NetworkConfigu
         return String.format("Network: %s\nSubnetwork: %s", getNetwork(), getSubnetwork());
     }
 
-    public static class NetworkConfigurationDescriptor extends Descriptor<NetworkConfiguration> {
+    public static abstract class NetworkConfigurationDescriptor extends Descriptor<NetworkConfiguration> {
         private static ComputeClient computeClient;
 
-        public String getDisplayName() {
-           return "Manually enter...";
-       }
+        public abstract String getDisplayName();
 
         public static void setComputeClient(ComputeClient client) {
             computeClient = client;

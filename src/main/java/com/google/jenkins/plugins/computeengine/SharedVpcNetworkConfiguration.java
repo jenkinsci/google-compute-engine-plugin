@@ -23,7 +23,6 @@ public class SharedVpcNetworkConfiguration extends NetworkConfiguration {
 
     @Extension
     public static final class DescriptorImpl extends NetworkConfigurationDescriptor {
-        @Override
         public String getDisplayName() {
             return "Shared VPC";
         }

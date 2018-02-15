@@ -33,7 +33,6 @@ public class AutofilledNetworkConfiguration extends NetworkConfiguration {
 
     @Extension
     public static final class DescriptorImpl extends NetworkConfigurationDescriptor {
-        @Override
         public String getDisplayName() { return "Available networks"; }
 
         public ListBoxModel doFillNetworkItems(@AncestorInPath Jenkins context,
