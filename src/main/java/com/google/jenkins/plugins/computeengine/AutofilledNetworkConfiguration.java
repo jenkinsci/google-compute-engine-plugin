@@ -40,7 +40,6 @@ public class AutofilledNetworkConfiguration extends NetworkConfiguration {
                                                @QueryParameter("projectId") @RelativePath("../..") final String projectId,
                                                @QueryParameter("credentialsId") @RelativePath("../..") final String credentialsId) {
             ListBoxModel items = new ListBoxModel();
-
             items.add("");
 
             try {
