@@ -68,7 +68,7 @@ public abstract class NetworkConfiguration implements Describable<NetworkConfigu
 
     @Override
     public String toString() {
-        return String.format("Network: %s\nSubnetwork: %s", getNetwork(), getSubnetwork());
+        return String.format("Network: %s%nSubnetwork: %s", getNetwork(), getSubnetwork());
     }
 
     public static abstract class NetworkConfigurationDescriptor extends Descriptor<NetworkConfiguration> {

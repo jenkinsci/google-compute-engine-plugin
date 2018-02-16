@@ -1,5 +1,6 @@
 package com.google.jenkins.plugins.computeengine;
 
+import com.google.api.client.util.StringUtils;
 import com.google.common.base.Strings;
 import hudson.Extension;
 import hudson.RelativePath;
@@ -13,6 +14,7 @@ public class SharedVpcNetworkConfiguration extends NetworkConfiguration {
     public final String region;
 
     public static final String SUBNETWORK_TEMPLATE = "projects/%s/regions/%s/subnetworks/%s";
+
     @DataBoundConstructor
     public SharedVpcNetworkConfiguration(String projectId, String region, String subnetworkShortName) {
        super("", String.format(SUBNETWORK_TEMPLATE, projectId, region, subnetworkShortName));
@@ -28,14 +30,14 @@ public class SharedVpcNetworkConfiguration extends NetworkConfiguration {
         }
 
         public FormValidation doCheckProjectId(@QueryParameter String value) {
-            if (value == null || value.equals("")) {
+            if (Strings.isNullOrEmpty(value)) {
                 return FormValidation.error("Project ID required");
             }
             return FormValidation.ok();
         }
 
         public FormValidation doCheckSubnetworkName(@QueryParameter String value) {
-            if (value == null || value.equals("")) {
+            if (Strings.isNullOrEmpty(value)) {
                 return FormValidation.error("Subnetwork name required");
             }
 
