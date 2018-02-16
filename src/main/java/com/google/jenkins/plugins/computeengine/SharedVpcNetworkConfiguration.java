@@ -1,6 +1,5 @@
 package com.google.jenkins.plugins.computeengine;
 
-import com.google.api.client.util.StringUtils;
 import com.google.common.base.Strings;
 import hudson.Extension;
 import hudson.RelativePath;
@@ -9,18 +8,17 @@ import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.QueryParameter;
 
 public class SharedVpcNetworkConfiguration extends NetworkConfiguration {
+    public static final String SUBNETWORK_TEMPLATE = "projects/%s/regions/%s/subnetworks/%s";
     public final String projectId;
     public final String subnetworkShortName;
     public final String region;
 
-    public static final String SUBNETWORK_TEMPLATE = "projects/%s/regions/%s/subnetworks/%s";
-
     @DataBoundConstructor
     public SharedVpcNetworkConfiguration(String projectId, String region, String subnetworkShortName) {
-       super("", String.format(SUBNETWORK_TEMPLATE, projectId, region, subnetworkShortName));
-       this.projectId = projectId;
-       this.subnetworkShortName = subnetworkShortName;
-       this.region = region;
+        super("", String.format(SUBNETWORK_TEMPLATE, projectId, region, subnetworkShortName));
+        this.projectId = projectId;
+        this.subnetworkShortName = subnetworkShortName;
+        this.region = region;
     }
 
     @Extension
@@ -48,7 +46,7 @@ public class SharedVpcNetworkConfiguration extends NetworkConfiguration {
         }
 
         public FormValidation doCheckRegion(@QueryParameter String value, @QueryParameter("region") @RelativePath("..") final String region) {
-            if(Strings.isNullOrEmpty(region)|| Strings.isNullOrEmpty(value) || ! region.equals(value)) {
+            if (Strings.isNullOrEmpty(region) || Strings.isNullOrEmpty(value) || !region.equals(value)) {
                 return FormValidation.error("The region you specify for a shared VPC should match the region selected in the 'Location' section above");
             }
             return FormValidation.ok();

@@ -208,7 +208,7 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
     }
 
     public void appendLabels(Map<String, String> labels) {
-        if(googleLabels == null) {
+        if (googleLabels == null) {
             googleLabels = new HashMap<>();
         }
         googleLabels.putAll(labels);
@@ -220,7 +220,7 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
             Instance i = instance();
             Operation operation = cloud.client.insertInstance(cloud.projectId, i);
             logger.println("Sent insert request");
-            ComputeEngineInstance instance = new ComputeEngineInstance(cloud.name, i.getName(), i.getZone(), i.getDescription(), runAsUser,"./.jenkins-slave", numExecutors, mode, requiredLabel == null ? "" : requiredLabel.getName(), new ComputeEngineLinuxLauncher(cloud.getCloudName(), operation), new CloudRetentionStrategy(retentionTimeMinutes), getLaunchTimeoutMillis());
+            ComputeEngineInstance instance = new ComputeEngineInstance(cloud.name, i.getName(), i.getZone(), i.getDescription(), runAsUser, "./.jenkins-slave", numExecutors, mode, requiredLabel == null ? "" : requiredLabel.getName(), new ComputeEngineLinuxLauncher(cloud.getCloudName(), operation), new CloudRetentionStrategy(retentionTimeMinutes), getLaunchTimeoutMillis());
             return instance;
         } catch (Descriptor.FormException fe) {
             logger.printf("Error provisioning instance: %s", fe.getMessage());
@@ -382,7 +382,9 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
             return DEFAULT_RUN_AS_USER.toString();
         }
 
-        public static NetworkConfiguration defaultNetworkConfiguration() { return new AutofilledNetworkConfiguration(); }
+        public static NetworkConfiguration defaultNetworkConfiguration() {
+            return new AutofilledNetworkConfiguration();
+        }
 
         private static ComputeClient computeClient(Jenkins context, String credentialsId) throws IOException {
             if (computeClient != null) {
@@ -536,7 +538,6 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
             }
             return FormValidation.ok();
         }
-
 
 
         public ListBoxModel doFillBootDiskTypeItems(@AncestorInPath Jenkins context,

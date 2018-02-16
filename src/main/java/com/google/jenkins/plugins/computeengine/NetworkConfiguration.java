@@ -19,7 +19,6 @@ package com.google.jenkins.plugins.computeengine;
 import com.cloudbees.plugins.credentials.domains.DomainRequirement;
 import com.google.jenkins.plugins.computeengine.client.ClientFactory;
 import com.google.jenkins.plugins.computeengine.client.ComputeClient;
-import hudson.Extension;
 import hudson.model.Describable;
 import hudson.model.Descriptor;
 import jenkins.model.Jenkins;
@@ -74,8 +73,6 @@ public abstract class NetworkConfiguration implements Describable<NetworkConfigu
     public static abstract class NetworkConfigurationDescriptor extends Descriptor<NetworkConfiguration> {
         private static ComputeClient computeClient;
 
-        public abstract String getDisplayName();
-
         public static void setComputeClient(ComputeClient client) {
             computeClient = client;
         }
@@ -87,5 +84,7 @@ public abstract class NetworkConfiguration implements Describable<NetworkConfigu
             ClientFactory clientFactory = new ClientFactory(context, new ArrayList<DomainRequirement>(), credentialsId);
             return clientFactory.compute();
         }
+
+        public abstract String getDisplayName();
     }
 }

@@ -18,12 +18,10 @@ package com.google.jenkins.plugins.computeengine;
 
 import com.google.api.services.compute.model.Instance;
 import hudson.slaves.AbstractCloudComputer;
-import hudson.slaves.Cloud;
 import org.kohsuke.stapler.DataBoundSetter;
 import org.kohsuke.stapler.HttpRedirect;
 import org.kohsuke.stapler.HttpResponse;
 
-import javax.annotation.CheckForNull;
 import java.io.IOException;
 
 public class ComputeEngineComputer extends AbstractCloudComputer<ComputeEngineInstance> {
@@ -54,7 +52,7 @@ public class ComputeEngineComputer extends AbstractCloudComputer<ComputeEngineIn
     public void setNumExecutorsStr(String value) {
         Integer v = InstanceConfiguration.intOrDefault(value, InstanceConfiguration.DEFAULT_NUM_EXECUTORS);
         ComputeEngineInstance node = getNode();
-        if(node != null) {
+        if (node != null) {
             node.setNumExecutors(v);
         }
     }

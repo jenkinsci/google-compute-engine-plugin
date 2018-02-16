@@ -77,7 +77,7 @@ public class ComputeEngineLinuxLauncher extends ComputeEngineComputerLauncher {
     protected void launch(ComputeEngineComputer computer, TaskListener listener, Instance inst)
             throws IOException, InterruptedException {
         ComputeEngineInstance node = computer.getNode();
-        if(node == null) {
+        if (node == null) {
             logWarning(computer, listener, "Could not get node from computer");
             return;
         }
@@ -143,12 +143,12 @@ public class ComputeEngineLinuxLauncher extends ComputeEngineComputerLauncher {
     }
 
     private GoogleKeyPair setupSshKeys(ComputeEngineComputer computer) throws CloudNotFoundException, IOException, InterruptedException {
-        if(computer == null) {
+        if (computer == null) {
             throw new IllegalArgumentException("A null ComputeEngineComputer was provided");
         }
 
         ComputeEngineInstance node = computer.getNode();
-        if(node == null) {
+        if (node == null) {
             throw new IllegalArgumentException("A ComputeEngineComputer with no node was provided");
         }
 
@@ -166,7 +166,7 @@ public class ComputeEngineLinuxLauncher extends ComputeEngineComputerLauncher {
             Exception { //TODO: better exceptions
         logInfo(computer, listener, "bootstrap");
         ComputeEngineInstance node = computer.getNode();
-        if(node == null) {
+        if (node == null) {
             throw new IllegalArgumentException("A ComputeEngineComputer with no node was provided");
         }
         Connection bootstrapConn = null;
@@ -204,7 +204,7 @@ public class ComputeEngineLinuxLauncher extends ComputeEngineComputerLauncher {
 
     private Connection connectToSsh(ComputeEngineComputer computer, TaskListener listener) throws Exception {
         ComputeEngineInstance node = computer.getNode();
-        if(node == null) {
+        if (node == null) {
             throw new IllegalArgumentException("A ComputeEngineComputer with no node was provided");
         }
 

@@ -64,13 +64,13 @@ public abstract class ComputeEngineComputerLauncher extends ComputerLauncher {
 
         try {
             cloud = computer.getCloud();
-        } catch(CloudNotFoundException cnfe) {
+        } catch (CloudNotFoundException cnfe) {
             log(LOGGER, Level.SEVERE, listener, String.format("Could not get cloud %s", cloudName));
             return;
         }
 
         ComputeEngineInstance node = computer.getNode();
-        if(node == null) {
+        if (node == null) {
             log(LOGGER, Level.SEVERE, listener, String.format("Could not get node from computer"));
             return;
         }

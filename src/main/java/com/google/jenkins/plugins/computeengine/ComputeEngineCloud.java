@@ -22,7 +22,6 @@ import com.cloudbees.plugins.credentials.common.StandardCredentials;
 import com.cloudbees.plugins.credentials.common.StandardListBoxModel;
 import com.cloudbees.plugins.credentials.domains.DomainRequirement;
 import com.google.api.services.compute.model.Instance;
-import com.google.api.services.compute.model.Region;
 import com.google.jenkins.plugins.computeengine.client.ClientFactory;
 import com.google.jenkins.plugins.computeengine.client.ComputeClient;
 import com.google.jenkins.plugins.credentials.oauth.GoogleOAuth2Credentials;
@@ -43,7 +42,6 @@ import org.kohsuke.stapler.HttpResponse;
 import org.kohsuke.stapler.QueryParameter;
 
 import javax.annotation.Nonnull;
-import javax.naming.NoInitialContextException;
 import javax.servlet.ServletException;
 import java.io.IOException;
 import java.io.PrintStream;
@@ -58,18 +56,18 @@ import static javax.servlet.http.HttpServletResponse.SC_BAD_REQUEST;
 
 public class ComputeEngineCloud extends AbstractCloudImpl {
     public static final String CLOUD_PREFIX = "gce-";
-    public final String projectId;
-    public final String credentialsId;
-    public final List<InstanceConfiguration> configurations;
-
     private static final Logger LOGGER = Logger.getLogger(ComputeEngineCloud.class.getName());
     private static final SimpleFormatter sf = new SimpleFormatter();
     private static Map<String, String> REQUIRED_LABEL;
+
     static {
         REQUIRED_LABEL = new HashMap<String, String>();
         REQUIRED_LABEL.put("jenkinscloud", "gcp");
     }
 
+    public final String projectId;
+    public final String credentialsId;
+    public final List<InstanceConfiguration> configurations;
     protected transient ComputeClient client;
 
     @DataBoundConstructor
@@ -167,7 +165,7 @@ public class ComputeEngineCloud extends AbstractCloudImpl {
                             Computer c;
                             try {
                                 c = node.toComputer();
-                                if(c != null) {
+                                if (c != null) {
                                     c.connect(false).get();
                                 }
                             } catch (Exception e) {
@@ -183,7 +181,7 @@ public class ComputeEngineCloud extends AbstractCloudImpl {
             }
         } catch (IOException ioe) {
             LOGGER.log(Level.WARNING, "Error provisioning node", ioe);
-        }catch (NoConfigurationException nce) {
+        } catch (NoConfigurationException nce) {
             LOGGER.log(Level.WARNING, String.format("An instance configuration could not be found to provision a node for label %s", label.getName()), nce.getMessage());
         }
         return r;
@@ -218,12 +216,12 @@ public class ComputeEngineCloud extends AbstractCloudImpl {
 
     @Override
     public boolean canProvision(Label label) {
-         try {
-             getInstanceConfig(label);
-             return true;
-         } catch (NoConfigurationException nce) {
-             return false;
-         }
+        try {
+            getInstanceConfig(label);
+            return true;
+        } catch (NoConfigurationException nce) {
+            return false;
+        }
     }
 
     /**

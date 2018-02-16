@@ -22,18 +22,21 @@ import static com.google.jenkins.plugins.computeengine.InstanceConfiguration.ERR
 
 public class AutofilledNetworkConfiguration extends NetworkConfiguration {
     private static final Logger LOGGER = Logger.getLogger(AutofilledNetworkConfiguration.class.getName());
+
     @DataBoundConstructor
     public AutofilledNetworkConfiguration(String network, String subnetwork) {
         super(network, subnetwork);
     }
 
     public AutofilledNetworkConfiguration() {
-       super("", "");
+        super("", "");
     }
 
     @Extension
     public static final class DescriptorImpl extends NetworkConfigurationDescriptor {
-        public String getDisplayName() { return "Available networks"; }
+        public String getDisplayName() {
+            return "Available networks";
+        }
 
         public ListBoxModel doFillNetworkItems(@AncestorInPath Jenkins context,
                                                @QueryParameter("projectId") @RelativePath("../..") final String projectId,
@@ -78,7 +81,7 @@ public class AutofilledNetworkConfiguration extends NetworkConfiguration {
                                                   @QueryParameter("credentialsId") @RelativePath("../..") final String credentialsId) {
             ListBoxModel items = new ListBoxModel();
 
-            if(Strings.isNullOrEmpty(region)) {
+            if (Strings.isNullOrEmpty(region)) {
                 return items;
             }
 
