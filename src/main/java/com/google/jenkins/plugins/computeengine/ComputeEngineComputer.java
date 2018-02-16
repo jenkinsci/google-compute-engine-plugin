@@ -47,8 +47,7 @@ public class ComputeEngineComputer extends AbstractCloudComputer<ComputeEngineIn
     }
 
     public String getNumExecutorsStr() {
-        return "computer";
-        //return String.valueOf(super.getNumExecutors());
+        return String.valueOf(super.getNumExecutors());
     }
 
     @DataBoundSetter
