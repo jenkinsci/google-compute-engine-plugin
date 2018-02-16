@@ -42,7 +42,8 @@ public class InstanceConfigurationTest {
     public static final String PROJECT_ID = "test-project";
     public static final String REGION = "us-west1";
     public static final String ZONE = "us-west1-a";
-    public static final String LABEL = "LABEL1, LABEL2";
+    public static final String LABEL = "LABEL1 LABEL2";
+    public static final String A_LABEL = "LABEL1";
     public static final String MACHINE_TYPE = "n1-standard-1";
     public static final String STARTUP_SCRIPT = "#!/bin/bash";
     public static final String NUM_EXECUTORS = "1";
@@ -57,13 +58,13 @@ public class InstanceConfigurationTest {
     public static final String ACCELERATOR_NAME = "test-gpu";
     public static final String ACCELERATOR_COUNT = "1";
     public static final String RUN_AS_USER = "jenkins";
-    public final String NETWORK_NAME = "test-network";
-    public final String SUBNETWORK_NAME = "test-subnetwork";
-    public final boolean EXTERNAL_ADDR = true;
-    public final String NETWORK_TAGS = "tag1 tag2";
-    public final String SERVICE_ACCOUNT_EMAIL = "test-service-account";
-    public final String RETENTION_TIME_MINUTES_STR = "1";
-    public final String LAUNCH_TIMEOUT_SECONDS_STR = "100";
+    public static final String NETWORK_NAME = "test-network";
+    public static final String SUBNETWORK_NAME = "test-subnetwork";
+    public static final boolean EXTERNAL_ADDR = true;
+    public static final String NETWORK_TAGS = "tag1 tag2";
+    public static final String SERVICE_ACCOUNT_EMAIL = "test-service-account";
+    public static final String RETENTION_TIME_MINUTES_STR = "1";
+    public static final String LAUNCH_TIMEOUT_SECONDS_STR = "100";
 
 
     @Mock
@@ -187,7 +188,7 @@ public class InstanceConfigurationTest {
 
     }
 
-    private InstanceConfiguration instanceConfiguration() {
+    public  static InstanceConfiguration instanceConfiguration() {
         return new InstanceConfiguration(
                 NAME_PREFIX,
                 REGION,

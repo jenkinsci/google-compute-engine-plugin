@@ -57,19 +57,18 @@ import java.util.logging.SimpleFormatter;
 import static javax.servlet.http.HttpServletResponse.SC_BAD_REQUEST;
 
 public class ComputeEngineCloud extends AbstractCloudImpl {
+    public static final String CLOUD_PREFIX = "gce-";
+    public final String projectId;
+    public final String credentialsId;
+    public final List<InstanceConfiguration> configurations;
+
     private static final Logger LOGGER = Logger.getLogger(ComputeEngineCloud.class.getName());
     private static final SimpleFormatter sf = new SimpleFormatter();
-    private static final String CLOUD_PREFIX = "gce-";
     private static Map<String, String> REQUIRED_LABEL;
-
     static {
         REQUIRED_LABEL = new HashMap<String, String>();
         REQUIRED_LABEL.put("jenkinscloud", "gcp");
     }
-
-    public final String projectId;
-    public final String credentialsId;
-    public final List<InstanceConfiguration> configurations;
 
     protected transient ComputeClient client;
 

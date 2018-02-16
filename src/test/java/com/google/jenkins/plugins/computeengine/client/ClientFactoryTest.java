@@ -69,9 +69,6 @@ public class ClientFactoryTest {
     public void init() {
         Mockito.when(serviceAccountConfig.getAccountId()).thenReturn(ACCOUNT_ID);
         Mockito.when(serviceAccountConfig.getPrivateKey()).thenReturn(PRIVATE_KEY);
-
-        Assert.assertEquals(ACCOUNT_ID, serviceAccountConfig.getAccountId());
-        Assert.assertEquals(PRIVATE_KEY, serviceAccountConfig.getPrivateKey());
     }
 
     @Test

@@ -83,8 +83,6 @@ public class AutofilledNetworkConfigurationTest {
         ListBoxModel got = d.doFillNetworkItems(r.jenkins, "", "");
         Assert.assertEquals(networks.size()+1, got.size()); // Add 1 to expected as callee inserts 1 empty item
         Assert.assertEquals(NETWORK_NAME, got.get(1).name);
-
-
     }
 
     @Test
