@@ -21,6 +21,7 @@ import com.cloudbees.plugins.credentials.CredentialsStore;
 import com.cloudbees.plugins.credentials.SystemCredentialsProvider;
 import com.cloudbees.plugins.credentials.domains.Domain;
 import com.cloudbees.plugins.credentials.domains.DomainRequirement;
+import com.google.api.services.compute.model.Image;
 import com.google.api.services.compute.model.Instance;
 import com.google.api.services.compute.model.Operation;
 import com.google.jenkins.plugins.computeengine.client.ClientFactory;
@@ -177,6 +178,12 @@ public class ComputeEngineCloudIT {
         assertEquals(1, creds.size());
     }
 
+    @Test //TODO: Group client tests into their own test class
+    public void testGetImage() throws Exception {
+        ComputeEngineCloud cloud = (ComputeEngineCloud) r.jenkins.clouds.get(0);
+        Image i = cloud.client.getImage("debian-cloud", "debian-8-jessie-v20180206");
+        assertNotNull(i);
+    }
 
     @Test(timeout = 300000)
     public void testWorkerCreated() throws Exception {

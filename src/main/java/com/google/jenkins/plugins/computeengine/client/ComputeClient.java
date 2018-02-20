@@ -41,6 +41,12 @@ public class ComputeClient {
         return regionSelfLink.substring(regionSelfLink.lastIndexOf("/") + 1, regionSelfLink.length());
     }
 
+    public static String lastParam(String value) {
+        if(value.contains("/"))
+            value = value.substring(value.lastIndexOf("/") + 1, value.length());
+        return value;
+    }
+
     public static String buildLabelsFilterString(Map<String, String> labels) {
         StringBuilder sb = new StringBuilder();
         for (Map.Entry<String, String> l : labels.entrySet()) {
@@ -164,6 +170,14 @@ public class ComputeClient {
         return images;
     }
 
+    public Image getImage(String projectId, String name) throws IOException {
+        Image image = compute
+                .images()
+                .get(projectId, name)
+                .execute();
+
+        return image;
+    }
     public List<AcceleratorType> getAcceleratorTypes(String projectId, String zone) throws IOException {
         zone = zoneFromSelfLink(zone);
 

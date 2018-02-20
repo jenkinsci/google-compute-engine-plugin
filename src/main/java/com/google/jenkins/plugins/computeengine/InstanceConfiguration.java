@@ -18,6 +18,7 @@ package com.google.jenkins.plugins.computeengine;
 
 import com.cloudbees.plugins.credentials.domains.DomainRequirement;
 import com.google.api.services.compute.model.*;
+import com.google.common.base.Strings;
 import com.google.jenkins.plugins.computeengine.client.ClientFactory;
 import com.google.jenkins.plugins.computeengine.client.ComputeClient;
 import hudson.Extension;
@@ -576,7 +577,7 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
 
         public FormValidation doCheckBootDiskSourceImageProject(@QueryParameter String value) {
             if (value.equals("")) {
-                return FormValidation.error("Please select source image project...");
+                return FormValidation.warning("Please select source image project...");
             }
             return FormValidation.ok();
         }
@@ -585,7 +586,7 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
                                                                @QueryParameter("bootDiskSourceImageProject") final String projectId,
                                                                @QueryParameter("credentialsId") @RelativePath("..") final String credentialsId) {
             ListBoxModel items = new ListBoxModel();
-
+            items.add("");
             try {
                 ComputeClient compute = computeClient(context, credentialsId);
                 List<Image> images = compute.getImages(projectId);
@@ -601,6 +602,36 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
                 return null;
             }
             return items;
+        }
+
+        public FormValidation doCheckBootDiskSourceImageName(@QueryParameter String value) {
+            if (value.equals("")) {
+                return FormValidation.warning("Please select source image...");
+            }
+            return FormValidation.ok();
+        }
+
+        public FormValidation doCheckBootDiskSizeGbStr(@AncestorInPath Jenkins context,
+                                                       @QueryParameter String value,
+                                                       @QueryParameter("bootDiskSourceImageProject") final String projectId,
+                                                       @QueryParameter("bootDiskSourceImageName") final String imageName,
+                                                       @QueryParameter("credentialsId") @RelativePath("..") final String credentialsId) {
+            if (Strings.isNullOrEmpty(credentialsId) || Strings.isNullOrEmpty(projectId) || Strings.isNullOrEmpty(imageName))
+                return FormValidation.ok();
+
+            try {
+                ComputeClient compute = computeClient(context, credentialsId);
+                Image i = compute.getImage(ComputeClient.lastParam(projectId), ComputeClient.lastParam(imageName));
+                if (i == null)
+                    return FormValidation.error("Could not find image " + imageName);
+                Long bootDiskSizeGb = Long.parseLong(value);
+                if (bootDiskSizeGb < i.getDiskSizeGb()) {
+                    return FormValidation.error(String.format("The disk image you have chosen requires a minimum of %dGB. Please increase boot disk size to accommodate.", i.getDiskSizeGb()));
+                }
+            } catch (IOException ioe) {
+                return FormValidation.error(ioe, "Error validating boot disk size");
+            }
+            return FormValidation.ok();
         }
 
         public FormValidation doCheckLabelString(@QueryParameter String value, @QueryParameter Node.Mode mode) {

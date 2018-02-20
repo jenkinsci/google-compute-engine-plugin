@@ -22,6 +22,9 @@ import com.google.jenkins.plugins.computeengine.ComputeEngineCloud;
 import com.google.jenkins.plugins.computeengine.InstanceConfiguration;
 import com.google.jenkins.plugins.computeengine.client.ComputeClient;
 import hudson.model.Node;
+import hudson.util.FormValidation;
+import jenkins.model.Jenkins;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -34,6 +37,7 @@ import org.mockito.junit.MockitoJUnitRunner;
 import java.util.ArrayList;
 import java.util.List;
 
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 
 @RunWith(MockitoJUnitRunner.class)
@@ -95,6 +99,9 @@ public class InstanceConfigurationTest {
         imageTypes.add(new Image().setName("").setSelfLink(""));
         imageTypes.add(new Image().setName(BOOT_DISK_IMAGE_NAME).setSelfLink(BOOT_DISK_IMAGE_NAME));
 
+        Image image = new Image();
+        image.setName(BOOT_DISK_IMAGE_NAME).setSelfLink(BOOT_DISK_IMAGE_NAME).setDiskSizeGb(Long.parseLong(BOOT_DISK_SIZE_GB_STR));
+
         List<Network> networks = new ArrayList<Network>();
         networks.add(new Network().setName("").setSelfLink(""));
         networks.add(new Network().setName(NETWORK_NAME).setSelfLink(NETWORK_NAME));
@@ -111,6 +118,7 @@ public class InstanceConfigurationTest {
         Mockito.when(computeClient.getZones(anyString(), anyString())).thenReturn(zones);
         Mockito.when(computeClient.getMachineTypes(anyString(), anyString())).thenReturn(machineTypes);
         Mockito.when(computeClient.getBootDiskTypes(anyString(), anyString())).thenReturn(diskTypes);
+        Mockito.when(computeClient.getImage(anyString(), anyString())).thenReturn(image);
         Mockito.when(computeClient.getImages(anyString())).thenReturn(imageTypes);
         Mockito.when(computeClient.getAcceleratorTypes(anyString(), anyString())).thenReturn(acceleratorTypes);
         Mockito.when(computeClient.getNetworks(anyString())).thenReturn(networks);
@@ -215,4 +223,22 @@ public class InstanceConfigurationTest {
                 RUN_AS_USER);
     }
 
+    @Test
+    public void descriptorBootDiskSizeValidation() throws Exception {
+        InstanceConfiguration.DescriptorImpl.setComputeClient(computeClient);
+        InstanceConfiguration.DescriptorImpl d = new InstanceConfiguration.DescriptorImpl();
+
+        // Empty project, image, and credentials should be OK
+        FormValidation fv = d.doCheckBootDiskSizeGbStr(r.jenkins, String.valueOf(Long.parseLong(BOOT_DISK_SIZE_GB_STR) - 1L), "", "", "");
+        Assert.assertEquals(FormValidation.Kind.OK, fv.kind);
+
+        fv = d.doCheckBootDiskSizeGbStr(r.jenkins, String.valueOf(Long.parseLong(BOOT_DISK_SIZE_GB_STR) - 1L), PROJECT_ID, BOOT_DISK_IMAGE_NAME,  PROJECT_ID);
+        Assert.assertEquals(FormValidation.Kind.ERROR, fv.kind);
+
+        fv = d.doCheckBootDiskSizeGbStr(r.jenkins, String.valueOf(Long.parseLong(BOOT_DISK_SIZE_GB_STR)), "", "", "");
+        Assert.assertEquals(FormValidation.Kind.OK, fv.kind);
+
+        fv = d.doCheckBootDiskSizeGbStr(r.jenkins, String.valueOf(Long.parseLong(BOOT_DISK_SIZE_GB_STR) + 1L), "", "", "");
+        Assert.assertEquals(FormValidation.Kind.OK, fv.kind);
+    }
 }
