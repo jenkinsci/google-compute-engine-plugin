@@ -78,7 +78,7 @@
                 <f:textbox default="${descriptor.defaultBootDiskSizeGb()}"/>
             </f:entry>
             <f:entry field="bootDiskAutoDelete" title="${%Delete on termination?}">
-                <f:checkbox default="${descriptor.defaultBootDiskAutoDelete}"/>
+                <f:checkbox default="${descriptor.defaultBootDiskAutoDelete()}" />
             </f:entry>
         </f:section>
 

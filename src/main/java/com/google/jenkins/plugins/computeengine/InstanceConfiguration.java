@@ -379,6 +379,10 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
             return DEFAULT_BOOT_DISK_SIZE_GB.toString();
         }
 
+        public static String defaultBootDiskAutoDelete() {
+            return "true";
+        }
+
         public static String defaultRunAsUser() {
             return DEFAULT_RUN_AS_USER.toString();
         }
