@@ -240,6 +240,13 @@ public class ComputeClient {
         return compute.instances().get(projectId, zone, instanceId).execute();
     }
 
+    /**
+     * Return all instances that contain the given labels
+     * @param projectId
+     * @param labels
+     * @return
+     * @throws IOException
+     */
     public List<Instance> getInstancesWithLabel(String projectId, Map<String, String> labels) throws IOException {
         Compute.Instances.AggregatedList request = compute.instances().aggregatedList(projectId);
         request.setFilter(buildLabelsFilterString(labels));
@@ -276,6 +283,15 @@ public class ComputeClient {
         return waitForOperationCompletion(projectId, op, 60 * 1000);
     }
 
+    /**
+     * Blocks until an existing operation completes.
+     * @param projectId
+     * @param operation
+     * @param timeout
+     * @return
+     * @throws IOException
+     * @throws InterruptedException
+     */
     public Operation.Error waitForOperationCompletion(String projectId, Operation operation, long timeout)
             throws IOException, InterruptedException {
         if (operation == null) {

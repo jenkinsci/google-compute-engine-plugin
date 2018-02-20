@@ -8,7 +8,7 @@
         <version>3.2</version>
         <relativePath/>
     </parent>
-    <artifactId>google-compute-plugin</artifactId>
+    <artifactId>google-compute-engine</artifactId>
     <version>0.1-SNAPSHOT</version>
     <packaging>hpi</packaging>
     <properties>
@@ -16,7 +16,7 @@
         <java.level>8</java.level>
         <skip.surefire.tests>${skipTests}</skip.surefire.tests>
     </properties>
-    <name>Google Compute Engine plugin</name>
+    <name>Google Compute Engine Plugin</name>
     <description>This plugin allows Jenkins to provision dynamic worker nodes on Google Compute Engine.</description>
     <url>https://wiki.jenkins-ci.org/display/JENKINS/Google+Compute+Engine+plugin</url>
     <licenses>
@@ -36,6 +36,7 @@
         <developer>
             <id>evanbrown</id>
             <name>Evan Brown</name>
+            <email>evanbrown@google.com</email>
         </developer>
     </developers>
 
