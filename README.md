@@ -64,11 +64,11 @@ Instance configurations have many options that were not listed above. A few of t
 
 -  **Preemptible** - instances provisioned by Jenkins will be launched as [Preemptible VMs](https://cloud.google.com/preemptible-vms/) these are up to 80% less expensive than normal VMs but can be terminated at any time. When using this setting, ensure that builds can be retried without impacting your workload.
 -  **Disk Type and Size** - dictates the performance of the filesystem that your agents are running on. Note that in GCE, [larger disks get higher IOPS and throughput](https://cloud.google.com/compute/docs/disks/performance#type_comparison).
--  **Network tags **- these tags will be applied to the instances provisioned by Jenkins. These should be set to allow the Jenkins master to access port 22 on the Jenkins agents. More info on [firewall rules in GCE is available here](https://cloud.google.com/vpc/docs/firewalls).
+-  **Network tags** - these tags will be applied to the instances provisioned by Jenkins. These should be set to allow the Jenkins master to access port 22 on the Jenkins agents. More info on [firewall rules in GCE is available here](https://cloud.google.com/vpc/docs/firewalls).
 -  **External IP** - dictates whether the instance should receive an external routable IP address. In GCE, you will need to have either an external IP or a [NAT gateway](https://cloud.google.com/vpc/docs/special-configurations#multiple-natgateways) setup in order to download anything from the internet.
 -  **Startup Script** - defines a set of commands that should be run before making the instance available for running your jobs. For more info, review the [startup script docs](https://cloud.google.com/compute/docs/startupscript).
 -  **GPUs** - attach 1 or more GPUs to the instance. For more info, visit the [GCE GPU docs](https://cloud.google.com/compute/docs/gpus/).
--  **Service Account E-mail **- sets the service account that the instance will be able to access from metadata. For more info, review the [service account documentation](https://cloud.google.com/compute/docs/access/service-accounts).
+-  **Service Account E-mail** - sets the service account that the instance will be able to access from metadata. For more info, review the [service account documentation](https://cloud.google.com/compute/docs/access/service-accounts).
 
 ## Contributing
 See [CONTRIBUTING.md](CONTRIBUTING.md)
