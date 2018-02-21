@@ -1,11 +1,11 @@
-# Google Compute Engine Plugin (alpha)
+# Google Compute Engine Plugin for Jenkins
 
 This plugin allows Jenkins to dynamically provision agents in Google Compute Engine. After a configurable idle period, instances will be deleted and you will no longer be billed for their use.
 
 ## Installation
 
 1. Download the plugin from [here](https://storage.googleapis.com/jenkins-graphite/google-compute-plugin-latest.hpi).
-1. Go to **Manage Jenkins **then** Manage Plugins**. 
+1. Go to **Manage Jenkins **then** Manage Plugins**.
 1. In the Plugin Manager, click the **Advanced** tab and then **Choose File **under the **Upload Plugin **section**.**
 1. Choose the Jenkins plugin file downloaded in Step 1.
 1. Click the **Upload** button.
@@ -14,18 +14,18 @@ This plugin allows Jenkins to dynamically provision agents in Google Compute Eng
 
 ### IAM Credentials
 
-1. Create a service account using the Google Cloud SDK.  
-  
+1. Create a service account using the Google Cloud SDK.
+
     gcloud iam service-accounts create jenkins-gce
 
-1. Add the **instanceAdmin** and **serviceAccountUser** roles to the service account.  
-  
-    export PROJECT=$(gcloud info --format='value(config.project)')  
-    export SA_EMAIL=$(gcloud iam service-accounts list --filter="name:jenkins-gce" --format='value(email)')  
+1. Add the **instanceAdmin** and **serviceAccountUser** roles to the service account.
+
+    export PROJECT=$(gcloud info --format='value(config.project)')
+    export SA_EMAIL=$(gcloud iam service-accounts list --filter="name:jenkins-gce" --format='value(email)')
     gcloud projects add-iam-policy-binding --member serviceAccount:$SA_EMAIL --role roles/compute.instanceAdmin --role roles/iam.serviceAccountUser $PROJECT
 
-1. Download a JSON Service Account key for your newly created service account. Take note of where the file was created, you will upload it to Jenkins in a subsequent step.  
-  
+1. Download a JSON Service Account key for your newly created service account. Take note of where the file was created, you will upload it to Jenkins in a subsequent step.
+
     gcloud iam service-accounts keys create --iam-account $SA_EMAIL jenkins-gce.json
 
 1. In Jenkins, click the **Credentials** button on the left side of the screen. Then click **System**.
@@ -69,3 +69,9 @@ Instance configurations have many options that were not listed above. A few of t
 -  **Startup Script** - defines a set of commands that should be run before making the instance available for running your jobs. For more info, review the [startup script docs](https://cloud.google.com/compute/docs/startupscript).
 -  **GPUs** - attach 1 or more GPUs to the instance. For more info, visit the [GCE GPU docs](https://cloud.google.com/compute/docs/gpus/).
 -  **Service Account E-mail **- sets the service account that the instance will be able to access from metadata. For more info, review the [service account documentation](https://cloud.google.com/compute/docs/access/service-accounts).
+
+## Contributing
+See [CONTRIBUTING.md](CONTRIBUTING.md)
+
+## License
+See [LICENSE.md](LICENSE.md)
