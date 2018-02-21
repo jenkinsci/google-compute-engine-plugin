@@ -5,8 +5,8 @@ This plugin allows Jenkins to dynamically provision agents in Google Compute Eng
 ## Installation
 
 1. Download the plugin from [here](https://storage.googleapis.com/jenkins-graphite/google-compute-plugin-latest.hpi).
-1. Go to **Manage Jenkins **then** Manage Plugins**.
-1. In the Plugin Manager, click the **Advanced** tab and then **Choose File **under the **Upload Plugin **section**.**
+1. Go to **Manage Jenkins** then **Manage Plugins**.
+1. In the Plugin Manager, click the **Advanced** tab and then **Choose File** under the **Upload Plugin** section.
 1. Choose the Jenkins plugin file downloaded in Step 1.
 1. Click the **Upload** button.
 
