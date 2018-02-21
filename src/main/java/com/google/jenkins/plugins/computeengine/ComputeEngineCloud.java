@@ -119,7 +119,7 @@ public class ComputeEngineCloud extends AbstractCloudImpl {
         return getCloudName();
     }
 
-    private void readResolve() {
+    protected Object readResolve() {
         try {
             ClientFactory clientFactory = new ClientFactory(Jenkins.getInstance(), new ArrayList<DomainRequirement>(),
                     credentialsId);
@@ -133,6 +133,8 @@ public class ComputeEngineCloud extends AbstractCloudImpl {
             c.cloud = this;
             c.appendLabels(REQUIRED_LABEL);
         }
+
+        return this;
     }
 
     public void addConfiguration(InstanceConfiguration config) {
