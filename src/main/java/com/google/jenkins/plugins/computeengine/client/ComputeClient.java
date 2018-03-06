@@ -42,7 +42,7 @@ public class ComputeClient {
     }
 
     public static String lastParam(String value) {
-        if(value.contains("/"))
+        if (value.contains("/"))
             value = value.substring(value.lastIndexOf("/") + 1, value.length());
         return value;
     }
@@ -178,6 +178,7 @@ public class ComputeClient {
 
         return image;
     }
+
     public List<AcceleratorType> getAcceleratorTypes(String projectId, String zone) throws IOException {
         zone = zoneFromSelfLink(zone);
 
@@ -256,6 +257,7 @@ public class ComputeClient {
 
     /**
      * Return all instances that contain the given labels
+     *
      * @param projectId
      * @param labels
      * @return
@@ -299,6 +301,7 @@ public class ComputeClient {
 
     /**
      * Blocks until an existing operation completes.
+     *
      * @param projectId
      * @param operation
      * @param timeout

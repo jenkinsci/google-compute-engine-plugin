@@ -48,10 +48,9 @@ public class ClientFactory {
     private final HttpRequestInitializer gcred;
 
     /**
-     *
-     * @param itemGroup A handle to the Jenkins instance
+     * @param itemGroup          A handle to the Jenkins instance
      * @param domainRequirements
-     * @param credentialsId The idea of a GoogleRobotCredentials credential
+     * @param credentialsId      The idea of a GoogleRobotCredentials credential
      * @throws IOException
      */
     public ClientFactory(ItemGroup itemGroup, List<DomainRequirement> domainRequirements, String credentialsId)

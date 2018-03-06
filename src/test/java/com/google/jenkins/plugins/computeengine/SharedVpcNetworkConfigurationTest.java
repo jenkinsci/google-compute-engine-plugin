@@ -96,7 +96,7 @@ public class SharedVpcNetworkConfigurationTest {
         Assert.assertEquals(FormValidation.Kind.ERROR, fv.kind);
 
         // Matching regions return no error
-        fv = d.doCheckRegion("https://selflink/project/region", "region");
+        fv = d.doCheckRegion("region", "https://selflink/project/region");
         Assert.assertEquals(FormValidation.Kind.OK, fv.kind);
     }
 }
