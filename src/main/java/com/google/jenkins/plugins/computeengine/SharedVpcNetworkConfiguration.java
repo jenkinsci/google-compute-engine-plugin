@@ -46,7 +46,7 @@ public class SharedVpcNetworkConfiguration extends NetworkConfiguration {
         }
 
         public FormValidation doCheckRegion(@QueryParameter String value, @QueryParameter("region") @RelativePath("..") final String region) {
-            if (Strings.isNullOrEmpty(region) || Strings.isNullOrEmpty(value) || !region.equals(value)) {
+            if (Strings.isNullOrEmpty(region) || Strings.isNullOrEmpty(value) || !region.endsWith(value)) {
                 return FormValidation.error("The region you specify for a shared VPC should match the region selected in the 'Location' section above");
             }
             return FormValidation.ok();
