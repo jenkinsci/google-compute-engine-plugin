@@ -18,7 +18,7 @@
     </properties>
     <name>Google Compute Engine Plugin</name>
     <description>This plugin allows Jenkins to provision dynamic worker nodes on Google Compute Engine.</description>
-    <url>https://wiki.jenkins-ci.org/display/JENKINS/Google+Compute+Engine+plugin</url>
+    <url>https://wiki.jenkins-ci.org/display/JENKINS/Google+Compute+Engine+Plugin</url>
     <licenses>
         <license>
             <name>Apache License, Version 2.0</name>
