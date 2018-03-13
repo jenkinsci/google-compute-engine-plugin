@@ -70,6 +70,9 @@ Instance configurations have many options that were not listed above. A few of t
 -  **GPUs** - attach 1 or more GPUs to the instance. For more info, visit the [GCE GPU docs](https://cloud.google.com/compute/docs/gpus/).
 -  **Service Account E-mail** - sets the service account that the instance will be able to access from metadata. For more info, review the [service account documentation](https://cloud.google.com/compute/docs/access/service-accounts).
 
+## Feature requests and bug reports
+Please file feature requests and bug reports under the `google-compute-engine-plugin` component of the [Jenkins CI JIRA](https://issues.jenkins-ci.org).
+
 ## Contributing
 See [CONTRIBUTING.md](CONTRIBUTING.md)
 
