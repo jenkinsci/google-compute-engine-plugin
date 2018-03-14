@@ -412,7 +412,14 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
 
         public List<NetworkConfiguration.NetworkConfigurationDescriptor> getNetworkConfigurationDescriptors() {
             List<NetworkConfiguration.NetworkConfigurationDescriptor> d = Jenkins.getInstance().getDescriptorList(NetworkConfiguration.class);
-            d.removeIf(i -> i.clazz.getName().equals("NetworkConfiguration"));
+            // No deprecated regions
+            Iterator it = d.iterator();
+            while (it.hasNext()) {
+                NetworkConfiguration.NetworkConfigurationDescriptor o = (NetworkConfiguration.NetworkConfigurationDescriptor) it.next();
+                if (o.clazz.getName().equals("NetworkConfiguration")) {
+                    it.remove();
+                }
+            }
             return d;
         }
 

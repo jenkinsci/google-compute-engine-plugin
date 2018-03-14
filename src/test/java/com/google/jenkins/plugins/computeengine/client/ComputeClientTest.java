@@ -13,14 +13,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package com.google.jenkins.plugins.computeengine.client;
 
 import com.google.api.services.compute.Compute;
-import com.google.api.services.compute.model.DeprecationStatus;
-import com.google.api.services.compute.model.Metadata;
-import com.google.api.services.compute.model.Region;
-import com.google.api.services.compute.model.RegionList;
+import com.google.api.services.compute.model.*;
 import com.google.jenkins.plugins.computeengine.InstanceConfigurationTest;
 import org.junit.Before;
 import org.junit.Test;
@@ -52,20 +48,72 @@ public class ComputeClientTest {
     @Mock
     public RegionList regionList;
 
+    @Mock
+    public Compute.Zones zones;
+
+    @Mock
+    public Compute.Zones.List zonesListCall;
+
+    @Mock
+    public ZoneList zoneList;
+
+    @Mock
+    public Compute.MachineTypes machineTypes;
+
+    @Mock
+    Compute.MachineTypes.List machineTypesListCall;
+
+    @Mock
+    public MachineTypeList machineTypeList;
+
+
+    @Mock
+    public Compute.DiskTypes diskTypes;
+
+    @Mock
+    Compute.DiskTypes.List diskTypesListCall;
+
+    @Mock
+    public DiskTypeList diskTypeList;
+
     @InjectMocks
     ComputeClient computeClient;
 
     List<Region> listOfRegions;
+    List<Zone> listOfZones;
+    List<MachineType> listOfMachineTypes;
+    List<DiskType> listOfDiskTypes;
 
     @Before
     public void init() throws Exception {
-        listOfRegions = new ArrayList<Region>();
+        listOfRegions = new ArrayList<>();
+        listOfZones = new ArrayList<>();
+        listOfMachineTypes = new ArrayList<>();
+        listOfDiskTypes = new ArrayList<>();
 
         // Mock regions
         Mockito.when(regionList.getItems()).thenReturn(listOfRegions);
         Mockito.when(regionsListCall.execute()).thenReturn(regionList);
         Mockito.when(regions.list(InstanceConfigurationTest.PROJECT_ID)).thenReturn(regionsListCall);
         Mockito.when(compute.regions()).thenReturn(regions);
+
+        // Mock zones
+        Mockito.when(zoneList.getItems()).thenReturn(listOfZones);
+        Mockito.when(zonesListCall.execute()).thenReturn(zoneList);
+        Mockito.when(zones.list(InstanceConfigurationTest.PROJECT_ID)).thenReturn(zonesListCall);
+        Mockito.when(compute.zones()).thenReturn(zones);
+
+        // Mock machine types
+        Mockito.when(machineTypeList.getItems()).thenReturn(listOfMachineTypes);
+        Mockito.when(machineTypesListCall.execute()).thenReturn(machineTypeList);
+        Mockito.when(machineTypes.list(Mockito.anyString(), Mockito.anyString())).thenReturn(machineTypesListCall);
+        Mockito.when(compute.machineTypes()).thenReturn(machineTypes);
+
+        // Mock disk types
+        Mockito.when(diskTypeList.getItems()).thenReturn(listOfDiskTypes);
+        Mockito.when(diskTypesListCall.execute()).thenReturn(diskTypeList);
+        Mockito.when(diskTypes.list(Mockito.anyString(), Mockito.anyString())).thenReturn(diskTypesListCall);
+        Mockito.when(compute.diskTypes()).thenReturn(diskTypes);
     }
 
     @Test
@@ -79,6 +127,42 @@ public class ComputeClientTest {
 
         assertEquals(3, computeClient.getRegions(InstanceConfigurationTest.PROJECT_ID).size());
         assertEquals("eu-central1", computeClient.getRegions(InstanceConfigurationTest.PROJECT_ID).get(0).getName());
+    }
+
+    @Test
+    public void getZones() throws IOException {
+        listOfZones.clear();
+        listOfZones.add(new Zone().setRegion("us-west1").setName("us-west1-b"));
+        listOfZones.add(new Zone().setRegion("eu-central1").setName("eu-central1-a"));
+        listOfZones.add(new Zone().setRegion("us-west1").setName("us-west1-a"));
+
+        assertEquals(2, computeClient.getZones(InstanceConfigurationTest.PROJECT_ID, "us-west1").size());
+        assertEquals("us-west1-a", computeClient.getZones(InstanceConfigurationTest.PROJECT_ID, "us-west1").get(0).getName());
+    }
+
+    @Test
+    public void getMachineTypes() throws IOException {
+        listOfMachineTypes.clear();
+        listOfMachineTypes.add(new MachineType().setName("b"));
+        listOfMachineTypes.add(new MachineType().setName("a"));
+        listOfMachineTypes.add(new MachineType().setName("z"));
+        listOfMachineTypes.add(new MachineType().setName("d").setDeprecated(new DeprecationStatus().setDeprecated("DEPRECATED")));
+
+        assertEquals(3, computeClient.getMachineTypes("", "").size());
+        assertEquals("a", computeClient.getMachineTypes("", "").get(0).getName());
+    }
+
+    @Test
+    public void getDiskTypes() throws IOException {
+        listOfDiskTypes.clear();
+        listOfDiskTypes.add(new DiskType().setName("b"));
+        listOfDiskTypes.add(new DiskType().setName("a"));
+        listOfDiskTypes.add(new DiskType().setName("z"));
+        listOfDiskTypes.add(new DiskType().setName("local-d"));
+        listOfDiskTypes.add(new DiskType().setName("d").setDeprecated(new DeprecationStatus().setDeprecated("DEPRECATED")));
+
+        assertEquals(3, computeClient.getBootDiskTypes("", "").size());
+        assertEquals("a", computeClient.getBootDiskTypes("", "").get(0).getName());
     }
 
     @Test

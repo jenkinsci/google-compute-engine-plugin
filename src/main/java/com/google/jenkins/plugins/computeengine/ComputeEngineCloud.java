@@ -198,7 +198,14 @@ public class ComputeEngineCloud extends AbstractCloudImpl {
     private synchronized Integer availableNodeCapacity() throws IOException {
         try {
             List<Instance> instances = client.getInstancesWithLabel(projectId, REQUIRED_LABEL);
-            instances.removeIf(z -> !z.getStatus().equals("RUNNING")); // Only count running VMs
+            // No deprecated regions
+            Iterator it = instances.iterator();
+            while (it.hasNext()) {
+                Instance o = (Instance) it.next();
+                if (o.getStatus().equals("RUNNING")) {
+                    it.remove();
+                }
+            }
             Integer capacity = getInstanceCap() - instances.size();
             LOGGER.info(String.format("Found capacity for %d nodes in cloud %s", capacity, getCloudName()));
             return (getInstanceCap() - instances.size());

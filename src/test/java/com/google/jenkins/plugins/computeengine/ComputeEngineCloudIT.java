@@ -291,11 +291,9 @@ public class ComputeEngineCloudIT {
 
     private static void deleteIntegrationInstances(boolean waitForCompletion) throws IOException {
         List<Instance> instances = client.getInstancesWithLabel(projectId, INTEGRATION_LABEL);
-        ExecutorService executor = Executors.newWorkStealingPool();
-
-        //TODO: run this in an ExecutorService
-        instances.parallelStream()
-                .forEach(i -> safeDelete(i.getName(), waitForCompletion));
+        for(Instance i : instances) {
+           safeDelete(i.getName(), waitForCompletion);
+        }
     }
 
     private static void safeDelete(String instanceId, boolean waitForCompletion) {

@@ -20,10 +20,7 @@ import com.google.api.services.compute.Compute;
 import com.google.api.services.compute.model.*;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 /**
  * Client for communicating with the Google Compute API
@@ -90,11 +87,23 @@ public class ComputeClient {
                 .execute()
                 .getItems();
 
-        // Sort by name
-        regions.sort(Comparator.comparing(Region::getName));
-
         // No deprecated regions
-        regions.removeIf(r -> r.getDeprecated() != null);
+        Iterator it = regions.iterator();
+        while (it.hasNext()) {
+            Region o = (Region) it.next();
+            if (o.getDeprecated() != null && o.getDeprecated().getDeprecated().equalsIgnoreCase("DEPRECATED")) {
+                it.remove();
+            }
+        }
+
+        // Sort by name
+        Collections.sort(regions, new Comparator<Region>() {
+            @Override
+            public int compare(Region o1, Region o2) {
+                return o1.getName().compareTo(o2.getName());
+            }
+        });
+
         return regions;
     }
 
@@ -106,10 +115,22 @@ public class ComputeClient {
                 .getItems();
 
         // Only zones for the region
-        zones.removeIf(z -> !z.getRegion().equals(region));
+        Iterator it = zones.iterator();
+        while (it.hasNext()) {
+            Zone o = (Zone) it.next();
+            if (!o.getRegion().equals(region)) {
+                it.remove();
+            }
+        }
 
         // Sort by name
-        zones.sort(Comparator.comparing(Zone::getName));
+        Collections.sort(zones, new Comparator<Zone>() {
+            @Override
+            public int compare(Zone o1, Zone o2) {
+                return o1.getName().compareTo(o2.getName());
+            }
+        });
+
         return zones;
     }
 
@@ -122,10 +143,22 @@ public class ComputeClient {
                 .getItems();
 
         // No deprecated items
-        machineTypes.removeIf(z -> z.getDeprecated() != null);
+        Iterator it = machineTypes.iterator();
+        while (it.hasNext()) {
+            MachineType o = (MachineType) it.next();
+            if (o.getDeprecated() != null && o.getDeprecated().getDeprecated().equalsIgnoreCase("DEPRECATED")) {
+                it.remove();
+            }
+        }
 
         // Sort by name
-        machineTypes.sort(Comparator.comparing(MachineType::getName));
+        Collections.sort(machineTypes, new Comparator<MachineType>() {
+            @Override
+            public int compare(MachineType o1, MachineType o2) {
+                return o1.getName().compareTo(o2.getName());
+            }
+        });
+
         return machineTypes;
     }
 
@@ -138,10 +171,22 @@ public class ComputeClient {
                 .getItems();
 
         // No deprecated items
-        diskTypes.removeIf(z -> z.getDeprecated() != null);
+        Iterator it = diskTypes.iterator();
+        while (it.hasNext()) {
+            DiskType o = (DiskType) it.next();
+            if (o.getDeprecated() != null && o.getDeprecated().getDeprecated().equalsIgnoreCase("DEPRECATED")) {
+                it.remove();
+            }
+        }
 
         // Sort by name
-        diskTypes.sort(Comparator.comparing(DiskType::getName));
+        Collections.sort(diskTypes, new Comparator<DiskType>() {
+            @Override
+            public int compare(DiskType o1, DiskType o2) {
+                return o1.getName().compareTo(o2.getName());
+            }
+        });
+
         return diskTypes;
     }
 
@@ -150,8 +195,13 @@ public class ComputeClient {
         List<DiskType> diskTypes = this.getDiskTypes(projectId, zone);
 
         // No local disks
-        diskTypes.removeIf(z -> z.getName().startsWith("local-"));
-
+        Iterator it = diskTypes.iterator();
+        while (it.hasNext()) {
+            DiskType o = (DiskType) it.next();
+            if (o.getName().startsWith("local-")) {
+                it.remove();
+            }
+        }
         return diskTypes;
     }
 
@@ -163,10 +213,22 @@ public class ComputeClient {
                 .getItems();
 
         // No deprecated items
-        images.removeIf(z -> z.getDeprecated() != null);
+        Iterator it = images.iterator();
+        while (it.hasNext()) {
+            Image o = (Image) it.next();
+            if (o.getDeprecated() != null && o.getDeprecated().getDeprecated().equalsIgnoreCase("DEPRECATED")) {
+                it.remove();
+            }
+        }
 
         // Sort by name
-        images.sort(Comparator.comparing(Image::getName));
+        Collections.sort(images, new Comparator<Image>() {
+            @Override
+            public int compare(Image o1, Image o2) {
+                return o1.getName().compareTo(o2.getName());
+            }
+        });
+
         return images;
     }
 
@@ -193,11 +255,22 @@ public class ComputeClient {
 
         //TODO: do we need to check size?
         if (acceleratorTypes.size() > 0) {
-            // Only zones for the region
-            acceleratorTypes.removeIf(z -> z.getDeprecated() != null);
+            // No deprecated items
+            Iterator it = acceleratorTypes.iterator();
+            while (it.hasNext()) {
+                AcceleratorType o = (AcceleratorType) it.next();
+                if (o.getDeprecated() != null && o.getDeprecated().getDeprecated().equalsIgnoreCase("DEPRECATED")) {
+                    it.remove();
+                }
+            }
 
             // Sort by name
-            acceleratorTypes.sort(Comparator.comparing(AcceleratorType::getName));
+            Collections.sort(acceleratorTypes, new Comparator<AcceleratorType>() {
+                @Override
+                public int compare(AcceleratorType o1, AcceleratorType o2) {
+                    return o1.getName().compareTo(o2.getName());
+                }
+            });
         }
         return acceleratorTypes;
     }
@@ -224,10 +297,21 @@ public class ComputeClient {
                 .getItems();
 
         // Only subnetworks in the parent network
-        subnetworks.removeIf(z -> !z.getNetwork().equals(networkSelfLink));
+        Iterator it = subnetworks.iterator();
+        while (it.hasNext()) {
+            Subnetwork o = (Subnetwork) it.next();
+            if (o.getNetwork().equals(networkSelfLink)) {
+                it.remove();
+            }
+        }
 
         // Sort by name
-        subnetworks.sort(Comparator.comparing(Subnetwork::getName));
+        Collections.sort(subnetworks, new Comparator<Subnetwork>() {
+            @Override
+            public int compare(Subnetwork o1, Subnetwork o2) {
+                return o1.getName().compareTo(o2.getName());
+            }
+        });
 
         return subnetworks;
     }
