@@ -40,7 +40,11 @@
             <email>evanbrown@google.com</email>
         </developer>
     </developers>
-
+    <scm>
+      <connection>scm:git:ssh://github.com/jenkinsci/google-compute-engine-plugin.git</connection>
+      <developerConnection>scm:git:ssh://git@github.com/jenkinsci/google-compute-engine-plugin.git</developerConnection>
+      <url>https://github.com/jenkinsci/google-compute-engine-plugin</url>
+    </scm>
     <repositories>
         <repository>
             <id>repo.jenkins-ci.org</id>
