@@ -123,7 +123,7 @@ public class ComputeClientTest {
         listOfRegions.add(new Region().setName("eu-central1"));
         listOfRegions.add(new Region().setName("us-central1"));
         listOfRegions.add(new Region().setName("us-east1")
-                .setDeprecated(new DeprecationStatus().setDeprecated("DEPRECATED")));
+                .setDeprecated(new DeprecationStatus().setState("DEPRECATED")));
 
         assertEquals(3, computeClient.getRegions(InstanceConfigurationTest.PROJECT_ID).size());
         assertEquals("eu-central1", computeClient.getRegions(InstanceConfigurationTest.PROJECT_ID).get(0).getName());
@@ -138,6 +138,9 @@ public class ComputeClientTest {
 
         assertEquals(2, computeClient.getZones(InstanceConfigurationTest.PROJECT_ID, "us-west1").size());
         assertEquals("us-west1-a", computeClient.getZones(InstanceConfigurationTest.PROJECT_ID, "us-west1").get(0).getName());
+
+        listOfZones.clear();
+        assertEquals(0, computeClient.getZones(InstanceConfigurationTest.PROJECT_ID, "us-west1").size());
     }
 
     @Test
@@ -146,10 +149,10 @@ public class ComputeClientTest {
         listOfMachineTypes.add(new MachineType().setName("b"));
         listOfMachineTypes.add(new MachineType().setName("a"));
         listOfMachineTypes.add(new MachineType().setName("z"));
-        listOfMachineTypes.add(new MachineType().setName("d").setDeprecated(new DeprecationStatus().setDeprecated("DEPRECATED")));
+        listOfMachineTypes.add(new MachineType().setName("d").setDeprecated(new DeprecationStatus().setState("DEPRECATED")));
 
-        assertEquals(3, computeClient.getMachineTypes("", "").size());
-        assertEquals("a", computeClient.getMachineTypes("", "").get(0).getName());
+        assertEquals(3, computeClient.getMachineTypes("", "test").size());
+        assertEquals("a", computeClient.getMachineTypes("", "test").get(0).getName());
     }
 
     @Test
@@ -159,10 +162,10 @@ public class ComputeClientTest {
         listOfDiskTypes.add(new DiskType().setName("a"));
         listOfDiskTypes.add(new DiskType().setName("z"));
         listOfDiskTypes.add(new DiskType().setName("local-d"));
-        listOfDiskTypes.add(new DiskType().setName("d").setDeprecated(new DeprecationStatus().setDeprecated("DEPRECATED")));
+        listOfDiskTypes.add(new DiskType().setName("d").setDeprecated(new DeprecationStatus().setState("DEPRECATED")));
 
-        assertEquals(3, computeClient.getBootDiskTypes("", "").size());
-        assertEquals("a", computeClient.getBootDiskTypes("", "").get(0).getName());
+        assertEquals(3, computeClient.getBootDiskTypes("", "test").size());
+        assertEquals("a", computeClient.getBootDiskTypes("", "test").get(0).getName());
     }
 
     @Test

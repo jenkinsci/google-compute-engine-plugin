@@ -86,12 +86,15 @@ public class ComputeClient {
                 .list(projectId)
                 .execute()
                 .getItems();
+        if (regions == null) {
+            regions = new ArrayList<Region>();
+        }
 
         // No deprecated regions
         Iterator it = regions.iterator();
         while (it.hasNext()) {
             Region o = (Region) it.next();
-            if (o.getDeprecated() != null && o.getDeprecated().getDeprecated().equalsIgnoreCase("DEPRECATED")) {
+            if (o.getDeprecated() != null && o.getDeprecated().getState().equalsIgnoreCase("DEPRECATED")) {
                 it.remove();
             }
         }
@@ -113,6 +116,9 @@ public class ComputeClient {
                 .list(projectId)
                 .execute()
                 .getItems();
+        if (zones == null) {
+            zones = new ArrayList<Zone>();
+        }
 
         // Only zones for the region
         Iterator it = zones.iterator();
@@ -141,12 +147,15 @@ public class ComputeClient {
                 .list(projectId, zone)
                 .execute()
                 .getItems();
+        if (machineTypes == null) {
+            machineTypes = new ArrayList<MachineType>();
+        }
 
         // No deprecated items
         Iterator it = machineTypes.iterator();
         while (it.hasNext()) {
             MachineType o = (MachineType) it.next();
-            if (o.getDeprecated() != null && o.getDeprecated().getDeprecated().equalsIgnoreCase("DEPRECATED")) {
+            if (o.getDeprecated() != null && o.getDeprecated().getState().equalsIgnoreCase("DEPRECATED")) {
                 it.remove();
             }
         }
@@ -169,12 +178,15 @@ public class ComputeClient {
                 .list(projectId, zone)
                 .execute()
                 .getItems();
+        if (diskTypes == null) {
+            diskTypes = new ArrayList<DiskType>();
+        }
 
         // No deprecated items
         Iterator it = diskTypes.iterator();
         while (it.hasNext()) {
             DiskType o = (DiskType) it.next();
-            if (o.getDeprecated() != null && o.getDeprecated().getDeprecated().equalsIgnoreCase("DEPRECATED")) {
+            if (o.getDeprecated() != null && o.getDeprecated().getState().equalsIgnoreCase("DEPRECATED")) {
                 it.remove();
             }
         }
@@ -211,12 +223,15 @@ public class ComputeClient {
                 .list(projectId)
                 .execute()
                 .getItems();
+        if (images == null) {
+            images = new ArrayList<Image>();
+        }
 
         // No deprecated items
         Iterator it = images.iterator();
         while (it.hasNext()) {
             Image o = (Image) it.next();
-            if (o.getDeprecated() != null && o.getDeprecated().getDeprecated().equalsIgnoreCase("DEPRECATED")) {
+            if (o.getDeprecated() != null && o.getDeprecated().getState().equalsIgnoreCase("DEPRECATED")) {
                 it.remove();
             }
         }
@@ -259,7 +274,7 @@ public class ComputeClient {
             Iterator it = acceleratorTypes.iterator();
             while (it.hasNext()) {
                 AcceleratorType o = (AcceleratorType) it.next();
-                if (o.getDeprecated() != null && o.getDeprecated().getDeprecated().equalsIgnoreCase("DEPRECATED")) {
+                if (o.getDeprecated() != null && o.getDeprecated().getState().equalsIgnoreCase("DEPRECATED")) {
                     it.remove();
                 }
             }
@@ -295,12 +310,15 @@ public class ComputeClient {
                 .list(projectId, region)
                 .execute()
                 .getItems();
+        if (subnetworks == null) {
+            subnetworks = new ArrayList<Subnetwork>();
+        }
 
         // Only subnetworks in the parent network
         Iterator it = subnetworks.iterator();
         while (it.hasNext()) {
             Subnetwork o = (Subnetwork) it.next();
-            if (o.getNetwork().equals(networkSelfLink)) {
+            if (! o.getNetwork().equals(networkSelfLink)) {
                 it.remove();
             }
         }
