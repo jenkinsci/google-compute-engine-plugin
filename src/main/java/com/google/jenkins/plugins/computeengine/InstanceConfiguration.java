@@ -214,6 +214,12 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
         }
         googleLabels.putAll(labels);
     }
+    public void appendLabel(String key, String value) {
+        if (googleLabels == null) {
+            googleLabels = new HashMap<>();
+        }
+        googleLabels.put(key, value);
+    }
 
     public ComputeEngineInstance provision(TaskListener listener, Label requiredLabel) throws IOException {
         PrintStream logger = listener.getLogger();

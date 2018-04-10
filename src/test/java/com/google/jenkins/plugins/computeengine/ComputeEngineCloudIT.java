@@ -21,6 +21,7 @@ import com.cloudbees.plugins.credentials.CredentialsStore;
 import com.cloudbees.plugins.credentials.SystemCredentialsProvider;
 import com.cloudbees.plugins.credentials.domains.Domain;
 import com.cloudbees.plugins.credentials.domains.DomainRequirement;
+import com.google.api.services.compute.Compute;
 import com.google.api.services.compute.model.Image;
 import com.google.api.services.compute.model.Instance;
 import com.google.api.services.compute.model.Operation;
@@ -199,10 +200,18 @@ public class ComputeEngineCloudIT {
         assertEquals(logs(), 1, planned.size());
 
         // Wait for the node creation to finish
-        planned.iterator().next().future.get();
+        String name = planned.iterator().next().future.get().getNodeName();
 
         // There should be no warning logs
         assertEquals(logs(), false, logs().contains("WARNING"));
+
+        Instance i = cloud.client.getInstance(projectId, ZONE, name);
+
+        // The created instance should have 3 labels
+        assertEquals(logs(),3, i.getLabels().size());
+
+        // Instance should have a label with key CONFIG_LABEL_KEY and value equal to the config's name prefix
+        assertEquals(logs(), validInstanceConfiguration1().namePrefix, i.getLabels().get(ComputeEngineCloud.CONFIG_LABEL_KEY));
     }
 
     @Test(timeout = 300000)
@@ -251,7 +260,7 @@ public class ComputeEngineCloudIT {
                 NODE_MODE,
                 new AcceleratorConfiguration(ACCELERATOR_NAME, ACCELERATOR_COUNT),
                 RUN_AS_USER);
-        ic.appendLabels(INTEGRATION_LABEL);
+                ic.appendLabels(INTEGRATION_LABEL);
         return ic;
     }
 

@@ -56,13 +56,14 @@ import static javax.servlet.http.HttpServletResponse.SC_BAD_REQUEST;
 
 public class ComputeEngineCloud extends AbstractCloudImpl {
     public static final String CLOUD_PREFIX = "gce-";
+    public static final String CONFIG_LABEL_KEY = "jenkins_config_name";
     private static final Logger LOGGER = Logger.getLogger(ComputeEngineCloud.class.getName());
     private static final SimpleFormatter sf = new SimpleFormatter();
-    private static Map<String, String> REQUIRED_LABEL;
+    private static Map<String, String> REQUIRED_LABELS;
 
     static {
-        REQUIRED_LABEL = new HashMap<String, String>();
-        REQUIRED_LABEL.put("jenkinscloud", "gcp");
+        REQUIRED_LABELS = new HashMap<String, String>();
+        REQUIRED_LABELS.put("jenkinscloud", "gcp");
     }
 
     public final String projectId;
@@ -131,7 +132,8 @@ public class ComputeEngineCloud extends AbstractCloudImpl {
 
         for (InstanceConfiguration c : configurations) {
             c.cloud = this;
-            c.appendLabels(REQUIRED_LABEL);
+            c.appendLabels(REQUIRED_LABELS);
+            c.appendLabel(CONFIG_LABEL_KEY, c.namePrefix);
         }
 
         return this;
@@ -150,7 +152,7 @@ public class ComputeEngineCloud extends AbstractCloudImpl {
             final InstanceConfiguration config = getInstanceConfig(label);
             LOGGER.log(Level.INFO, "Provisioning node from config " + config + " for excess workload of " + excessWorkload + " units of label '" + label + "'");
             while (excessWorkload > 0) {
-                Integer availableCapacity = availableNodeCapacity();
+                Integer availableCapacity = availableNodeCapacity(config.googleLabels);
                 if (availableCapacity <= 0) {
                     LOGGER.warning(String.format("Could not provision new nodes to meet excess workload demand (%d). Cloud provider %s has reached its configured capacity of %d", excessWorkload, getCloudName(), getInstanceCap()));
                     break;
@@ -195,9 +197,9 @@ public class ComputeEngineCloud extends AbstractCloudImpl {
      * @return
      * @throws IOException
      */
-    private synchronized Integer availableNodeCapacity() throws IOException {
+    private synchronized Integer availableNodeCapacity(Map<String, String> labels) throws IOException {
         try {
-            List<Instance> instances = client.getInstancesWithLabel(projectId, REQUIRED_LABEL);
+            List<Instance> instances = client.getInstancesWithLabel(projectId, labels);
             // No deprecated regions
             Iterator it = instances.iterator();
             while (it.hasNext()) {
