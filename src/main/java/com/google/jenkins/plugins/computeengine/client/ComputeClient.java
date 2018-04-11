@@ -318,7 +318,7 @@ public class ComputeClient {
         Iterator it = subnetworks.iterator();
         while (it.hasNext()) {
             Subnetwork o = (Subnetwork) it.next();
-            if (! o.getNetwork().equals(networkSelfLink)) {
+            if (!o.getNetwork().equals(networkSelfLink)) {
                 it.remove();
             }
         }

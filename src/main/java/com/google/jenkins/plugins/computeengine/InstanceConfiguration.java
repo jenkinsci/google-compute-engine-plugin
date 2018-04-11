@@ -214,6 +214,7 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
         }
         googleLabels.putAll(labels);
     }
+
     public void appendLabel(String key, String value) {
         if (googleLabels == null) {
             googleLabels = new HashMap<>();
