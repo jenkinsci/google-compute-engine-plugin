@@ -33,13 +33,15 @@ public abstract class ComputeEngineComputerLauncher extends ComputerLauncher {
     private static final Logger LOGGER = Logger.getLogger(ComputeEngineComputerLauncher.class.getName());
     private static final SimpleFormatter sf = new SimpleFormatter();
 
-    private final Operation insertOperation;
+    private final String insertOperationId;
+    private final String zone;
     private final String cloudName;
 
-    public ComputeEngineComputerLauncher(String cloudName, Operation insertOperation) {
+    public ComputeEngineComputerLauncher(String cloudName, String insertOperationId, String zone) {
         super();
         this.cloudName = cloudName;
-        this.insertOperation = insertOperation;
+        this.insertOperationId = insertOperationId;
+        this.zone = zone;
     }
 
     public static void log(Logger logger, Level level, TaskListener listener, String message) {
@@ -78,18 +80,18 @@ public abstract class ComputeEngineComputerLauncher extends ComputerLauncher {
         // Wait until the Operation from the Instance insert is complete or fails
         Operation.Error opError = new Operation.Error();
         try {
-            LOGGER.info(String.format("Launch will wait %d for operation %s to complete...", node.launchTimeout, insertOperation.getId()));
+            LOGGER.info(String.format("Launch will wait %d for operation %s to complete...", node.launchTimeout, insertOperationId));
             // This call will a null error when the operation is complete, or a relevant error if it fails.
-            opError = cloud.client.waitForOperationCompletion(cloud.projectId, insertOperation, node.getLaunchTimeoutMillis());
+            opError = cloud.client.waitForOperationCompletion(cloud.projectId, insertOperationId, zone, node.getLaunchTimeoutMillis());
             if (opError != null) {
-                LOGGER.info(String.format("Launch failed while waiting for operation %s to complete. Operation error was %s", insertOperation.getId(), opError.getErrors().get(0).getMessage()));
+                LOGGER.info(String.format("Launch failed while waiting for operation %s to complete. Operation error was %s", insertOperationId, opError.getErrors().get(0).getMessage()));
                 return;
             }
         } catch (IOException ioe) {
-            LOGGER.info(String.format("Launch failed while waiting for operation %s to complete. Operation error was %s", insertOperation.getId(), opError.getErrors().get(0).getMessage()));
+            LOGGER.info(String.format("Launch failed while waiting for operation %s to complete. Operation error was %s", insertOperationId, opError.getErrors().get(0).getMessage()));
             return;
         } catch (InterruptedException ie) {
-            LOGGER.info(String.format("Launch failed while waiting for operation %s to complete. Operation error was %s", insertOperation.getId(), opError.getErrors().get(0).getMessage()));
+            LOGGER.info(String.format("Launch failed while waiting for operation %s to complete. Operation error was %s", insertOperationId, opError.getErrors().get(0).getMessage()));
             return;
         }
 

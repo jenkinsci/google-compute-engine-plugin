@@ -21,7 +21,6 @@ import com.cloudbees.plugins.credentials.CredentialsStore;
 import com.cloudbees.plugins.credentials.SystemCredentialsProvider;
 import com.cloudbees.plugins.credentials.domains.Domain;
 import com.cloudbees.plugins.credentials.domains.DomainRequirement;
-import com.google.api.services.compute.Compute;
 import com.google.api.services.compute.model.Image;
 import com.google.api.services.compute.model.Instance;
 import com.google.api.services.compute.model.Operation;
@@ -310,7 +309,7 @@ public class ComputeEngineCloudIT {
         try {
             Operation op = client.terminateInstance(projectId, ZONE, instanceId);
             if (waitForCompletion)
-                client.waitForOperationCompletion(projectId, op, 3 * 60 * 1000);
+                client.waitForOperationCompletion(projectId, op.getName(), op.getZone(), 3 * 60 * 1000);
         } catch (Exception e) {
             log.warning(String.format("Error deleting instance %s: %s", instanceId, e.getMessage()));
         }
