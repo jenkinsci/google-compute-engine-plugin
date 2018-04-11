@@ -207,7 +207,10 @@ public class ComputeEngineCloud extends AbstractCloudImpl {
             Iterator it = instances.iterator();
             while (it.hasNext()) {
                 Instance o = (Instance) it.next();
-                if (o.getStatus().equals("RUNNING")) {
+                if (! (o.getStatus().equals("PROVISIONING") ||
+                       o.getStatus().equals("STAGING") ||
+                       o.getStatus().equals("RUNNING")))
+                        {
                     it.remove();
                 }
             }
