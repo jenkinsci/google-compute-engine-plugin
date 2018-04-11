@@ -18,6 +18,7 @@ package com.google.jenkins.plugins.computeengine.client;
 
 import com.google.api.services.compute.Compute;
 import com.google.api.services.compute.model.*;
+import com.google.common.base.Strings;
 
 import java.io.IOException;
 import java.util.*;
@@ -398,34 +399,38 @@ public class ComputeClient {
         existingMetadata.setItems(newMetadataItems);
 
         Operation op = compute.instances().setMetadata(projectId, zone, instanceId, existingMetadata).execute();
-        return waitForOperationCompletion(projectId, op, 60 * 1000);
+        return waitForOperationCompletion(projectId, op.getName(), op.getZone(), 60 * 1000);
     }
 
     /**
      * Blocks until an existing operation completes.
      *
      * @param projectId
-     * @param operation
+     * @param operationId
+     * @param zone
      * @param timeout
      * @return
      * @throws IOException
      * @throws InterruptedException
      */
-    public Operation.Error waitForOperationCompletion(String projectId, Operation operation, long timeout)
+    public Operation.Error waitForOperationCompletion(String projectId, String operationId, String zone, long timeout)
             throws IOException, InterruptedException {
-        if (operation == null) {
-            throw new IllegalArgumentException("Operation can not be null");
+        if (Strings.isNullOrEmpty(operationId)) {
+            throw new IllegalArgumentException("Operation ID can not be null");
         }
-
-        long start = System.currentTimeMillis();
-        final long POLL_INTERVAL = 5 * 1000;
-        String zone = operation.getZone();  // null for global/regional operations
+        if (Strings.isNullOrEmpty(zone)) {
+            throw new IllegalArgumentException("Zone can not be null");
+        }
         if (zone != null) {
             String[] bits = zone.split("/");
             zone = bits[bits.length - 1];
         }
+
+        Operation operation = compute.zoneOperations().get(projectId, zone, operationId).execute();
+        long start = System.currentTimeMillis();
+        final long POLL_INTERVAL = 5 * 1000;
+
         String status = operation.getStatus();
-        String opId = operation.getName();
         while (!status.equals("DONE")) {
             Thread.sleep(POLL_INTERVAL);
             long elapsed = System.currentTimeMillis() - start;
@@ -434,10 +439,10 @@ public class ComputeClient {
             }
             System.out.println("waiting...");
             if (zone != null) {
-                Compute.ZoneOperations.Get get = compute.zoneOperations().get(projectId, zone, opId);
+                Compute.ZoneOperations.Get get = compute.zoneOperations().get(projectId, zone, operationId);
                 operation = get.execute();
             } else {
-                Compute.GlobalOperations.Get get = compute.globalOperations().get(projectId, opId);
+                Compute.GlobalOperations.Get get = compute.globalOperations().get(projectId, operationId);
                 operation = get.execute();
             }
             if (operation != null) {

@@ -45,7 +45,7 @@ public class ComputeEngineLinuxLauncher extends ComputeEngineComputerLauncher {
     private static int bootstrapAuthSleepMs = 15000;
 
     public ComputeEngineLinuxLauncher(String cloudName, Operation insertOperation) {
-        super(cloudName, insertOperation);
+        super(cloudName, insertOperation.getName(), insertOperation.getZone());
     }
 
     protected void log(Level level, ComputeEngineComputer computer, TaskListener listener, String message) {
