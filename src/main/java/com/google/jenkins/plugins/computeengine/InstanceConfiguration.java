@@ -75,6 +75,7 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
     public final String bootDiskSourceImageProject;
     public final NetworkConfiguration networkConfiguration;
     public final boolean externalAddress;
+    public final boolean useInternalAddress;
     public final String networkTags;
     public final String serviceAccountEmail;
     public final Node.Mode mode;
@@ -107,6 +108,7 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
                                  String bootDiskSizeGbStr,
                                  NetworkConfiguration networkConfiguration,
                                  boolean externalAddress,
+                                 boolean useInternalAddress,
                                  String networkTags,
                                  String serviceAccountEmail,
                                  String retentionTimeMinutesStr,
@@ -139,6 +141,7 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
         // Network
         this.networkConfiguration = networkConfiguration;
         this.externalAddress = externalAddress;
+        this.useInternalAddress = useInternalAddress;
         this.networkTags = Util.fixNull(networkTags).trim();
 
         // IAM
@@ -228,7 +231,7 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
             Instance i = instance();
             Operation operation = cloud.client.insertInstance(cloud.projectId, i);
             logger.println("Sent insert request");
-            ComputeEngineInstance instance = new ComputeEngineInstance(cloud.name, i.getName(), i.getZone(), i.getDescription(), runAsUser, "./.jenkins-slave", numExecutors, mode, requiredLabel == null ? "" : requiredLabel.getName(), new ComputeEngineLinuxLauncher(cloud.getCloudName(), operation), new CloudRetentionStrategy(retentionTimeMinutes), getLaunchTimeoutMillis());
+            ComputeEngineInstance instance = new ComputeEngineInstance(cloud.name, i.getName(), i.getZone(), i.getDescription(), runAsUser, "./.jenkins-slave", numExecutors, mode, requiredLabel == null ? "" : requiredLabel.getName(), new ComputeEngineLinuxLauncher(cloud.getCloudName(), operation, this.useInternalAddress), new CloudRetentionStrategy(retentionTimeMinutes), getLaunchTimeoutMillis());
             return instance;
         } catch (Descriptor.FormException fe) {
             logger.printf("Error provisioning instance: %s", fe.getMessage());

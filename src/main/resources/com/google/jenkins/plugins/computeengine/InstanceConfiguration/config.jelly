@@ -62,6 +62,9 @@
             <f:entry field="externalAddress" title="${%External IP?}">
                 <f:checkbox/>
             </f:entry>
+            <f:entry field="useInternalAddress" title="${%Use Internal IP?}">
+                <f:checkbox/>
+            </f:entry>
         </f:section>
 
         <f:section title="Boot Disk">

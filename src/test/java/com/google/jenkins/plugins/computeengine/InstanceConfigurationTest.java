@@ -194,6 +194,8 @@ public class InstanceConfigurationTest {
         assert (i.getDisks().get(0).getInitializeParams().getDiskSizeGb().equals(Long.parseLong(BOOT_DISK_SIZE_GB_STR)));
         assert (i.getDisks().get(0).getInitializeParams().getSourceImage().equals(BOOT_DISK_IMAGE_NAME));
 
+        assert(instanceConfiguration().useInternalAddress == false);
+
     }
 
     public  static InstanceConfiguration instanceConfiguration() {
@@ -214,6 +216,7 @@ public class InstanceConfigurationTest {
                 BOOT_DISK_SIZE_GB_STR,
                 new AutofilledNetworkConfiguration(NETWORK_NAME, SUBNETWORK_NAME),
                 EXTERNAL_ADDR,
+                false,
                 NETWORK_TAGS,
                 SERVICE_ACCOUNT_EMAIL,
                 RETENTION_TIME_MINUTES_STR,

@@ -35,6 +35,8 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 public class ComputeEngineLinuxLauncher extends ComputeEngineComputerLauncher {
+    public final boolean useInternalAddress;
+
     public static final String SSH_METADATA_KEY = "ssh-keys";
 
     //TODO: make this configurable
@@ -44,8 +46,9 @@ public class ComputeEngineLinuxLauncher extends ComputeEngineComputerLauncher {
     private static int bootstrapAuthTries = 30;
     private static int bootstrapAuthSleepMs = 15000;
 
-    public ComputeEngineLinuxLauncher(String cloudName, Operation insertOperation) {
+    public ComputeEngineLinuxLauncher(String cloudName, Operation insertOperation, boolean useInternalAddress) {
         super(cloudName, insertOperation.getName(), insertOperation.getZone());
+        this.useInternalAddress = useInternalAddress;
     }
 
     protected void log(Level level, ComputeEngineComputer computer, TaskListener listener, String message) {
@@ -223,17 +226,24 @@ public class ComputeEngineLinuxLauncher extends ComputeEngineComputerLauncher {
 
                 String host = "";
 
-                // If host has a public address, use it
+                //TODO: handle multiple NICs
                 NetworkInterface nic = instance.getNetworkInterfaces().get(0);
-                if (nic.getAccessConfigs() != null) {
-                    for (AccessConfig ac : nic.getAccessConfigs()) {
-                        if (ac.getType().equals(InstanceConfiguration.NAT_TYPE)) {
-                            host = ac.getNatIP();
+
+                if (this.useInternalAddress) {
+                    host = nic.getNetworkIP();
+                } else {
+                    // Look for a public IP address
+                    if (nic.getAccessConfigs() != null) {
+                        for (AccessConfig ac : nic.getAccessConfigs()) {
+                            if (ac.getType().equals(InstanceConfiguration.NAT_TYPE)) {
+                                host = ac.getNatIP();
+                            }
                         }
                     }
-                }
-                if (host.isEmpty()) {
-                    host = nic.getNetworkIP();
+                    // No public address found. Fall back to internal address
+                    if (host.isEmpty()) {
+                        host = nic.getNetworkIP();
+                    }
                 }
 
                 int port = SSH_PORT;
