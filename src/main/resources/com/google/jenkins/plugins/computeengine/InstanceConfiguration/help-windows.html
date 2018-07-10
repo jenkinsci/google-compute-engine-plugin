@@ -1,18 +1,23 @@
 <div>
     Enable this option if the launched machine is a Windows VM. The Windows VM must have the OpenSSH server feature
-    installed on it, and you must have configured an administrative user with a username and password.
+    installed on it, Java installed on it, and you must have configured an administrative user with a username and password.
     <p>
         The configured username and password should be set in the "Windows Username" and "Windows Password"
         fields.
     </p>
     <p>
-        You can use the Startup Script to automatically install the OpenSSH server role and set up a user with:
+        You can use the following Startup Script to automatically set up the minimum requirements. In this example
+        the Windows username is "Build" and the password is "password123".
     </p>
     <p>
         <code>
-            Add-WindowsCapability -Online -Name OpenSSH.Server~~~~0.0.1.0<br />
-            net user /add Build password<br />
-            net localgroup administrators Build /add
+            Set-ExecutionPolicy Bypass -Scope Process -Force;<br />
+            Invoke-Expression ((New-Object System.Net.WebClient).DownloadString('https://chocolatey.org/install.ps1'));<br />
+            RefreshEnv.cmd<br />
+            net user /add Build password123<br />
+            net localgroup administrators Build /add<br />
+            choco install -y jre8<br />
+            choco install -y openssh -params '"/SSHServerFeature"'
         </code>
     </p>
     <p>
