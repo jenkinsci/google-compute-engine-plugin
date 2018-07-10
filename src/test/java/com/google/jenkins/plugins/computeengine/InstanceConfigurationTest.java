@@ -171,7 +171,7 @@ public class InstanceConfigurationTest {
         assert (i.getGuestAccelerators().get(0).getAcceleratorCount().equals(Integer.parseInt(ACCELERATOR_COUNT)));
 
         // Metadata
-        assert (i.getMetadata().getItems().get(0).getKey().equals(InstanceConfiguration.METADATA_STARTUP_SCRIPT_KEY));
+        assert (i.getMetadata().getItems().get(0).getKey().equals(InstanceConfiguration.METADATA_LINUX_STARTUP_SCRIPT_KEY));
         assert (i.getMetadata().getItems().get(0).getValue().equals(STARTUP_SCRIPT));
 
         // Network

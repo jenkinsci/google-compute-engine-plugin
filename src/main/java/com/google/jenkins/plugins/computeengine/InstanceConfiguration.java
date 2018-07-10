@@ -46,10 +46,11 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
     public static final Integer DEFAULT_RETENTION_TIME_MINUTES = (DEFAULT_LAUNCH_TIMEOUT_SECONDS / 60) + 1;
     public static final String DEFAULT_RUN_AS_USER = "jenkins";
     public static final String ERROR_NO_SUBNETS = "No subnetworks exist in the given network and region.";
-    public static final String METADATA_STARTUP_SCRIPT_KEY = "startup-script";
+    public static final String METADATA_LINUX_STARTUP_SCRIPT_KEY = "startup-script";
+    public static final String METADATA_WINDOWS_STARTUP_SCRIPT_KEY = "windows-startup-script-ps1";
     public static final String NAT_TYPE = "ONE_TO_ONE_NAT";
     public static final String NAT_NAME = "External NAT";
-    public static final List<String> KNOWN_LINUX_IMAGE_PROJECTS = Collections.unmodifiableList(new ArrayList<String>() {{
+    public static final List<String> KNOWN_IMAGE_PROJECTS = Collections.unmodifiableList(new ArrayList<String>() {{
         add("centos-cloud");
         add("coreos-cloud");
         add("cos-cloud");
@@ -58,6 +59,8 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
         add("suse-cloud");
         add("suse-sap-cloud");
         add("ubuntu-os-cloud");
+        add("windows-cloud");
+        add("windows-sql-cloud");
     }});
     public final String description;
     public final String namePrefix;
@@ -83,6 +86,9 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
     public final String retentionTimeMinutesStr;
     public final String launchTimeoutSecondsStr;
     public final String bootDiskSizeGbStr;
+    public final boolean windows;
+    public final String windowsUsername;
+    public final String windowsPassword;
     public Map<String, String> googleLabels;
     public Integer numExecutors;
     public Integer retentionTimeMinutes;
@@ -106,6 +112,9 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
                                  String bootDiskSourceImageName,
                                  String bootDiskSourceImageProject,
                                  String bootDiskSizeGbStr,
+                                 boolean windows,
+                                 String windowsUsername,
+                                 String windowsPassword,
                                  NetworkConfiguration networkConfiguration,
                                  boolean externalAddress,
                                  boolean useInternalAddress,
@@ -123,6 +132,9 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
         this.description = description;
         this.startupScript = startupScript;
         this.preemptible = preemptible;
+        this.windows = windows;
+        this.windowsUsername = windowsUsername;
+        this.windowsPassword = windowsPassword;
         this.numExecutors = intOrDefault(numExecutorsStr, DEFAULT_NUM_EXECUTORS);
         this.numExecutorsStr = numExecutors.toString();
         this.retentionTimeMinutes = intOrDefault(retentionTimeMinutesStr, DEFAULT_RETENTION_TIME_MINUTES);
@@ -231,7 +243,29 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
             Instance i = instance();
             Operation operation = cloud.client.insertInstance(cloud.projectId, i);
             logger.println("Sent insert request");
-            ComputeEngineInstance instance = new ComputeEngineInstance(cloud.name, i.getName(), i.getZone(), i.getDescription(), runAsUser, "./.jenkins-slave", numExecutors, mode, requiredLabel == null ? "" : requiredLabel.getName(), new ComputeEngineLinuxLauncher(cloud.getCloudName(), operation, this.useInternalAddress), new CloudRetentionStrategy(retentionTimeMinutes), getLaunchTimeoutMillis());
+            String remoteFS = "./.jenkins-slave";
+            ComputeEngineComputerLauncher launcher = null;
+            if (this.windows) {
+                launcher = new ComputeEngineWindowsLauncher(cloud.getCloudName(), operation, this.useInternalAddress);
+                remoteFS = "C:\\JenkinsSlave";
+            } else {
+                launcher = new ComputeEngineLinuxLauncher(cloud.getCloudName(), operation, this.useInternalAddress);
+            }
+            ComputeEngineInstance instance = new ComputeEngineInstance(
+                    cloud.name,
+                    i.getName(),
+                    i.getZone(), 
+                    i.getDescription(),
+                    runAsUser,
+                    remoteFS,
+                    this.windowsUsername,
+                    this.windowsPassword,
+                    numExecutors, 
+                    mode, 
+                    requiredLabel == null ? "" : requiredLabel.getName(),
+                    launcher,
+                    new CloudRetentionStrategy(retentionTimeMinutes), 
+                    getLaunchTimeoutMillis());
             return instance;
         } catch (Descriptor.FormException fe) {
             logger.printf("Error provisioning instance: %s", fe.getMessage());
@@ -285,7 +319,11 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
         if (notNullOrEmpty(startupScript)) {
             Metadata metadata = new Metadata();
             List<Metadata.Items> items = new ArrayList<>();
-            items.add(new Metadata.Items().setKey(METADATA_STARTUP_SCRIPT_KEY).setValue(startupScript));
+            if (this.windows) {
+                items.add(new Metadata.Items().setKey(METADATA_WINDOWS_STARTUP_SCRIPT_KEY).setValue(startupScript));
+            } else {
+                items.add(new Metadata.Items().setKey(METADATA_LINUX_STARTUP_SCRIPT_KEY).setValue(startupScript));
+            }
             metadata.setItems(items);
             return metadata;
         }
@@ -590,7 +628,7 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
             ListBoxModel items = new ListBoxModel();
             items.add("");
             items.add(projectId);
-            for (String v : KNOWN_LINUX_IMAGE_PROJECTS) {
+            for (String v : KNOWN_IMAGE_PROJECTS) {
                 items.add(v);
             }
             return items;

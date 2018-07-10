@@ -1,0 +1,22 @@
+<div>
+    Enable this option if the launched machine is a Windows VM. The Windows VM must have the OpenSSH server feature
+    installed on it, and you must have configured an administrative user with a username and password.
+    <p>
+        The configured username and password should be set in the "Windows Username" and "Windows Password"
+        fields.
+    </p>
+    <p>
+        You can use the Startup Script to automatically install the OpenSSH server role and set up a user with:
+    </p>
+    <p>
+        <code>
+            Add-WindowsCapability -Online -Name OpenSSH.Server~~~~0.0.1.0<br />
+            net user /add Build password<br />
+            net localgroup administrators Build /add
+        </code>
+    </p>
+    <p>
+        See the <a href="https://cloud.google.com/compute/docs/instances/windows">Windows VM Instances</a>
+        documentation for more information.
+    </p>
+</div>
