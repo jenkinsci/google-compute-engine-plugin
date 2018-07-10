@@ -114,7 +114,7 @@ public class ComputeEngineWindowsLauncher extends ComputeEngineComputerLauncher 
 
 
             //TODO: allow jvmopt configuration
-            String launchString = "java -jar " + tmpDir + "/slave.jar";
+            String launchString = "java -jar C:\\slave.jar";
 
             logInfo(computer, listener, "Launching Jenkins agent via plugin SSH: " + launchString);
             final Session sess = conn.openSession();
