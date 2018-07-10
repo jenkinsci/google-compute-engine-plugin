@@ -47,6 +47,19 @@
              <f:entry field="minCpuPlatform" title="${%Minimum Cpu Platform}">
                  <f:select/>
              </f:entry>
+            <f:entry field="windows" title="${%Windows?}">
+                <f:checkbox/>
+            </f:entry>
+            <f:entry title="${%Windows Username}" field="windowsUsername">
+                <f:textbox default="Build"/>
+            </f:entry>
+            <f:entry title="${%Windows Password}" field="windowsPassword">
+                <f:password/>
+            </f:entry>
+            <f:entry field="minCpuPlatform" title="${%Minimum Cpu Platform}">
+                <f:select/>
+            </f:entry>
+>>>>>>> b9301dd... Add support for Windows instances on Google Cloud
             <f:entry field="startupScript" title="${%Startup script}">
                 <f:textarea/>
             </f:entry>
