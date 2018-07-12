@@ -89,6 +89,7 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
     public final boolean windows;
     public final String windowsUsername;
     public final String windowsPassword;
+    public final Integer localSsdDisks;
     public Map<String, String> googleLabels;
     public Integer numExecutors;
     public Integer retentionTimeMinutes;
@@ -115,6 +116,7 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
                                  boolean windows,
                                  String windowsUsername,
                                  String windowsPassword,
+                                 Integer localSsdDisks,
                                  NetworkConfiguration networkConfiguration,
                                  boolean externalAddress,
                                  boolean useInternalAddress,
@@ -150,6 +152,9 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
         this.bootDiskSizeGb = longOrDefault(bootDiskSizeGbStr, DEFAULT_BOOT_DISK_SIZE_GB);
         this.bootDiskSizeGbStr = bootDiskSizeGb.toString();
 
+        // Local SSDs
+        this.localSsdDisks = localSsdDisks;
+        
         // Network
         this.networkConfiguration = networkConfiguration;
         this.externalAddress = externalAddress;
@@ -357,6 +362,17 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
 
         List<AttachedDisk> disks = new ArrayList<>();
         disks.add(boot);
+        
+        for (Integer i = 0; i < this.localSsdDisks; i++) {
+            AttachedDisk ssd = new AttachedDisk();
+            ssd.setType("SCRATCH");
+            ssd.setAutoDelete(true);
+            ssd.setInitializeParams(new AttachedDiskInitializeParams()
+                .setDiskType("zones/" + ComputeClient.zoneFromSelfLink(zone) + "/diskTypes/local-ssd")
+            );
+            disks.add(ssd);
+        }
+        
         return disks;
     }
 
