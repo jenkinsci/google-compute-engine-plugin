@@ -44,6 +44,9 @@
             <f:entry title="${%Number of Local SSDs}" field="localSsdDisks">
                 <f:textbox default="0"/>
             </f:entry>
+            <f:entry title="${%Remote Location}" field="remoteFs">
+                <f:textbox default=""/>
+            </f:entry>
             <f:entry field="preemptible" title="${%Preemptible?}">
                 <f:checkbox/>
             </f:entry>

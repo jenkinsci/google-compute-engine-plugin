@@ -89,6 +89,7 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
     public final boolean windows;
     public final String windowsUsername;
     public final String windowsPassword;
+    public final String remoteFs;
     public final Integer localSsdDisks;
     public Map<String, String> googleLabels;
     public Integer numExecutors;
@@ -116,6 +117,7 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
                                  boolean windows,
                                  String windowsUsername,
                                  String windowsPassword,
+                                 String remoteFs,
                                  Integer localSsdDisks,
                                  NetworkConfiguration networkConfiguration,
                                  boolean externalAddress,
@@ -154,6 +156,9 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
 
         // Local SSDs
         this.localSsdDisks = localSsdDisks;
+        
+        // Remote filesystem location.
+        this.remoteFs = remoteFs;
         
         // Network
         this.networkConfiguration = networkConfiguration;
@@ -248,13 +253,18 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
             Instance i = instance();
             Operation operation = cloud.client.insertInstance(cloud.projectId, i);
             logger.println("Sent insert request");
-            String remoteFS = "./.jenkins-slave";
+            String targetRemoteFs = this.remoteFs;
             ComputeEngineComputerLauncher launcher = null;
             if (this.windows) {
                 launcher = new ComputeEngineWindowsLauncher(cloud.getCloudName(), operation, this.useInternalAddress);
-                remoteFS = "C:\\JenkinsSlave";
+                if (targetRemoteFs == null || targetRemoteFs.isEmpty()) {
+                    targetRemoteFs = "C:\\JenkinsSlave";
+                }
             } else {
                 launcher = new ComputeEngineLinuxLauncher(cloud.getCloudName(), operation, this.useInternalAddress);
+                if (targetRemoteFs == null || targetRemoteFs.isEmpty()) {
+                    targetRemoteFs = "./.jenkins-slave";
+                }
             }
             ComputeEngineInstance instance = new ComputeEngineInstance(
                     cloud.name,
@@ -262,7 +272,7 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
                     i.getZone(), 
                     i.getDescription(),
                     runAsUser,
-                    remoteFS,
+                    targetRemoteFs,
                     this.windowsUsername,
                     this.windowsPassword,
                     numExecutors, 
