@@ -6,6 +6,7 @@
 package com.google.jenkins.plugins.computeengine;
 
 import com.google.api.services.compute.model.AccessConfig;
+import com.google.api.services.compute.model.AttachedDisk;
 import com.google.api.services.compute.model.Instance;
 import com.google.api.services.compute.model.Metadata;
 import com.google.api.services.compute.model.NetworkInterface;
@@ -29,6 +30,7 @@ import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import jenkins.model.Jenkins;
+import org.apache.commons.codec.binary.Base64;
 
 public class ComputeEngineWindowsLauncher extends ComputeEngineComputerLauncher {
     public final boolean useInternalAddress;
@@ -112,6 +114,21 @@ public class ComputeEngineWindowsLauncher extends ComputeEngineComputerLauncher 
                 logWarning(computer, listener, "Java is not installed.");
             }
 
+            boolean hasLocalSsds = false;
+            for (AttachedDisk disk : computer.getInstance().getDisks()) {
+                if ("SCRATCH".equals(disk.getType())) {
+                    hasLocalSsds = true;
+                }
+            }
+            if (hasLocalSsds) {
+                // Make sure that any uninitialized local disks are formatted
+                // and mounted, as the working directory for Jenkins might be
+                // located on a disk that is not yet available.
+                logInfo(computer, listener, "Initializing local SSDs that are present if needed...");
+                String powerShellDiskInit = "Get-Disk | Where-Object { $_.FriendlyName -eq \"Google EphemeralDisk\" -and $_.PartitionStyle -eq \"RAW\" } | ForEach-Object { Initialize-Disk $_.Number; New-Partition -DiskNumber $_.Number -UseMaximumSize -AssignDriveLetter }";
+                String encodedPowerShell = new String(Base64.encodeBase64(powerShellDiskInit.getBytes("UTF-16LE")));
+                conn.exec("powershell -ExecutionPolicy Bypass -EncodedCommand " + encodedPowerShell, logger);
+            }
 
             //TODO: allow jvmopt configuration
             String launchString = "java -jar C:\\slave.jar";
