@@ -125,7 +125,20 @@ public class ComputeEngineWindowsLauncher extends ComputeEngineComputerLauncher 
                 // and mounted, as the working directory for Jenkins might be
                 // located on a disk that is not yet available.
                 logInfo(computer, listener, "Initializing local SSDs that are present if needed...");
-                String powerShellDiskInit = "Get-Disk | Where-Object { $_.FriendlyName -eq \"Google EphemeralDisk\" -and $_.PartitionStyle -eq \"RAW\" } | ForEach-Object { Initialize-Disk $_.Number; New-Partition -DiskNumber $_.Number -UseMaximumSize -AssignDriveLetter }";
+                String powerShellDiskInit = 
+                        "Get-Disk"
+                        + " | Where-Object { $_.FriendlyName -eq \"Google EphemeralDisk\" -and $_.PartitionStyle -eq \"RAW\" }"
+                        + " | ForEach-Object { "
+                        + "Initialize-Disk $_.Number;"
+                        + "$Partition = New-Partition -DiskNumber $_.Number -UseMaximumSize;"
+                        + "Format-Volume -Force -Partition $Partition;"
+                        + "Add-PartitionAccessPath -DiskNumber $_.Number -PartitionNumber $Partition.PartitionNumber -AssignDriveLetter;"
+                        + "$Partition = Get-Partition -DiskNumber $_.Number -PartitionNumber $Partition.PartitionNumber;"
+                        // Java applications have an issue where they can't create directories on newly
+                        // formatted NTFS partitions until some other application creates a directory
+                        // first.
+                        + "New-Item -Path \"$($Partition.DriveLetter):\\_JavaWorkaround\" -ItemType Directory;"
+                        + "}";
                 String encodedPowerShell = new String(Base64.encodeBase64(powerShellDiskInit.getBytes("UTF-16LE")));
                 conn.exec("powershell -ExecutionPolicy Bypass -EncodedCommand " + encodedPowerShell, logger);
             }
