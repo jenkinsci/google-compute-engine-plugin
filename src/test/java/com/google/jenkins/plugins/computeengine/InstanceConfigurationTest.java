@@ -233,6 +233,7 @@ public class InstanceConfigurationTest {
                 false,
                 "",
                 "",
+                null,
                 0,
                 new AutofilledNetworkConfiguration(NETWORK_NAME, SUBNETWORK_NAME),
                 EXTERNAL_ADDR,
