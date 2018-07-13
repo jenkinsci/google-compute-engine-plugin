@@ -156,7 +156,7 @@ public class ComputeEngineCloud extends AbstractCloudImpl {
                     break;
                 }
 
-                final ComputeEngineInstance node = config.provision(StreamTaskListener.fromStdout(), label);
+                final ComputeEngineInstance node = config.provision(StreamTaskListener.fromStdout(), config.getLabelString());
                 Jenkins.getInstance().addNode(node);
                 r.add(new PlannedNode(node.getNodeName(), Computer.threadPoolForRemoting.submit(new Callable<Node>() {
                     public Node call() throws Exception {
@@ -223,9 +223,9 @@ public class ComputeEngineCloud extends AbstractCloudImpl {
         }
     }
 
-    private synchronized ComputeEngineInstance getAnAgent(InstanceConfiguration config, Label requiredLabel) {
+    private synchronized ComputeEngineInstance getAnAgent(InstanceConfiguration config, String labels) {
         try {
-            return config.provision(StreamTaskListener.fromStdout(), requiredLabel);
+            return config.provision(StreamTaskListener.fromStdout(), labels);
         } catch (Exception e) {
             return null;
         }
