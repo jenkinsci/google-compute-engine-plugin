@@ -16,7 +16,10 @@
                 <f:textbox default="${descriptor.defaultRetentionTimeMinutes()}"/>
             </f:entry>
             <f:slave-mode name="mode" node="${instance}"/>
-            <f:entry title="${%Labels}" field="labelString">
+            <f:entry title="${%Jenkins slave labels}" field="labelString">
+                <f:textbox/>
+            </f:entry>
+            <f:entry title="${%Google-Labels}" field="googleLabelsString">
                 <f:textbox/>
             </f:entry>
             <f:entry title="${%Run as user}" field="runAsUser">

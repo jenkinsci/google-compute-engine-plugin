@@ -64,7 +64,8 @@ public class ComputeEngineCloudIT {
     private static final String REGION = format("projects/%s/regions/us-west1");
     private static final String ZONE = "us-west1-a";
     private static final String ZONE_BASE = format("projects/%s/zones/" + ZONE);
-    private static final String LABEL = "integration";
+	private static final String LABEL = "integration";
+	private static final String GOOGLELABEL = "component:integration";
     private static final String MACHINE_TYPE = ZONE_BASE + "/machineTypes/n1-standard-1";
     private static final String NUM_EXECUTORS = "1";
     private static final boolean PREEMPTIBLE = false;
@@ -245,6 +246,7 @@ public class ComputeEngineCloudIT {
                 DEB_JAVA_STARTUP_SCRIPT,
                 PREEMPTIBLE,
                 LABEL,
+                GOOGLELABEL,
                 CONFIG_DESC,
                 BOOT_DISK_TYPE,
                 BOOT_DISK_AUTODELETE,
@@ -280,6 +282,7 @@ public class ComputeEngineCloudIT {
                 "",
                 PREEMPTIBLE,
                 LABEL,
+                GOOGLELABEL,
                 CONFIG_DESC,
                 BOOT_DISK_TYPE,
                 BOOT_DISK_AUTODELETE,
