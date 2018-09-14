@@ -1,0 +1,46 @@
+<!--We want to override the form in configuring the node-->
+<?jelly escape-by-default='true'?>
+<j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:d="jelly:define" xmlns:l="/lib/layout" xmlns:t="/lib/hudson" xmlns:f="/lib/form">
+    <l:layout norefresh="true" permission="${app.ADMINISTER}" title="${it.name} Configuration">
+        <st:include page="sidepanel.jelly"/>
+        <l:main-panel>
+            <table width="100%">
+
+                <!--These variables need to be set since we are reconfiguring rather than a newly added instance-->
+                <j:set var="instance" value="${it.node}" />
+                <j:set var="descriptor" value="${instance.descriptor}" />
+                <j:set var="APIInstance" value="${it.instance}" />
+                <j:set var="cloud" value="${instance.cloud}" />
+
+                <h3>This is a read-only view. Click <a href="${rootURL}/configure"> here</a> to configure your instances.</h3>
+                <br/>
+                <f:section title="General">
+
+                    <f:entry title="${%Name}" field="name">
+                        <f:textbox value="${it.name}" readonly="readonly" />
+                    </f:entry>
+
+                    <f:entry title="${%Node Description}" field="nodeDescription">
+                        <f:readOnlyTextbox />
+                    </f:entry>
+                </f:section>
+
+                <f:section title="Location">
+                    <f:entry field="zone" title="${%Zone}">
+                        <f:readOnlyTextbox />
+                    </f:entry>
+                </f:section>
+
+                <f:section title="Machine Configuration">
+                    <f:entry title="${%Machine Type}" field="machineType">
+                        <f:textbox value="${it.instance.machineType}" readonly="readonly" />
+                    </f:entry>
+                    <f:entry title="${%Number of Executors}" field="numExecutors">
+                        <f:readOnlyTextbox />
+                    </f:entry>
+                </f:section>
+
+            </table>
+        </l:main-panel>
+    </l:layout>
+</j:jelly>
