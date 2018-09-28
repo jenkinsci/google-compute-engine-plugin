@@ -67,6 +67,7 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
     public final String numExecutorsStr;
     public final String startupScript;
     public final boolean preemptible;
+    public final String minCpuPlatform;
     public final String labels;
     public final String runAsUser;
     public final String bootDiskType;
@@ -99,6 +100,7 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
                                  String numExecutorsStr,
                                  String startupScript,
                                  boolean preemptible,
+                                 String minCpuPlatform,
                                  String labelString,
                                  String description,
                                  String bootDiskType,
@@ -123,6 +125,7 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
         this.description = description;
         this.startupScript = startupScript;
         this.preemptible = preemptible;
+        this.minCpuPlatform = minCpuPlatform;
         this.numExecutors = intOrDefault(numExecutorsStr, DEFAULT_NUM_EXECUTORS);
         this.numExecutorsStr = numExecutors.toString();
         this.retentionTimeMinutes = intOrDefault(retentionTimeMinutesStr, DEFAULT_RETENTION_TIME_MINUTES);
@@ -256,6 +259,7 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
         i.setDescription(description);
         i.setZone(ComputeClient.zoneFromSelfLink(zone));
         i.setMachineType(stripSelfLinkPrefix(machineType));
+        i.setMinCpuPlatform(minCpuPlatform);
         i.setMetadata(metadata());
         i.setTags(tags());
         i.setScheduling(scheduling());
@@ -561,6 +565,30 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
             return FormValidation.ok();
         }
 
+        public ListBoxModel doFillMinCpuPlatformItems(@AncestorInPath Jenkins context,
+                                               @QueryParameter("projectId") @RelativePath("..") final String projectId,
+                                               @QueryParameter("zone") final String zone,
+                                               @QueryParameter("credentialsId") @RelativePath("..") final String credentialsId)
+        {
+            ListBoxModel items = new ListBoxModel();
+            items.add("");
+            try {
+                ComputeClient compute = computeClient(context,credentialsId);
+                List<String> cpuPlatforms = compute.cpuPlatforms(projectId,zone);
+
+                for (String cpuPlatform : cpuPlatforms) {
+                    items.add(cpuPlatform);
+                }
+                return items;
+            } catch (IOException ioe) {
+                items.clear();
+                items.add("Error retrieving cpu Platforms");
+                return items;
+            } catch (IllegalArgumentException iae) {
+                //TODO log
+                return null;
+            }
+        }
 
         public ListBoxModel doFillBootDiskTypeItems(@AncestorInPath Jenkins context,
                                                     @QueryParameter("projectId") @RelativePath("..") final String projectId,
