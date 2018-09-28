@@ -59,6 +59,9 @@
             <f:entry title="${%Windows Password}" field="windowsPassword">
                 <f:password/>
             </f:entry>
+             <f:entry field="minCpuPlatform" title="${%Minimum Cpu Platform}">
+                 <f:select/>
+             </f:entry>
             <f:entry field="startupScript" title="${%Startup script}">
                 <f:textarea/>
             </f:entry>

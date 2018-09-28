@@ -68,6 +68,8 @@ public class ComputeEngineCloudIT {
     private static final String MACHINE_TYPE = ZONE_BASE + "/machineTypes/n1-standard-1";
     private static final String NUM_EXECUTORS = "1";
     private static final boolean PREEMPTIBLE = false;
+    //  TODO: Write a test to see if min cpu platform worked by picking a higher version?
+    private static final String MIN_CPU_PLATFORM = "Intel Broadwell";
     private static final String CONFIG_DESC = "integration";
     private static final String BOOT_DISK_TYPE = ZONE_BASE + "/diskTypes/pd-ssd";
     private static final boolean BOOT_DISK_AUTODELETE = true;
@@ -244,6 +246,7 @@ public class ComputeEngineCloudIT {
                 NUM_EXECUTORS,
                 DEB_JAVA_STARTUP_SCRIPT,
                 PREEMPTIBLE,
+                MIN_CPU_PLATFORM,
                 LABEL,
                 CONFIG_DESC,
                 BOOT_DISK_TYPE,
@@ -284,6 +287,7 @@ public class ComputeEngineCloudIT {
                 NUM_EXECUTORS,
                 "",
                 PREEMPTIBLE,
+                MIN_CPU_PLATFORM,
                 LABEL,
                 CONFIG_DESC,
                 BOOT_DISK_TYPE,
