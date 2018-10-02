@@ -259,7 +259,6 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
         i.setDescription(description);
         i.setZone(ComputeClient.zoneFromSelfLink(zone));
         i.setMachineType(stripSelfLinkPrefix(machineType));
-        i.setMinCpuPlatform(minCpuPlatform);
         i.setMetadata(metadata());
         i.setTags(tags());
         i.setScheduling(scheduling());
@@ -267,6 +266,11 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
         i.setGuestAccelerators(accelerators());
         i.setNetworkInterfaces(networkInterfaces());
         i.setServiceAccounts(serviceAccounts());
+
+        //optional
+        if (notNullOrEmpty(minCpuPlatform)) {
+            i.setMinCpuPlatform(minCpuPlatform);
+        }
         return i;
     }
 

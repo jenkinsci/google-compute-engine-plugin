@@ -165,12 +165,13 @@ public class InstanceConfigurationTest {
 
     @Test
     public void testInstanceModel() {
-        Instance i = instanceConfiguration().instance();
+        Instance i = instanceConfiguration(MIN_CPU_PLATFORM).instance();
         // General
         assert (i.getName().startsWith(NAME_PREFIX));
         assert (i.getDescription().equals(CONFIG_DESC));
         assert (i.getZone().equals(ZONE));
         assert (i.getMachineType().equals(MACHINE_TYPE));
+        assert (i.getMinCpuPlatform().equals(MIN_CPU_PLATFORM));
 
         // Accelerators
         assert (i.getGuestAccelerators().get(0).getAcceleratorType().equals(ACCELERATOR_NAME));
@@ -200,11 +201,20 @@ public class InstanceConfigurationTest {
         assert (i.getDisks().get(0).getInitializeParams().getDiskSizeGb().equals(Long.parseLong(BOOT_DISK_SIZE_GB_STR)));
         assert (i.getDisks().get(0).getInitializeParams().getSourceImage().equals(BOOT_DISK_IMAGE_NAME));
 
-        assert(instanceConfiguration().useInternalAddress == false);
+
+
+        InstanceConfiguration instanceConfiguration = instanceConfiguration();
+        assert(instanceConfiguration.useInternalAddress == false);
+        assert(instanceConfiguration.instance().getMinCpuPlatform() == null);
+
 
     }
 
-    public  static InstanceConfiguration instanceConfiguration() {
+    public static InstanceConfiguration instanceConfiguration() {
+        return instanceConfiguration("");
+    }
+
+    public  static InstanceConfiguration instanceConfiguration(String minCpuPlatform) {
         return new InstanceConfiguration(
                 NAME_PREFIX,
                 REGION,
@@ -213,7 +223,7 @@ public class InstanceConfigurationTest {
                 NUM_EXECUTORS,
                 STARTUP_SCRIPT,
                 PREEMPTIBLE,
-                MIN_CPU_PLATFORM,
+                minCpuPlatform,
                 LABEL,
                 CONFIG_DESC,
                 BOOT_DISK_TYPE,
