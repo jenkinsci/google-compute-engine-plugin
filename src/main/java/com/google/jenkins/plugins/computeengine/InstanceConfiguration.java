@@ -573,8 +573,8 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
             ListBoxModel items = new ListBoxModel();
             items.add("");
             try {
-                ComputeClient compute = computeClient(context,credentialsId);
-                List<String> cpuPlatforms = compute.cpuPlatforms(projectId,zone);
+                ComputeClient compute = computeClient(context, credentialsId);
+                List<String> cpuPlatforms = compute.cpuPlatforms(projectId, zone);
 
                 for (String cpuPlatform : cpuPlatforms) {
                     items.add(cpuPlatform);
