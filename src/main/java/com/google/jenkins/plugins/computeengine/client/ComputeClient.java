@@ -172,6 +172,18 @@ public class ComputeClient {
         return machineTypes;
     }
 
+    public List<String> cpuPlatforms(String projectId, String zone) throws IOException {
+        List<String> cpuPlatforms = new ArrayList<String>();
+        zone = zoneFromSelfLink(zone);
+        Zone zoneObject = compute.zones()
+                .get(projectId,zone)
+                .execute();
+        if (zoneObject == null) {
+            return cpuPlatforms;
+        }
+        return zoneObject.getAvailableCpuPlatforms();
+    }
+
     public List<DiskType> getDiskTypes(String projectId, String zone) throws IOException {
         zone = zoneFromSelfLink(zone);
         List<DiskType> diskTypes = compute
