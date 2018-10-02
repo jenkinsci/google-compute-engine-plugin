@@ -206,8 +206,6 @@ public class InstanceConfigurationTest {
         InstanceConfiguration instanceConfiguration = instanceConfiguration();
         assert(instanceConfiguration.useInternalAddress == false);
         assert(instanceConfiguration.instance().getMinCpuPlatform() == null);
-
-
     }
 
     public static InstanceConfiguration instanceConfiguration() {
