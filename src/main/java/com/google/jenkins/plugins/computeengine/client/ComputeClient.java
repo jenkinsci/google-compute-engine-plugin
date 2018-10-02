@@ -174,7 +174,6 @@ public class ComputeClient {
 
     public List<String> cpuPlatforms(String projectId, String zone) throws IOException {
         List<String> cpuPlatforms = new ArrayList<String>();
-        String filter = String.format("selfLInk='%s'",zone);
         zone = zoneFromSelfLink(zone);
         Zone zoneObject = compute.zones()
                 .get(projectId,zone)
