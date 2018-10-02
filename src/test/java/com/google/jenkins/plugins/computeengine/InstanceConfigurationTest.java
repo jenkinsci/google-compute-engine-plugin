@@ -93,6 +93,7 @@ public class InstanceConfigurationTest {
         machineTypes.add(new MachineType().setName(MACHINE_TYPE).setSelfLink(MACHINE_TYPE));
 
         List<String> cpuPlatforms = new ArrayList<>();
+        cpuPlatforms.add("");
         cpuPlatforms.add("Intel Skylake");
         cpuPlatforms.add("Intel Haswell");
 
