@@ -70,6 +70,7 @@ public class InstanceConfigurationTest {
     public static final String SERVICE_ACCOUNT_EMAIL = "test-service-account";
     public static final String RETENTION_TIME_MINUTES_STR = "1";
     public static final String LAUNCH_TIMEOUT_SECONDS_STR = "100";
+    public static final boolean WINDOWS = false;
 
 
     @Mock
@@ -161,7 +162,7 @@ public class InstanceConfigurationTest {
 
         r.submit(r.createWebClient().goTo("configure").getFormByName("config"));
         InstanceConfiguration got = ((ComputeEngineCloud) r.jenkins.clouds.iterator().next()).getInstanceConfig(CONFIG_DESC);
-        r.assertEqualBeans(want, got, "namePrefix,region,zone,machineType,preemptible,minCpuPlatform,startupScript,bootDiskType,bootDiskSourceImageName,bootDiskSourceImageProject,bootDiskSizeGb,acceleratorConfiguration,networkConfiguration,externalAddress,networkTags,serviceAccountEmail");
+        r.assertEqualBeans(want, got, "namePrefix,region,zone,machineType,preemptible,windows,minCpuPlatform,startupScript,bootDiskType,bootDiskSourceImageName,bootDiskSourceImageProject,bootDiskSizeGb,acceleratorConfiguration,networkConfiguration,externalAddress,networkTags,serviceAccountEmail");
     }
 
     @Test
@@ -230,11 +231,11 @@ public class InstanceConfigurationTest {
                 BOOT_DISK_IMAGE_NAME,
                 BOOT_DISK_PROJECT_ID,
                 BOOT_DISK_SIZE_GB_STR,
-                false,
+                WINDOWS,
+                "",
                 "",
                 "",
                 null,
-                0,
                 new AutofilledNetworkConfiguration(NETWORK_NAME, SUBNETWORK_NAME),
                 EXTERNAL_ADDR,
                 false,

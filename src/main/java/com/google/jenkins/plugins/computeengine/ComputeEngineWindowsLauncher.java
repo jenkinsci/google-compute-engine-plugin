@@ -5,14 +5,14 @@
  */
 package com.google.jenkins.plugins.computeengine;
 
+import com.cloudbees.jenkins.plugins.sshcredentials.SSHAuthenticator;
+
+import com.cloudbees.plugins.credentials.common.StandardUsernameCredentials;
 import com.google.api.services.compute.model.AccessConfig;
-import com.google.api.services.compute.model.AttachedDisk;
 import com.google.api.services.compute.model.Instance;
-import com.google.api.services.compute.model.Metadata;
 import com.google.api.services.compute.model.NetworkInterface;
 import com.google.api.services.compute.model.Operation;
-import com.google.jenkins.plugins.computeengine.client.ComputeClient;
-import com.google.jenkins.plugins.computeengine.ssh.GoogleKeyPair;
+
 import com.trilead.ssh2.Connection;
 import com.trilead.ssh2.HTTPProxyData;
 import com.trilead.ssh2.SCPClient;
@@ -29,8 +29,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+
 import jenkins.model.Jenkins;
-import org.apache.commons.codec.binary.Base64;
 
 public class ComputeEngineWindowsLauncher extends ComputeEngineComputerLauncher {
     public final boolean useInternalAddress;
@@ -94,7 +94,7 @@ public class ComputeEngineWindowsLauncher extends ComputeEngineComputerLauncher 
                 // connect fresh as ROOT
                 logInfo(computer, listener, "connect fresh as root");
                 cleanupConn = connectToSsh(computer, listener);
-                if (!cleanupConn.authenticateWithPassword(node.windowsUsername, node.windowsPassword)) {
+                if (!authenticateSSH(node.windowsConfig, cleanupConn, listener)) {
                     logWarning(computer, listener, "Authentication failed");
                     return; // failed to connect
                 }
@@ -112,35 +112,6 @@ public class ComputeEngineWindowsLauncher extends ComputeEngineComputerLauncher 
             // Confirm Java is installed
             if (!testCommand(computer, conn, "java -fullversion", logger, listener)) {
                 logWarning(computer, listener, "Java is not installed.");
-            }
-
-            boolean hasLocalSsds = false;
-            for (AttachedDisk disk : computer.getInstance().getDisks()) {
-                if ("SCRATCH".equals(disk.getType())) {
-                    hasLocalSsds = true;
-                }
-            }
-            if (hasLocalSsds) {
-                // Make sure that any uninitialized local disks are formatted
-                // and mounted, as the working directory for Jenkins might be
-                // located on a disk that is not yet available.
-                logInfo(computer, listener, "Initializing local SSDs that are present if needed...");
-                String powerShellDiskInit = 
-                        "Get-Disk"
-                        + " | Where-Object { $_.FriendlyName -eq \"Google EphemeralDisk\" -and $_.PartitionStyle -eq \"RAW\" }"
-                        + " | ForEach-Object { "
-                        + "Initialize-Disk $_.Number;"
-                        + "$Partition = New-Partition -DiskNumber $_.Number -UseMaximumSize;"
-                        + "Format-Volume -Force -Partition $Partition;"
-                        + "Add-PartitionAccessPath -DiskNumber $_.Number -PartitionNumber $Partition.PartitionNumber -AssignDriveLetter;"
-                        + "$Partition = Get-Partition -DiskNumber $_.Number -PartitionNumber $Partition.PartitionNumber;"
-                        // Java applications have an issue where they can't create directories on newly
-                        // formatted NTFS partitions until some other application creates a directory
-                        // first.
-                        + "New-Item -Path \"$($Partition.DriveLetter):\\_JavaWorkaround\" -ItemType Directory;"
-                        + "}";
-                String encodedPowerShell = new String(Base64.encodeBase64(powerShellDiskInit.getBytes("UTF-16LE")));
-                conn.exec("powershell -ExecutionPolicy Bypass -EncodedCommand " + encodedPowerShell, logger);
             }
 
             //TODO: allow jvmopt configuration
@@ -168,10 +139,24 @@ public class ComputeEngineWindowsLauncher extends ComputeEngineComputerLauncher 
 
     }
 
+    private boolean authenticateSSH(WindowsConfiguration windowsConfig, Connection sshConnection,
+                                    TaskListener listener) throws Exception{
+        boolean isAuthenticated;
+        String windowsUsername = windowsConfig.getWindowsUsername();
+        if (windowsConfig.getPrivateKeyCredentialsId() != null) {
+            StandardUsernameCredentials cred = windowsConfig.getPrivateKeyCredentials();
+            isAuthenticated = SSHAuthenticator.newInstance(sshConnection, cred, windowsUsername).authenticate(listener);
+        } else {
+            isAuthenticated = sshConnection.authenticateWithPassword(windowsUsername, windowsConfig.getPassword());
+        }
+        return isAuthenticated;
+    }
+
     private boolean bootstrap(ComputeEngineComputer computer, TaskListener listener) throws IOException,
             Exception { //TODO: better exceptions
         logInfo(computer, listener, "bootstrap");
         ComputeEngineInstance node = computer.getNode();
+        WindowsConfiguration windowsConfig = node.windowsConfig;
         if (node == null) {
             throw new IllegalArgumentException("A ComputeEngineComputer with no node was provided");
         }
@@ -179,13 +164,11 @@ public class ComputeEngineWindowsLauncher extends ComputeEngineComputerLauncher 
         try {
             int tries = bootstrapAuthTries;
             boolean isAuthenticated = false;
-            logInfo(computer, listener, "Getting keypair...");
-            logInfo(computer, listener, "Using autogenerated keypair");
             while (tries-- > 0) {
-                logInfo(computer, listener, "Authenticating as " + node.windowsUsername);
+                logInfo(computer, listener, "Authenticating as " + windowsConfig.getWindowsUsername());
                 try {
                     bootstrapConn = connectToSsh(computer, listener);
-                    isAuthenticated = bootstrapConn.authenticateWithPassword(node.windowsUsername, node.windowsPassword);
+                    isAuthenticated = authenticateSSH(windowsConfig, bootstrapConn, listener);
                 } catch (IOException e) {
                     logException(computer, listener, "Exception trying to authenticate", e);
                     bootstrapConn.close();

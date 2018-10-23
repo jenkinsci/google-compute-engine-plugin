@@ -6,18 +6,22 @@
         fields.
     </p>
     <p>
-        You can use the following Startup Script to automatically set up the minimum requirements. In this example
-        the Windows username is "Build" and the password is "password123".
+        If you do not have the aforementioned pre-installed, you can use the following Startup Script to automatically set up the minimum requirements. In this example
+        the Windows username is "Build" and the password is "P@ssword2". <br />
+        See the help file below for Windows private SSH key if you wish to authenticate SSH via keys.
     </p>
     <p>
         <code>
             Set-ExecutionPolicy Bypass -Scope Process -Force;<br />
             Invoke-Expression ((New-Object System.Net.WebClient).DownloadString('https://chocolatey.org/install.ps1'));<br />
             RefreshEnv.cmd<br />
-            net user /add Build password123<br />
-            net localgroup administrators Build /add<br />
-            choco install -y jre8<br />
-            choco install -y openssh -params '"/SSHServerFeature"'
+            choco install -y openssh -params '"/SSHServerFeature"'<br />
+            choco install -y jre8
+
+            $username = "Build"<br />
+            $password = ConvertTo-SecureString "P@ssword2" -AsPlainText -Force<br />
+            $cred = New-Object System.Management.Automation.PSCredential -ArgumentList $username,$password<br />
+            Start-Process cmd /c -WindowStyle Hidden -Credential $cred -ErrorAction SilentlyContinue<br />
         </code>
     </p>
     <p>

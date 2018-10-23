@@ -1,0 +1,70 @@
+# Running Windows VM's
+* To run a VM as an agent, you'll need both SSH and Java installed on the Windows Image. We recommend using chocolatey to install OpenSSH and Java.
+
+## Creating a Windows Image
+* We will be using Packer to help us build a Windows 2016 image from GCE with OpenSSH and Java pre-installed. We will use the GCP cloud console, and you will need the following 2 files available to you on your google cloud console.
+  * For more information and an example of packer usage with the GCE jenkins plugin, see this [guide](https://cloud.google.com/solutions/using-jenkins-for-distributed-builds-on-compute-engine#create_a_jenkins_agent_image)
+* Sample JSON file (jenkins-agent.json):
+```
+{
+  "builders": [
+    {
+      "type": "googlecompute",
+      "project_id": "my-project-id",
+      "source_image_family": "windows-2016",
+      "source_image_project_id": "gce-uefi-images",
+      "zone": "us-central1-a",
+      "disk_size": "50",
+      "image_name": "jenkins-agent-windows-{{timestamp}}",
+      "image_family": "jenkins-agent-windows",
+      "communicator": "winrm",
+      "winrm_username": "packer_user",
+      "winrm_insecure": true,
+      "winrm_use_ssl": true,
+      "metadata": {
+        "windows-startup-script-cmd": "winrm quickconfig -quiet & net user /add packer_user & net localgroup administrators packer_user /add & winrm set winrm/config/service/auth @{Basic=\"true\"}"
+      }
+    }
+  ],
+  "provisioners": [
+    {
+      "type": "powershell",
+      "script": "windows-image-install.ps1"
+    }
+  ]
+}
+```
+
+* sample windows-image-install.ps1
+  * See this [file](windows-image-install.ps1)
+  * Essentially, the script needs to install Java and OpenSSH. Adding a user and using key-based authentication are optional but recommended. These requirements are all done in the sample script above.
+
+* To have packer build this image, run the following in your google cloud console:
+```
+./packer build jenkins-agent.json
+```
+
+* The Terminal should output something along the lines of:
+```
+A disk image was created: jenkins-agent-windows-1494277483
+```
+
+* The jenkins-agent-1494277483 will be part of your image's name. The image will now be available in the Jenkins UI under Configure System. You can now launch your Windows agent!
+
+## Running a Windows Agent on Jenkins
+* Have the following fields (Windows? and username) checked and filled out, respectively. The username must already exist in your agent.
+  * See the earlier section on building an image for examples of how to configure a user
+![Windows checked](windows_images/windowsconfig.png)
+
+### Creating Credentials
+* For security, if you wish to authenticate with the password (have it already configured for earlier said username), create a username/password credential in Jenkins.
+![Password certificate](windows_images/usernamepassword.png)
+
+* If authenticating with keys, install the SSH Credentials plugin. Create the credential in Jenkins; leave the passphrase portion blank.
+![Private key certificate](windows_images/sshcred.png)
+
+* Your credentials should now show up under Manage Jenkins > Configure System
+![credentials show in dropdown](windows_images/windowsconfig.png)
+
+
+* You must enter either credentials for either the password or key authentication option.

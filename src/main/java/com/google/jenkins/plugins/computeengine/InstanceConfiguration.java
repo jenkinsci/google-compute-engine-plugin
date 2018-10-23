@@ -16,6 +16,13 @@
 
 package com.google.jenkins.plugins.computeengine;
 
+import com.cloudbees.jenkins.plugins.sshcredentials.impl.BasicSSHUserPrivateKey;
+import com.cloudbees.plugins.credentials.CredentialsMatchers;
+import com.cloudbees.plugins.credentials.CredentialsProvider;
+import com.cloudbees.plugins.credentials.common.StandardListBoxModel;
+import com.cloudbees.plugins.credentials.common.StandardUsernameCredentials;
+import com.cloudbees.plugins.credentials.common.StandardUsernameListBoxModel;
+import com.cloudbees.plugins.credentials.common.StandardUsernamePasswordCredentials;
 import com.cloudbees.plugins.credentials.domains.DomainRequirement;
 import com.google.api.services.compute.model.*;
 import com.google.common.base.Strings;
@@ -26,6 +33,7 @@ import hudson.RelativePath;
 import hudson.Util;
 import hudson.model.*;
 import hudson.model.labels.LabelAtom;
+import hudson.security.ACL;
 import hudson.slaves.CloudRetentionStrategy;
 import hudson.util.FormValidation;
 import hudson.util.ListBoxModel;
@@ -88,10 +96,10 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
     public final String launchTimeoutSecondsStr;
     public final String bootDiskSizeGbStr;
     public final boolean windows;
-    public final String windowsUsername;
-    public final String windowsPassword;
+    public final String windowsPasswordCredentialsId;
+    public final String windowsPrivateKeyCredentialsId;
+    public final WindowsConfiguration windowsConfig;
     public final String remoteFs;
-    public final Integer localSsdDisks;
     public Map<String, String> googleLabels;
     public Integer numExecutors;
     public Integer retentionTimeMinutes;
@@ -118,9 +126,9 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
                                  String bootDiskSizeGbStr,
                                  boolean windows,
                                  String windowsUsername,
-                                 String windowsPassword,
+                                 String windowsPasswordCredentialsId,
+                                 String windowsPrivateKeyCredentialsId,
                                  String remoteFs,
-                                 Integer localSsdDisks,
                                  NetworkConfiguration networkConfiguration,
                                  boolean externalAddress,
                                  boolean useInternalAddress,
@@ -140,8 +148,11 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
         this.preemptible = preemptible;
 
         this.windows = windows;
-        this.windowsUsername = windowsUsername;
-        this.windowsPassword = windowsPassword;
+        this.windowsConfig = createWindowsConfig(windowsUsername, windowsPasswordCredentialsId, windowsPrivateKeyCredentialsId);
+
+        // these are needed for the credentials to persist in the UI
+        this.windowsPasswordCredentialsId = windowsPasswordCredentialsId;
+        this.windowsPrivateKeyCredentialsId = windowsPrivateKeyCredentialsId;
 
         this.minCpuPlatform = minCpuPlatform;
         this.numExecutors = intOrDefault(numExecutorsStr, DEFAULT_NUM_EXECUTORS);
@@ -159,9 +170,6 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
         this.bootDiskSizeGb = longOrDefault(bootDiskSizeGbStr, DEFAULT_BOOT_DISK_SIZE_GB);
         this.bootDiskSizeGbStr = bootDiskSizeGb.toString();
 
-        // Local SSDs
-        this.localSsdDisks = localSsdDisks;
-        
         // Remote filesystem location.
         this.remoteFs = remoteFs;
         
@@ -181,6 +189,15 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
         this.runAsUser = runAsUser;
 
         readResolve();
+    }
+
+    public WindowsConfiguration createWindowsConfig(String windowsUsername, String windowsPasswordCredentialsId,
+                                                    String windowsPrivateKeyCredentialsId) {
+        if (!windows) {
+            return null;
+        }
+        return new WindowsConfiguration(windowsUsername, windowsPasswordCredentialsId, windowsPrivateKeyCredentialsId);
+
     }
 
     public static Integer intOrDefault(String toParse, Integer defaultTo) {
@@ -278,8 +295,7 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
                     i.getDescription(),
                     runAsUser,
                     targetRemoteFs,
-                    this.windowsUsername,
-                    this.windowsPassword,
+                    windowsConfig,
                     numExecutors, 
                     mode, 
                     requiredLabel == null ? "" : requiredLabel.getName(),
@@ -382,17 +398,7 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
 
         List<AttachedDisk> disks = new ArrayList<>();
         disks.add(boot);
-        
-        for (Integer i = 0; i < this.localSsdDisks; i++) {
-            AttachedDisk ssd = new AttachedDisk();
-            ssd.setType("SCRATCH");
-            ssd.setAutoDelete(true);
-            ssd.setInitializeParams(new AttachedDiskInitializeParams()
-                .setDiskType("zones/" + ComputeClient.zoneFromSelfLink(zone) + "/diskTypes/local-ssd")
-            );
-            disks.add(ssd);
-        }
-        
+
         return disks;
     }
 
@@ -757,6 +763,44 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
             if (mode == Node.Mode.EXCLUSIVE && (value == null || value.trim().isEmpty())) {
                 return FormValidation.warning("You may want to assign labels to this node;"
                         + " it's marked to only run jobs that are exclusively tied to itself or a label.");
+            }
+            return FormValidation.ok();
+        }
+
+        public ListBoxModel doFillWindowsPasswordCredentialsIdItems(@AncestorInPath Jenkins context, @QueryParameter String value) {
+            if (context == null || !context.hasPermission(Item.CONFIGURE)) {
+                return new StandardListBoxModel();
+            }
+            List<DomainRequirement> domainRequirements = new ArrayList<DomainRequirement>();
+            return new StandardListBoxModel()
+                    .withEmptySelection()
+                    .withMatching(
+                            CredentialsMatchers.instanceOf(StandardUsernamePasswordCredentials.class),
+                            CredentialsProvider.lookupCredentials(
+                                    StandardUsernamePasswordCredentials.class, context, ACL.SYSTEM,
+                                    domainRequirements));
+        }
+
+        public ListBoxModel doFillWindowsPrivateKeyCredentialsIdItems(@AncestorInPath Jenkins context, @QueryParameter String value) {
+            if (context == null || !context.hasPermission(Item.CONFIGURE)) {
+                return new StandardUsernameListBoxModel();
+            }
+            List<DomainRequirement> domainRequirements = new ArrayList<DomainRequirement>();
+            return new StandardUsernameListBoxModel()
+                    .withEmptySelection()
+                    .withMatching(
+                            CredentialsMatchers.instanceOf(BasicSSHUserPrivateKey.class),
+                            CredentialsProvider.lookupCredentials(
+                                    StandardUsernameCredentials.class, context, ACL.SYSTEM,
+                                    domainRequirements));
+        }
+
+        public FormValidation doCheckWindowsPrivateKeyCredentialsId(@AncestorInPath Jenkins context,
+                                                                    @QueryParameter String value,
+                                                                    @QueryParameter("windows") boolean windows,
+                                                                    @QueryParameter("windowsPasswordCredentialsId") String windowsPasswordCredentialsId) {
+            if (windows && (Strings.isNullOrEmpty(value) && Strings.isNullOrEmpty(windowsPasswordCredentialsId))) {
+                return FormValidation.error("A password or private key credential is required");
             }
             return FormValidation.ok();
         }

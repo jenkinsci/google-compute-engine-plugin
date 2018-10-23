@@ -16,7 +16,6 @@
 
 package com.google.jenkins.plugins.computeengine;
 
-import com.google.api.services.compute.model.Instance;
 import hudson.Extension;
 import hudson.model.Descriptor;
 import hudson.model.Node;
@@ -33,8 +32,7 @@ public class ComputeEngineInstance extends AbstractCloudSlave {
     public final String zone;
     public final String cloudName;
     public final String sshUser;
-    public final String windowsUsername;
-    public final String windowsPassword;
+    public final WindowsConfiguration windowsConfig;
     public Integer launchTimeout; // Seconds
     private Boolean connected;
 
@@ -44,8 +42,7 @@ public class ComputeEngineInstance extends AbstractCloudSlave {
                                  String nodeDescription,
                                  String sshUser,
                                  String remoteFS,
-                                 String windowsUsername,
-                                 String windowsPassword,
+                                 WindowsConfiguration windowsConfig,
                                  int numExecutors,
                                  Node.Mode mode,
                                  String labelString,
@@ -59,8 +56,7 @@ public class ComputeEngineInstance extends AbstractCloudSlave {
         this.zone = zone;
         this.cloudName = cloudName;
         this.sshUser = sshUser;
-        this.windowsUsername = windowsUsername;
-        this.windowsPassword = windowsPassword;
+        this.windowsConfig = windowsConfig;
     }
 
     @Override
@@ -82,7 +78,7 @@ public class ComputeEngineInstance extends AbstractCloudSlave {
 
 
     }
-    
+
     public void onConnected() {
         this.connected = true;
     }
