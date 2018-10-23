@@ -77,6 +77,7 @@ public class ComputeEngineLinuxLauncher extends ComputeEngineComputerLauncher {
         log(Level.WARNING, computer, listener, message);
     }
 
+    @Override
     protected void launch(ComputeEngineComputer computer, TaskListener listener, Instance inst)
             throws IOException, InterruptedException {
         ComputeEngineInstance node = computer.getNode();
