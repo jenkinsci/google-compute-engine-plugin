@@ -21,85 +21,92 @@ import hudson.model.Descriptor;
 import hudson.model.Node;
 import hudson.model.TaskListener;
 import hudson.slaves.*;
-import jenkins.model.Jenkins;
-
 import java.io.IOException;
 import java.util.Collections;
 import java.util.logging.Logger;
+import jenkins.model.Jenkins;
 
 public class ComputeEngineInstance extends AbstractCloudSlave {
-    private static final Logger LOGGER = Logger.getLogger(ComputeEngineInstance.class.getName());
-    public final String zone;
-    public final String cloudName;
-    public final String sshUser;
-    public Integer launchTimeout; // Seconds
-    private Boolean connected;
+  private static final Logger LOGGER = Logger.getLogger(ComputeEngineInstance.class.getName());
+  public final String zone;
+  public final String cloudName;
+  public final String sshUser;
+  public Integer launchTimeout; // Seconds
+  private Boolean connected;
 
-    public ComputeEngineInstance(String cloudName,
-                                 String name,
-                                 String zone,
-                                 String nodeDescription,
-                                 String sshUser,
-                                 String remoteFS,
-                                 int numExecutors,
-                                 Node.Mode mode,
-                                 String labelString,
-                                 ComputerLauncher launcher,
-                                 RetentionStrategy retentionStrategy,
-                                 Integer launchTimeout)
-            throws Descriptor.FormException,
-            IOException {
-        super(name, nodeDescription, remoteFS, numExecutors, mode, labelString, launcher, retentionStrategy, Collections.<NodeProperty<?>>emptyList());
-        this.launchTimeout = launchTimeout;
-        this.zone = zone;
-        this.cloudName = cloudName;
-        this.sshUser = sshUser;
+  public ComputeEngineInstance(
+      String cloudName,
+      String name,
+      String zone,
+      String nodeDescription,
+      String sshUser,
+      String remoteFS,
+      int numExecutors,
+      Node.Mode mode,
+      String labelString,
+      ComputerLauncher launcher,
+      RetentionStrategy retentionStrategy,
+      Integer launchTimeout)
+      throws Descriptor.FormException, IOException {
+    super(
+        name,
+        nodeDescription,
+        remoteFS,
+        numExecutors,
+        mode,
+        labelString,
+        launcher,
+        retentionStrategy,
+        Collections.<NodeProperty<?>>emptyList());
+    this.launchTimeout = launchTimeout;
+    this.zone = zone;
+    this.cloudName = cloudName;
+    this.sshUser = sshUser;
+  }
+
+  @Override
+  public AbstractCloudComputer createComputer() {
+    return new ComputeEngineComputer(this);
+  }
+
+  @Override
+  protected void _terminate(TaskListener listener) throws IOException, InterruptedException {
+    try {
+      ComputeEngineCloud cloud = getCloud();
+      // If the instance is running, attempt to terminate it. This is an asynch call and we
+      // return immediately, hoping for the best.
+      cloud.client.terminateInstanceWithStatus(cloud.projectId, zone, name, "RUNNING");
+    } catch (CloudNotFoundException cnfe) {
+      listener.error(cnfe.getMessage());
+      return;
     }
+  }
 
+  public void onConnected() {
+    this.connected = true;
+  }
+
+  public Boolean getConnected() {
+    return this.connected;
+  }
+
+  public long getLaunchTimeoutMillis() {
+    return launchTimeout * 1000L;
+  }
+
+  public ComputeEngineCloud getCloud() throws CloudNotFoundException {
+    ComputeEngineCloud cloud = (ComputeEngineCloud) Jenkins.getInstance().getCloud(cloudName);
+    if (cloud == null)
+      throw new CloudNotFoundException(
+          String.format("Could not find cloud %s in Jenkins configuration", cloudName));
+    return cloud;
+  }
+
+  @Extension
+  public static final class DescriptorImpl extends SlaveDescriptor {
     @Override
-    public AbstractCloudComputer createComputer() {
-        return new ComputeEngineComputer(this);
+    public String getDisplayName() {
+      return Messages.ComputeEngineAgent_DisplayName();
     }
-
-    @Override
-    protected void _terminate(TaskListener listener) throws IOException, InterruptedException {
-        try {
-            ComputeEngineCloud cloud = getCloud();
-            // If the instance is running, attempt to terminate it. This is an asynch call and we
-            // return immediately, hoping for the best.
-            cloud.client.terminateInstanceWithStatus(cloud.projectId, zone, name, "RUNNING");
-        } catch (CloudNotFoundException cnfe) {
-            listener.error(cnfe.getMessage());
-            return;
-        }
-
-
-    }
-
-    public void onConnected() {
-        this.connected = true;
-    }
-
-    public Boolean getConnected() {
-        return this.connected;
-    }
-
-    public long getLaunchTimeoutMillis() {
-        return launchTimeout * 1000L;
-    }
-
-    public ComputeEngineCloud getCloud() throws CloudNotFoundException {
-        ComputeEngineCloud cloud = (ComputeEngineCloud) Jenkins.getInstance().getCloud(cloudName);
-        if (cloud == null)
-            throw new CloudNotFoundException(String.format("Could not find cloud %s in Jenkins configuration", cloudName));
-        return cloud;
-    }
-
-    @Extension
-    public static final class DescriptorImpl extends SlaveDescriptor {
-        @Override
-        public String getDisplayName() {
-            return Messages.ComputeEngineAgent_DisplayName();
-        }
-    }
+  }
 }

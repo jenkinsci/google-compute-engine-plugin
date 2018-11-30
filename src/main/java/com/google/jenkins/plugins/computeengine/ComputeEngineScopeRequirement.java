@@ -16,13 +16,12 @@
 package com.google.jenkins.plugins.computeengine;
 
 import com.google.jenkins.plugins.credentials.oauth.GoogleOAuth2ScopeRequirement;
-
 import java.util.Collection;
 import java.util.Collections;
 
 public class ComputeEngineScopeRequirement extends GoogleOAuth2ScopeRequirement {
-    @Override
-    public Collection<String> getScopes() {
-        return Collections.singletonList("https://www.googleapis.com/auth/compute");
-    }
+  @Override
+  public Collection<String> getScopes() {
+    return Collections.singletonList("https://www.googleapis.com/auth/compute");
+  }
 }

@@ -21,70 +21,72 @@ import com.google.jenkins.plugins.computeengine.client.ClientFactory;
 import com.google.jenkins.plugins.computeengine.client.ComputeClient;
 import hudson.model.Describable;
 import hudson.model.Descriptor;
-import jenkins.model.Jenkins;
-
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Objects;
+import jenkins.model.Jenkins;
 
 public abstract class NetworkConfiguration implements Describable<NetworkConfiguration> {
-    public final String network;
-    public final String subnetwork;
+  public final String network;
+  public final String subnetwork;
 
-    public NetworkConfiguration(String network, String subnetwork) {
-        this.network = network;
-        this.subnetwork = subnetwork;
+  public NetworkConfiguration(String network, String subnetwork) {
+    this.network = network;
+    this.subnetwork = subnetwork;
+  }
+
+  public String getNetwork() {
+    return network;
+  }
+
+  public String getSubnetwork() {
+    return subnetwork;
+  }
+
+  public Descriptor<NetworkConfiguration> getDescriptor() {
+    return Jenkins.getInstance().getDescriptor(getClass());
+  }
+
+  @Override
+  public int hashCode() {
+    return Objects.hash(network, subnetwork);
+  }
+
+  @Override
+  public boolean equals(Object obj) {
+    if (obj == null) {
+      return false;
+    }
+    if (!NetworkConfiguration.class.isAssignableFrom(obj.getClass())) {
+      return false;
+    }
+    final NetworkConfiguration other = (NetworkConfiguration) obj;
+    return this.network.equals(other.network) && this.subnetwork.equals(other.subnetwork);
+  }
+
+  @Override
+  public String toString() {
+    return String.format("Network: %s%nSubnetwork: %s", getNetwork(), getSubnetwork());
+  }
+
+  public abstract static class NetworkConfigurationDescriptor
+      extends Descriptor<NetworkConfiguration> {
+    private static ComputeClient computeClient;
+
+    public static void setComputeClient(ComputeClient client) {
+      computeClient = client;
     }
 
-    public String getNetwork() {
-        return network;
+    public static ComputeClient computeClient(Jenkins context, String credentialsId)
+        throws IOException {
+      if (computeClient != null) {
+        return computeClient;
+      }
+      ClientFactory clientFactory =
+          new ClientFactory(context, new ArrayList<DomainRequirement>(), credentialsId);
+      return clientFactory.compute();
     }
 
-    public String getSubnetwork() {
-        return subnetwork;
-    }
-
-    public Descriptor<NetworkConfiguration> getDescriptor() {
-        return Jenkins.getInstance().getDescriptor(getClass());
-    }
-
-    @Override
-    public int hashCode() {
-        return Objects.hash(network, subnetwork);
-    }
-
-    @Override
-    public boolean equals(Object obj) {
-        if (obj == null) {
-            return false;
-        }
-        if (!NetworkConfiguration.class.isAssignableFrom(obj.getClass())) {
-            return false;
-        }
-        final NetworkConfiguration other = (NetworkConfiguration) obj;
-        return this.network.equals(other.network) && this.subnetwork.equals(other.subnetwork);
-    }
-
-    @Override
-    public String toString() {
-        return String.format("Network: %s%nSubnetwork: %s", getNetwork(), getSubnetwork());
-    }
-
-    public static abstract class NetworkConfigurationDescriptor extends Descriptor<NetworkConfiguration> {
-        private static ComputeClient computeClient;
-
-        public static void setComputeClient(ComputeClient client) {
-            computeClient = client;
-        }
-
-        public static ComputeClient computeClient(Jenkins context, String credentialsId) throws IOException {
-            if (computeClient != null) {
-                return computeClient;
-            }
-            ClientFactory clientFactory = new ClientFactory(context, new ArrayList<DomainRequirement>(), credentialsId);
-            return clientFactory.compute();
-        }
-
-        public abstract String getDisplayName();
-    }
+    public abstract String getDisplayName();
+  }
 }

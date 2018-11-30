@@ -16,9 +16,15 @@
 
 package com.google.jenkins.plugins.computeengine;
 
+import static com.google.jenkins.plugins.computeengine.InstanceConfigurationTest.ACCELERATOR_COUNT;
+import static com.google.jenkins.plugins.computeengine.InstanceConfigurationTest.ACCELERATOR_NAME;
+import static org.mockito.ArgumentMatchers.anyString;
+
 import com.google.api.services.compute.model.AcceleratorType;
 import com.google.jenkins.plugins.computeengine.client.ComputeClient;
 import hudson.util.ListBoxModel;
+import java.util.ArrayList;
+import java.util.List;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
@@ -29,51 +35,50 @@ import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.junit.MockitoJUnitRunner;
 
-import java.util.ArrayList;
-import java.util.List;
-
-import static com.google.jenkins.plugins.computeengine.InstanceConfigurationTest.ACCELERATOR_COUNT;
-import static com.google.jenkins.plugins.computeengine.InstanceConfigurationTest.ACCELERATOR_NAME;
-import static org.mockito.ArgumentMatchers.anyString;
-
 @RunWith(MockitoJUnitRunner.class)
 public class AcceleratorConfigurationTest {
-    @Rule
-    public JenkinsRule r = new JenkinsRule();
+  @Rule public JenkinsRule r = new JenkinsRule();
 
-    @Mock
-    public ComputeClient computeClient;
+  @Mock public ComputeClient computeClient;
 
-    @Before
-    public void init() {
-    }
+  @Before
+  public void init() {}
 
-    @Test
-    public void construction() {
-        // Test string->int conversion
-        AcceleratorConfiguration ac = new AcceleratorConfiguration("type", "2");
-        Assert.assertEquals((long) 2, (long) ac.gpuCount());
+  @Test
+  public void construction() {
+    // Test string->int conversion
+    AcceleratorConfiguration ac = new AcceleratorConfiguration("type", "2");
+    Assert.assertEquals((long) 2, (long) ac.gpuCount());
 
-        // Test toString
-        Assert.assertEquals("type (2)", ac.toString());
+    // Test toString
+    Assert.assertEquals("type (2)", ac.toString());
 
-        // Test equality
-        AcceleratorConfiguration ac2 = new AcceleratorConfiguration("type", "2");
-        Assert.assertTrue(ac.equals(ac2));
-    }
+    // Test equality
+    AcceleratorConfiguration ac2 = new AcceleratorConfiguration("type", "2");
+    Assert.assertTrue(ac.equals(ac2));
+  }
 
-    @Test
-    public void clientCalls() throws Exception {
-        // Set up mock
-        List<AcceleratorType> acceleratorTypes = new ArrayList<AcceleratorType>();
-        acceleratorTypes.add(new AcceleratorType().setName(ACCELERATOR_NAME).setSelfLink(ACCELERATOR_NAME).setMaximumCardsPerInstance(Integer.parseInt(ACCELERATOR_COUNT)));
-        acceleratorTypes.add(new AcceleratorType().setName(ACCELERATOR_NAME+"2").setSelfLink(ACCELERATOR_NAME+"2").setMaximumCardsPerInstance(Integer.parseInt(ACCELERATOR_COUNT)+1));
-        Mockito.when(computeClient.getAcceleratorTypes(anyString(), anyString())).thenReturn(acceleratorTypes);
-        AcceleratorConfiguration.DescriptorImpl.setComputeClient(computeClient);
+  @Test
+  public void clientCalls() throws Exception {
+    // Set up mock
+    List<AcceleratorType> acceleratorTypes = new ArrayList<AcceleratorType>();
+    acceleratorTypes.add(
+        new AcceleratorType()
+            .setName(ACCELERATOR_NAME)
+            .setSelfLink(ACCELERATOR_NAME)
+            .setMaximumCardsPerInstance(Integer.parseInt(ACCELERATOR_COUNT)));
+    acceleratorTypes.add(
+        new AcceleratorType()
+            .setName(ACCELERATOR_NAME + "2")
+            .setSelfLink(ACCELERATOR_NAME + "2")
+            .setMaximumCardsPerInstance(Integer.parseInt(ACCELERATOR_COUNT) + 1));
+    Mockito.when(computeClient.getAcceleratorTypes(anyString(), anyString()))
+        .thenReturn(acceleratorTypes);
+    AcceleratorConfiguration.DescriptorImpl.setComputeClient(computeClient);
 
-        // Test items returned by dropdown filler
-        AcceleratorConfiguration.DescriptorImpl d = new AcceleratorConfiguration.DescriptorImpl();
-        ListBoxModel got = d.doFillGpuTypeItems(r.jenkins, "", "", "");
-        Assert.assertEquals(2, got.size());
-    }
+    // Test items returned by dropdown filler
+    AcceleratorConfiguration.DescriptorImpl d = new AcceleratorConfiguration.DescriptorImpl();
+    ListBoxModel got = d.doFillGpuTypeItems(r.jenkins, "", "", "");
+    Assert.assertEquals(2, got.size());
+  }
 }
