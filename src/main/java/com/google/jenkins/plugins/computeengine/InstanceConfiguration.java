@@ -31,6 +31,7 @@ import hudson.util.FormValidation;
 import hudson.util.ListBoxModel;
 import jenkins.model.Jenkins;
 import org.apache.commons.text.RandomStringGenerator;
+import org.jenkinsci.plugins.durabletask.executors.OnceRetentionStrategy;
 import org.kohsuke.stapler.AncestorInPath;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.QueryParameter;
@@ -84,6 +85,7 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
     public final String retentionTimeMinutesStr;
     public final String launchTimeoutSecondsStr;
     public final String bootDiskSizeGbStr;
+    public final boolean oneShot;
     public Map<String, String> googleLabels;
     public Integer numExecutors;
     public Integer retentionTimeMinutes;
@@ -117,7 +119,8 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
                                  String launchTimeoutSecondsStr,
                                  Node.Mode mode,
                                  AcceleratorConfiguration acceleratorConfiguration,
-                                 String runAsUser) {
+                                 String runAsUser,
+                                 boolean oneShot) {
         this.namePrefix = namePrefix;
         this.region = region;
         this.zone = zone;
@@ -127,6 +130,7 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
         this.preemptible = preemptible;
         this.minCpuPlatform = minCpuPlatform;
         this.numExecutors = intOrDefault(numExecutorsStr, DEFAULT_NUM_EXECUTORS);
+        this.oneShot = oneShot;
         this.numExecutorsStr = numExecutors.toString();
         this.retentionTimeMinutes = intOrDefault(retentionTimeMinutesStr, DEFAULT_RETENTION_TIME_MINUTES);
         this.retentionTimeMinutesStr = retentionTimeMinutes.toString();
@@ -234,7 +238,22 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
             Instance i = instance();
             Operation operation = cloud.client.insertInstance(cloud.projectId, i);
             logger.println("Sent insert request");
-            ComputeEngineInstance instance = new ComputeEngineInstance(cloud.name, i.getName(), i.getZone(), i.getDescription(), runAsUser, "./.jenkins-slave", numExecutors, mode, requiredLabel == null ? "" : requiredLabel.getName(), new ComputeEngineLinuxLauncher(cloud.getCloudName(), operation, this.useInternalAddress), new CloudRetentionStrategy(retentionTimeMinutes), getLaunchTimeoutMillis());
+            ComputeEngineComputerLauncher launcher = new ComputeEngineLinuxLauncher(cloud.getCloudName(), operation, this.useInternalAddress);
+            
+            ComputeEngineInstance instance = new ComputeEngineInstance(
+                    cloud.name,
+                    i.getName(),
+                    i.getZone(), 
+                    i.getDescription(),
+                    runAsUser,
+                    "./.jenkins-slave",
+                    numExecutors, 
+                    mode, 
+                    requiredLabel == null ? "" : requiredLabel.getName(),
+                    launcher,
+                    (oneShot ? new OnceRetentionStrategy(retentionTimeMinutes) : new CloudRetentionStrategy(retentionTimeMinutes)),
+                    getLaunchTimeoutMillis(),
+                    oneShot);
             return instance;
         } catch (Descriptor.FormException fe) {
             logger.printf("Error provisioning instance: %s", fe.getMessage());

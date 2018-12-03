@@ -37,8 +37,6 @@ import org.jvnet.hudson.test.JenkinsRule;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.*;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.logging.LogManager;
 import java.util.logging.Logger;
 import java.util.logging.SimpleFormatter;
@@ -263,7 +261,8 @@ public class ComputeEngineCloudIT {
                 LAUNCH_TIMEOUT_SECONDS_STR,
                 NODE_MODE,
                 new AcceleratorConfiguration(ACCELERATOR_NAME, ACCELERATOR_COUNT),
-                RUN_AS_USER);
+                RUN_AS_USER,
+                false);
                 ic.appendLabels(INTEGRATION_LABEL);
         return ic;
     }
@@ -299,7 +298,8 @@ public class ComputeEngineCloudIT {
                 LAUNCH_TIMEOUT_SECONDS_STR,
                 NODE_MODE,
                 new AcceleratorConfiguration(ACCELERATOR_NAME, ACCELERATOR_COUNT),
-                RUN_AS_USER);
+                RUN_AS_USER,
+                false);
         ic.appendLabels(INTEGRATION_LABEL);
         return ic;
     }

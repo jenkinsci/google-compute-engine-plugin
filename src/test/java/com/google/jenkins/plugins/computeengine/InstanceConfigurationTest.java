@@ -17,13 +17,9 @@
 package com.google.jenkins.plugins.computeengine;
 
 import com.google.api.services.compute.model.*;
-import com.google.jenkins.plugins.computeengine.AcceleratorConfiguration;
-import com.google.jenkins.plugins.computeengine.ComputeEngineCloud;
-import com.google.jenkins.plugins.computeengine.InstanceConfiguration;
 import com.google.jenkins.plugins.computeengine.client.ComputeClient;
 import hudson.model.Node;
 import hudson.util.FormValidation;
-import jenkins.model.Jenkins;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
@@ -239,7 +235,8 @@ public class InstanceConfigurationTest {
                 LAUNCH_TIMEOUT_SECONDS_STR,
                 NODE_MODE,
                 new AcceleratorConfiguration(ACCELERATOR_NAME, ACCELERATOR_COUNT),
-                RUN_AS_USER);
+                RUN_AS_USER,
+                false);
     }
 
     @Test
