@@ -30,6 +30,7 @@ import hudson.slaves.CloudRetentionStrategy;
 import hudson.util.FormValidation;
 import hudson.util.ListBoxModel;
 import jenkins.model.Jenkins;
+import org.apache.commons.lang.StringUtils;
 import org.apache.commons.text.RandomStringGenerator;
 import org.kohsuke.stapler.AncestorInPath;
 import org.kohsuke.stapler.DataBoundConstructor;
@@ -261,18 +262,21 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
         i.setLabels(googleLabels);
         i.setDescription(description);
         i.setZone(ComputeClient.zoneFromSelfLink(zone));
-        i.setMachineType(stripSelfLinkPrefix(machineType));
-        i.setMetadata(metadata());
-        i.setTags(tags());
-        i.setScheduling(scheduling());
-        i.setDisks(disks());
-        i.setGuestAccelerators(accelerators());
-        i.setNetworkInterfaces(networkInterfaces());
-        i.setServiceAccounts(serviceAccounts());
+        
+        if (StringUtils.isBlank(template)) {
+            i.setMachineType(stripSelfLinkPrefix(machineType));
+            i.setMetadata(metadata());
+            i.setTags(tags());
+            i.setScheduling(scheduling());
+            i.setDisks(disks());
+            i.setGuestAccelerators(accelerators());
+            i.setNetworkInterfaces(networkInterfaces());
+            i.setServiceAccounts(serviceAccounts());
 
-        //optional
-        if (notNullOrEmpty(minCpuPlatform)) {
-            i.setMinCpuPlatform(minCpuPlatform);
+            //optional
+            if (notNullOrEmpty(minCpuPlatform)) {
+                i.setMinCpuPlatform(minCpuPlatform);
+            }
         }
         return i;
     }
