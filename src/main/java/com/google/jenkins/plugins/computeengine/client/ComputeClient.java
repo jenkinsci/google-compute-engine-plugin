@@ -347,8 +347,10 @@ public class ComputeClient {
         return subnetworks;
     }
 
-    public Operation insertInstance(String projectId, Instance i) throws IOException {
-        return compute.instances().insert(projectId, i.getZone(), i).execute();
+    public Operation insertInstance(String projectId, String template, Instance i) throws IOException {
+        final Compute.Instances.Insert insert = compute.instances().insert(projectId, i.getZone(), i);
+        insert.setSourceInstanceTemplate(template);
+        return insert.execute();
     }
 
     public Operation terminateInstance(String projectId, String zone, String InstanceId) throws IOException {
@@ -389,6 +391,27 @@ public class ComputeClient {
             }
         }
         return instances;
+    }
+    
+    public List<InstanceTemplate> getTemplates(String projectId) throws IOException {
+        List<InstanceTemplate> instanceTemplates = compute
+                .instanceTemplates()
+                .list(projectId)
+                .execute()
+                .getItems();
+        if (instanceTemplates == null) {
+            instanceTemplates = new ArrayList<>();
+        }
+
+        // Sort by name
+        Collections.sort(instanceTemplates, new Comparator<InstanceTemplate>() {
+            @Override
+            public int compare(InstanceTemplate o1, InstanceTemplate o2) {
+                return o1.getName().compareTo(o2.getName());
+            }
+        });
+
+        return instanceTemplates;
     }
 
     /**

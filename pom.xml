@@ -67,12 +67,12 @@
         <dependency>
             <groupId>org.jenkins-ci.plugins</groupId>
             <artifactId>google-oauth-plugin</artifactId>
-            <version>0.5</version>
+            <version>0.6</version>
         </dependency>
         <dependency>
             <groupId>com.google.apis</groupId>
             <artifactId>google-api-services-compute</artifactId>
-            <version>v1-rev165-1.22.0</version>
+            <version>v1-rev199-1.22.0</version>
         </dependency>
         <dependency>
             <groupId>org.mockito</groupId>

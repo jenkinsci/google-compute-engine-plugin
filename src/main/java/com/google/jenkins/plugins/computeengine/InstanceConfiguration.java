@@ -84,6 +84,7 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
     public final String retentionTimeMinutesStr;
     public final String launchTimeoutSecondsStr;
     public final String bootDiskSizeGbStr;
+    public final String template;
     public Map<String, String> googleLabels;
     public Integer numExecutors;
     public Integer retentionTimeMinutes;
@@ -117,7 +118,8 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
                                  String launchTimeoutSecondsStr,
                                  Node.Mode mode,
                                  AcceleratorConfiguration acceleratorConfiguration,
-                                 String runAsUser) {
+                                 String runAsUser,
+                                 String template) {
         this.namePrefix = namePrefix;
         this.region = region;
         this.zone = zone;
@@ -127,6 +129,7 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
         this.preemptible = preemptible;
         this.minCpuPlatform = minCpuPlatform;
         this.numExecutors = intOrDefault(numExecutorsStr, DEFAULT_NUM_EXECUTORS);
+        this.template = template;
         this.numExecutorsStr = numExecutors.toString();
         this.retentionTimeMinutes = intOrDefault(retentionTimeMinutesStr, DEFAULT_RETENTION_TIME_MINUTES);
         this.retentionTimeMinutesStr = retentionTimeMinutes.toString();
@@ -232,7 +235,7 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
         PrintStream logger = listener.getLogger();
         try {
             Instance i = instance();
-            Operation operation = cloud.client.insertInstance(cloud.projectId, i);
+            Operation operation = cloud.client.insertInstance(cloud.projectId, template, i);
             logger.println("Sent insert request");
             ComputeEngineInstance instance = new ComputeEngineInstance(cloud.name, i.getName(), i.getZone(), i.getDescription(), runAsUser, "./.jenkins-slave", numExecutors, mode, requiredLabel == null ? "" : requiredLabel.getName(), new ComputeEngineLinuxLauncher(cloud.getCloudName(), operation, this.useInternalAddress), new CloudRetentionStrategy(retentionTimeMinutes), getLaunchTimeoutMillis());
             return instance;
@@ -496,6 +499,26 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
             } catch (IOException ioe) {
                 items.clear();
                 items.add("Error retrieving regions");
+                return items;
+            }
+        }
+        
+        public ListBoxModel doFillTemplateItems(@AncestorInPath Jenkins context,
+                                              @QueryParameter("projectId") @RelativePath("..") final String projectId,
+                                              @QueryParameter("credentialsId") @RelativePath("..") final String credentialsId) {
+            ListBoxModel items = new ListBoxModel();
+            items.add("");
+            try {
+                ComputeClient compute = computeClient(context, credentialsId);
+                List<InstanceTemplate> instanceTemplates = compute.getTemplates(projectId);
+
+                for (InstanceTemplate instanceTemplate : instanceTemplates) {
+                    items.add(instanceTemplate.getName(), instanceTemplate.getSelfLink());
+                }
+                return items;
+            } catch (IOException ioe) {
+                items.clear();
+                items.add("Error retrieving instanceTemplates");
                 return items;
             }
         }

@@ -35,6 +35,9 @@
 
 
         <f:section title="Machine Configuration">
+            <f:entry field="template" title="${%Template to use}">
+                <f:select/>
+            </f:entry>
             <f:entry field="machineType" title="${%Machine Type}">
                 <f:select/>
             </f:entry>
