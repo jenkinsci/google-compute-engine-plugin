@@ -46,7 +46,6 @@
                 <f:entry field="machineType" title="${%Machine Type}">
                     <f:select/>
                 </f:entry>
-                </f:entry>
                 <f:entry field="preemptible" title="${%Preemptible?}">
                     <f:checkbox/>
                 </f:entry>
@@ -60,45 +59,45 @@
                     <st:include page="config.jelly" class="${descriptor.clazz}"/>
                 </f:optionalProperty>
 
-            <f:section title="Networking">
-                <f:dropdownDescriptorSelector title="General" field="networkConfiguration"
+                <f:section title="Networking">
+                    <f:dropdownDescriptorSelector title="General" field="networkConfiguration"
                                           descriptors="${descriptor.networkConfigurationDescriptors}"
                                           default="${descriptor.defaultNetworkConfiguration()}"/>
-                <f:entry title="${%Network tags}" field="networkTags">
-                    <f:textbox/>
-                </f:entry>
-                <f:entry field="externalAddress" title="${%External IP?}">
-                    <f:checkbox/>
-                </f:entry>
-                <f:entry field="useInternalAddress" title="${%Use Internal IP?}">
-                    <f:checkbox/>
-                </f:entry>
-            </f:section>
+                    <f:entry title="${%Network tags}" field="networkTags">
+                        <f:textbox/>
+                    </f:entry>
+                    <f:entry field="externalAddress" title="${%External IP?}">
+                        <f:checkbox/>
+                    </f:entry>
+                    <f:entry field="useInternalAddress" title="${%Use Internal IP?}">
+                        <f:checkbox/>
+                    </f:entry>
+                </f:section>
 
-            <f:section title="Boot Disk">
-                <f:entry field="bootDiskSourceImageProject" title="${%Image project}">
-                    <f:select/>
-                </f:entry>
-                <f:entry field="bootDiskSourceImageName" title="${%Image name}">
-                    <f:select/>
-                </f:entry>
-                <f:entry field="bootDiskType" title="${%Disk Type}">
-                    <f:select/>
-                </f:entry>
-                <f:entry field="bootDiskSizeGbStr" title="${%Size}">
-                    <f:textbox default="${descriptor.defaultBootDiskSizeGb()}"/>
-                </f:entry>
-                <f:entry field="bootDiskAutoDelete" title="${%Delete on termination?}">
-                    <f:checkbox default="${descriptor.defaultBootDiskAutoDelete()}" />
-                </f:entry>
-            </f:section>
+                <f:section title="Boot Disk">
+                    <f:entry field="bootDiskSourceImageProject" title="${%Image project}">
+                        <f:select/>
+                    </f:entry>
+                    <f:entry field="bootDiskSourceImageName" title="${%Image name}">
+                        <f:select/>
+                    </f:entry>
+                    <f:entry field="bootDiskType" title="${%Disk Type}">
+                        <f:select/>
+                    </f:entry>
+                    <f:entry field="bootDiskSizeGbStr" title="${%Size}">
+                        <f:textbox default="${descriptor.defaultBootDiskSizeGb()}"/>
+                    </f:entry>
+                    <f:entry field="bootDiskAutoDelete" title="${%Delete on termination?}">
+                        <f:checkbox default="${descriptor.defaultBootDiskAutoDelete()}" />
+                    </f:entry>
+                </f:section>
 
-            <f:section title="IAM">
-                <f:entry field="serviceAccountEmail" title="${%Service Account E-mail}">
-                    <f:textbox/>
-                </f:entry>
-            </f:section>
-        </f:advanced>
+                <f:section title="IAM">
+                    <f:entry field="serviceAccountEmail" title="${%Service Account E-mail}">
+                        <f:textbox/>
+                    </f:entry>
+                </f:section>
+            </f:advanced>
         </f:section>
 
         <f:entry title="">
