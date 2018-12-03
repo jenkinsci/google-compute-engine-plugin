@@ -70,6 +70,7 @@ public class InstanceConfigurationTest {
     public static final String SERVICE_ACCOUNT_EMAIL = "test-service-account";
     public static final String RETENTION_TIME_MINUTES_STR = "1";
     public static final String LAUNCH_TIMEOUT_SECONDS_STR = "100";
+    public static final boolean WINDOWS = false;
 
 
     @Mock
@@ -161,7 +162,7 @@ public class InstanceConfigurationTest {
 
         r.submit(r.createWebClient().goTo("configure").getFormByName("config"));
         InstanceConfiguration got = ((ComputeEngineCloud) r.jenkins.clouds.iterator().next()).getInstanceConfig(CONFIG_DESC);
-        r.assertEqualBeans(want, got, "namePrefix,region,zone,machineType,preemptible,minCpuPlatform,startupScript,bootDiskType,bootDiskSourceImageName,bootDiskSourceImageProject,bootDiskSizeGb,acceleratorConfiguration,networkConfiguration,externalAddress,networkTags,serviceAccountEmail");
+        r.assertEqualBeans(want, got, "namePrefix,region,zone,machineType,preemptible,windows,minCpuPlatform,startupScript,bootDiskType,bootDiskSourceImageName,bootDiskSourceImageProject,bootDiskSizeGb,acceleratorConfiguration,networkConfiguration,externalAddress,networkTags,serviceAccountEmail");
     }
 
     @Test
@@ -179,7 +180,7 @@ public class InstanceConfigurationTest {
         assert (i.getGuestAccelerators().get(0).getAcceleratorCount().equals(Integer.parseInt(ACCELERATOR_COUNT)));
 
         // Metadata
-        assert (i.getMetadata().getItems().get(0).getKey().equals(InstanceConfiguration.METADATA_STARTUP_SCRIPT_KEY));
+        assert (i.getMetadata().getItems().get(0).getKey().equals(InstanceConfiguration.METADATA_LINUX_STARTUP_SCRIPT_KEY));
         assert (i.getMetadata().getItems().get(0).getValue().equals(STARTUP_SCRIPT));
 
         // Network
@@ -230,6 +231,11 @@ public class InstanceConfigurationTest {
                 BOOT_DISK_IMAGE_NAME,
                 BOOT_DISK_PROJECT_ID,
                 BOOT_DISK_SIZE_GB_STR,
+                WINDOWS,
+                "",
+                "",
+                "",
+                null,
                 new AutofilledNetworkConfiguration(NETWORK_NAME, SUBNETWORK_NAME),
                 EXTERNAL_ADDR,
                 false,

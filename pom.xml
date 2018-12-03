@@ -12,9 +12,9 @@
     <packaging>hpi</packaging>
     <properties>
         <jenkins.version>2.7.3</jenkins.version>
-        <java.level>7</java.level>
-        <maven.compiler.source>1.7</maven.compiler.source>
-        <maven.compiler.target>1.7</maven.compiler.target>
+        <java.level>8</java.level>
+        <maven.compiler.source>1.8</maven.compiler.source>
+        <maven.compiler.target>1.8</maven.compiler.target>
         <skip.surefire.tests>${skipTests}</skip.surefire.tests>
     </properties>
     <name>Google Compute Engine Plugin</name>
@@ -70,9 +70,19 @@
             <version>0.5</version>
         </dependency>
         <dependency>
+            <groupId>org.jenkins-ci.plugins</groupId>
+            <artifactId>ssh-credentials</artifactId>
+            <version>1.6.1</version>
+        </dependency>
+        <dependency>
             <groupId>com.google.apis</groupId>
             <artifactId>google-api-services-compute</artifactId>
             <version>v1-rev165-1.22.0</version>
+        </dependency>
+        <dependency>
+            <groupId>com.google.guava</groupId>
+            <artifactId>guava</artifactId>
+            <version>19.0</version>
         </dependency>
         <dependency>
             <groupId>org.mockito</groupId>
@@ -123,6 +133,9 @@
                 <configuration>
                     <disableXmlReport>true</disableXmlReport>
                     <useFile>false</useFile>
+                    <excludes>
+                        <exclude>**/ComputeEngineCloudWindowsIT.java</exclude>
+                    </excludes>
                 </configuration>
             </plugin>
             <plugin>
