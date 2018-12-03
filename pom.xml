@@ -90,6 +90,11 @@
             <artifactId>trilead-ssh2</artifactId>
             <version>build-217-jenkins-11</version>
         </dependency>
+        <dependency> <!-- OnceRetentionStrategy -->
+            <groupId>org.jenkins-ci.plugins</groupId>
+            <artifactId>durable-task</artifactId>
+            <version>1.28</version>
+        </dependency>
         <dependency>
             <groupId>junit</groupId>
             <artifactId>junit</artifactId>

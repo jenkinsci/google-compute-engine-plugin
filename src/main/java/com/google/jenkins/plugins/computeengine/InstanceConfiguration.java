@@ -252,8 +252,8 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
                     requiredLabel == null ? "" : requiredLabel.getName(),
                     launcher,
                     (oneShot ? new OnceRetentionStrategy(retentionTimeMinutes) : new CloudRetentionStrategy(retentionTimeMinutes)),
-                    getLaunchTimeoutMillis(),
-                    oneShot);
+                    getLaunchTimeoutMillis()
+            );
             return instance;
         } catch (Descriptor.FormException fe) {
             logger.printf("Error provisioning instance: %s", fe.getMessage());

@@ -31,9 +31,8 @@ public class ComputeEngineInstance extends AbstractCloudSlave {
     public final String zone;
     public final String cloudName;
     public final String sshUser;
-    public final boolean oneShot;
-    public boolean connected;
     public Integer launchTimeout; // Seconds
+    public Boolean connected;
 
     public ComputeEngineInstance(String cloudName,
                                  String name,
@@ -46,8 +45,7 @@ public class ComputeEngineInstance extends AbstractCloudSlave {
                                  String labelString,
                                  ComputerLauncher launcher,
                                  RetentionStrategy retentionStrategy,
-                                 Integer launchTimeout,
-                                 boolean oneShot)
+                                 Integer launchTimeout)
             throws Descriptor.FormException,
             IOException {
         super(name, nodeDescription, remoteFS, numExecutors, mode, labelString, launcher, retentionStrategy, Collections.<NodeProperty<?>>emptyList());
@@ -55,7 +53,6 @@ public class ComputeEngineInstance extends AbstractCloudSlave {
         this.zone = zone;
         this.cloudName = cloudName;
         this.sshUser = sshUser;
-        this.oneShot = oneShot;
     }
 
     @Override
