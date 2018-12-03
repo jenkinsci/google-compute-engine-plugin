@@ -263,13 +263,8 @@ public class ComputeEngineCloudIT {
                 LAUNCH_TIMEOUT_SECONDS_STR,
                 NODE_MODE,
                 new AcceleratorConfiguration(ACCELERATOR_NAME, ACCELERATOR_COUNT),
-<<<<<<< HEAD
-                RUN_AS_USER);
-=======
                 RUN_AS_USER,
-                false,
                 null);
->>>>>>> 17c9e8b... First version of working templates
                 ic.appendLabels(INTEGRATION_LABEL);
         return ic;
     }
