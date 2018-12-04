@@ -1,0 +1,30 @@
+<div>
+    Enable this option if the launched machine is a Windows VM. The Windows VM must have the OpenSSH server feature
+    installed on it, Java installed on it, and you must have configured an administrative user with a username and password.
+    <p>
+        The configured username and password should be set in the "Windows Username" and "Windows Password" fields.
+    </p>
+    <p>
+        If you do not have the aforementioned pre-installed, you can use the following startup script to automatically set up the minimum requirements.
+        In this example the Windows username is "Build" and the password is "P@ssword2". <br/>
+        See the help file below for Windows private SSH key if you wish to authenticate SSH via keys.
+    </p>
+    <p>
+        <code>
+            Set-ExecutionPolicy Bypass -Scope Process -Force;<br/>
+            Invoke-Expression ((New-Object System.Net.WebClient).DownloadString('https://chocolatey.org/install.ps1'));<br />
+            RefreshEnv.cmd<br/>
+            choco install -y openssh -params '"/SSHServerFeature"'<br/>
+            choco install -y jre8<br/>
+            <br/>
+            $username = "Build"<br/>
+            $password = ConvertTo-SecureString "P@ssword2" -AsPlainText -Force<br/>
+            $cred = New-Object System.Management.Automation.PSCredential -ArgumentList $username,$password<br/>
+            Start-Process cmd /c -WindowStyle Hidden -Credential $cred -ErrorAction SilentlyContinue<br/>
+        </code>
+    </p>
+    <p>
+        See the <a href="https://cloud.google.com/compute/docs/instances/windows">Windows VM Instances</a> documentation
+        for more information.
+    </p>
+</div>
