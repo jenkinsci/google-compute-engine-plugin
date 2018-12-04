@@ -69,6 +69,10 @@ public class WindowsConfiguration {
                 CredentialsProvider.lookupCredentials(StandardUsernamePasswordCredentials.class,
                         Jenkins.getInstance(), ACL.SYSTEM, domainRequirements),
                 CredentialsMatchers.withId(passwordCredentialsId.get()));
+
+        if (cred == null) {
+          return null;
+        }
         return cred.getPassword().getPlainText();
     }
 

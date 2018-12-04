@@ -159,12 +159,17 @@ public class ComputeEngineWindowsLauncher extends ComputeEngineComputerLauncher 
 
     private boolean bootstrap(ComputeEngineComputer computer, TaskListener listener) throws IOException,
             Exception { //TODO(evanbrown): better exceptions
+        if (computer == null) {
+            throw new IllegalArgumentException("A null ComputeEngineComputer was provided");
+        }
         logInfo(computer, listener, "bootstrap");
+
         ComputeEngineInstance node = computer.getNode();
-        WindowsConfiguration windowsConfig = node.windowsConfig.get();
         if (node == null) {
             throw new IllegalArgumentException("A ComputeEngineComputer with no node was provided");
         }
+        WindowsConfiguration windowsConfig = node.windowsConfig.get();
+
         Connection bootstrapConn = null;
         try {
             int tries = bootstrapAuthTries;

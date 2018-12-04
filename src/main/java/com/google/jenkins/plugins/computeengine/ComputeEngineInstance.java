@@ -29,11 +29,12 @@ import java.util.logging.Logger;
 import java.util.Optional;
 
 public class ComputeEngineInstance extends AbstractCloudSlave {
+    private static final long serialVersionUID = 1;
     private static final Logger LOGGER = Logger.getLogger(ComputeEngineInstance.class.getName());
     public final String zone;
     public final String cloudName;
     public final String sshUser;
-    public final Optional<WindowsConfiguration> windowsConfig;
+    public transient final Optional<WindowsConfiguration> windowsConfig;
     public Integer launchTimeout; // Seconds
     private Boolean connected;
 
