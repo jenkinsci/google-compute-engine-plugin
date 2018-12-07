@@ -9,6 +9,7 @@ import com.cloudbees.plugins.credentials.common.StandardUsernamePasswordCredenti
 import com.cloudbees.plugins.credentials.domains.DomainRequirement;
 import hudson.security.ACL;
 import jenkins.model.Jenkins;
+import com.google.common.base.Strings;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -36,8 +37,9 @@ public class WindowsConfiguration {
      */
     public WindowsConfiguration(String windowsUsername, String passwordCredentialsId, String privateKeyCredentialsId) {
         this.windowsUsername = windowsUsername;
-        this.privateKeyCredentialsId = Optional.ofNullable(privateKeyCredentialsId);
-        this.passwordCredentialsId = Optional.ofNullable(passwordCredentialsId);
+        //TODO (rachelyen) verify both are non-null
+        this.privateKeyCredentialsId = Optional.ofNullable(Strings.emptyToNull(privateKeyCredentialsId));
+        this.passwordCredentialsId = Optional.ofNullable(Strings.emptyToNull(passwordCredentialsId));
     }
 
     /**
