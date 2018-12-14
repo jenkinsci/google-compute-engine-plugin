@@ -67,6 +67,7 @@ public class ComputeEngineCloudIT {
     private static final String LABEL = "integration";
     private static final String MACHINE_TYPE = ZONE_BASE + "/machineTypes/n1-standard-1";
     private static final String NUM_EXECUTORS = "1";
+    private static final String MULTIPLE_NUM_EXECUTORS = "2";
     private static final boolean PREEMPTIBLE = false;
     //  TODO: Write a test to see if min cpu platform worked by picking a higher version?
     private static final String MIN_CPU_PLATFORM = "Intel Broadwell";
@@ -193,7 +194,8 @@ public class ComputeEngineCloudIT {
         logOutput.reset();
 
         ComputeEngineCloud cloud = (ComputeEngineCloud) r.jenkins.clouds.get(0);
-        cloud.addConfiguration(validInstanceConfiguration1());
+        InstanceConfiguration ic = validInstanceConfiguration1(NUM_EXECUTORS);
+        cloud.addConfiguration(ic);
         // Add a new node
         Collection<NodeProvisioner.PlannedNode> planned = cloud.provision(new LabelAtom(LABEL), 1);
 
@@ -212,14 +214,16 @@ public class ComputeEngineCloudIT {
         assertEquals(logs(),3, i.getLabels().size());
 
         // Instance should have a label with key CONFIG_LABEL_KEY and value equal to the config's name prefix
-        assertEquals(logs(), validInstanceConfiguration1().namePrefix, i.getLabels().get(ComputeEngineCloud.CONFIG_LABEL_KEY));
+        assertEquals(logs(), ic.namePrefix, i.getLabels().get(ComputeEngineCloud.CONFIG_LABEL_KEY));
         assertEquals(logs(), String.valueOf(cloud.name.hashCode()), i.getLabels().get(ComputeEngineCloud.CLOUD_ID_LABEL_KEY));
     }
     
     @Test(timeout = 300000)
     public void test1WorkerCreatedFor2Executors() throws Exception {
+        logOutput.reset();
+
         ComputeEngineCloud cloud = (ComputeEngineCloud) r.jenkins.clouds.get(0);
-        cloud.addConfiguration(validInstanceConfiguration1());
+        cloud.addConfiguration(validInstanceConfiguration1(MULTIPLE_NUM_EXECUTORS));
         // Add a new node
         Collection<NodeProvisioner.PlannedNode> planned = cloud.provision(new LabelAtom(LABEL), 2);
 
@@ -248,8 +252,8 @@ public class ComputeEngineCloudIT {
         assertEquals(logs(), true, logs().contains("WARNING"));
     }
 
-    private static InstanceConfiguration validInstanceConfiguration1() {
-        return instanceConfiguration(DEB_JAVA_STARTUP_SCRIPT);
+    private static InstanceConfiguration validInstanceConfiguration1(String numExecutors) {
+        return instanceConfiguration(DEB_JAVA_STARTUP_SCRIPT, numExecutors);
     }
 
     /**
@@ -258,16 +262,16 @@ public class ComputeEngineCloudIT {
      * @return
      */
     private static InstanceConfiguration invalidInstanceConfiguration1() {
-        return instanceConfiguration("");
+        return instanceConfiguration("", NUM_EXECUTORS);
     }
 
-    private static InstanceConfiguration instanceConfiguration(String startupScript) {
+    private static InstanceConfiguration instanceConfiguration(String startupScript, String numExecutors) {
         InstanceConfiguration ic = new InstanceConfiguration(
                 NAME_PREFIX,
                 REGION,
                 ZONE,
                 MACHINE_TYPE,
-                NUM_EXECUTORS,
+                numExecutors,
                 startupScript,
                 PREEMPTIBLE,
                 MIN_CPU_PLATFORM,
