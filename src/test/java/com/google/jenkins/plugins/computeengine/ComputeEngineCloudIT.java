@@ -215,6 +215,17 @@ public class ComputeEngineCloudIT {
         assertEquals(logs(), validInstanceConfiguration1().namePrefix, i.getLabels().get(ComputeEngineCloud.CONFIG_LABEL_KEY));
         assertEquals(logs(), String.valueOf(cloud.name.hashCode()), i.getLabels().get(ComputeEngineCloud.CLOUD_ID_LABEL_KEY));
     }
+    
+    @Test(timeout = 300000)
+    public void test1WorkerCreatedFor2Executors() throws Exception {
+        ComputeEngineCloud cloud = (ComputeEngineCloud) r.jenkins.clouds.get(0);
+        cloud.addConfiguration(validInstanceConfiguration1());
+        // Add a new node
+        Collection<NodeProvisioner.PlannedNode> planned = cloud.provision(new LabelAtom(LABEL), 2);
+
+        // There should be a planned node
+        assertEquals(logs(), 1, planned.size());
+    }
 
     @Test(timeout = 300000)
     public void testWorkerFailed() throws Exception {
@@ -238,39 +249,7 @@ public class ComputeEngineCloudIT {
     }
 
     private static InstanceConfiguration validInstanceConfiguration1() {
-        InstanceConfiguration ic = new InstanceConfiguration(
-                NAME_PREFIX,
-                REGION,
-                ZONE,
-                MACHINE_TYPE,
-                NUM_EXECUTORS,
-                DEB_JAVA_STARTUP_SCRIPT,
-                PREEMPTIBLE,
-                MIN_CPU_PLATFORM,
-                LABEL,
-                CONFIG_DESC,
-                BOOT_DISK_TYPE,
-                BOOT_DISK_AUTODELETE,
-                BOOT_DISK_IMAGE_NAME,
-                BOOT_DISK_PROJECT_ID,
-                BOOT_DISK_SIZE_GB_STR,
-                false,
-                "",
-                "",
-                "",
-                null,
-                new AutofilledNetworkConfiguration(NETWORK_NAME, SUBNETWORK_NAME),
-                EXTERNAL_ADDR,
-                false,
-                NETWORK_TAGS,
-                SERVICE_ACCOUNT_EMAIL,
-                RETENTION_TIME_MINUTES_STR,
-                LAUNCH_TIMEOUT_SECONDS_STR,
-                NODE_MODE,
-                new AcceleratorConfiguration(ACCELERATOR_NAME, ACCELERATOR_COUNT),
-                RUN_AS_USER);
-                ic.appendLabels(INTEGRATION_LABEL);
-        return ic;
+        return instanceConfiguration(DEB_JAVA_STARTUP_SCRIPT);
     }
 
     /**
@@ -279,13 +258,17 @@ public class ComputeEngineCloudIT {
      * @return
      */
     private static InstanceConfiguration invalidInstanceConfiguration1() {
+        return instanceConfiguration("");
+    }
+
+    private static InstanceConfiguration instanceConfiguration(String startupScript) {
         InstanceConfiguration ic = new InstanceConfiguration(
                 NAME_PREFIX,
                 REGION,
                 ZONE,
                 MACHINE_TYPE,
                 NUM_EXECUTORS,
-                "",
+                startupScript,
                 PREEMPTIBLE,
                 MIN_CPU_PLATFORM,
                 LABEL,
