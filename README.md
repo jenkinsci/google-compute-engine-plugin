@@ -18,4 +18,4 @@ Please file feature requests and bug reports under the `google-compute-engine-pl
 See [CONTRIBUTING.md](CONTRIBUTING.md)
 
 ## License
-See [LICENSE.md](LICENSE.md)
+See [LICENSE](LICENSE)
