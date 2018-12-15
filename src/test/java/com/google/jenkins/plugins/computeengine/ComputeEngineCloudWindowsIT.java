@@ -1,24 +1,8 @@
-/*
- * Copyright 2018 Google Inc. All Rights Reserved.
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
 package com.google.jenkins.plugins.computeengine;
 
-import com.cloudbees.plugins.credentials.Credentials;
-import com.cloudbees.plugins.credentials.CredentialsStore;
-import com.cloudbees.plugins.credentials.SystemCredentialsProvider;
+import com.cloudbees.jenkins.plugins.sshcredentials.impl.BasicSSHUserPrivateKey;
+import com.cloudbees.plugins.credentials.*;
+import com.cloudbees.plugins.credentials.common.StandardUsernameCredentials;
 import com.cloudbees.plugins.credentials.domains.Domain;
 import com.cloudbees.plugins.credentials.domains.DomainRequirement;
 import com.google.api.services.compute.model.Image;
@@ -26,6 +10,7 @@ import com.google.api.services.compute.model.Instance;
 import com.google.api.services.compute.model.Operation;
 import com.google.jenkins.plugins.computeengine.client.ClientFactory;
 import com.google.jenkins.plugins.computeengine.client.ComputeClient;
+import com.google.jenkins.plugins.computeengine.ssh.GoogleKeyPair;
 import com.google.jenkins.plugins.credentials.oauth.GoogleRobotPrivateKeyCredentials;
 import com.google.jenkins.plugins.credentials.oauth.ServiceAccountConfig;
 import hudson.model.Node;
@@ -37,8 +22,6 @@ import org.jvnet.hudson.test.JenkinsRule;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.*;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.logging.LogManager;
 import java.util.logging.Logger;
 import java.util.logging.SimpleFormatter;
@@ -47,17 +30,11 @@ import java.util.logging.StreamHandler;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 
-public class ComputeEngineCloudIT {
-    private static Logger log = Logger.getLogger(ComputeEngineCloudIT.class.getName());
-
-    private static final String DEB_JAVA_STARTUP_SCRIPT = "#!/bin/bash\n" +
-            "/etc/init.d/ssh stop\n" +
-            "echo \"deb http://http.debian.net/debian stretch-backports main\" | \\\n" +
-            "      sudo tee --append /etc/apt/sources.list > /dev/null\n" +
-            "apt-get -y update\n" +
-            "apt-get -y install -t stretch-backports openjdk-8-jdk\n" +
-            "update-java-alternatives -s java-1.8.0-openjdk-amd64\n" +
-            "/etc/init.d/ssh start";
+/**
+ * Integration test for launching windows VM. Tests that agents can be created properly.
+ */
+public class ComputeEngineCloudWindowsIT {
+    private static Logger log = Logger.getLogger(ComputeEngineCloudWindowsIT.class.getName());
 
     private static final String CLOUD_NAME = "integration";
     private static final String NAME_PREFIX = "integration";
@@ -68,18 +45,17 @@ public class ComputeEngineCloudIT {
     private static final String MACHINE_TYPE = ZONE_BASE + "/machineTypes/n1-standard-1";
     private static final String NUM_EXECUTORS = "1";
     private static final boolean PREEMPTIBLE = false;
-    //  TODO: Write a test to see if min cpu platform worked by picking a higher version?
-    private static final String MIN_CPU_PLATFORM = "Intel Broadwell";
     private static final String CONFIG_DESC = "integration";
-    private static final String BOOT_DISK_TYPE = ZONE_BASE + "/diskTypes/pd-ssd";
+    private static final String MIN_CPU_PLATFORM = "Intel Broadwell";
+    private static final String BOOT_DISK_TYPE = ZONE_BASE + "/diskTypes/pd-ssd"; //hmm
     private static final boolean BOOT_DISK_AUTODELETE = true;
-    private static final String BOOT_DISK_PROJECT_ID = "debian-cloud";
-    private static final String BOOT_DISK_IMAGE_NAME = "projects/debian-cloud/global/images/family/debian-9";
-    private static final String BOOT_DISK_SIZE_GB_STR = "10";
+    private static final String BOOT_DISK_SIZE_GB_STR = "50";
     private static final Node.Mode NODE_MODE = Node.Mode.EXCLUSIVE;
     private static final String ACCELERATOR_NAME = "";
     private static final String ACCELERATOR_COUNT = "";
     private static final String RUN_AS_USER = "jenkins";
+
+    private static final String WINDOWS_USER = "Build";
 
     private static Map<String, String> INTEGRATION_LABEL;
 
@@ -93,8 +69,8 @@ public class ComputeEngineCloudIT {
     private static final boolean EXTERNAL_ADDR = true;
     private static final String NETWORK_TAGS = "ssh";
     private static final String SERVICE_ACCOUNT_EMAIL = "";
-    private static final String RETENTION_TIME_MINUTES_STR = "";
-    private static final String LAUNCH_TIMEOUT_SECONDS_STR = "";
+    private static final String RETENTION_TIME_MINUTES_STR = "600";
+    private static final String LAUNCH_TIMEOUT_SECONDS_STR = "3000";
 
     private static Logger cloudLogger;
     private static Logger clientLogger;
@@ -103,7 +79,8 @@ public class ComputeEngineCloudIT {
 
     private static ComputeClient client;
     private static String projectId;
-
+    private static String bootDiskProjectId;
+    private static String bootDiskImageName;
 
     private static String format(String s) {
         String projectId = System.getenv("GOOGLE_PROJECT_ID");
@@ -128,6 +105,12 @@ public class ComputeEngineCloudIT {
 
         String serviceAccountKeyJson = System.getenv("GOOGLE_CREDENTIALS");
         assertNotNull("GOOGLE_CREDENTIALS env var must be set", serviceAccountKeyJson);
+
+        bootDiskProjectId = System.getenv("GOOGLE_BOOT_DISK_PROJECT_ID");
+        assertNotNull("GOOGLE_BOOT_DISK_PROJECT_ID env var must be set", bootDiskProjectId);
+
+        bootDiskImageName = System.getenv("GOOGLE_BOOT_DISK_IMAGE_NAME");
+        assertNotNull("GOOGLE_BOOT_DISK_IMAGE_NAME env var must be set", bootDiskImageName);
 
         ServiceAccountConfig sac = new StringJsonServiceAccountConfig(serviceAccountKeyJson);
         Credentials c = (Credentials) new GoogleRobotPrivateKeyCredentials(projectId, sac, null);
@@ -175,7 +158,7 @@ public class ComputeEngineCloudIT {
     }
 
     @Test
-    public void testCredentialsCreated() {
+    public void testGoogleCredentialsCreated() {
         List<Credentials> creds = new SystemCredentialsProvider.ProviderImpl().getStore(r.jenkins).getCredentials(Domain.global());
         assertEquals(1, creds.size());
     }
@@ -183,7 +166,7 @@ public class ComputeEngineCloudIT {
     @Test //TODO: Group client tests into their own test class
     public void testGetImage() throws Exception {
         ComputeEngineCloud cloud = (ComputeEngineCloud) r.jenkins.clouds.get(0);
-        Image i = cloud.client.getImage("debian-cloud", "debian-9-stretch-v20180820");
+        Image i = cloud.client.getImage(this.bootDiskProjectId, this.bootDiskImageName);
         assertNotNull(i);
     }
 
@@ -194,6 +177,11 @@ public class ComputeEngineCloudIT {
 
         ComputeEngineCloud cloud = (ComputeEngineCloud) r.jenkins.clouds.get(0);
         cloud.addConfiguration(validInstanceConfiguration1());
+
+        // Test our private key credentials were created properly
+        List<Credentials> creds = new SystemCredentialsProvider.ProviderImpl().getStore(r.jenkins).getCredentials(Domain.global());
+        assertEquals(2, creds.size());
+
         // Add a new node
         Collection<NodeProvisioner.PlannedNode> planned = cloud.provision(new LabelAtom(LABEL), 1);
 
@@ -213,55 +201,37 @@ public class ComputeEngineCloudIT {
 
         // Instance should have a label with key CONFIG_LABEL_KEY and value equal to the config's name prefix
         assertEquals(logs(), validInstanceConfiguration1().namePrefix, i.getLabels().get(ComputeEngineCloud.CONFIG_LABEL_KEY));
+        // proper id label to properly count instances
         assertEquals(logs(), String.valueOf(cloud.name.hashCode()), i.getLabels().get(ComputeEngineCloud.CLOUD_ID_LABEL_KEY));
     }
-    
-    @Test(timeout = 300000)
-    public void test1WorkerCreatedFor2Executors() throws Exception {
-        ComputeEngineCloud cloud = (ComputeEngineCloud) r.jenkins.clouds.get(0);
-        cloud.addConfiguration(validInstanceConfiguration1());
-        // Add a new node
-        Collection<NodeProvisioner.PlannedNode> planned = cloud.provision(new LabelAtom(LABEL), 2);
 
-        // There should be a planned node
-        assertEquals(logs(), 1, planned.size());
-    }
+    private static InstanceConfiguration validInstanceConfiguration1() throws Exception{
+        GoogleKeyPair kp = GoogleKeyPair.generate("");
+        // Have to reformat since GoogleKeyPair's format is for metadata server and not typical public key format
+        String publicKey = kp.getPublicKey().trim().substring(1);
 
-    @Test(timeout = 300000)
-    public void testWorkerFailed() throws Exception {
-        //TODO: each test method should probably have its own handler.
-        logOutput.reset();
+        String startupScript = String.format("Stop-Service sshd\n" +
+                "$username = " + "\"%1$s\"\n" +
+                "$ConfiguredPublicKey = "  + "\"%2$s\"\n" +
+                "Write-Output \"Second phase\"\n" +
+                "# We are in the second phase of startup where we need to set up authorized_keys for the specified user.\n" +
+                "$UserSid = Get-WmiObject win32_useraccount -Filter \"name = '$username'\" | select-object sid -ExpandProperty SID\n" +
+                "$UserProfilePath = Get-ItemProperty -Path  \"HKLM:\\Software\\Microsoft\\Windows NT\\CurrentVersion\\ProfileList\\$UserSid\" -Name ProfileImagePath | select-object profileimagepath -ExpandProperty ProfileImagePath\n" +
+                "# Create the .ssh folder and authorized_keys file.\n" +
+                "mkdir $UserProfilePath\\.ssh\n" +
+                "Set-Content -Path $UserProfilePath\\.ssh\\authorized_keys -Value $ConfiguredPublicKey\n" +
+                "# Fix up permissions on authorized_keys\n" +
+                "Import-Module \"$env:PROGRAMFILES\\OpenSSH-Win64\\OpenSSHUtils.psd1\" -Force\n" +
+                "Repair-AuthorizedKeyPermission -FilePath  $UserProfilePath\\.ssh\\authorized_keys\n" +
+                "Restart-Service sshd", WINDOWS_USER, publicKey);
 
-        ComputeEngineCloud cloud = (ComputeEngineCloud) r.jenkins.clouds.get(0);
-        cloud.addConfiguration(invalidInstanceConfiguration1());
+        StandardUsernameCredentials windowsPrivateKeyCredential = new BasicSSHUserPrivateKey(CredentialsScope.GLOBAL, null, WINDOWS_USER,
+                new BasicSSHUserPrivateKey.DirectEntryPrivateKeySource(kp.getPrivateKey()), null,
+                "integration test private key for windows");
 
-        // Add a new node
-        Collection<NodeProvisioner.PlannedNode> planned = cloud.provision(new LabelAtom(LABEL), 1);
+        CredentialsStore store = new SystemCredentialsProvider.ProviderImpl().getStore(r.jenkins);
+        store.addCredentials(Domain.global(), windowsPrivateKeyCredential);
 
-        // There should be a planned node
-        assertEquals(logs(), 1, planned.size());
-
-        // Wait for the node creation to fail
-        planned.iterator().next().future.get();
-
-        // There should be warning logs
-        assertEquals(logs(), true, logs().contains("WARNING"));
-    }
-
-    private static InstanceConfiguration validInstanceConfiguration1() {
-        return instanceConfiguration(DEB_JAVA_STARTUP_SCRIPT);
-    }
-
-    /**
-     * This configuration creates an instance with no Java installed.
-     *
-     * @return
-     */
-    private static InstanceConfiguration invalidInstanceConfiguration1() {
-        return instanceConfiguration("");
-    }
-
-    private static InstanceConfiguration instanceConfiguration(String startupScript) {
         InstanceConfiguration ic = new InstanceConfiguration(
                 NAME_PREFIX,
                 REGION,
@@ -275,13 +245,13 @@ public class ComputeEngineCloudIT {
                 CONFIG_DESC,
                 BOOT_DISK_TYPE,
                 BOOT_DISK_AUTODELETE,
-                BOOT_DISK_IMAGE_NAME,
-                BOOT_DISK_PROJECT_ID,
+                "projects/" + bootDiskProjectId + "/global/images/" + bootDiskImageName,
+                bootDiskProjectId,
                 BOOT_DISK_SIZE_GB_STR,
-                false,
+                true,
+                WINDOWS_USER,
                 "",
-                "",
-                "",
+                windowsPrivateKeyCredential.getId(),
                 null,
                 new AutofilledNetworkConfiguration(NETWORK_NAME, SUBNETWORK_NAME),
                 EXTERNAL_ADDR,
@@ -300,7 +270,7 @@ public class ComputeEngineCloudIT {
     private static void deleteIntegrationInstances(boolean waitForCompletion) throws IOException {
         List<Instance> instances = client.getInstancesWithLabel(projectId, INTEGRATION_LABEL);
         for(Instance i : instances) {
-           safeDelete(i.getName(), waitForCompletion);
+            safeDelete(i.getName(), waitForCompletion);
         }
     }
 

@@ -179,7 +179,7 @@ public class ComputeEngineCloud extends AbstractCloudImpl {
                         return node;
                     }
                 }), node.getNumExecutors()));
-                excessWorkload -= 1;
+                excessWorkload -= node.getNumExecutors();
             }
         } catch (IOException ioe) {
             LOGGER.log(Level.WARNING, "Error provisioning node", ioe);

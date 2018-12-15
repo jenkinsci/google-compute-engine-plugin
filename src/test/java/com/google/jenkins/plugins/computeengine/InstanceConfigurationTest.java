@@ -52,6 +52,7 @@ public class InstanceConfigurationTest {
     public static final String STARTUP_SCRIPT = "#!/bin/bash";
     public static final String NUM_EXECUTORS = "1";
     public static final boolean PREEMPTIBLE = true;
+    public static final String MIN_CPU_PLATFORM = "Intel Haswell";
     public static final String CONFIG_DESC = "test-config";
     public static final String BOOT_DISK_TYPE = "pd-standard";
     public static final boolean BOOT_DISK_AUTODELETE = true;
@@ -69,6 +70,7 @@ public class InstanceConfigurationTest {
     public static final String SERVICE_ACCOUNT_EMAIL = "test-service-account";
     public static final String RETENTION_TIME_MINUTES_STR = "1";
     public static final String LAUNCH_TIMEOUT_SECONDS_STR = "100";
+    public static final boolean WINDOWS = false;
 
 
     @Mock
@@ -90,6 +92,11 @@ public class InstanceConfigurationTest {
         List<MachineType> machineTypes = new ArrayList<MachineType>();
         machineTypes.add(new MachineType().setName("").setSelfLink(""));
         machineTypes.add(new MachineType().setName(MACHINE_TYPE).setSelfLink(MACHINE_TYPE));
+
+        List<String> cpuPlatforms = new ArrayList<>();
+        cpuPlatforms.add("");
+        cpuPlatforms.add("Intel Skylake");
+        cpuPlatforms.add("Intel Haswell");
 
         List<DiskType> diskTypes = new ArrayList<DiskType>();
         diskTypes.add(new DiskType().setName("").setSelfLink(""));
@@ -117,6 +124,7 @@ public class InstanceConfigurationTest {
         Mockito.when(computeClient.getRegions(anyString())).thenReturn(regions);
         Mockito.when(computeClient.getZones(anyString(), anyString())).thenReturn(zones);
         Mockito.when(computeClient.getMachineTypes(anyString(), anyString())).thenReturn(machineTypes);
+        Mockito.when(computeClient.cpuPlatforms(anyString(), anyString())).thenReturn(cpuPlatforms);
         Mockito.when(computeClient.getBootDiskTypes(anyString(), anyString())).thenReturn(diskTypes);
         Mockito.when(computeClient.getImage(anyString(), anyString())).thenReturn(image);
         Mockito.when(computeClient.getImages(anyString())).thenReturn(imageTypes);
@@ -154,24 +162,25 @@ public class InstanceConfigurationTest {
 
         r.submit(r.createWebClient().goTo("configure").getFormByName("config"));
         InstanceConfiguration got = ((ComputeEngineCloud) r.jenkins.clouds.iterator().next()).getInstanceConfig(CONFIG_DESC);
-        r.assertEqualBeans(want, got, "namePrefix,region,zone,machineType,preemptible,startupScript,bootDiskType,bootDiskSourceImageName,bootDiskSourceImageProject,bootDiskSizeGb,acceleratorConfiguration,networkConfiguration,externalAddress,networkTags,serviceAccountEmail");
+        r.assertEqualBeans(want, got, "namePrefix,region,zone,machineType,preemptible,windows,minCpuPlatform,startupScript,bootDiskType,bootDiskSourceImageName,bootDiskSourceImageProject,bootDiskSizeGb,acceleratorConfiguration,networkConfiguration,externalAddress,networkTags,serviceAccountEmail");
     }
 
     @Test
     public void testInstanceModel() {
-        Instance i = instanceConfiguration().instance();
+        Instance i = instanceConfiguration(MIN_CPU_PLATFORM).instance();
         // General
         assert (i.getName().startsWith(NAME_PREFIX));
         assert (i.getDescription().equals(CONFIG_DESC));
         assert (i.getZone().equals(ZONE));
         assert (i.getMachineType().equals(MACHINE_TYPE));
+        assert (i.getMinCpuPlatform().equals(MIN_CPU_PLATFORM));
 
         // Accelerators
         assert (i.getGuestAccelerators().get(0).getAcceleratorType().equals(ACCELERATOR_NAME));
         assert (i.getGuestAccelerators().get(0).getAcceleratorCount().equals(Integer.parseInt(ACCELERATOR_COUNT)));
 
         // Metadata
-        assert (i.getMetadata().getItems().get(0).getKey().equals(InstanceConfiguration.METADATA_STARTUP_SCRIPT_KEY));
+        assert (i.getMetadata().getItems().get(0).getKey().equals(InstanceConfiguration.METADATA_LINUX_STARTUP_SCRIPT_KEY));
         assert (i.getMetadata().getItems().get(0).getValue().equals(STARTUP_SCRIPT));
 
         // Network
@@ -194,11 +203,18 @@ public class InstanceConfigurationTest {
         assert (i.getDisks().get(0).getInitializeParams().getDiskSizeGb().equals(Long.parseLong(BOOT_DISK_SIZE_GB_STR)));
         assert (i.getDisks().get(0).getInitializeParams().getSourceImage().equals(BOOT_DISK_IMAGE_NAME));
 
-        assert(instanceConfiguration().useInternalAddress == false);
 
+
+        InstanceConfiguration instanceConfiguration = instanceConfiguration();
+        assert(instanceConfiguration.useInternalAddress == false);
+        assert(instanceConfiguration.instance().getMinCpuPlatform() == null);
     }
 
-    public  static InstanceConfiguration instanceConfiguration() {
+    public static InstanceConfiguration instanceConfiguration() {
+        return instanceConfiguration("");
+    }
+
+    public  static InstanceConfiguration instanceConfiguration(String minCpuPlatform) {
         return new InstanceConfiguration(
                 NAME_PREFIX,
                 REGION,
@@ -207,6 +223,7 @@ public class InstanceConfigurationTest {
                 NUM_EXECUTORS,
                 STARTUP_SCRIPT,
                 PREEMPTIBLE,
+                minCpuPlatform,
                 LABEL,
                 CONFIG_DESC,
                 BOOT_DISK_TYPE,
@@ -214,6 +231,11 @@ public class InstanceConfigurationTest {
                 BOOT_DISK_IMAGE_NAME,
                 BOOT_DISK_PROJECT_ID,
                 BOOT_DISK_SIZE_GB_STR,
+                WINDOWS,
+                "",
+                "",
+                "",
+                null,
                 new AutofilledNetworkConfiguration(NETWORK_NAME, SUBNETWORK_NAME),
                 EXTERNAL_ADDR,
                 false,
