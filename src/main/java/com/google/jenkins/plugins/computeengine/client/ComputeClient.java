@@ -396,6 +396,13 @@ public class ComputeClient {
         return instances;
     }
     
+    public InstanceTemplate getTemplate(String projectId, String templateName) throws IOException {
+        return compute
+                .instanceTemplates()
+                .get(projectId, templateName)
+                .execute();
+    }
+    
     public List<InstanceTemplate> getTemplates(String projectId) throws IOException {
         List<InstanceTemplate> instanceTemplates = compute
                 .instanceTemplates()

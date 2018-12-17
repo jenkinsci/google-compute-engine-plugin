@@ -256,14 +256,20 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
         return this;
     }
 
-    public Instance instance() {
+    public Instance instance() throws IOException {
         Instance i = new Instance();
         i.setName(uniqueName());
-        i.setLabels(googleLabels);
         i.setDescription(description);
         i.setZone(ComputeClient.zoneFromSelfLink(zone));
         
-        if (StringUtils.isBlank(template)) {
+        if (StringUtils.isNotBlank(template)) {
+            InstanceTemplate instanceTemplate = cloud.client.getTemplate(cloud.projectId, template);
+            Map<String, String> templateLabels = instanceTemplate.getProperties().getLabels();
+            Map<String, String> mergedLabels = new HashMap<>(templateLabels);
+            mergedLabels.putAll(googleLabels);
+            i.setLabels(mergedLabels);
+        } else {
+            i.setLabels(googleLabels);
             i.setMachineType(stripSelfLinkPrefix(machineType));
             i.setMetadata(metadata());
             i.setTags(tags());
