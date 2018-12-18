@@ -156,7 +156,7 @@ public class ComputeEngineCloud extends AbstractCloudImpl {
                     break;
                 }
 
-                final ComputeEngineInstance node = config.provision(StreamTaskListener.fromStdout(), config.getLabelString());
+                final ComputeEngineInstance node = config.provision(StreamTaskListener.fromStdout());
                 Jenkins.getInstance().addNode(node);
                 r.add(new PlannedNode(node.getNodeName(), Computer.threadPoolForRemoting.submit(new Callable<Node>() {
                     public Node call() throws Exception {
@@ -223,14 +223,6 @@ public class ComputeEngineCloud extends AbstractCloudImpl {
         }
     }
 
-    private synchronized ComputeEngineInstance getAnAgent(InstanceConfiguration config, String labels) {
-        try {
-            return config.provision(StreamTaskListener.fromStdout(), labels);
-        } catch (Exception e) {
-            return null;
-        }
-    }
-
     @Override
     public boolean canProvision(Label label) {
         try {
@@ -285,7 +277,7 @@ public class ComputeEngineCloud extends AbstractCloudImpl {
             throw HttpResponses.error(SC_BAD_REQUEST, "No such Instance Configuration: " + configuration);
         }
 
-        ComputeEngineInstance node = c.provision(StreamTaskListener.fromStdout(), null);
+        ComputeEngineInstance node = c.provision(StreamTaskListener.fromStdout());
         if (node == null)
             throw HttpResponses.error(SC_BAD_REQUEST, "Could not provision new node.");
         Jenkins.getInstance().addNode(node);
