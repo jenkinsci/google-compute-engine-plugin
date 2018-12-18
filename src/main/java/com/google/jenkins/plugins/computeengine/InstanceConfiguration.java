@@ -28,7 +28,6 @@ import com.google.api.services.compute.model.*;
 import com.google.common.base.Strings;
 import com.google.jenkins.plugins.computeengine.client.ClientFactory;
 import com.google.jenkins.plugins.computeengine.client.ComputeClient;
-import com.google.common.collect.ImmutableList;
 import hudson.Extension;
 import hudson.RelativePath;
 import hudson.Util;
