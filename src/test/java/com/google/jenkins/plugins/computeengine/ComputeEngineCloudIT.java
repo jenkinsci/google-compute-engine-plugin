@@ -65,6 +65,7 @@ public class ComputeEngineCloudIT {
     private static final String ZONE = "us-west1-a";
     private static final String ZONE_BASE = format("projects/%s/zones/" + ZONE);
     private static final String LABEL = "integration";
+    private static final String MULTIPLE_LABEL = "integration test";
     private static final String MACHINE_TYPE = ZONE_BASE + "/machineTypes/n1-standard-1";
     private static final String NUM_EXECUTORS = "1";
     private static final String MULTIPLE_NUM_EXECUTORS = "2";
@@ -232,6 +233,21 @@ public class ComputeEngineCloudIT {
     }
 
     @Test(timeout = 300000)
+    public void testMultipleLabels() throws Exception {
+        // For a configuration with multiple labels, test if job label matches one of the configuration's labels
+        logOutput.reset();
+
+        ComputeEngineCloud cloud = (ComputeEngineCloud) r.jenkins.clouds.get(0);
+        InstanceConfiguration ic = instanceConfiguration(DEB_JAVA_STARTUP_SCRIPT, NUM_EXECUTORS, MULTIPLE_LABEL);
+        cloud.addConfiguration(ic);
+        // Add a new node
+        Collection<NodeProvisioner.PlannedNode> planned = cloud.provision(new LabelAtom(LABEL), 1);
+
+        // There should be a planned node
+        assertEquals(logs(), 1, planned.size());
+    }
+
+    @Test(timeout = 300000)
     public void testWorkerFailed() throws Exception {
         //TODO: each test method should probably have its own handler.
         logOutput.reset();
@@ -253,7 +269,7 @@ public class ComputeEngineCloudIT {
     }
 
     private static InstanceConfiguration validInstanceConfiguration1(String numExecutors) {
-        return instanceConfiguration(DEB_JAVA_STARTUP_SCRIPT, numExecutors);
+        return instanceConfiguration(DEB_JAVA_STARTUP_SCRIPT, numExecutors, LABEL);
     }
 
     /**
@@ -262,10 +278,10 @@ public class ComputeEngineCloudIT {
      * @return
      */
     private static InstanceConfiguration invalidInstanceConfiguration1() {
-        return instanceConfiguration("", NUM_EXECUTORS);
+        return instanceConfiguration("", NUM_EXECUTORS, LABEL);
     }
 
-    private static InstanceConfiguration instanceConfiguration(String startupScript, String numExecutors) {
+    private static InstanceConfiguration instanceConfiguration(String startupScript, String numExecutors, String labels) {
         InstanceConfiguration ic = new InstanceConfiguration(
                 NAME_PREFIX,
                 REGION,
@@ -275,7 +291,7 @@ public class ComputeEngineCloudIT {
                 startupScript,
                 PREEMPTIBLE,
                 MIN_CPU_PLATFORM,
-                LABEL,
+                labels,
                 CONFIG_DESC,
                 BOOT_DISK_TYPE,
                 BOOT_DISK_AUTODELETE,
