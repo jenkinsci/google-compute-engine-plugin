@@ -233,7 +233,7 @@ public class ComputeEngineCloudIT {
     }
 
     @Test(timeout = 300000)
-    public void testMultipleLabels() throws Exception {
+    public void testMultipleLabelsForJob() throws Exception {
         // For a configuration with multiple labels, test if job label matches one of the configuration's labels
         logOutput.reset();
 
@@ -245,6 +245,22 @@ public class ComputeEngineCloudIT {
 
         // There should be a planned node
         assertEquals(logs(), 1, planned.size());
+    }
+
+    @Test(timeout = 300000)
+    public void testMultipleLabelsInConfig() throws Exception {
+        // For a configuration with multiple labels, test if job label matches one of the configuration's labels
+        logOutput.reset();
+
+        ComputeEngineCloud cloud = (ComputeEngineCloud) r.jenkins.clouds.get(0);
+        InstanceConfiguration ic = instanceConfiguration(DEB_JAVA_STARTUP_SCRIPT, NUM_EXECUTORS, MULTIPLE_LABEL);
+        cloud.addConfiguration(ic);
+        // Add a new node
+        Collection<NodeProvisioner.PlannedNode> planned = cloud.provision(new LabelAtom(LABEL), 1);
+
+        String provisionedLabels = planned.iterator().next().future.get().getLabelString();
+        // There should be a planned node TODO
+        assertEquals(logs(), MULTIPLE_LABEL, provisionedLabels);
     }
 
     @Test(timeout = 300000)
