@@ -334,7 +334,7 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
         i.setZone(ComputeClient.zoneFromSelfLink(zone));
         
         if (StringUtils.isNotBlank(template)) {
-            InstanceTemplate instanceTemplate = cloud.client.getTemplate(cloud.projectId, template);
+            InstanceTemplate instanceTemplate = cloud.client.getTemplate(ComputeClient.lastParam(cloud.projectId), ComputeClient.lastParam(template));
             Map<String, String> templateLabels = instanceTemplate.getProperties().getLabels();
             Map<String, String> mergedLabels = new HashMap<>(templateLabels);
             mergedLabels.putAll(googleLabels);
