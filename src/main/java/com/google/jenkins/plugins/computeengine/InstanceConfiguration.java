@@ -16,6 +16,13 @@
 
 package com.google.jenkins.plugins.computeengine;
 
+import com.cloudbees.jenkins.plugins.sshcredentials.impl.BasicSSHUserPrivateKey;
+import com.cloudbees.plugins.credentials.CredentialsMatchers;
+import com.cloudbees.plugins.credentials.CredentialsProvider;
+import com.cloudbees.plugins.credentials.common.StandardListBoxModel;
+import com.cloudbees.plugins.credentials.common.StandardUsernameCredentials;
+import com.cloudbees.plugins.credentials.common.StandardUsernameListBoxModel;
+import com.cloudbees.plugins.credentials.common.StandardUsernamePasswordCredentials;
 import com.cloudbees.plugins.credentials.domains.DomainRequirement;
 import com.google.api.services.compute.model.*;
 import com.google.common.base.Strings;
@@ -26,6 +33,7 @@ import hudson.RelativePath;
 import hudson.Util;
 import hudson.model.*;
 import hudson.model.labels.LabelAtom;
+import hudson.security.ACL;
 import hudson.slaves.CloudRetentionStrategy;
 import hudson.util.FormValidation;
 import hudson.util.ListBoxModel;
@@ -38,7 +46,15 @@ import org.kohsuke.stapler.QueryParameter;
 
 import java.io.IOException;
 import java.io.PrintStream;
-import java.util.*;
+import java.util.Arrays;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Set;
+import java.util.Iterator;
+import java.util.Optional;
 
 public class InstanceConfiguration implements Describable<InstanceConfiguration> {
     public static final Long DEFAULT_BOOT_DISK_SIZE_GB = 10L;
@@ -47,10 +63,11 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
     public static final Integer DEFAULT_RETENTION_TIME_MINUTES = (DEFAULT_LAUNCH_TIMEOUT_SECONDS / 60) + 1;
     public static final String DEFAULT_RUN_AS_USER = "jenkins";
     public static final String ERROR_NO_SUBNETS = "No subnetworks exist in the given network and region.";
-    public static final String METADATA_STARTUP_SCRIPT_KEY = "startup-script";
+    public static final String METADATA_LINUX_STARTUP_SCRIPT_KEY = "startup-script";
+    public static final String METADATA_WINDOWS_STARTUP_SCRIPT_KEY = "windows-startup-script-ps1";
     public static final String NAT_TYPE = "ONE_TO_ONE_NAT";
     public static final String NAT_NAME = "External NAT";
-    public static final List<String> KNOWN_LINUX_IMAGE_PROJECTS = Collections.unmodifiableList(new ArrayList<String>() {{
+    public static final List<String> KNOWN_IMAGE_PROJECTS = Collections.unmodifiableList(new ArrayList<String>() {{
         add("centos-cloud");
         add("coreos-cloud");
         add("cos-cloud");
@@ -59,6 +76,8 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
         add("suse-cloud");
         add("suse-sap-cloud");
         add("ubuntu-os-cloud");
+        add("windows-cloud");
+        add("windows-sql-cloud");
     }});
     public final String description;
     public final String namePrefix;
@@ -86,6 +105,11 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
     public final String launchTimeoutSecondsStr;
     public final String bootDiskSizeGbStr;
     public final String template;
+    public final boolean windows;
+    public final String windowsPasswordCredentialsId;
+    public final String windowsPrivateKeyCredentialsId;
+    public final Optional<WindowsConfiguration> windowsConfig;
+    public final String remoteFs;
     public Map<String, String> googleLabels;
     public Integer numExecutors;
     public Integer retentionTimeMinutes;
@@ -110,6 +134,11 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
                                  String bootDiskSourceImageName,
                                  String bootDiskSourceImageProject,
                                  String bootDiskSizeGbStr,
+                                 boolean windows,
+                                 String windowsUsername,
+                                 String windowsPasswordCredentialsId,
+                                 String windowsPrivateKeyCredentialsId,
+                                 String remoteFs,
                                  NetworkConfiguration networkConfiguration,
                                  boolean externalAddress,
                                  boolean useInternalAddress,
@@ -128,6 +157,19 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
         this.description = description;
         this.startupScript = startupScript;
         this.preemptible = preemptible;
+
+        this.windows = windows;
+        if (windows) {
+            this.windowsConfig = Optional.of(new WindowsConfiguration(windowsUsername, windowsPasswordCredentialsId,
+                    windowsPrivateKeyCredentialsId));
+        } else {
+            this.windowsConfig = Optional.empty();
+        }
+
+        // these are needed for the credentials to persist in the UI
+        this.windowsPasswordCredentialsId = windowsPasswordCredentialsId;
+        this.windowsPrivateKeyCredentialsId = windowsPrivateKeyCredentialsId;
+
         this.minCpuPlatform = minCpuPlatform;
         this.numExecutors = intOrDefault(numExecutorsStr, DEFAULT_NUM_EXECUTORS);
         this.template = template;
@@ -145,6 +187,9 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
         this.bootDiskSizeGb = longOrDefault(bootDiskSizeGbStr, DEFAULT_BOOT_DISK_SIZE_GB);
         this.bootDiskSizeGbStr = bootDiskSizeGb.toString();
 
+        // Remote filesystem location.
+        this.remoteFs = remoteFs;
+        
         // Network
         this.networkConfiguration = networkConfiguration;
         this.externalAddress = externalAddress;
@@ -238,7 +283,33 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
             Instance i = instance();
             Operation operation = cloud.client.insertInstance(cloud.projectId, template, i);
             logger.println("Sent insert request");
-            ComputeEngineInstance instance = new ComputeEngineInstance(cloud.name, i.getName(), i.getZone(), i.getDescription(), runAsUser, "./.jenkins-slave", numExecutors, mode, requiredLabel == null ? "" : requiredLabel.getName(), new ComputeEngineLinuxLauncher(cloud.getCloudName(), operation, this.useInternalAddress), new CloudRetentionStrategy(retentionTimeMinutes), getLaunchTimeoutMillis());
+            String targetRemoteFs = this.remoteFs;
+            ComputeEngineComputerLauncher launcher = null;
+            if (this.windows) {
+                launcher = new ComputeEngineWindowsLauncher(cloud.getCloudName(), operation, this.useInternalAddress);
+                if (targetRemoteFs == null || targetRemoteFs.isEmpty()) {
+                    targetRemoteFs = "C:\\JenkinsSlave";
+                }
+            } else {
+                launcher = new ComputeEngineLinuxLauncher(cloud.getCloudName(), operation, this.useInternalAddress);
+                if (targetRemoteFs == null || targetRemoteFs.isEmpty()) {
+                    targetRemoteFs = "./.jenkins-slave";
+                }
+            }
+            ComputeEngineInstance instance = new ComputeEngineInstance(
+                    cloud.name,
+                    i.getName(),
+                    i.getZone(), 
+                    i.getDescription(),
+                    runAsUser,
+                    targetRemoteFs,
+                    windowsConfig,
+                    numExecutors, 
+                    mode, 
+                    requiredLabel == null ? "" : requiredLabel.getName(),
+                    launcher,
+                    new CloudRetentionStrategy(retentionTimeMinutes), 
+                    getLaunchTimeoutMillis());
             return instance;
         } catch (Descriptor.FormException fe) {
             logger.printf("Error provisioning instance: %s", fe.getMessage());
@@ -306,7 +377,11 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
         if (notNullOrEmpty(startupScript)) {
             Metadata metadata = new Metadata();
             List<Metadata.Items> items = new ArrayList<>();
-            items.add(new Metadata.Items().setKey(METADATA_STARTUP_SCRIPT_KEY).setValue(startupScript));
+            if (this.windows) {
+                items.add(new Metadata.Items().setKey(METADATA_WINDOWS_STARTUP_SCRIPT_KEY).setValue(startupScript));
+            } else {
+                items.add(new Metadata.Items().setKey(METADATA_LINUX_STARTUP_SCRIPT_KEY).setValue(startupScript));
+            }
             metadata.setItems(items);
             return metadata;
         }
@@ -655,7 +730,7 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
             ListBoxModel items = new ListBoxModel();
             items.add("");
             items.add(projectId);
-            for (String v : KNOWN_LINUX_IMAGE_PROJECTS) {
+            for (String v : KNOWN_IMAGE_PROJECTS) {
                 items.add(v);
             }
             return items;
@@ -724,6 +799,44 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
             if (mode == Node.Mode.EXCLUSIVE && (value == null || value.trim().isEmpty())) {
                 return FormValidation.warning("You may want to assign labels to this node;"
                         + " it's marked to only run jobs that are exclusively tied to itself or a label.");
+            }
+            return FormValidation.ok();
+        }
+
+        public ListBoxModel doFillWindowsPasswordCredentialsIdItems(@AncestorInPath Jenkins context, @QueryParameter String value) {
+            if (context == null || !context.hasPermission(Item.CONFIGURE)) {
+                return new StandardListBoxModel();
+            }
+            List<DomainRequirement> domainRequirements = new ArrayList<DomainRequirement>();
+            return new StandardListBoxModel()
+                    .withEmptySelection()
+                    .withMatching(
+                            CredentialsMatchers.instanceOf(StandardUsernamePasswordCredentials.class),
+                            CredentialsProvider.lookupCredentials(
+                                    StandardUsernamePasswordCredentials.class, context, ACL.SYSTEM,
+                                    domainRequirements));
+        }
+
+        public ListBoxModel doFillWindowsPrivateKeyCredentialsIdItems(@AncestorInPath Jenkins context, @QueryParameter String value) {
+            if (context == null || !context.hasPermission(Item.CONFIGURE)) {
+                return new StandardUsernameListBoxModel();
+            }
+            List<DomainRequirement> domainRequirements = new ArrayList<DomainRequirement>();
+            return new StandardUsernameListBoxModel()
+                    .withEmptySelection()
+                    .withMatching(
+                            CredentialsMatchers.instanceOf(BasicSSHUserPrivateKey.class),
+                            CredentialsProvider.lookupCredentials(
+                                    StandardUsernameCredentials.class, context, ACL.SYSTEM,
+                                    domainRequirements));
+        }
+
+        public FormValidation doCheckWindowsPrivateKeyCredentialsId(@AncestorInPath Jenkins context,
+                                                                    @QueryParameter String value,
+                                                                    @QueryParameter("windows") boolean windows,
+                                                                    @QueryParameter("windowsPasswordCredentialsId") String windowsPasswordCredentialsId) {
+            if (windows && (Strings.isNullOrEmpty(value) && Strings.isNullOrEmpty(windowsPasswordCredentialsId))) {
+                return FormValidation.error("A password or private key credential is required");
             }
             return FormValidation.ok();
         }
