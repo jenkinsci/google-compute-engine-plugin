@@ -19,7 +19,6 @@ package com.google.jenkins.plugins.computeengine.client;
 import com.google.api.services.compute.Compute;
 import com.google.api.services.compute.model.*;
 import com.google.common.base.Strings;
-import org.apache.commons.lang3.StringUtils;
 
 import java.io.IOException;
 import java.util.*;
@@ -32,18 +31,8 @@ import java.util.*;
 public class ComputeClient {
     private Compute compute;
 
-    public static String zoneFromSelfLink(String zoneSelfLink) {
-        return zoneSelfLink.substring(zoneSelfLink.lastIndexOf("/") + 1, zoneSelfLink.length());
-    }
-
-    public static String regionFromSelfLink(String regionSelfLink) {
-        return regionSelfLink.substring(regionSelfLink.lastIndexOf("/") + 1, regionSelfLink.length());
-    }
-
-    public static String lastParam(String value) {
-        if (value.contains("/"))
-            value = value.substring(value.lastIndexOf("/") + 1, value.length());
-        return value;
+    public static String nameFromSelfLink(String selfLink) { 
+        return selfLink.substring(selfLink.lastIndexOf("/") + 1, selfLink.length());
     }
 
     public static String buildLabelsFilterString(Map<String, String> labels) {
@@ -143,7 +132,7 @@ public class ComputeClient {
     }
 
     public List<MachineType> getMachineTypes(String projectId, String zone) throws IOException {
-        zone = zoneFromSelfLink(zone);
+        zone = nameFromSelfLink(zone);
         List<MachineType> machineTypes = compute
                 .machineTypes()
                 .list(projectId, zone)
@@ -175,7 +164,7 @@ public class ComputeClient {
 
     public List<String> cpuPlatforms(String projectId, String zone) throws IOException {
         List<String> cpuPlatforms = new ArrayList<String>();
-        zone = zoneFromSelfLink(zone);
+        zone = nameFromSelfLink(zone);
         Zone zoneObject = compute.zones()
                 .get(projectId,zone)
                 .execute();
@@ -186,7 +175,7 @@ public class ComputeClient {
     }
 
     public List<DiskType> getDiskTypes(String projectId, String zone) throws IOException {
-        zone = zoneFromSelfLink(zone);
+        zone = nameFromSelfLink(zone);
         List<DiskType> diskTypes = compute
                 .diskTypes()
                 .list(projectId, zone)
@@ -217,7 +206,7 @@ public class ComputeClient {
     }
 
     public List<DiskType> getBootDiskTypes(String projectId, String zone) throws IOException {
-        zone = zoneFromSelfLink(zone);
+        zone = nameFromSelfLink(zone);
         List<DiskType> diskTypes = this.getDiskTypes(projectId, zone);
 
         // No local disks
@@ -271,7 +260,7 @@ public class ComputeClient {
     }
 
     public List<AcceleratorType> getAcceleratorTypes(String projectId, String zone) throws IOException {
-        zone = zoneFromSelfLink(zone);
+        zone = nameFromSelfLink(zone);
 
         List<AcceleratorType> acceleratorTypes = compute
                 .acceleratorTypes()
@@ -318,7 +307,7 @@ public class ComputeClient {
     }
 
     public List<Subnetwork> getSubnetworks(String projectId, String networkSelfLink, String region) throws IOException {
-        region = regionFromSelfLink(region);
+        region = nameFromSelfLink(region);
         List<Subnetwork> subnetworks = compute
                 .subnetworks()
                 .list(projectId, region)
@@ -348,21 +337,21 @@ public class ComputeClient {
         return subnetworks;
     }
 
-    public Operation insertInstance(String projectId, String template, Instance i) throws IOException {
-        final Compute.Instances.Insert insert = compute.instances().insert(projectId, i.getZone(), i);
-        if (StringUtils.isNoneBlank(template)) {
-            insert.setSourceInstanceTemplate(template);
+    public Operation insertInstance(String projectId, Optional<String> template, Instance instance) throws IOException {
+        final Compute.Instances.Insert insert = compute.instances().insert(projectId, instance.getZone(), instance);
+        if (template.isPresent()) {
+            insert.setSourceInstanceTemplate(template.get());
         }
         return insert.execute();
     }
 
     public Operation terminateInstance(String projectId, String zone, String InstanceId) throws IOException {
-        zone = zoneFromSelfLink(zone);
+        zone = nameFromSelfLink(zone);
         return compute.instances().delete(projectId, zone, InstanceId).execute();
     }
 
     public Operation terminateInstanceWithStatus(String projectId, String zone, String instanceId, String desiredStatus) throws IOException, InterruptedException {
-        zone = zoneFromSelfLink(zone);
+        zone = nameFromSelfLink(zone);
         Instance i = getInstance(projectId, zone, instanceId);
         if (i.getStatus().equals(desiredStatus)) {
             return compute.instances().delete(projectId, zone, instanceId).execute();
@@ -371,7 +360,7 @@ public class ComputeClient {
     }
 
     public Instance getInstance(String projectId, String zone, String instanceId) throws IOException {
-        zone = zoneFromSelfLink(zone);
+        zone = nameFromSelfLink(zone);
         return compute.instances().get(projectId, zone, instanceId).execute();
     }
 
@@ -410,16 +399,11 @@ public class ComputeClient {
                 .execute()
                 .getItems();
         if (instanceTemplates == null) {
-            instanceTemplates = new ArrayList<>();
+            instanceTemplates = Collections.emptyList();
         }
 
         // Sort by name
-        Collections.sort(instanceTemplates, new Comparator<InstanceTemplate>() {
-            @Override
-            public int compare(InstanceTemplate o1, InstanceTemplate o2) {
-                return o1.getName().compareTo(o2.getName());
-            }
-        });
+        instanceTemplates.sort(Comparator.comparing(InstanceTemplate::getName));
 
         return instanceTemplates;
     }
@@ -436,7 +420,7 @@ public class ComputeClient {
      * @throws InterruptedException
      */
     public Operation.Error appendInstanceMetadata(String projectId, String zone, String instanceId, List<Metadata.Items> items) throws IOException, InterruptedException {
-        zone = zoneFromSelfLink(zone);
+        zone = nameFromSelfLink(zone);
         Instance instance = getInstance(projectId, zone, instanceId);
         Metadata existingMetadata = instance.getMetadata();
 

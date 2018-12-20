@@ -56,6 +56,8 @@ import java.util.Set;
 import java.util.Iterator;
 import java.util.Optional;
 
+import static com.google.jenkins.plugins.computeengine.client.ComputeClient.nameFromSelfLink;
+
 public class InstanceConfiguration implements Describable<InstanceConfiguration> {
     public static final Long DEFAULT_BOOT_DISK_SIZE_GB = 10L;
     public static final Integer DEFAULT_NUM_EXECUTORS = 1;
@@ -280,8 +282,8 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
     public ComputeEngineInstance provision(TaskListener listener) throws IOException {
         PrintStream logger = listener.getLogger();
         try {
-            Instance i = instance();
-            Operation operation = cloud.client.insertInstance(cloud.projectId, template, i);
+            Instance instance = instance();
+            Operation operation = cloud.client.insertInstance(cloud.projectId, Optional.ofNullable(template), instance);
             logger.println("Sent insert request");
             String targetRemoteFs = this.remoteFs;
             ComputeEngineComputerLauncher launcher = null;
@@ -296,11 +298,11 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
                     targetRemoteFs = "./.jenkins-slave";
                 }
             }
-            ComputeEngineInstance instance = new ComputeEngineInstance(
+            ComputeEngineInstance computeEngineInstance = new ComputeEngineInstance(
                     cloud.name,
-                    i.getName(),
-                    i.getZone(), 
-                    i.getDescription(),
+                    instance.getName(),
+                    instance.getZone(), 
+                    instance.getDescription(),
                     runAsUser,
                     targetRemoteFs,
                     windowsConfig,
@@ -310,7 +312,7 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
                     launcher,
                     new CloudRetentionStrategy(retentionTimeMinutes), 
                     getLaunchTimeoutMillis());
-            return instance;
+            return computeEngineInstance;
         } catch (Descriptor.FormException fe) {
             logger.printf("Error provisioning instance: %s", fe.getMessage());
             return null;
@@ -328,34 +330,34 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
     }
 
     public Instance instance() throws IOException {
-        Instance i = new Instance();
-        i.setName(uniqueName());
-        i.setDescription(description);
-        i.setZone(ComputeClient.zoneFromSelfLink(zone));
+        Instance instance = new Instance();
+        instance.setName(uniqueName());
+        instance.setDescription(description);
+        instance.setZone(nameFromSelfLink(zone));
         
         if (StringUtils.isNotBlank(template)) {
-            InstanceTemplate instanceTemplate = cloud.client.getTemplate(ComputeClient.lastParam(cloud.projectId), ComputeClient.lastParam(template));
+            InstanceTemplate instanceTemplate = cloud.client.getTemplate(nameFromSelfLink(cloud.projectId), nameFromSelfLink(template));
             Map<String, String> templateLabels = instanceTemplate.getProperties().getLabels();
             Map<String, String> mergedLabels = new HashMap<>(templateLabels);
             mergedLabels.putAll(googleLabels);
-            i.setLabels(mergedLabels);
+            instance.setLabels(mergedLabels);
         } else {
-            i.setLabels(googleLabels);
-            i.setMachineType(stripSelfLinkPrefix(machineType));
-            i.setMetadata(metadata());
-            i.setTags(tags());
-            i.setScheduling(scheduling());
-            i.setDisks(disks());
-            i.setGuestAccelerators(accelerators());
-            i.setNetworkInterfaces(networkInterfaces());
-            i.setServiceAccounts(serviceAccounts());
+            instance.setLabels(googleLabels);
+            instance.setMachineType(stripSelfLinkPrefix(machineType));
+            instance.setMetadata(metadata());
+            instance.setTags(tags());
+            instance.setScheduling(scheduling());
+            instance.setDisks(disks());
+            instance.setGuestAccelerators(accelerators());
+            instance.setNetworkInterfaces(networkInterfaces());
+            instance.setServiceAccounts(serviceAccounts());
 
             //optional
             if (notNullOrEmpty(minCpuPlatform)) {
-                i.setMinCpuPlatform(minCpuPlatform);
+                instance.setMinCpuPlatform(minCpuPlatform);
             }
         }
-        return i;
+        return instance;
     }
 
     private String uniqueName() {
@@ -782,7 +784,7 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
 
             try {
                 ComputeClient compute = computeClient(context, credentialsId);
-                Image i = compute.getImage(ComputeClient.lastParam(projectId), ComputeClient.lastParam(imageName));
+                Image i = compute.getImage(nameFromSelfLink(projectId), nameFromSelfLink(imageName));
                 if (i == null)
                     return FormValidation.error("Could not find image " + imageName);
                 Long bootDiskSizeGb = Long.parseLong(value);
