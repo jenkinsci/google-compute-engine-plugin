@@ -335,7 +335,7 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
         instance.setDescription(description);
         instance.setZone(nameFromSelfLink(zone));
         
-        if (StringUtils.isNotBlank(template)) {
+        if (StringUtils.isNotEmpty(template)) {
             InstanceTemplate instanceTemplate = cloud.client.getTemplate(nameFromSelfLink(cloud.projectId), nameFromSelfLink(template));
             Map<String, String> templateLabels = instanceTemplate.getProperties().getLabels();
             Map<String, String> mergedLabels = new HashMap<>(templateLabels);

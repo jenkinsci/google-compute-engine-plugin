@@ -21,9 +21,17 @@ import com.cloudbees.plugins.credentials.CredentialsStore;
 import com.cloudbees.plugins.credentials.SystemCredentialsProvider;
 import com.cloudbees.plugins.credentials.domains.Domain;
 import com.cloudbees.plugins.credentials.domains.DomainRequirement;
+import com.google.api.services.compute.model.AttachedDisk;
+import com.google.api.services.compute.model.AttachedDiskInitializeParams;
 import com.google.api.services.compute.model.Image;
 import com.google.api.services.compute.model.Instance;
+import com.google.api.services.compute.model.InstanceProperties;
+import com.google.api.services.compute.model.InstanceTemplate;
+import com.google.api.services.compute.model.Metadata;
 import com.google.api.services.compute.model.Operation;
+import com.google.api.services.compute.model.Tags;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.jenkins.plugins.computeengine.client.ClientFactory;
 import com.google.jenkins.plugins.computeengine.client.ComputeClient;
 import com.google.jenkins.plugins.credentials.oauth.GoogleRobotPrivateKeyCredentials;
@@ -37,15 +45,16 @@ import org.jvnet.hudson.test.JenkinsRule;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.*;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.logging.LogManager;
 import java.util.logging.Logger;
 import java.util.logging.SimpleFormatter;
 import java.util.logging.StreamHandler;
 
+import static com.google.common.collect.ImmutableList.of;
+import static com.google.jenkins.plugins.computeengine.InstanceConfiguration.METADATA_LINUX_STARTUP_SCRIPT_KEY;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
 
 public class ComputeEngineCloudIT {
     private static Logger log = Logger.getLogger(ComputeEngineCloudIT.class.getName());
@@ -82,6 +91,8 @@ public class ComputeEngineCloudIT {
     private static final String ACCELERATOR_NAME = "";
     private static final String ACCELERATOR_COUNT = "";
     private static final String RUN_AS_USER = "jenkins";
+    private static final String NULL_TEMPLATE = null;
+    private static final String TEMPLATE = "test-template";
 
     private static Map<String, String> INTEGRATION_LABEL;
 
@@ -195,7 +206,7 @@ public class ComputeEngineCloudIT {
         logOutput.reset();
 
         ComputeEngineCloud cloud = (ComputeEngineCloud) r.jenkins.clouds.get(0);
-        InstanceConfiguration ic = validInstanceConfiguration1(NUM_EXECUTORS);
+        InstanceConfiguration ic = validInstanceConfiguration();
         cloud.addConfiguration(ic);
         // Add a new node
         Collection<NodeProvisioner.PlannedNode> planned = cloud.provision(new LabelAtom(LABEL), 1);
@@ -224,7 +235,7 @@ public class ComputeEngineCloudIT {
         logOutput.reset();
 
         ComputeEngineCloud cloud = (ComputeEngineCloud) r.jenkins.clouds.get(0);
-        cloud.addConfiguration(validInstanceConfiguration1(MULTIPLE_NUM_EXECUTORS));
+        cloud.addConfiguration(validInstanceConfigurationWithExecutors(MULTIPLE_NUM_EXECUTORS));
         // Add a new node
         Collection<NodeProvisioner.PlannedNode> planned = cloud.provision(new LabelAtom(LABEL), 2);
 
@@ -238,7 +249,7 @@ public class ComputeEngineCloudIT {
         logOutput.reset();
 
         ComputeEngineCloud cloud = (ComputeEngineCloud) r.jenkins.clouds.get(0);
-        InstanceConfiguration ic = instanceConfiguration(DEB_JAVA_STARTUP_SCRIPT, NUM_EXECUTORS, MULTIPLE_LABEL);
+        InstanceConfiguration ic = validInstanceConfigurationWithLabels(MULTIPLE_LABEL);
         cloud.addConfiguration(ic);
         // Add a new node
         Collection<NodeProvisioner.PlannedNode> planned = cloud.provision(new LabelAtom(LABEL), 1);
@@ -253,7 +264,7 @@ public class ComputeEngineCloudIT {
         logOutput.reset();
 
         ComputeEngineCloud cloud = (ComputeEngineCloud) r.jenkins.clouds.get(0);
-        InstanceConfiguration ic = instanceConfiguration(DEB_JAVA_STARTUP_SCRIPT, NUM_EXECUTORS, MULTIPLE_LABEL);
+        InstanceConfiguration ic = validInstanceConfigurationWithLabels(MULTIPLE_LABEL);
         cloud.addConfiguration(ic);
         // Add a new node
         Collection<NodeProvisioner.PlannedNode> planned = cloud.provision(new LabelAtom(LABEL), 1);
@@ -284,8 +295,57 @@ public class ComputeEngineCloudIT {
         assertEquals(logs(), true, logs().contains("WARNING"));
     }
 
-    private static InstanceConfiguration validInstanceConfiguration1(String numExecutors) {
-        return instanceConfiguration(DEB_JAVA_STARTUP_SCRIPT, numExecutors, LABEL);
+    @Test(timeout = 300000)
+    public void testTemplate() throws Exception {
+        ComputeEngineCloud cloud = (ComputeEngineCloud) r.jenkins.clouds.get(0);
+        cloud.addConfiguration(validInstanceConfigurationWithTemplate(TEMPLATE));
+
+        InstanceTemplate instanceTemplate = new InstanceTemplate();
+        instanceTemplate.setName(TEMPLATE);
+        InstanceProperties instanceProperties = new InstanceProperties();
+        instanceProperties.setLabels(ImmutableMap.of("test-label", "label-value"));
+        AttachedDisk boot = new AttachedDisk();
+        boot.setBoot(true);
+        boot.setAutoDelete(BOOT_DISK_AUTODELETE);
+        boot.setInitializeParams(new AttachedDiskInitializeParams()
+                .setDiskSizeGb(Long.parseLong(BOOT_DISK_SIZE_GB_STR))
+                .setDiskType(BOOT_DISK_TYPE)
+                .setSourceImage(BOOT_DISK_IMAGE_NAME)
+        );
+        instanceProperties.setDisks(of(boot));
+        instanceProperties.setTags(new Tags().setItems(of(NETWORK_TAGS)));
+        instanceProperties.setMetadata(new Metadata().setItems(of(new Metadata.Items()
+                .set(METADATA_LINUX_STARTUP_SCRIPT_KEY, DEB_JAVA_STARTUP_SCRIPT))));
+        instanceTemplate.setProperties(instanceProperties);
+        client.getCompute().instanceTemplates().insert(cloud.projectId, instanceTemplate);
+
+        // Add a new node
+        Collection<NodeProvisioner.PlannedNode> planned = cloud.provision(new LabelAtom(LABEL), 1);
+
+        // There should be a planned node
+        assertEquals(logs(), 1, planned.size());
+
+        // Wait for the node creation to fail
+        planned.iterator().next().future.get();
+
+        // There should be warning logs
+        assertTrue(logs(), logs().contains("WARNING"));
+    }
+
+    
+    private static InstanceConfiguration validInstanceConfiguration() {
+        return instanceConfiguration(DEB_JAVA_STARTUP_SCRIPT, NUM_EXECUTORS, LABEL, NULL_TEMPLATE);
+    }
+    private static InstanceConfiguration validInstanceConfigurationWithLabels(String labels) {
+        return instanceConfiguration(DEB_JAVA_STARTUP_SCRIPT, NUM_EXECUTORS, labels, NULL_TEMPLATE);
+    }
+    
+    private static InstanceConfiguration validInstanceConfigurationWithExecutors(String numExecutors) {
+        return instanceConfiguration(DEB_JAVA_STARTUP_SCRIPT, numExecutors, LABEL, NULL_TEMPLATE);
+    }
+    
+    private static InstanceConfiguration validInstanceConfigurationWithTemplate(String template) {
+        return instanceConfiguration(DEB_JAVA_STARTUP_SCRIPT, NUM_EXECUTORS, LABEL, template);
     }
 
     /**
@@ -294,10 +354,10 @@ public class ComputeEngineCloudIT {
      * @return
      */
     private static InstanceConfiguration invalidInstanceConfiguration1() {
-        return instanceConfiguration("", NUM_EXECUTORS, LABEL);
+        return instanceConfiguration("", NUM_EXECUTORS, LABEL, NULL_TEMPLATE);
     }
 
-    private static InstanceConfiguration instanceConfiguration(String startupScript, String numExecutors, String labels) {
+    private static InstanceConfiguration instanceConfiguration(String startupScript, String numExecutors, String labels, String template) {
         InstanceConfiguration ic = new InstanceConfiguration(
                 NAME_PREFIX,
                 REGION,
@@ -329,7 +389,7 @@ public class ComputeEngineCloudIT {
                 NODE_MODE,
                 new AcceleratorConfiguration(ACCELERATOR_NAME, ACCELERATOR_COUNT),
                 RUN_AS_USER,
-                ""
+                template
         );
         ic.appendLabels(INTEGRATION_LABEL);
         return ic;

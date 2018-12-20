@@ -67,6 +67,10 @@ public class ComputeClient {
         this.compute = compute;
     }
 
+    public Compute getCompute() {
+        return compute;
+    }
+
     /**
      * @return
      * @throws IOException
