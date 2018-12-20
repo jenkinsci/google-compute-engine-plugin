@@ -277,7 +277,7 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
         googleLabels.put(key, value);
     }
 
-    public ComputeEngineInstance provision(TaskListener listener, Label requiredLabel) throws IOException {
+    public ComputeEngineInstance provision(TaskListener listener) throws IOException {
         PrintStream logger = listener.getLogger();
         try {
             Instance i = instance();
@@ -306,7 +306,7 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
                     windowsConfig,
                     numExecutors, 
                     mode, 
-                    requiredLabel == null ? "" : requiredLabel.getName(),
+                    labels,
                     launcher,
                     new CloudRetentionStrategy(retentionTimeMinutes), 
                     getLaunchTimeoutMillis());
