@@ -21,6 +21,7 @@ import com.cloudbees.plugins.credentials.CredentialsStore;
 import com.cloudbees.plugins.credentials.SystemCredentialsProvider;
 import com.cloudbees.plugins.credentials.domains.Domain;
 import com.cloudbees.plugins.credentials.domains.DomainRequirement;
+import com.google.api.services.compute.model.AccessConfig;
 import com.google.api.services.compute.model.AttachedDisk;
 import com.google.api.services.compute.model.AttachedDiskInitializeParams;
 import com.google.api.services.compute.model.Image;
@@ -28,9 +29,9 @@ import com.google.api.services.compute.model.Instance;
 import com.google.api.services.compute.model.InstanceProperties;
 import com.google.api.services.compute.model.InstanceTemplate;
 import com.google.api.services.compute.model.Metadata;
+import com.google.api.services.compute.model.NetworkInterface;
 import com.google.api.services.compute.model.Operation;
 import com.google.api.services.compute.model.Tags;
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.jenkins.plugins.computeengine.client.ClientFactory;
 import com.google.jenkins.plugins.computeengine.client.ComputeClient;
@@ -39,12 +40,20 @@ import com.google.jenkins.plugins.credentials.oauth.ServiceAccountConfig;
 import hudson.model.Node;
 import hudson.model.labels.LabelAtom;
 import hudson.slaves.NodeProvisioner;
-import org.junit.*;
+import org.junit.After;
+import org.junit.AfterClass;
+import org.junit.BeforeClass;
+import org.junit.ClassRule;
+import org.junit.Test;
 import org.jvnet.hudson.test.JenkinsRule;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.logging.LogManager;
 import java.util.logging.Logger;
 import java.util.logging.SimpleFormatter;
@@ -52,7 +61,11 @@ import java.util.logging.StreamHandler;
 
 import static com.google.common.collect.ImmutableList.of;
 import static com.google.jenkins.plugins.computeengine.InstanceConfiguration.METADATA_LINUX_STARTUP_SCRIPT_KEY;
+import static com.google.jenkins.plugins.computeengine.InstanceConfiguration.NAT_NAME;
+import static com.google.jenkins.plugins.computeengine.InstanceConfiguration.NAT_TYPE;
+import static com.google.jenkins.plugins.computeengine.client.ComputeClient.nameFromSelfLink;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
@@ -92,12 +105,12 @@ public class ComputeEngineCloudIT {
     private static final String ACCELERATOR_COUNT = "";
     private static final String RUN_AS_USER = "jenkins";
     private static final String NULL_TEMPLATE = null;
-    private static final String TEMPLATE = "test-template";
+    private static final String TEMPLATE = format("projects/%s/global/instanceTemplates/test-template");
 
     private static Map<String, String> INTEGRATION_LABEL;
 
     static {
-        INTEGRATION_LABEL = new HashMap<String, String>();
+        INTEGRATION_LABEL = new HashMap<>();
         INTEGRATION_LABEL.put("integration", "delete");
     }
 
@@ -185,6 +198,13 @@ public class ComputeEngineCloudIT {
     public void after() {
         ComputeEngineCloud cloud = (ComputeEngineCloud) r.jenkins.clouds.get(0);
         cloud.configurations.clear();
+
+
+        try {
+            client.getCompute().instanceTemplates().delete(cloud.projectId, nameFromSelfLink(TEMPLATE)).execute();
+        } catch (Exception e) {
+            // noop
+        }
     }
 
     @Test
@@ -218,18 +238,18 @@ public class ComputeEngineCloudIT {
         String name = planned.iterator().next().future.get().getNodeName();
 
         // There should be no warning logs
-        assertEquals(logs(), false, logs().contains("WARNING"));
+        assertFalse(logs(), logs().contains("WARNING"));
 
         Instance i = cloud.client.getInstance(projectId, ZONE, name);
 
         // The created instance should have 3 labels
-        assertEquals(logs(),3, i.getLabels().size());
+        assertEquals(logs(), 3, i.getLabels().size());
 
         // Instance should have a label with key CONFIG_LABEL_KEY and value equal to the config's name prefix
         assertEquals(logs(), ic.namePrefix, i.getLabels().get(ComputeEngineCloud.CONFIG_LABEL_KEY));
         assertEquals(logs(), String.valueOf(cloud.name.hashCode()), i.getLabels().get(ComputeEngineCloud.CLOUD_ID_LABEL_KEY));
     }
-    
+
     @Test(timeout = 300000)
     public void test1WorkerCreatedFor2Executors() throws Exception {
         logOutput.reset();
@@ -299,25 +319,33 @@ public class ComputeEngineCloudIT {
     public void testTemplate() throws Exception {
         ComputeEngineCloud cloud = (ComputeEngineCloud) r.jenkins.clouds.get(0);
         cloud.addConfiguration(validInstanceConfigurationWithTemplate(TEMPLATE));
-
+       
         InstanceTemplate instanceTemplate = new InstanceTemplate();
-        instanceTemplate.setName(TEMPLATE);
+        instanceTemplate.setName(nameFromSelfLink(TEMPLATE));
         InstanceProperties instanceProperties = new InstanceProperties();
+        instanceProperties.setMachineType(nameFromSelfLink(MACHINE_TYPE));
         instanceProperties.setLabels(ImmutableMap.of("test-label", "label-value"));
         AttachedDisk boot = new AttachedDisk();
         boot.setBoot(true);
         boot.setAutoDelete(BOOT_DISK_AUTODELETE);
         boot.setInitializeParams(new AttachedDiskInitializeParams()
                 .setDiskSizeGb(Long.parseLong(BOOT_DISK_SIZE_GB_STR))
-                .setDiskType(BOOT_DISK_TYPE)
+                .setDiskType(nameFromSelfLink(BOOT_DISK_TYPE))
                 .setSourceImage(BOOT_DISK_IMAGE_NAME)
         );
         instanceProperties.setDisks(of(boot));
         instanceProperties.setTags(new Tags().setItems(of(NETWORK_TAGS)));
         instanceProperties.setMetadata(new Metadata().setItems(of(new Metadata.Items()
                 .set(METADATA_LINUX_STARTUP_SCRIPT_KEY, DEB_JAVA_STARTUP_SCRIPT))));
+        instanceProperties.setNetworkInterfaces(of(new NetworkInterface()
+                .setName(NETWORK_NAME)
+                .setAccessConfigs(of(new AccessConfig()
+                        .setType(NAT_TYPE)
+                        .setName(NAT_NAME)
+                ))
+        ));
         instanceTemplate.setProperties(instanceProperties);
-        client.getCompute().instanceTemplates().insert(cloud.projectId, instanceTemplate);
+        client.getCompute().instanceTemplates().insert(cloud.projectId, instanceTemplate).execute();
 
         // Add a new node
         Collection<NodeProvisioner.PlannedNode> planned = cloud.provision(new LabelAtom(LABEL), 1);
@@ -330,20 +358,22 @@ public class ComputeEngineCloudIT {
 
         // There should be warning logs
         assertTrue(logs(), logs().contains("WARNING"));
+
     }
 
-    
+
     private static InstanceConfiguration validInstanceConfiguration() {
         return instanceConfiguration(DEB_JAVA_STARTUP_SCRIPT, NUM_EXECUTORS, LABEL, NULL_TEMPLATE);
     }
+
     private static InstanceConfiguration validInstanceConfigurationWithLabels(String labels) {
         return instanceConfiguration(DEB_JAVA_STARTUP_SCRIPT, NUM_EXECUTORS, labels, NULL_TEMPLATE);
     }
-    
+
     private static InstanceConfiguration validInstanceConfigurationWithExecutors(String numExecutors) {
         return instanceConfiguration(DEB_JAVA_STARTUP_SCRIPT, numExecutors, LABEL, NULL_TEMPLATE);
     }
-    
+
     private static InstanceConfiguration validInstanceConfigurationWithTemplate(String template) {
         return instanceConfiguration(DEB_JAVA_STARTUP_SCRIPT, NUM_EXECUTORS, LABEL, template);
     }
@@ -397,8 +427,8 @@ public class ComputeEngineCloudIT {
 
     private static void deleteIntegrationInstances(boolean waitForCompletion) throws IOException {
         List<Instance> instances = client.getInstancesWithLabel(projectId, INTEGRATION_LABEL);
-        for(Instance i : instances) {
-           safeDelete(i.getName(), waitForCompletion);
+        for (Instance i : instances) {
+            safeDelete(i.getName(), waitForCompletion);
         }
     }
 
