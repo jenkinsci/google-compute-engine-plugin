@@ -67,10 +67,6 @@ public class ComputeClient {
         this.compute = compute;
     }
 
-    public Compute getCompute() {
-        return compute;
-    }
-
     /**
      * @return
      * @throws IOException
@@ -390,15 +386,25 @@ public class ComputeClient {
     }
     
     public InstanceTemplate getTemplate(String projectId, String templateName) throws IOException {
-        return compute
-                .instanceTemplates()
+        return compute.instanceTemplates()
                 .get(projectId, templateName)
                 .execute();
     }
     
+    public void insertTemplate(String projectId, InstanceTemplate instanceTemplate) throws IOException {
+        compute.instanceTemplates()
+                .insert(projectId, instanceTemplate)
+                .execute();
+    }
+    
+    public void deleteTemplate(String projectId, String templateName) throws IOException {
+        compute.instanceTemplates()
+                .delete(projectId, templateName)
+                .execute();
+    }
+    
     public List<InstanceTemplate> getTemplates(String projectId) throws IOException {
-        List<InstanceTemplate> instanceTemplates = compute
-                .instanceTemplates()
+        List<InstanceTemplate> instanceTemplates = compute.instanceTemplates()
                 .list(projectId)
                 .execute()
                 .getItems();

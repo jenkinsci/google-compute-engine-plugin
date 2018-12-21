@@ -199,12 +199,6 @@ public class ComputeEngineCloudIT {
         ComputeEngineCloud cloud = (ComputeEngineCloud) r.jenkins.clouds.get(0);
         cloud.configurations.clear();
 
-
-        try {
-            client.getCompute().instanceTemplates().delete(cloud.projectId, nameFromSelfLink(TEMPLATE)).execute();
-        } catch (Exception e) {
-            // noop
-        }
     }
 
     @Test
@@ -319,46 +313,56 @@ public class ComputeEngineCloudIT {
     public void testTemplate() throws Exception {
         ComputeEngineCloud cloud = (ComputeEngineCloud) r.jenkins.clouds.get(0);
         cloud.addConfiguration(validInstanceConfigurationWithTemplate(TEMPLATE));
-       
-        InstanceTemplate instanceTemplate = new InstanceTemplate();
-        instanceTemplate.setName(nameFromSelfLink(TEMPLATE));
-        InstanceProperties instanceProperties = new InstanceProperties();
-        instanceProperties.setMachineType(nameFromSelfLink(MACHINE_TYPE));
-        instanceProperties.setLabels(ImmutableMap.of("test-label", "label-value"));
-        AttachedDisk boot = new AttachedDisk();
-        boot.setBoot(true);
-        boot.setAutoDelete(BOOT_DISK_AUTODELETE);
-        boot.setInitializeParams(new AttachedDiskInitializeParams()
-                .setDiskSizeGb(Long.parseLong(BOOT_DISK_SIZE_GB_STR))
-                .setDiskType(nameFromSelfLink(BOOT_DISK_TYPE))
-                .setSourceImage(BOOT_DISK_IMAGE_NAME)
-        );
-        instanceProperties.setDisks(of(boot));
-        instanceProperties.setTags(new Tags().setItems(of(NETWORK_TAGS)));
-        instanceProperties.setMetadata(new Metadata().setItems(of(new Metadata.Items()
-                .set(METADATA_LINUX_STARTUP_SCRIPT_KEY, DEB_JAVA_STARTUP_SCRIPT))));
-        instanceProperties.setNetworkInterfaces(of(new NetworkInterface()
-                .setName(NETWORK_NAME)
-                .setAccessConfigs(of(new AccessConfig()
-                        .setType(NAT_TYPE)
-                        .setName(NAT_NAME)
-                ))
-        ));
-        instanceTemplate.setProperties(instanceProperties);
-        client.getCompute().instanceTemplates().insert(cloud.projectId, instanceTemplate).execute();
+        try {
+            InstanceTemplate instanceTemplate = new InstanceTemplate();
+            instanceTemplate.setName(nameFromSelfLink(TEMPLATE));
+            InstanceProperties instanceProperties = new InstanceProperties();
+            instanceProperties.setMachineType(nameFromSelfLink(MACHINE_TYPE));
+            instanceProperties.setLabels(ImmutableMap.of("test-label", "label-value"));
+            AttachedDisk boot = new AttachedDisk();
+            boot.setBoot(true);
+            boot.setAutoDelete(BOOT_DISK_AUTODELETE);
+            boot.setInitializeParams(new AttachedDiskInitializeParams()
+                    .setDiskSizeGb(Long.parseLong(BOOT_DISK_SIZE_GB_STR))
+                    .setDiskType(nameFromSelfLink(BOOT_DISK_TYPE))
+                    .setSourceImage(BOOT_DISK_IMAGE_NAME)
+            );
+            instanceProperties.setDisks(of(boot));
+            instanceProperties.setTags(new Tags().setItems(of(NETWORK_TAGS)));
+            instanceProperties.setMetadata(new Metadata().setItems(of(new Metadata.Items()
+                    .setKey(METADATA_LINUX_STARTUP_SCRIPT_KEY).setValue(DEB_JAVA_STARTUP_SCRIPT))));
+            instanceProperties.setNetworkInterfaces(of(new NetworkInterface()
+                    .setName(NETWORK_NAME)
+                    .setAccessConfigs(of(new AccessConfig()
+                            .setType(NAT_TYPE)
+                            .setName(NAT_NAME)
+                    ))
+            ));
+            instanceTemplate.setProperties(instanceProperties);
+            client.insertTemplate(cloud.projectId, instanceTemplate);
 
-        // Add a new node
-        Collection<NodeProvisioner.PlannedNode> planned = cloud.provision(new LabelAtom(LABEL), 1);
+            // Add a new node
+            Collection<NodeProvisioner.PlannedNode> planned = cloud.provision(new LabelAtom(LABEL), 1);
 
-        // There should be a planned node
-        assertEquals(logs(), 1, planned.size());
+            // There should be a planned node
+            assertEquals(logs(), 1, planned.size());
 
-        // Wait for the node creation to fail
-        planned.iterator().next().future.get();
+            // Wait for the node creation to finish
+            String name = planned.iterator().next().future.get().getNodeName();
 
-        // There should be warning logs
-        assertTrue(logs(), logs().contains("WARNING"));
+            // There should be no warning logs
+            assertFalse(logs(), logs().contains("WARNING"));
 
+            Instance instance = client.getInstance(projectId, ZONE, name);
+            assertTrue(logs(), instance.getLabels().containsKey("test-label"));
+            assertEquals(logs(), String.valueOf(cloud.name.hashCode()), instance.getLabels().get(ComputeEngineCloud.CLOUD_ID_LABEL_KEY));
+        } finally {
+            try {
+                client.deleteTemplate(cloud.projectId, nameFromSelfLink(TEMPLATE));
+            } catch (Exception e) {
+                // noop
+            }
+        }
     }
 
 
