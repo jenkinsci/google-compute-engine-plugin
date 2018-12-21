@@ -283,6 +283,7 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
         PrintStream logger = listener.getLogger();
         try {
             Instance instance = instance();
+            // TODO: JENKINS-55285
             Operation operation = cloud.client.insertInstance(cloud.projectId, Optional.ofNullable(template), instance);
             logger.println("Sent insert request");
             String targetRemoteFs = this.remoteFs;
@@ -336,6 +337,7 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
         instance.setZone(nameFromSelfLink(zone));
         
         if (StringUtils.isNotEmpty(template)) {
+            // TODO: JENKINS-55285
             InstanceTemplate instanceTemplate = cloud.client.getTemplate(nameFromSelfLink(cloud.projectId), nameFromSelfLink(template));
             Map<String, String> templateLabels = instanceTemplate.getProperties().getLabels();
             Map<String, String> mergedLabels = new HashMap<>(templateLabels);
