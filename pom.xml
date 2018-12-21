@@ -12,6 +12,7 @@
     <packaging>hpi</packaging>
     <properties>
         <jenkins.version>2.7.3</jenkins.version>
+        <jenkinsRuleTimeout>-Djenkins.test.timeout=480</jenkinsRuleTimeout>
         <java.level>8</java.level>
         <maven.compiler.source>1.8</maven.compiler.source>
         <maven.compiler.target>1.8</maven.compiler.target>
@@ -114,9 +115,6 @@
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-surefire-plugin</artifactId>
                     <version>2.20.1</version>
-                    <configuration>
-                        <argLine>-Djenkins.test.timeout=480</argLine>
-                    </configuration>
                 </plugin>
             </plugins>
         </pluginManagement>
@@ -139,6 +137,7 @@
                     <excludes>
                         <exclude>**/ComputeEngineCloudWindowsIT.java</exclude>
                     </excludes>
+                    <argLine>${jenkinsRuleTimeout}</argLine>
                 </configuration>
             </plugin>
             <plugin>
