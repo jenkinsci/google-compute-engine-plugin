@@ -80,6 +80,10 @@ public class ComputeEngineInstance extends AbstractCloudSlave {
 
 
     }
+    
+    public String getCloudName() {
+        return cloudName;
+    }
 
     public void onConnected() {
         this.connected = true;
@@ -93,7 +97,7 @@ public class ComputeEngineInstance extends AbstractCloudSlave {
         return launchTimeout * 1000L;
     }
 
-    public ComputeEngineCloud getCloud() throws CloudNotFoundException {
+    public ComputeEngineCloud getCloud() {
         ComputeEngineCloud cloud = (ComputeEngineCloud) Jenkins.getInstance().getCloud(cloudName);
         if (cloud == null)
             throw new CloudNotFoundException(String.format("Could not find cloud %s in Jenkins configuration", cloudName));

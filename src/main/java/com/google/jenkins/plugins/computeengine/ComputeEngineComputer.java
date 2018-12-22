@@ -100,7 +100,7 @@ public class ComputeEngineComputer extends AbstractCloudComputer<ComputeEngineIn
         }
     }
 
-    protected ComputeEngineCloud getCloud() throws CloudNotFoundException {
+    protected ComputeEngineCloud getCloud() {
         ComputeEngineInstance node = getNode();
         if (node == null)
             throw new CloudNotFoundException("Could not retrieve cloud from empty node");
