@@ -12,7 +12,7 @@
     <packaging>hpi</packaging>
     <properties>
         <jenkins.version>2.7.3</jenkins.version>
-        <jenkinsRuleTimeout>-Djenkins.test.timeout=480</jenkinsRuleTimeout>
+        <jenkinsRuleTimeout>480</jenkinsRuleTimeout>
         <java.level>8</java.level>
         <maven.compiler.source>1.8</maven.compiler.source>
         <maven.compiler.target>1.8</maven.compiler.target>
@@ -137,7 +137,7 @@
                     <excludes>
                         <exclude>**/ComputeEngineCloudWindowsIT.java</exclude>
                     </excludes>
-                    <argLine>${jenkinsRuleTimeout}</argLine>
+                    <argLine>-Djenkins.test.timeout=${jenkinsRuleTimeout}</argLine>
                 </configuration>
             </plugin>
             <plugin>
