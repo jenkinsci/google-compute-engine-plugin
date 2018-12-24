@@ -11,10 +11,6 @@ import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.junit.MockitoJUnitRunner;
 
-import java.util.logging.Level;
-import java.util.logging.LogManager;
-import java.util.logging.Logger;
-
 import static com.google.common.collect.ImmutableList.of;
 import static org.junit.Assert.assertNotNull;
 import static org.mockito.ArgumentMatchers.eq;
@@ -61,7 +57,7 @@ public class CleanLostNodesWorkTest {
     @Test
     public void shouldNotCleanAnyInstance() throws Exception {
         final String instanceName = "inst-1";
-        Instance remoteInstance = new Instance().setName(instanceName);
+        Instance remoteInstance = new Instance().setName(instanceName).setStatus("RUNNING");
         when(client.getInstancesWithLabel(eq(TEST_PROJECT_ID), anyMap())).thenReturn(of(remoteInstance));
 
         ComputeEngineInstance localInstance = Mockito.mock(ComputeEngineInstance.class);
@@ -81,7 +77,7 @@ public class CleanLostNodesWorkTest {
     public void shouldCleanLostInstance() throws Exception {
         final String instanceName = "inst-2";
         final String zone = "test-zone";
-        Instance remoteInstance = new Instance().setName(instanceName).setZone(zone);
+        Instance remoteInstance = new Instance().setName(instanceName).setZone(zone).setStatus("RUNNING");
         when(client.getInstancesWithLabel(eq(TEST_PROJECT_ID), anyMap())).thenReturn(of(remoteInstance));
 
         r.jenkins.clouds.add(cloud);
@@ -89,5 +85,19 @@ public class CleanLostNodesWorkTest {
         getWorker().doRun();
         verify(client).getInstancesWithLabel(eq(TEST_PROJECT_ID), anyMap());
         verify(client).terminateInstance(eq(TEST_PROJECT_ID), eq(zone), eq(instanceName));
+    }
+
+    @Test
+    public void shouldNotCleanStoppingInstance() throws Exception {
+        final String instanceName = "inst-2";
+        final String zone = "test-zone";
+        Instance remoteInstance = new Instance().setName(instanceName).setZone(zone).setStatus("STOPPING");
+        when(client.getInstancesWithLabel(eq(TEST_PROJECT_ID), anyMap())).thenReturn(of(remoteInstance));
+
+        r.jenkins.clouds.add(cloud);
+
+        getWorker().doRun();
+        verify(client).getInstancesWithLabel(eq(TEST_PROJECT_ID), anyMap());
+        verifyZeroInteractions(client);
     }
 }
