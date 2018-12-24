@@ -45,7 +45,7 @@ public class CleanLostNodesWork extends PeriodicWork {
     protected final Logger logger = Logger.getLogger(getClass().getName());
 
     public long getRecurrencePeriod() {
-        return MIN;
+        return HOUR;
     }
 
     /**
@@ -101,10 +101,18 @@ public class CleanLostNodesWork extends PeriodicWork {
         Map<String, String> filterLabel = new HashMap<>();
         filterLabel.put(CLOUD_ID_LABEL_KEY, cloud.getInstanceUniqueId());
         try {
-            return cloud.getClient().getInstancesWithLabel(cloud.getProjectId(), filterLabel);
+            return cloud.getClient()
+                    .getInstancesWithLabel(cloud.getProjectId(), filterLabel)
+                    .stream()
+                    .filter(instance -> shouldTerminateStatus(instance.getStatus()))
+                    .collect(Collectors.toList());
         } catch (IOException ex) {
             logger.log(Level.WARNING, "Error finding remote instances", ex);
             return emptyList();
         }
+    }
+
+    private boolean shouldTerminateStatus(String status) {
+        return !status.equals("STOPPING");
     }
 }
