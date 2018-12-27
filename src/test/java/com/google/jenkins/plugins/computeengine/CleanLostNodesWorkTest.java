@@ -100,4 +100,18 @@ public class CleanLostNodesWorkTest {
         verify(client).getInstancesWithLabel(eq(TEST_PROJECT_ID), anyMap());
         verifyZeroInteractions(client);
     }
+    
+    @Test
+    public void shouldNotCleanTerminatedInstance() throws Exception {
+        final String instanceName = "inst-2";
+        final String zone = "test-zone";
+        Instance remoteInstance = new Instance().setName(instanceName).setZone(zone).setStatus("TERMINATED");
+        when(client.getInstancesWithLabel(eq(TEST_PROJECT_ID), anyMap())).thenReturn(of(remoteInstance));
+
+        r.jenkins.clouds.add(cloud);
+
+        getWorker().doRun();
+        verify(client).getInstancesWithLabel(eq(TEST_PROJECT_ID), anyMap());
+        verifyZeroInteractions(client);
+    }
 }
