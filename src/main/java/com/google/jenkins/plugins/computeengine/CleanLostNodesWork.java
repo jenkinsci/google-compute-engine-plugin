@@ -24,7 +24,6 @@ import jenkins.model.Jenkins;
 import org.jenkinsci.Symbol;
 
 import java.io.IOException;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -32,6 +31,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
 
+import static com.google.common.collect.ImmutableMap.of;
 import static com.google.jenkins.plugins.computeengine.ComputeEngineCloud.CLOUD_ID_LABEL_KEY;
 import static java.util.Collections.emptyList;
 
@@ -44,6 +44,11 @@ import static java.util.Collections.emptyList;
 public class CleanLostNodesWork extends PeriodicWork {
     protected final Logger logger = Logger.getLogger(getClass().getName());
 
+    /**
+     * {@inheritDoc}
+     */
+    @SuppressWarnings("unchecked")
+    @Override
     public long getRecurrencePeriod() {
         return HOUR;
     }
@@ -59,22 +64,32 @@ public class CleanLostNodesWork extends PeriodicWork {
     }
 
     private void cleanCloud(ComputeEngineCloud cloud) {
-        logger.log(Level.FINEST, "Cleaning cloud " + cloud.getCloudName());
-        List<Instance> remoteInstances = findRemoteInstances(cloud);
-        Set<String> localInstances = findLocalInstances(cloud);
-        remoteInstances.forEach(remote -> checkOneInstance(remote, localInstances, cloud));
+        try {
+            logger.log(Level.FINEST, "Cleaning cloud " + cloud.getCloudName());
+            List<Instance> remoteInstances = findRemoteInstances(cloud);
+            Set<String> localInstances = findLocalInstances(cloud);
+            remoteInstances
+                    .stream()
+                    .filter(remote -> isOrphaned(remote, localInstances))
+                    .forEach(remote -> terminateInstance(remote, cloud));
+        } catch (Exception ex) {
+            logger.log(Level.WARNING, "Error cleaning cloud " + cloud.getCloudName(), ex);
+        }
     }
 
-    private void checkOneInstance(Instance remote, Set<String> localInstances, ComputeEngineCloud cloud) {
+    private boolean isOrphaned(Instance remote, Set<String> localInstances) {
         String instanceName = remote.getName();
         logger.log(Level.FINEST, "Checking instance " + instanceName);
-        if (!localInstances.contains(instanceName)) {
-            logger.log(Level.INFO, "Remote instance " + instanceName + " not found locally, removing it");
-            try {
-                cloud.getClient().terminateInstance(cloud.getProjectId(), remote.getZone(), instanceName);
-            } catch (IOException ex) {
-                logger.log(Level.WARNING, "Error terminating remote instance " + instanceName, ex);
-            }
+        return !localInstances.contains(instanceName);
+    }
+
+    private void terminateInstance(Instance remote, ComputeEngineCloud cloud) {
+        String instanceName = remote.getName();
+        logger.log(Level.INFO, "Remote instance " + instanceName + " not found locally, removing it");
+        try {
+            cloud.getClient().terminateInstance(cloud.getProjectId(), remote.getZone(), instanceName);
+        } catch (IOException ex) {
+            logger.log(Level.WARNING, "Error terminating remote instance " + instanceName, ex);
         }
     }
 
@@ -98,8 +113,7 @@ public class CleanLostNodesWork extends PeriodicWork {
     }
 
     private List<Instance> findRemoteInstances(ComputeEngineCloud cloud) {
-        Map<String, String> filterLabel = new HashMap<>();
-        filterLabel.put(CLOUD_ID_LABEL_KEY, cloud.getInstanceUniqueId());
+        Map<String, String> filterLabel = of(CLOUD_ID_LABEL_KEY, cloud.getInstanceUniqueId());
         try {
             return cloud.getClient()
                     .getInstancesWithLabel(cloud.getProjectId(), filterLabel)

@@ -146,7 +146,7 @@ public class ComputeEngineLinuxLauncher extends ComputeEngineComputerLauncher {
 
     }
 
-    private GoogleKeyPair setupSshKeys(ComputeEngineComputer computer) throws IOException, InterruptedException {
+    private GoogleKeyPair setupSshKeys(ComputeEngineComputer computer) throws CloudNotFoundException, IOException, InterruptedException {
         if (computer == null) {
             throw new IllegalArgumentException("A null ComputeEngineComputer was provided");
         }

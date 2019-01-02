@@ -137,6 +137,15 @@ public class ComputeEngineCloud extends AbstractCloudImpl {
         return this;
     }
 
+
+    /**
+     * Returns unique ID of that cloud instance.
+     * 
+     * This ID allows us to find machines from our cloud in GCP.
+     * Current implementation is bit naive and generate ID based on name hashCode.
+     *
+     * @return instance unique ID
+     */
     public String getInstanceUniqueId() {
         // Semi unique ID
         return String.valueOf(name.hashCode());
