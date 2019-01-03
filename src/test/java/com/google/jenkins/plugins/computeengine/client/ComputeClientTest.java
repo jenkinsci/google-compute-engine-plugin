@@ -36,6 +36,10 @@ import static org.junit.Assert.assertEquals;
 
 @RunWith(MockitoJUnitRunner.class)
 public class ComputeClientTest {
+    
+    private static final String TEST_PROJECT_ID = "test-project";
+    private static final String TEST_TEMPLATE_NAME = "test-template-name";
+    
     @Mock
     public Compute compute;
 
@@ -79,10 +83,11 @@ public class ComputeClientTest {
     @InjectMocks
     ComputeClient computeClient;
 
-    List<Region> listOfRegions;
-    List<Zone> listOfZones;
-    List<MachineType> listOfMachineTypes;
-    List<DiskType> listOfDiskTypes;
+    private List<Region> listOfRegions;
+    private List<Zone> listOfZones;
+    private List<MachineType> listOfMachineTypes;
+    private List<DiskType> listOfDiskTypes;
+    private List<InstanceTemplate> listOfInstanceTemplate;
 
     @Before
     public void init() throws Exception {
@@ -90,6 +95,7 @@ public class ComputeClientTest {
         listOfZones = new ArrayList<>();
         listOfMachineTypes = new ArrayList<>();
         listOfDiskTypes = new ArrayList<>();
+        listOfInstanceTemplate = new ArrayList<>();
 
         // Mock regions
         Mockito.when(regionList.getItems()).thenReturn(listOfRegions);
@@ -114,6 +120,20 @@ public class ComputeClientTest {
         Mockito.when(diskTypesListCall.execute()).thenReturn(diskTypeList);
         Mockito.when(diskTypes.list(Mockito.anyString(), Mockito.anyString())).thenReturn(diskTypesListCall);
         Mockito.when(compute.diskTypes()).thenReturn(diskTypes);
+        
+        // Mock instance templates
+        Compute.InstanceTemplates instanceTemplates = Mockito.mock(Compute.InstanceTemplates.class);
+        Compute.InstanceTemplates.List instanceTemplatesList = Mockito.mock(Compute.InstanceTemplates.List.class);
+        Compute.InstanceTemplates.Get instanceTemplatesGet = Mockito.mock(Compute.InstanceTemplates.Get.class);
+        InstanceTemplateList listOfInstanceTemplates = Mockito.mock(InstanceTemplateList.class);
+
+        Mockito.when(instanceTemplatesGet.execute()).thenReturn(new InstanceTemplate().setName(TEST_TEMPLATE_NAME));
+        Mockito.when(instanceTemplates.get(TEST_PROJECT_ID, TEST_TEMPLATE_NAME)).thenReturn(instanceTemplatesGet);
+        
+        Mockito.when(listOfInstanceTemplates.getItems()).thenReturn(listOfInstanceTemplate);
+        Mockito.when(instanceTemplatesList.execute()).thenReturn(listOfInstanceTemplates);
+        Mockito.when(instanceTemplates.list(TEST_PROJECT_ID)).thenReturn(instanceTemplatesList);
+        Mockito.when(compute.instanceTemplates()).thenReturn(instanceTemplates);
     }
 
     @Test
@@ -169,14 +189,14 @@ public class ComputeClientTest {
     }
 
     @Test
-    public void zoneSelfLink() {
+    public void nameFromSelfLink() {
         String zone;
 
         zone = "https://www.googleapis.com/compute/v1/projects/evandbrown17/zones/asia-east1-a";
-        assertEquals("asia-east1-a", ComputeClient.zoneFromSelfLink(zone));
+        assertEquals("asia-east1-a", ComputeClient.nameFromSelfLink(zone));
 
         zone = "asia-east1-a";
-        assertEquals("asia-east1-a", ComputeClient.zoneFromSelfLink(zone));
+        assertEquals("asia-east1-a", ComputeClient.nameFromSelfLink(zone));
     }
 
     @Test
@@ -202,5 +222,22 @@ public class ComputeClientTest {
         List<Metadata.Items> merged = ComputeClient.mergeMetadataItems(newItems, existingItems);
 
         assertEquals(existingItems.size(), merged.size());
+    }
+
+    @Test
+    public void getTemplates() throws IOException {
+        assertEquals(0, computeClient.getTemplates(TEST_PROJECT_ID).size());
+        
+        listOfInstanceTemplate.add(new InstanceTemplate().setName("z"));
+        listOfInstanceTemplate.add(new InstanceTemplate().setName("a"));
+        listOfInstanceTemplate.add(new InstanceTemplate().setName("c"));
+
+        assertEquals(3, computeClient.getTemplates(TEST_PROJECT_ID).size());
+        assertEquals("a", computeClient.getTemplates(TEST_PROJECT_ID).get(0).getName());
+    }
+    
+    @Test
+    public void getTemplate() throws IOException {
+        assertEquals(new InstanceTemplate().setName(TEST_TEMPLATE_NAME), computeClient.getTemplate(TEST_PROJECT_ID, TEST_TEMPLATE_NAME));
     }
 }

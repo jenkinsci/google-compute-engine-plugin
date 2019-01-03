@@ -16,15 +16,18 @@
 
 package com.google.jenkins.plugins.computeengine;
 
-import com.google.api.services.compute.model.*;
-import com.google.jenkins.plugins.computeengine.AcceleratorConfiguration;
-import com.google.jenkins.plugins.computeengine.ComputeEngineCloud;
-import com.google.jenkins.plugins.computeengine.InstanceConfiguration;
+import com.google.api.services.compute.model.AcceleratorType;
+import com.google.api.services.compute.model.DiskType;
+import com.google.api.services.compute.model.Image;
+import com.google.api.services.compute.model.Instance;
+import com.google.api.services.compute.model.MachineType;
+import com.google.api.services.compute.model.Network;
+import com.google.api.services.compute.model.Region;
+import com.google.api.services.compute.model.Subnetwork;
+import com.google.api.services.compute.model.Zone;
 import com.google.jenkins.plugins.computeengine.client.ComputeClient;
 import hudson.model.Node;
 import hudson.util.FormValidation;
-import jenkins.model.Jenkins;
-import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -37,7 +40,7 @@ import org.mockito.junit.MockitoJUnitRunner;
 import java.util.ArrayList;
 import java.util.List;
 
-import static org.mockito.ArgumentMatchers.any;
+import static org.junit.Assert.assertEquals;
 import static org.mockito.ArgumentMatchers.anyString;
 
 @RunWith(MockitoJUnitRunner.class)
@@ -166,7 +169,7 @@ public class InstanceConfigurationTest {
     }
 
     @Test
-    public void testInstanceModel() {
+    public void testInstanceModel() throws Exception {
         Instance i = instanceConfiguration(MIN_CPU_PLATFORM).instance();
         // General
         assert (i.getName().startsWith(NAME_PREFIX));
@@ -203,18 +206,16 @@ public class InstanceConfigurationTest {
         assert (i.getDisks().get(0).getInitializeParams().getDiskSizeGb().equals(Long.parseLong(BOOT_DISK_SIZE_GB_STR)));
         assert (i.getDisks().get(0).getInitializeParams().getSourceImage().equals(BOOT_DISK_IMAGE_NAME));
 
-
-
         InstanceConfiguration instanceConfiguration = instanceConfiguration();
-        assert(instanceConfiguration.useInternalAddress == false);
-        assert(instanceConfiguration.instance().getMinCpuPlatform() == null);
+        assert (instanceConfiguration.useInternalAddress == false);
+        assert (instanceConfiguration.instance().getMinCpuPlatform() == null);
     }
 
     public static InstanceConfiguration instanceConfiguration() {
         return instanceConfiguration("");
     }
 
-    public  static InstanceConfiguration instanceConfiguration(String minCpuPlatform) {
+    public static InstanceConfiguration instanceConfiguration(String minCpuPlatform) {
         return new InstanceConfiguration(
                 NAME_PREFIX,
                 REGION,
@@ -245,7 +246,8 @@ public class InstanceConfigurationTest {
                 LAUNCH_TIMEOUT_SECONDS_STR,
                 NODE_MODE,
                 new AcceleratorConfiguration(ACCELERATOR_NAME, ACCELERATOR_COUNT),
-                RUN_AS_USER);
+                RUN_AS_USER,
+                null);
     }
 
     @Test
@@ -255,15 +257,15 @@ public class InstanceConfigurationTest {
 
         // Empty project, image, and credentials should be OK
         FormValidation fv = d.doCheckBootDiskSizeGbStr(r.jenkins, String.valueOf(Long.parseLong(BOOT_DISK_SIZE_GB_STR) - 1L), "", "", "");
-        Assert.assertEquals(FormValidation.Kind.OK, fv.kind);
+        assertEquals(FormValidation.Kind.OK, fv.kind);
 
-        fv = d.doCheckBootDiskSizeGbStr(r.jenkins, String.valueOf(Long.parseLong(BOOT_DISK_SIZE_GB_STR) - 1L), PROJECT_ID, BOOT_DISK_IMAGE_NAME,  PROJECT_ID);
-        Assert.assertEquals(FormValidation.Kind.ERROR, fv.kind);
+        fv = d.doCheckBootDiskSizeGbStr(r.jenkins, String.valueOf(Long.parseLong(BOOT_DISK_SIZE_GB_STR) - 1L), PROJECT_ID, BOOT_DISK_IMAGE_NAME, PROJECT_ID);
+        assertEquals(FormValidation.Kind.ERROR, fv.kind);
 
         fv = d.doCheckBootDiskSizeGbStr(r.jenkins, String.valueOf(Long.parseLong(BOOT_DISK_SIZE_GB_STR)), "", "", "");
-        Assert.assertEquals(FormValidation.Kind.OK, fv.kind);
+        assertEquals(FormValidation.Kind.OK, fv.kind);
 
         fv = d.doCheckBootDiskSizeGbStr(r.jenkins, String.valueOf(Long.parseLong(BOOT_DISK_SIZE_GB_STR) + 1L), "", "", "");
-        Assert.assertEquals(FormValidation.Kind.OK, fv.kind);
+        assertEquals(FormValidation.Kind.OK, fv.kind);
     }
 }

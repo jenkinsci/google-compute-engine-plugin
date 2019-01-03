@@ -38,6 +38,7 @@ import hudson.slaves.CloudRetentionStrategy;
 import hudson.util.FormValidation;
 import hudson.util.ListBoxModel;
 import jenkins.model.Jenkins;
+import org.apache.commons.lang.StringUtils;
 import org.apache.commons.text.RandomStringGenerator;
 import org.kohsuke.stapler.AncestorInPath;
 import org.kohsuke.stapler.DataBoundConstructor;
@@ -54,6 +55,8 @@ import java.util.Map;
 import java.util.Set;
 import java.util.Iterator;
 import java.util.Optional;
+
+import static com.google.jenkins.plugins.computeengine.client.ComputeClient.nameFromSelfLink;
 
 public class InstanceConfiguration implements Describable<InstanceConfiguration> {
     public static final Long DEFAULT_BOOT_DISK_SIZE_GB = 10L;
@@ -103,6 +106,7 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
     public final String retentionTimeMinutesStr;
     public final String launchTimeoutSecondsStr;
     public final String bootDiskSizeGbStr;
+    public final String template;
     public final boolean windows;
     public final String windowsPasswordCredentialsId;
     public final String windowsPrivateKeyCredentialsId;
@@ -146,7 +150,8 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
                                  String launchTimeoutSecondsStr,
                                  Node.Mode mode,
                                  AcceleratorConfiguration acceleratorConfiguration,
-                                 String runAsUser) {
+                                 String runAsUser,
+                                 String template) {
         this.namePrefix = namePrefix;
         this.region = region;
         this.zone = zone;
@@ -169,6 +174,7 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
 
         this.minCpuPlatform = minCpuPlatform;
         this.numExecutors = intOrDefault(numExecutorsStr, DEFAULT_NUM_EXECUTORS);
+        this.template = template;
         this.numExecutorsStr = numExecutors.toString();
         this.retentionTimeMinutes = intOrDefault(retentionTimeMinutesStr, DEFAULT_RETENTION_TIME_MINUTES);
         this.retentionTimeMinutesStr = retentionTimeMinutes.toString();
@@ -276,8 +282,9 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
     public ComputeEngineInstance provision(TaskListener listener) throws IOException {
         PrintStream logger = listener.getLogger();
         try {
-            Instance i = instance();
-            Operation operation = cloud.client.insertInstance(cloud.projectId, i);
+            Instance instance = instance();
+            // TODO: JENKINS-55285
+            Operation operation = cloud.client.insertInstance(cloud.projectId, Optional.ofNullable(template), instance);
             logger.println("Sent insert request");
             String targetRemoteFs = this.remoteFs;
             ComputeEngineComputerLauncher launcher = null;
@@ -292,11 +299,11 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
                     targetRemoteFs = "./.jenkins-slave";
                 }
             }
-            ComputeEngineInstance instance = new ComputeEngineInstance(
+            ComputeEngineInstance computeEngineInstance = new ComputeEngineInstance(
                     cloud.name,
-                    i.getName(),
-                    i.getZone(), 
-                    i.getDescription(),
+                    instance.getName(),
+                    instance.getZone(), 
+                    instance.getDescription(),
                     runAsUser,
                     targetRemoteFs,
                     windowsConfig,
@@ -306,7 +313,7 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
                     launcher,
                     new CloudRetentionStrategy(retentionTimeMinutes), 
                     getLaunchTimeoutMillis());
-            return instance;
+            return computeEngineInstance;
         } catch (Descriptor.FormException fe) {
             logger.printf("Error provisioning instance: %s", fe.getMessage());
             return null;
@@ -323,26 +330,36 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
         return this;
     }
 
-    public Instance instance() {
-        Instance i = new Instance();
-        i.setName(uniqueName());
-        i.setLabels(googleLabels);
-        i.setDescription(description);
-        i.setZone(ComputeClient.zoneFromSelfLink(zone));
-        i.setMachineType(stripSelfLinkPrefix(machineType));
-        i.setMetadata(metadata());
-        i.setTags(tags());
-        i.setScheduling(scheduling());
-        i.setDisks(disks());
-        i.setGuestAccelerators(accelerators());
-        i.setNetworkInterfaces(networkInterfaces());
-        i.setServiceAccounts(serviceAccounts());
+    public Instance instance() throws IOException {
+        Instance instance = new Instance();
+        instance.setName(uniqueName());
+        instance.setDescription(description);
+        instance.setZone(nameFromSelfLink(zone));
+        
+        if (StringUtils.isNotEmpty(template)) {
+            // TODO: JENKINS-55285
+            InstanceTemplate instanceTemplate = cloud.client.getTemplate(nameFromSelfLink(cloud.projectId), nameFromSelfLink(template));
+            Map<String, String> templateLabels = instanceTemplate.getProperties().getLabels();
+            Map<String, String> mergedLabels = new HashMap<>(templateLabels);
+            mergedLabels.putAll(googleLabels);
+            instance.setLabels(mergedLabels);
+        } else {
+            instance.setLabels(googleLabels);
+            instance.setMachineType(stripSelfLinkPrefix(machineType));
+            instance.setMetadata(metadata());
+            instance.setTags(tags());
+            instance.setScheduling(scheduling());
+            instance.setDisks(disks());
+            instance.setGuestAccelerators(accelerators());
+            instance.setNetworkInterfaces(networkInterfaces());
+            instance.setServiceAccounts(serviceAccounts());
 
-        //optional
-        if (notNullOrEmpty(minCpuPlatform)) {
-            i.setMinCpuPlatform(minCpuPlatform);
+            //optional
+            if (notNullOrEmpty(minCpuPlatform)) {
+                instance.setMinCpuPlatform(minCpuPlatform);
+            }
         }
-        return i;
+        return instance;
     }
 
     private String uniqueName() {
@@ -574,6 +591,26 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
                 return items;
             }
         }
+        
+        public ListBoxModel doFillTemplateItems(@AncestorInPath Jenkins context,
+                                              @QueryParameter("projectId") @RelativePath("..") final String projectId,
+                                              @QueryParameter("credentialsId") @RelativePath("..") final String credentialsId) {
+            ListBoxModel items = new ListBoxModel();
+            items.add("");
+            try {
+                ComputeClient compute = computeClient(context, credentialsId);
+                List<InstanceTemplate> instanceTemplates = compute.getTemplates(projectId);
+
+                for (InstanceTemplate instanceTemplate : instanceTemplates) {
+                    items.add(instanceTemplate.getName(), instanceTemplate.getSelfLink());
+                }
+                return items;
+            } catch (IOException ioe) {
+                items.clear();
+                items.add("Error retrieving instanceTemplates");
+                return items;
+            }
+        }
 
         public FormValidation doCheckRegion(@QueryParameter String value) {
             if (value.equals("")) {
@@ -749,7 +786,7 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
 
             try {
                 ComputeClient compute = computeClient(context, credentialsId);
-                Image i = compute.getImage(ComputeClient.lastParam(projectId), ComputeClient.lastParam(imageName));
+                Image i = compute.getImage(nameFromSelfLink(projectId), nameFromSelfLink(imageName));
                 if (i == null)
                     return FormValidation.error("Could not find image " + imageName);
                 Long bootDiskSizeGb = Long.parseLong(value);
