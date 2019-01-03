@@ -262,7 +262,8 @@ public class ComputeEngineCloudWindowsIT {
                 LAUNCH_TIMEOUT_SECONDS_STR,
                 NODE_MODE,
                 new AcceleratorConfiguration(ACCELERATOR_NAME, ACCELERATOR_COUNT),
-                RUN_AS_USER);
+                RUN_AS_USER,
+                null);
         ic.appendLabels(INTEGRATION_LABEL);
         return ic;
     }
