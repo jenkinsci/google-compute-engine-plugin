@@ -150,11 +150,21 @@ public class ComputeEngineCloud extends AbstractCloudImpl {
         // Semi unique ID
         return String.valueOf(name.hashCode());
     }
-    
+
+    /**
+     * Returns GCP client for that cloud.
+     * 
+     * @return GCP client object.
+     */
     public ComputeClient getClient() {
         return client;
     }
 
+    /**
+     * Returns GCP projectId for that cloud.
+     * 
+     * @return projectId
+     */
     public String getProjectId() {
         return projectId;
     }
