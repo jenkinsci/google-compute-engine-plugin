@@ -25,12 +25,15 @@ import jenkins.model.Jenkins;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.logging.Logger;
+import java.util.Optional;
 
 public class ComputeEngineInstance extends AbstractCloudSlave {
+    private static final long serialVersionUID = 1;
     private static final Logger LOGGER = Logger.getLogger(ComputeEngineInstance.class.getName());
     public final String zone;
     public final String cloudName;
     public final String sshUser;
+    public transient final Optional<WindowsConfiguration> windowsConfig;
     public Integer launchTimeout; // Seconds
     public Boolean connected;
 
@@ -40,6 +43,7 @@ public class ComputeEngineInstance extends AbstractCloudSlave {
                                  String nodeDescription,
                                  String sshUser,
                                  String remoteFS,
+                                 Optional<WindowsConfiguration> windowsConfig,
                                  int numExecutors,
                                  Mode mode,
                                  String labelString,
@@ -53,6 +57,7 @@ public class ComputeEngineInstance extends AbstractCloudSlave {
         this.zone = zone;
         this.cloudName = cloudName;
         this.sshUser = sshUser;
+        this.windowsConfig = windowsConfig;
     }
 
     @Override

@@ -167,7 +167,7 @@ public class ComputeEngineCloud extends AbstractCloudImpl {
                     break;
                 }
 
-                final ComputeEngineInstance node = config.provision(StreamTaskListener.fromStdout(), label);
+                final ComputeEngineInstance node = config.provision(StreamTaskListener.fromStdout());
                 Jenkins.getInstance().addNode(node);
                 r.add(new PlannedNode(node.getNodeName(), Computer.threadPoolForRemoting.submit(new Callable<Node>() {
                     public Node call() throws Exception {
@@ -189,7 +189,7 @@ public class ComputeEngineCloud extends AbstractCloudImpl {
                         return null;
                     }
                 }), node.getNumExecutors()));
-                excessWorkload -= 1;
+                excessWorkload -= node.getNumExecutors();
             }
         } catch (IOException ioe) {
             LOGGER.log(Level.WARNING, "Error provisioning node", ioe);
@@ -230,14 +230,6 @@ public class ComputeEngineCloud extends AbstractCloudImpl {
         } catch (IOException ioe) {
             LOGGER.warning(String.format("An error occurred counting the number of existing instances in cloud %s: %s", getCloudName(), ioe.getMessage()));
             throw ioe;
-        }
-    }
-
-    private synchronized ComputeEngineInstance getAnAgent(InstanceConfiguration config, Label requiredLabel) {
-        try {
-            return config.provision(StreamTaskListener.fromStdout(), requiredLabel);
-        } catch (Exception e) {
-            return null;
         }
     }
 
@@ -295,7 +287,7 @@ public class ComputeEngineCloud extends AbstractCloudImpl {
             throw HttpResponses.error(SC_BAD_REQUEST, "No such Instance Configuration: " + configuration);
         }
 
-        ComputeEngineInstance node = c.provision(StreamTaskListener.fromStdout(), null);
+        ComputeEngineInstance node = c.provision(StreamTaskListener.fromStdout());
         if (node == null)
             throw HttpResponses.error(SC_BAD_REQUEST, "Could not provision new node.");
         Jenkins.getInstance().addNode(node);
