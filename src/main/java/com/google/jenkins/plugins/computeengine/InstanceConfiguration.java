@@ -339,11 +339,14 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
         if (StringUtils.isNotEmpty(template)) {
             // TODO: JENKINS-55285
             InstanceTemplate instanceTemplate = cloud.client.getTemplate(nameFromSelfLink(cloud.projectId), nameFromSelfLink(template));
+            Map<String, String> mergedLabels = new HashMap<>(googleLabels);
             if (instanceTemplate.getProperties().getLabels() != null) {
                 Map<String, String> templateLabels = instanceTemplate.getProperties().getLabels();
-                appendLabels(templateLabels);
+                mergedLabels.putAll(templateLabels);
             }
+            instance.setLabels(mergedLabels);
         } else {
+            instance.setLabels(googleLabels);
             instance.setMachineType(stripSelfLinkPrefix(machineType));
             instance.setMetadata(metadata());
             instance.setTags(tags());
@@ -358,7 +361,6 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
                 instance.setMinCpuPlatform(minCpuPlatform);
             }
         }
-        instance.setLabels(googleLabels);
         return instance;
     }
 
