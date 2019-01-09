@@ -184,8 +184,8 @@ public class ComputeEngineCloud extends AbstractCloudImpl {
                             }
                         } catch (Exception e) {
                             LOGGER.log(Level.WARNING, String.format("Exception waiting for node %s to connect", node.getNodeName()), e);
+                            node.terminate();
                         }
-                        node.terminate();
                         return null;
                     }
                 }), node.getNumExecutors()));
