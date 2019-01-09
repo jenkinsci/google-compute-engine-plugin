@@ -44,6 +44,7 @@ import hudson.model.labels.LabelAtom;
 import hudson.slaves.NodeProvisioner;
 import hudson.tasks.Builder;
 import hudson.tasks.Shell;
+import org.awaitility.Awaitility;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -55,9 +56,11 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 import java.util.logging.LogManager;
 import java.util.logging.Logger;
 import java.util.logging.SimpleFormatter;
@@ -202,7 +205,6 @@ public class ComputeEngineCloudIT {
     public void after() {
         ComputeEngineCloud cloud = (ComputeEngineCloud) r.jenkins.clouds.get(0);
         cloud.configurations.clear();
-
     }
 
     @Test
@@ -232,8 +234,10 @@ public class ComputeEngineCloudIT {
         // There should be a planned node
         assertEquals(logs(), 1, planned.size());
 
+        String name = planned.iterator().next().displayName;
+        
         // Wait for the node creation to finish
-        String name = planned.iterator().next().future.get().getNodeName();
+        planned.iterator().next().future.get();
 
         // There should be no warning logs
         assertFalse(logs(), logs().contains("WARNING"));
@@ -287,7 +291,11 @@ public class ComputeEngineCloudIT {
         // Add a new node
         Collection<NodeProvisioner.PlannedNode> planned = cloud.provision(new LabelAtom(LABEL), 1);
 
-        String provisionedLabels = planned.iterator().next().future.get().getLabelString();
+        String name = planned.iterator().next().displayName;
+
+        planned.iterator().next().future.get();
+        
+        String provisionedLabels = r.jenkins.getNode(name).getLabelString();
         // There should be a planned node TODO
         assertEquals(logs(), MULTIPLE_LABEL, provisionedLabels);
     }
@@ -310,7 +318,7 @@ public class ComputeEngineCloudIT {
         planned.iterator().next().future.get();
 
         // There should be warning logs
-        assertEquals(logs(), true, logs().contains("WARNING"));
+        assertTrue(logs(), logs().contains("WARNING"));
     }
 
     @Test(timeout = 500000)
@@ -318,6 +326,8 @@ public class ComputeEngineCloudIT {
         ComputeEngineCloud cloud = (ComputeEngineCloud) r.jenkins.clouds.get(0);
         cloud.addConfiguration(validInstanceConfigurationWithOneShot());
 
+        r.jenkins.getNodesObject().setNodes(Collections.emptyList());
+        
         // Assert that there is 0 nodes
         assertTrue(r.jenkins.getNodes().isEmpty());
 
@@ -333,7 +343,7 @@ public class ComputeEngineCloudIT {
         r.assertLogContains("works", build);
         
         // Assert that there is 0 nodes after job finished
-        assertTrue(r.jenkins.getNodes().isEmpty());
+        Awaitility.await().timeout(10, TimeUnit.SECONDS).until(() -> r.jenkins.getNodes().isEmpty());
     }
     
     @Test(timeout = 300000)
@@ -373,9 +383,11 @@ public class ComputeEngineCloudIT {
 
             // There should be a planned node
             assertEquals(logs(), 1, planned.size());
-
+            
+            String name = planned.iterator().next().displayName;
+            
             // Wait for the node creation to finish
-            String name = planned.iterator().next().future.get().getNodeName();
+            planned.iterator().next().future.get();
 
             // There should be no warning logs
             assertFalse(logs(), logs().contains("WARNING"));
@@ -469,6 +481,7 @@ public class ComputeEngineCloudIT {
 
     private static void safeDelete(String instanceId, boolean waitForCompletion) {
         try {
+            System.out.printf("Deleting: " + instanceId);
             Operation op = client.terminateInstance(projectId, ZONE, instanceId);
             if (waitForCompletion)
                 client.waitForOperationCompletion(projectId, op.getName(), op.getZone(), 3 * 60 * 1000);
