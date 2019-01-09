@@ -11,7 +11,7 @@
     <version>1.0.8-SNAPSHOT</version>
     <packaging>hpi</packaging>
     <properties>
-        <jenkins.version>2.7.3</jenkins.version>
+        <jenkins.version>2.150.1</jenkins.version>
         <jenkinsRuleTimeout>480</jenkinsRuleTimeout>
         <java.level>8</java.level>
         <maven.compiler.source>1.8</maven.compiler.source>
@@ -139,6 +139,12 @@
                 <configuration>
                     <disableXmlReport>true</disableXmlReport>
                     <useFile>false</useFile>
+                    <systemPropertyVariables>
+                        <hudson.model.LoadStatistics.clock>500</hudson.model.LoadStatistics.clock>
+                        <hudson.model.LoadStatistics.decay>0.5</hudson.model.LoadStatistics.decay>
+                        <hudson.agents.NodeProvisioner.MARGIN>100</hudson.agents.NodeProvisioner.MARGIN>
+                        <hudson.agents.NodeProvisioner.MARGIN0>1.0</hudson.agents.NodeProvisioner.MARGIN0>
+                    </systemPropertyVariables>
                     <excludes>
                         <exclude>**/ComputeEngineCloudWindowsIT.java</exclude>
                     </excludes>
