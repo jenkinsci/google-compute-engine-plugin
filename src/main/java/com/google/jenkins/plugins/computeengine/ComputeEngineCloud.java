@@ -140,12 +140,44 @@ public class ComputeEngineCloud extends AbstractCloudImpl {
             c.cloud = this;
             // Apply a label that associates an instance configuration with
             // this cloud provider
-            c.appendLabel(CLOUD_ID_LABEL_KEY, String.valueOf(this.name.hashCode()));
+            c.appendLabel(CLOUD_ID_LABEL_KEY, getInstanceUniqueId());
 
             // Apply a label that identifies the name of this instance configuration
             c.appendLabel(CONFIG_LABEL_KEY, c.namePrefix);
         }
         return this;
+    }
+
+
+    /**
+     * Returns unique ID of that cloud instance.
+     * 
+     * This ID allows us to find machines from our cloud in GCP.
+     * Current implementation is bit naive and generate ID based on name hashCode.
+     *
+     * @return instance unique ID
+     */
+    public String getInstanceUniqueId() {
+        // Semi unique ID
+        return String.valueOf(name.hashCode());
+    }
+
+    /**
+     * Returns GCP client for that cloud.
+     * 
+     * @return GCP client object.
+     */
+    public ComputeClient getClient() {
+        return client;
+    }
+
+    /**
+     * Returns GCP projectId for that cloud.
+     * 
+     * @return projectId
+     */
+    public String getProjectId() {
+        return projectId;
     }
 
     public void addConfiguration(InstanceConfiguration config) {
@@ -210,7 +242,7 @@ public class ComputeEngineCloud extends AbstractCloudImpl {
             // We only care about instances that have a label indicating they
             // belong to this cloud
             Map<String, String> filterLabel = new HashMap<>();
-            filterLabel.put(CLOUD_ID_LABEL_KEY, String.valueOf(this.name.hashCode()));
+            filterLabel.put(CLOUD_ID_LABEL_KEY, getInstanceUniqueId());
             List<Instance> instances = client.getInstancesWithLabel(projectId, filterLabel);
 
             // Don't count instances that are not running (or starting up)
