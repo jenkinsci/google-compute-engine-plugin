@@ -315,7 +315,7 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
                     mode, 
                     labels,
                     launcher,
-                    (oneShot ? new OnceRetentionStrategy(retentionTimeMinutes) : new CloudRetentionStrategy(retentionTimeMinutes)),
+                    new ComputeEngineRetentionStrategy(retentionTimeMinutes, oneShot),
                     getLaunchTimeoutMillis());
             return computeEngineInstance;
         } catch (Descriptor.FormException fe) {
