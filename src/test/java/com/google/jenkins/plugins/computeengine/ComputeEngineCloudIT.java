@@ -481,7 +481,6 @@ public class ComputeEngineCloudIT {
 
     private static void safeDelete(String instanceId, boolean waitForCompletion) {
         try {
-            System.out.printf("Deleting: " + instanceId);
             Operation op = client.terminateInstance(projectId, ZONE, instanceId);
             if (waitForCompletion)
                 client.waitForOperationCompletion(projectId, op.getName(), op.getZone(), 3 * 60 * 1000);

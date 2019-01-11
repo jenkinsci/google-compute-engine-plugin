@@ -30,12 +30,14 @@ import java.util.Optional;
 public class ComputeEngineInstance extends AbstractCloudSlave {
     private static final long serialVersionUID = 1;
     private static final Logger LOGGER = Logger.getLogger(ComputeEngineInstance.class.getName());
+    
+    // TODO: https://issues.jenkins-ci.org/browse/JENKINS-55518
     public final String zone;
     public final String cloudName;
     public final String sshUser;
     public transient final Optional<WindowsConfiguration> windowsConfig;
     public Integer launchTimeout; // Seconds
-    public Boolean connected;
+    private Boolean connected;
 
     public ComputeEngineInstance(String cloudName,
                                  String name,
