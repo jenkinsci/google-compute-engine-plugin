@@ -19,6 +19,8 @@ package com.google.jenkins.plugins.computeengine.client;
 import com.google.api.services.compute.Compute;
 import com.google.api.services.compute.model.*;
 import com.google.common.base.Strings;
+import com.google.common.collect.Collections2;
+import org.apache.commons.collections.CollectionUtils;
 
 import java.io.IOException;
 import java.util.*;
@@ -348,9 +350,9 @@ public class ComputeClient {
         return insert.execute();
     }
 
-    public Operation terminateInstance(String projectId, String zone, String InstanceId) throws IOException {
+    public Operation terminateInstance(String projectId, String zone, String instanceId) throws IOException {
         zone = nameFromSelfLink(zone);
-        return compute.instances().delete(projectId, zone, InstanceId).execute();
+        return compute.instances().delete(projectId, zone, instanceId).execute();
     }
 
     public Operation terminateInstanceWithStatus(String projectId, String zone, String instanceId, String desiredStatus) throws IOException, InterruptedException {
@@ -419,6 +421,19 @@ public class ComputeClient {
         instanceTemplates.sort(Comparator.comparing(InstanceTemplate::getName));
 
         return instanceTemplates;
+    }
+    
+    public boolean isPreempted(String projectId, String zone, String instanceId) throws IOException {
+        String filter = "(operationType=\"compute.instances.preempted\") AND (targetLink=\"" +
+                instanceId + "\")";
+        System.out.println("Filter [" + filter + "]");
+        List<Operation> items = compute.zoneOperations()
+                .list(projectId, zone)
+                .setFilter(filter)
+                .execute()
+                .getItems();
+        
+        return CollectionUtils.isNotEmpty(items);
     }
 
     /**

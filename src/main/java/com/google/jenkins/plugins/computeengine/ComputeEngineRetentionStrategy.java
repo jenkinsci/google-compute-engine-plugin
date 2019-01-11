@@ -7,7 +7,6 @@ import hudson.slaves.RetentionStrategy;
 import org.jenkinsci.plugins.durabletask.executors.OnceRetentionStrategy;
 
 import javax.annotation.Nonnull;
-import javax.imageio.IIOException;
 import java.io.IOException;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -50,6 +49,8 @@ public class ComputeEngineRetentionStrategy extends RetentionStrategy<ComputeEng
 
     @Override
     public void taskCompleted(Executor executor, Queue.Task task, long durationMS) {
+        LOGGER.log(Level.INFO, "Task completed " + task + " executor " + executor);
+        checkPre(executor, task);
         if (oneShot) {
             delegate.taskCompleted(executor, task, durationMS);
         }
@@ -57,21 +58,39 @@ public class ComputeEngineRetentionStrategy extends RetentionStrategy<ComputeEng
 
     @Override
     public void taskCompletedWithProblems(Executor executor, Queue.Task task, long durationMS, Throwable problems) {
+        LOGGER.log(Level.INFO, "Task completed with problems " + task + " executor " + executor);
+        checkPre(executor, task);
         if (oneShot) {
             delegate.taskCompletedWithProblems(executor, task, durationMS, problems);
         }
-        LOGGER.log(Level.INFO, "Task completed with problem " + task, problems);
-        try {
-            LOGGER.log(Level.INFO, "Trying to rerun task");
-            task.getOwnerTask().getOwnerTask().createExecutable().run();
-        } catch (IOException e) {
-            LOGGER.log(Level.WARNING, "Task rerunning error", e);
+    }
+
+    private void checkPre(Executor executor, Queue.Task task) {
+        ComputeEngineComputer computer = (ComputeEngineComputer) executor.getOwner();
+        final boolean preemptive = checkPreemptive(computer);
+        LOGGER.log(Level.INFO, "pre " + preemptive);
+        if (preemptive) {
+            try {
+                LOGGER.log(Level.INFO, "Trying to rerun task");
+                task.getOwnerTask().getOwnerTask().createExecutable().run();
+            } catch (IOException ex) {
+                LOGGER.log(Level.WARNING, "Task rerunning error", ex);
+            }
         }
     }
+    //"operationType": "compute.instances.preempted",
+    //   "targetLink": "https://www.googleapis.com/compute/v1/projects/team-saasops/zones/us-central1-a/instances/slave-ingwar-pre-rg3jbi",
+    //  Filter [(operationType="compute.instances.preempted") AND 
+    // (targetLink="https://www.googleapis.com/compute/v1/projects/team-saasops/zones/us-central1-a/instances/slave-ingwar-pre-rg3jbi")]
 
-    private void checkPreemptive(Executor executor) {
-        final ComputeEngineComputer computer = (ComputeEngineComputer) executor.getOwner();
-//        computer.getCloud().getClient().
+    private boolean checkPreemptive(ComputeEngineComputer computer) {
+        ComputeEngineCloud cloud = computer.getCloud();
+        boolean preempted = false;
+        try {
+            preempted = computer.getCloud().getClient().isPreempted(cloud.getProjectId(), computer.getNode().zone, computer.getInstance().getSelfLink());
+        } catch (IOException ex) {
+            LOGGER.log(Level.WARNING, "checkPreemptive error", ex);
+        }
+        return preempted;
     }
-
 }
