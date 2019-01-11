@@ -127,6 +127,6 @@ public class CleanLostNodesWork extends PeriodicWork {
     }
 
     private boolean shouldTerminateStatus(String status) {
-        return !status.equals("STOPPING") && !status.equals("TERMINATED");
+        return !status.equals("STOPPING");
     }
 }
