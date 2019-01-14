@@ -339,9 +339,11 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
         if (StringUtils.isNotEmpty(template)) {
             // TODO: JENKINS-55285
             InstanceTemplate instanceTemplate = cloud.client.getTemplate(nameFromSelfLink(cloud.projectId), nameFromSelfLink(template));
-            Map<String, String> templateLabels = instanceTemplate.getProperties().getLabels();
-            Map<String, String> mergedLabels = new HashMap<>(templateLabels);
-            mergedLabels.putAll(googleLabels);
+            Map<String, String> mergedLabels = new HashMap<>(googleLabels);
+            if (instanceTemplate.getProperties().getLabels() != null) {
+                Map<String, String> templateLabels = instanceTemplate.getProperties().getLabels();
+                mergedLabels.putAll(templateLabels);
+            }
             instance.setLabels(mergedLabels);
         } else {
             instance.setLabels(googleLabels);
