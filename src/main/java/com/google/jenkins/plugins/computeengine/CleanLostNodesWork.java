@@ -64,17 +64,13 @@ public class CleanLostNodesWork extends PeriodicWork {
     }
 
     private void cleanCloud(ComputeEngineCloud cloud) {
-        try {
-            logger.log(Level.FINEST, "Cleaning cloud " + cloud.getCloudName());
-            List<Instance> remoteInstances = findRemoteInstances(cloud);
-            Set<String> localInstances = findLocalInstances(cloud);
-            remoteInstances
-                    .stream()
-                    .filter(remote -> isOrphaned(remote, localInstances))
-                    .forEach(remote -> terminateInstance(remote, cloud));
-        } catch (Exception ex) {
-            logger.log(Level.WARNING, "Error cleaning cloud " + cloud.getCloudName(), ex);
-        }
+        logger.log(Level.FINEST, "Cleaning cloud " + cloud.getCloudName());
+        List<Instance> remoteInstances = findRemoteInstances(cloud);
+        Set<String> localInstances = findLocalInstances(cloud);
+        remoteInstances
+                .stream()
+                .filter(remote -> isOrphaned(remote, localInstances))
+                .forEach(remote -> terminateInstance(remote, cloud));
     }
 
     private boolean isOrphaned(Instance remote, Set<String> localInstances) {
