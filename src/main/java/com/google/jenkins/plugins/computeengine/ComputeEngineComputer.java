@@ -17,17 +17,23 @@
 package com.google.jenkins.plugins.computeengine;
 
 import com.google.api.services.compute.model.Instance;
+import hudson.model.TaskListener;
 import hudson.slaves.AbstractCloudComputer;
 import org.kohsuke.stapler.DataBoundSetter;
 import org.kohsuke.stapler.HttpRedirect;
 import org.kohsuke.stapler.HttpResponse;
 
 import java.io.IOException;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Future;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 public class ComputeEngineComputer extends AbstractCloudComputer<ComputeEngineInstance> {
+    private static final Logger LOGGER = Logger.getLogger(ComputeEngineComputerListener.class.getName());
 
     private volatile Instance instance;
-    private boolean preempted = false;
+    private Future<Boolean> preemptedFuture;
 
     public ComputeEngineComputer(ComputeEngineInstance slave) {
         super(slave);
@@ -38,10 +44,15 @@ public class ComputeEngineComputer extends AbstractCloudComputer<ComputeEngineIn
         return (ComputeEngineInstance) super.getNode();
     }
 
-    public void onConnected() {
+    void onConnected(TaskListener listener) throws IOException {
         ComputeEngineInstance node = getNode();
         if (node != null) {
             node.onConnected();
+            if (getPreemptible()) {
+                String nodeName = node.getNodeName();
+                LOGGER.log(Level.INFO, "Instance " + nodeName + " is preemptible, setting up premption listener");
+                preemptedFuture = getChannel().callAsync(new PreemptedCheckCallable(listener));
+            }
         }
     }
 
@@ -85,11 +96,19 @@ public class ComputeEngineComputer extends AbstractCloudComputer<ComputeEngineIn
         instance = _getInstance();
         return instance.getStatus();
     }
-    
+
     boolean getPreemptible() {
         try {
             return getInstance().getScheduling().getPreemptible();
         } catch (IOException | NullPointerException e) {
+            return false;
+        }
+    }
+    
+    boolean getPreempted() {
+        try {
+            return preemptedFuture != null && preemptedFuture.isDone() && preemptedFuture.get();
+        } catch (InterruptedException | ExecutionException e) {
             return false;
         }
     }
@@ -134,11 +153,4 @@ public class ComputeEngineComputer extends AbstractCloudComputer<ComputeEngineIn
         return new HttpRedirect("..");
     }
 
-    public boolean getPreempted() {
-        return preempted;
-    }
-
-    public void setPreempted(boolean preempted) {
-        this.preempted = preempted;
-    }
 }

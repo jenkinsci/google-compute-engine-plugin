@@ -1,13 +1,19 @@
 package com.google.jenkins.plugins.computeengine;
 
+import com.google.common.collect.ImmutableList;
+import hudson.model.Action;
+import hudson.model.Cause;
+import hudson.model.CauseAction;
 import hudson.model.Executor;
 import hudson.model.ExecutorListener;
+import hudson.model.Job;
 import hudson.model.Queue;
 import hudson.slaves.RetentionStrategy;
 import jenkins.model.Jenkins;
 import org.jenkinsci.plugins.durabletask.executors.OnceRetentionStrategy;
 
 import javax.annotation.Nonnull;
+import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -41,8 +47,6 @@ public class ComputeEngineRetentionStrategy extends RetentionStrategy<ComputeEng
 
     @Override
     public void taskAccepted(Executor executor, Queue.Task task) {
-        LOGGER.log(Level.INFO, "Task accepted " + task);
-        LOGGER.log(Level.INFO, "Task accepted owner " + getBaseTask(task));
         if (oneShot) {
             delegate.taskAccepted(executor, task);
         }
@@ -50,8 +54,7 @@ public class ComputeEngineRetentionStrategy extends RetentionStrategy<ComputeEng
 
     @Override
     public void taskCompleted(Executor executor, Queue.Task task, long durationMS) {
-        LOGGER.log(Level.INFO, "Task completed " + task + " executor " + executor);
-        checkPre(executor, task);
+        checkPreempted(executor, task);
         if (oneShot) {
             delegate.taskCompleted(executor, task, durationMS);
         }
@@ -59,8 +62,7 @@ public class ComputeEngineRetentionStrategy extends RetentionStrategy<ComputeEng
 
     @Override
     public void taskCompletedWithProblems(Executor executor, Queue.Task task, long durationMS, Throwable problems) {
-        LOGGER.log(Level.INFO, "Task completed with problems " + task + " executor " + executor);
-        checkPre(executor, task);
+        checkPreempted(executor, task);
         if (oneShot) {
             delegate.taskCompletedWithProblems(executor, task, durationMS, problems);
         }
@@ -69,22 +71,43 @@ public class ComputeEngineRetentionStrategy extends RetentionStrategy<ComputeEng
     private Queue.Task getBaseTask(Queue.Task task) {
         Queue.Task parent = task.getOwnerTask();
         while (task != parent) {
+            System.out.println("Task next: " + parent);
             task = parent;
             parent = task.getOwnerTask();
         }
         return parent;
     }
 
-    private void checkPre(Executor executor, Queue.Task task) {
+    private void checkPreempted(Executor executor, Queue.Task task) {
         ComputeEngineComputer computer = (ComputeEngineComputer) executor.getOwner();
         final boolean preemptible = computer.getPreemptible();
         final boolean preempted = computer.getPreempted();
-        LOGGER.log(Level.INFO, "preemptible " + preemptible + " && preempted " + preempted);
+        Queue.Task baseTask = getBaseTask(task);
+        try {
+            final List causes = ((Job) baseTask).getLastBuild().getCauses();
+            System.out.println("Causes: " + causes);
+        } catch (Exception e) {
+            System.out.println("Exception for " + baseTask);
+            e.printStackTrace();
+        }
         if (preemptible && preempted) {
-            LOGGER.log(Level.INFO, "Trying to rerun task");
-//                task.getOwnerTask().getOwnerTask().createExecutable().run();
-//                List<Action> actions = ImmutableList.of(new CauseAction(new Cause.UpstreamCause(task));
-            Jenkins.getInstance().getQueue().schedule2(getBaseTask(task), 0);
+            LOGGER.log(Level.INFO, baseTask + " preemptible " + preemptible + " && preempted " + preempted);
+            List<Action> actions = generateActionsForTask(task);
+            Jenkins.getInstance().getQueue().schedule2(baseTask, 0, actions);
+        } else if (preemptible) {
+            LOGGER.log(Level.INFO, "preemptible " + preemptible + " && preempted " + preempted);
         }
     }
+
+    private List<Action> generateActionsForTask(Queue.Task task) {
+        return ImmutableList.of(new CauseAction(new Cause.UserIdCause()),
+                new CauseAction(new Cause() {
+                    @Override
+                    public String getShortDescription() {
+                        return "Rebuilding preemptied job";
+                    }
+                }));
+    }
+    
+    
 } 
