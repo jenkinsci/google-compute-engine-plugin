@@ -423,19 +423,6 @@ public class ComputeClient {
         return instanceTemplates;
     }
     
-    public boolean isPreempted(String projectId, String zone, String instanceId) throws IOException {
-        String filter = "(operationType=\"compute.instances.preempted\") AND (targetLink=\"" +
-                instanceId + "\")";
-        System.out.println("Filter [" + filter + "]");
-        List<Operation> items = compute.zoneOperations()
-                .list(projectId, zone)
-                .setFilter(filter)
-                .execute()
-                .getItems();
-        
-        return CollectionUtils.isNotEmpty(items);
-    }
-
     /**
      * Appends metadata to an instance. Any metadata items with existing keys will be overwritten. Otherwise, metadata
      * is preserved. This method blocks until the operation completes.

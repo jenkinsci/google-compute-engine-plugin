@@ -27,6 +27,7 @@ import java.io.IOException;
 public class ComputeEngineComputer extends AbstractCloudComputer<ComputeEngineInstance> {
 
     private volatile Instance instance;
+    private boolean preempted = false;
 
     public ComputeEngineComputer(ComputeEngineInstance slave) {
         super(slave);
@@ -84,6 +85,14 @@ public class ComputeEngineComputer extends AbstractCloudComputer<ComputeEngineIn
         instance = _getInstance();
         return instance.getStatus();
     }
+    
+    boolean getPreemptible() {
+        try {
+            return getInstance().getScheduling().getPreemptible();
+        } catch (IOException | NullPointerException e) {
+            return false;
+        }
+    }
 
     private Instance _getInstance() throws IOException {
         try {
@@ -123,5 +132,13 @@ public class ComputeEngineComputer extends AbstractCloudComputer<ComputeEngineIn
             }
         }
         return new HttpRedirect("..");
+    }
+
+    public boolean getPreempted() {
+        return preempted;
+    }
+
+    public void setPreempted(boolean preempted) {
+        this.preempted = preempted;
     }
 }
