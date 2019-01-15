@@ -1,3 +1,18 @@
+/*
+ * Copyright 2019 Google Inc. All Rights Reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package com.google.jenkins.plugins.computeengine;
 
 import com.google.common.collect.ImmutableList;
@@ -8,6 +23,8 @@ import hudson.model.Executor;
 import hudson.model.ExecutorListener;
 import hudson.model.Job;
 import hudson.model.Queue;
+import hudson.security.ACL;
+import hudson.security.ACLContext;
 import hudson.slaves.RetentionStrategy;
 import jenkins.model.Jenkins;
 import org.jenkinsci.plugins.durabletask.executors.OnceRetentionStrategy;
@@ -71,7 +88,6 @@ public class ComputeEngineRetentionStrategy extends RetentionStrategy<ComputeEng
     private Queue.Task getBaseTask(Queue.Task task) {
         Queue.Task parent = task.getOwnerTask();
         while (task != parent) {
-            System.out.println("Task next: " + parent);
             task = parent;
             parent = task.getOwnerTask();
         }
@@ -83,6 +99,19 @@ public class ComputeEngineRetentionStrategy extends RetentionStrategy<ComputeEng
         final boolean preemptible = computer.getPreemptible();
         final boolean preempted = computer.getPreempted();
         Queue.Task baseTask = getBaseTask(task);
+        if (preemptible && preempted) {
+            LOGGER.log(Level.INFO, baseTask + " is preemptible and was preempted");
+            List<Action> actions = generateActionsForTask(task);
+            try (ACLContext context = ACL.as(task.getDefaultAuthentication())) {
+                Jenkins.getInstance().getQueue().schedule2(baseTask, 0, actions);
+            }
+        } else if (preemptible) {
+            LOGGER.log(Level.INFO, baseTask + " is preemptible and was NOT preempted");
+        }
+    }
+
+    private List<Action> generateActionsForTask(Queue.Task task) {
+        Queue.Task baseTask = getBaseTask(task);
         try {
             final List causes = ((Job) baseTask).getLastBuild().getCauses();
             System.out.println("Causes: " + causes);
@@ -90,16 +119,6 @@ public class ComputeEngineRetentionStrategy extends RetentionStrategy<ComputeEng
             System.out.println("Exception for " + baseTask);
             e.printStackTrace();
         }
-        if (preemptible && preempted) {
-            LOGGER.log(Level.INFO, baseTask + " preemptible " + preemptible + " && preempted " + preempted);
-            List<Action> actions = generateActionsForTask(task);
-            Jenkins.getInstance().getQueue().schedule2(baseTask, 0, actions);
-        } else if (preemptible) {
-            LOGGER.log(Level.INFO, "preemptible " + preemptible + " && preempted " + preempted);
-        }
-    }
-
-    private List<Action> generateActionsForTask(Queue.Task task) {
         return ImmutableList.of(new CauseAction(new Cause.UserIdCause()),
                 new CauseAction(new Cause() {
                     @Override
