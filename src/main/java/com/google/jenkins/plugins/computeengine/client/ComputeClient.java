@@ -19,8 +19,6 @@ package com.google.jenkins.plugins.computeengine.client;
 import com.google.api.services.compute.Compute;
 import com.google.api.services.compute.model.*;
 import com.google.common.base.Strings;
-import com.google.common.collect.Collections2;
-import org.apache.commons.collections.CollectionUtils;
 
 import java.io.IOException;
 import java.util.*;
@@ -36,7 +34,7 @@ public class ComputeClient {
     private static final Logger LOGGER = Logger.getLogger(ComputeClient.class.getName());
     private Compute compute;
 
-    public static String nameFromSelfLink(String selfLink) { 
+    public static String nameFromSelfLink(String selfLink) {
         return selfLink.substring(selfLink.lastIndexOf("/") + 1, selfLink.length());
     }
 
@@ -171,7 +169,7 @@ public class ComputeClient {
         List<String> cpuPlatforms = new ArrayList<String>();
         zone = nameFromSelfLink(zone);
         Zone zoneObject = compute.zones()
-                .get(projectId,zone)
+                .get(projectId, zone)
                 .execute();
         if (zoneObject == null) {
             return cpuPlatforms;
@@ -389,25 +387,25 @@ public class ComputeClient {
         }
         return instances;
     }
-    
+
     public InstanceTemplate getTemplate(String projectId, String templateName) throws IOException {
         return compute.instanceTemplates()
                 .get(projectId, templateName)
                 .execute();
     }
-    
+
     public void insertTemplate(String projectId, InstanceTemplate instanceTemplate) throws IOException {
         compute.instanceTemplates()
                 .insert(projectId, instanceTemplate)
                 .execute();
     }
-    
+
     public void deleteTemplate(String projectId, String templateName) throws IOException {
         compute.instanceTemplates()
                 .delete(projectId, templateName)
                 .execute();
     }
-    
+
     public List<InstanceTemplate> getTemplates(String projectId) throws IOException {
         List<InstanceTemplate> instanceTemplates = compute.instanceTemplates()
                 .list(projectId)
@@ -422,7 +420,7 @@ public class ComputeClient {
 
         return instanceTemplates;
     }
-    
+
     /**
      * Appends metadata to an instance. Any metadata items with existing keys will be overwritten. Otherwise, metadata
      * is preserved. This method blocks until the operation completes.
