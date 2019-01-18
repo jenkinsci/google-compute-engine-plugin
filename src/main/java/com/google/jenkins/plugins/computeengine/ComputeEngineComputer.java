@@ -17,8 +17,12 @@
 package com.google.jenkins.plugins.computeengine;
 
 import com.google.api.services.compute.model.Instance;
+import hudson.model.Executor;
+import hudson.model.Result;
 import hudson.model.TaskListener;
+import hudson.remoting.Channel;
 import hudson.slaves.AbstractCloudComputer;
+import jenkins.model.CauseOfInterruption;
 import org.kohsuke.stapler.DataBoundSetter;
 import org.kohsuke.stapler.HttpRedirect;
 import org.kohsuke.stapler.HttpResponse;
@@ -39,21 +43,36 @@ public class ComputeEngineComputer extends AbstractCloudComputer<ComputeEngineIn
         super(slave);
     }
 
-    @Override
-    public ComputeEngineInstance getNode() {
-        return (ComputeEngineInstance) super.getNode();
-    }
-
     void onConnected(TaskListener listener) throws IOException {
         ComputeEngineInstance node = getNode();
         if (node != null) {
             node.onConnected();
             if (getPreemptible()) {
                 String nodeName = node.getNodeName();
-                LOGGER.log(Level.INFO, "Instance " + nodeName + " is preemptible, setting up premption listener");
+                LOGGER.log(Level.INFO, "Instance " + nodeName + " is preemptive, setting up preemption listener");
                 preemptedFuture = getChannel().callAsync(new PreemptedCheckCallable(listener));
+                getChannel().addListener(new Channel.Listener() {
+                    @Override
+                    public void onClosed(Channel channel, IOException cause) {
+                        LOGGER.log(Level.INFO, "Goc channel close event");
+                        if (getPreempted()) {
+                            LOGGER.log(Level.INFO, "Goc channel close and its preempied");
+                            getExecutors().forEach(executor -> interruptExecutor(executor, nodeName));
+                        }
+                    }
+                });
             }
         }
+    }
+
+    private void interruptExecutor(Executor executor, String nodeName) {
+        LOGGER.log(Level.INFO, "Terminating executor " + executor + " node " + nodeName);
+        executor.interrupt(Result.FAILURE, new CauseOfInterruption() {
+                @Override
+                public String getShortDescription() {
+                    return "Instance " + nodeName + " was preempted";
+                }
+            });
     }
 
     public String getNumExecutorsStr() {

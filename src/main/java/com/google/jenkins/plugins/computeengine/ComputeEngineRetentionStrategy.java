@@ -100,13 +100,13 @@ public class ComputeEngineRetentionStrategy extends RetentionStrategy<ComputeEng
         final boolean preempted = computer.getPreempted();
         Queue.Task baseTask = getBaseTask(task);
         if (preemptible && preempted) {
-            LOGGER.log(Level.INFO, baseTask + " is preemptible and was preempted");
+            LOGGER.log(Level.INFO, baseTask + " is preemptive and was preempted");
             List<Action> actions = generateActionsForTask(task);
             try (ACLContext context = ACL.as(task.getDefaultAuthentication())) {
                 Jenkins.getInstance().getQueue().schedule2(baseTask, 0, actions);
             }
         } else if (preemptible) {
-            LOGGER.log(Level.INFO, baseTask + " is preemptible and was NOT preempted");
+            LOGGER.log(Level.INFO, baseTask + " is preemptive and was NOT preempted");
         }
     }
 
@@ -119,14 +119,16 @@ public class ComputeEngineRetentionStrategy extends RetentionStrategy<ComputeEng
             System.out.println("Exception for " + baseTask);
             e.printStackTrace();
         }
-        return ImmutableList.of(new CauseAction(new Cause.UserIdCause()),
-                new CauseAction(new Cause() {
-                    @Override
-                    public String getShortDescription() {
-                        return "Rebuilding preemptied job";
-                    }
-                }));
+        return ImmutableList.of(
+                new CauseAction(new Cause.UserIdCause()),
+                new CauseAction(new RebuidCause())
+        );
     }
     
-    
+    public static class RebuidCause extends Cause {
+        @Override
+        public String getShortDescription() {
+            return "Rebuilding preempted job";
+        }
+    }
 } 
