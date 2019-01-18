@@ -38,14 +38,8 @@ Start-Process cmd /c -WindowStyle Hidden -Credential $cred -ErrorAction Silently
 Write-Output "Creating key file and writing public key to file"
 $ConfiguredPublicKey = "<YOUR PUBLIC KEY HERE. WILL START WITH ssh-rsa>"
 
-# We are in the second phase of startup where we need to set up authorized_keys for the specified user.
-$UserSid = Get-WmiObject win32_useraccount -Filter "name = '$username'" | select-object sid -ExpandProperty SID
-$UserProfilePath = Get-ItemProperty -Path  "HKLM:\Software\Microsoft\Windows NT\CurrentVersion\ProfileList\$UserSid" -Name ProfileImagePath | select-object profileimagepath -ExpandProperty ProfileImagePath
-
-# Create the .ssh folder and authorized_keys file.
-mkdir $UserProfilePath\.ssh
-Set-Content -Path $UserProfilePath\.ssh\authorized_keys -Value $ConfiguredPublicKey
-
 # Fix up permissions on authorized_keys.
-Import-Module "$env:PROGRAMFILES\OpenSSH-Win64\OpenSSHUtils.psd1" -Force
-Repair-AuthorizedKeyPermission -FilePath  $UserProfilePath\.ssh\authorized_keys
+Set-Content -Path $env:PROGRAMDATA\ssh\administrators_authorized_keys -Value $ConfiguredPublicKey
+icacls $env:PROGRAMDATA\ssh\administrators_authorized_keys /inheritance:r
+icacls $env:PROGRAMDATA\ssh\administrators_authorized_keys /grant SYSTEM:`(F`)
+icacls $env:PROGRAMDATA\ssh\administrators_authorized_keys /grant BUILTIN\Administrators:`(F`)
