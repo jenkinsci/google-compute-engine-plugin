@@ -351,31 +351,7 @@ public class ComputeEngineCloudIT {
         ComputeEngineCloud cloud = (ComputeEngineCloud) r.jenkins.clouds.get(0);
         cloud.addConfiguration(validInstanceConfigurationWithTemplate(TEMPLATE));
         try {
-            InstanceTemplate instanceTemplate = new InstanceTemplate();
-            instanceTemplate.setName(nameFromSelfLink(TEMPLATE));
-            InstanceProperties instanceProperties = new InstanceProperties();
-            instanceProperties.setMachineType(nameFromSelfLink(MACHINE_TYPE));
-            instanceProperties.setLabels(ImmutableMap.of("test-label", "label-value"));
-            AttachedDisk boot = new AttachedDisk();
-            boot.setBoot(true);
-            boot.setAutoDelete(BOOT_DISK_AUTODELETE);
-            boot.setInitializeParams(new AttachedDiskInitializeParams()
-                    .setDiskSizeGb(Long.parseLong(BOOT_DISK_SIZE_GB_STR))
-                    .setDiskType(nameFromSelfLink(BOOT_DISK_TYPE))
-                    .setSourceImage(BOOT_DISK_IMAGE_NAME)
-            );
-            instanceProperties.setDisks(of(boot));
-            instanceProperties.setTags(new Tags().setItems(of(NETWORK_TAGS)));
-            instanceProperties.setMetadata(new Metadata().setItems(of(new Metadata.Items()
-                    .setKey(METADATA_LINUX_STARTUP_SCRIPT_KEY).setValue(DEB_JAVA_STARTUP_SCRIPT))));
-            instanceProperties.setNetworkInterfaces(of(new NetworkInterface()
-                    .setName(NETWORK_NAME)
-                    .setAccessConfigs(of(new AccessConfig()
-                            .setType(NAT_TYPE)
-                            .setName(NAT_NAME)
-                    ))
-            ));
-            instanceTemplate.setProperties(instanceProperties);
+            InstanceTemplate instanceTemplate = createTemplate(ImmutableMap.of("test-label", "label-value"));
             client.insertTemplate(cloud.projectId, instanceTemplate);
 
             // Add a new node
@@ -404,6 +380,55 @@ public class ComputeEngineCloudIT {
         }
     }
 
+    @Test(timeout = 300000)
+    public void testTemplateNoGoogleLabels() throws Exception {
+        ComputeEngineCloud cloud = (ComputeEngineCloud) r.jenkins.clouds.get(0);
+        cloud.addConfiguration(validInstanceConfigurationWithTemplate(TEMPLATE));
+        try {
+            InstanceTemplate instanceTemplate = createTemplate(null);
+            client.insertTemplate(cloud.projectId, instanceTemplate);
+
+            // Add a new node
+            Collection<NodeProvisioner.PlannedNode> planned = cloud.provision(new LabelAtom(LABEL), 1);
+
+            // There should be a successful planned node even without google labels
+            assertEquals(logs(), 1, planned.size());
+        } finally {
+            try {
+                client.deleteTemplate(cloud.projectId, nameFromSelfLink(TEMPLATE));
+            } catch (Exception e) {
+            }
+        }
+    }
+
+    private static InstanceTemplate createTemplate(Map<String, String> googleLabels) {
+        InstanceTemplate instanceTemplate = new InstanceTemplate();
+        instanceTemplate.setName(nameFromSelfLink(TEMPLATE));
+        InstanceProperties instanceProperties = new InstanceProperties();
+        instanceProperties.setMachineType(nameFromSelfLink(MACHINE_TYPE));
+        instanceProperties.setLabels(googleLabels);
+        AttachedDisk boot = new AttachedDisk();
+        boot.setBoot(true);
+        boot.setAutoDelete(BOOT_DISK_AUTODELETE);
+        boot.setInitializeParams(new AttachedDiskInitializeParams()
+                .setDiskSizeGb(Long.parseLong(BOOT_DISK_SIZE_GB_STR))
+                .setDiskType(nameFromSelfLink(BOOT_DISK_TYPE))
+                .setSourceImage(BOOT_DISK_IMAGE_NAME)
+        );
+        instanceProperties.setDisks(of(boot));
+        instanceProperties.setTags(new Tags().setItems(of(NETWORK_TAGS)));
+        instanceProperties.setMetadata(new Metadata().setItems(of(new Metadata.Items()
+                .setKey(METADATA_LINUX_STARTUP_SCRIPT_KEY).setValue(DEB_JAVA_STARTUP_SCRIPT))));
+        instanceProperties.setNetworkInterfaces(of(new NetworkInterface()
+                .setName(NETWORK_NAME)
+                .setAccessConfigs(of(new AccessConfig()
+                        .setType(NAT_TYPE)
+                        .setName(NAT_NAME)
+                ))
+        ));
+        instanceTemplate.setProperties(instanceProperties);
+        return instanceTemplate;
+    }
 
     private static InstanceConfiguration validInstanceConfiguration() {
         return instanceConfiguration(DEB_JAVA_STARTUP_SCRIPT, NUM_EXECUTORS, LABEL, false, NULL_TEMPLATE);

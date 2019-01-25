@@ -8,11 +8,11 @@
         <relativePath />
     </parent>
     <artifactId>google-compute-engine</artifactId>
-    <version>1.0.8-SNAPSHOT</version>
+    <version>1.0.9-SNAPSHOT</version>
     <packaging>hpi</packaging>
     <properties>
         <jenkins.version>2.37</jenkins.version>
-        <jenkinsRuleTimeout>480</jenkinsRuleTimeout>
+        <jenkinsRuleTimeout>0</jenkinsRuleTimeout>
         <java.level>8</java.level>
         <maven.compiler.source>1.8</maven.compiler.source>
         <maven.compiler.target>1.8</maven.compiler.target>
