@@ -16,6 +16,8 @@
 
 package com.google.jenkins.plugins.computeengine;
 
+import com.google.api.services.compute.model.Operation;
+import com.google.jenkins.plugins.computeengine.client.ComputeClient;
 import hudson.Extension;
 import hudson.model.Descriptor;
 import hudson.model.Node;
@@ -70,6 +72,15 @@ public class ComputeEngineInstance extends AbstractCloudSlave {
     protected void _terminate(TaskListener listener) throws IOException, InterruptedException {
         try {
             ComputeEngineCloud cloud = getCloud();
+
+            //TODO: snapshot . temporary haha i need to move this vbefore the java stuff
+            try {
+//                logInfo(computer, listener, "trying to create snapshot");
+                //TODO: how to get snapshot errors
+//                logInfo(computer, listener, "Error/result of snapshot" + createSnapshot(computer).getErrors());
+                createSnapshot(cloud);
+            } catch (Exception e) {
+            }
             // If the instance is running, attempt to terminate it. This is an asynch call and we
             // return immediately, hoping for the best.
             cloud.client.terminateInstanceWithStatus(cloud.projectId, zone, name, "RUNNING");
@@ -83,6 +94,12 @@ public class ComputeEngineInstance extends AbstractCloudSlave {
     
     public String getCloudName() {
         return cloudName;
+    }
+
+
+    private Operation.Error createSnapshot(ComputeEngineCloud cloud) throws Exception{
+        ComputeClient client = cloud.client;
+        return client.createSnapshot(cloud.projectId, zone, this.getNodeName());
     }
 
     public void onConnected() {

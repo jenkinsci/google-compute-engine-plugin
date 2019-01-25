@@ -418,6 +418,34 @@ public class ComputeClient {
         return instanceTemplates;
     }
 
+    //TODO: my stuff lol
+    // disk seems to be the actual name of my image. ok disk, node.getNodeName()
+
+    /**
+     * Creates persistent disk snapshot for Compute Engine instance.
+     * This method blocks until the operation completes.
+     *
+     * @param projectId
+     * @param zone
+     * @param instanceId
+     * @return
+     * @throws IOException
+     * @throws InterruptedException
+     */
+    public Operation.Error createSnapshot(String projectId, String zone, String instanceId) throws IOException, InterruptedException{
+        //TODO: cleanup in the case of a failed snapshot creation (try catch?)
+        // can catch the exceptions, but i want a case where any exception of op.getError() is non null
+        //cause CreateSnapshot extends ComputeRequest<Operation>
+        zone = nameFromSelfLink(zone);
+        System.out.println("zone is " + zone);
+        System.out.println("projectId is " + projectId);
+        System.out.println("disk name is " + instanceId);
+        Operation op = compute.disks().createSnapshot(projectId, zone, instanceId, null).execute();
+
+        // poll for result
+        return waitForOperationCompletion(projectId, op.getName(), op.getZone(), 600 * 1000);
+    }
+
     /**
      * Appends metadata to an instance. Any metadata items with existing keys will be overwritten. Otherwise, metadata
      * is preserved. This method blocks until the operation completes.
