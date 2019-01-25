@@ -440,7 +440,10 @@ public class ComputeClient {
         System.out.println("zone is " + zone);
         System.out.println("projectId is " + projectId);
         System.out.println("disk name is " + instanceId);
-        Operation op = compute.disks().createSnapshot(projectId, zone, instanceId, null).execute();
+        Snapshot snapshot = new Snapshot();
+        //TODO: better name
+        snapshot.setName("meow-" + System.currentTimeMillis());
+        Operation op = compute.disks().createSnapshot(projectId, zone, instanceId, snapshot).execute();
 
         // poll for result
         return waitForOperationCompletion(projectId, op.getName(), op.getZone(), 600 * 1000);

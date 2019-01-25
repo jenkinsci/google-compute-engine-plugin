@@ -69,23 +69,24 @@ public class ComputeEngineInstance extends AbstractCloudSlave {
     }
 
     @Override
-    protected void _terminate(TaskListener listener) throws IOException, InterruptedException {
+    protected void _terminate(TaskListener listener) {
         try {
             ComputeEngineCloud cloud = getCloud();
 
-            //TODO: snapshot . temporary haha i need to move this vbefore the java stuff
-            try {
-//                logInfo(computer, listener, "trying to create snapshot");
-                //TODO: how to get snapshot errors
-//                logInfo(computer, listener, "Error/result of snapshot" + createSnapshot(computer).getErrors());
                 createSnapshot(cloud);
-            } catch (Exception e) {
-            }
+
             // If the instance is running, attempt to terminate it. This is an asynch call and we
             // return immediately, hoping for the best.
             cloud.client.terminateInstanceWithStatus(cloud.projectId, zone, name, "RUNNING");
         } catch (CloudNotFoundException cnfe) {
             listener.error(cnfe.getMessage());
+            return;
+        } catch (InterruptedException e) {
+            //TODO: do I have to do logger or can i sys out println?
+            System.out.println("interrupted exception for snapshot: " + e);
+            return;
+        } catch (IOException e) {
+            System.out.println("IOException for snapshot: " + e);
             return;
         }
 
@@ -97,7 +98,7 @@ public class ComputeEngineInstance extends AbstractCloudSlave {
     }
 
 
-    private Operation.Error createSnapshot(ComputeEngineCloud cloud) throws Exception{
+    private Operation.Error createSnapshot(ComputeEngineCloud cloud) throws IOException, InterruptedException {
         ComputeClient client = cloud.client;
         return client.createSnapshot(cloud.projectId, zone, this.getNodeName());
     }
