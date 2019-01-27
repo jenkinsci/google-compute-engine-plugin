@@ -23,6 +23,7 @@ import hudson.model.Executor;
 import hudson.model.ExecutorListener;
 import hudson.model.Job;
 import hudson.model.Queue;
+import hudson.model.queue.Tasks;
 import hudson.security.ACL;
 import hudson.security.ACLContext;
 import hudson.slaves.RetentionStrategy;
@@ -64,6 +65,7 @@ public class ComputeEngineRetentionStrategy extends RetentionStrategy<ComputeEng
 
     @Override
     public void taskAccepted(Executor executor, Queue.Task task) {
+        getBaseTask(task);
         if (oneShot) {
             delegate.taskAccepted(executor, task);
         }
@@ -86,10 +88,12 @@ public class ComputeEngineRetentionStrategy extends RetentionStrategy<ComputeEng
     }
 
     private Queue.Task getBaseTask(Queue.Task task) {
-        Queue.Task parent = task.getOwnerTask();
+        System.out.print("Task: " + task + "\n\n");
+        Queue.Task parent = Tasks.getOwnerTaskOf(task);
         while (task != parent) {
+            System.out.print("Owner: " + parent + "\n\n");
             task = parent;
-            parent = task.getOwnerTask();
+            parent = Tasks.getOwnerTaskOf(task);
         }
         return parent;
     }
@@ -113,7 +117,8 @@ public class ComputeEngineRetentionStrategy extends RetentionStrategy<ComputeEng
     private List<Action> generateActionsForTask(Queue.Task task) {
         Queue.Task baseTask = getBaseTask(task);
         try {
-            final List causes = ((Job) baseTask).getLastBuild().getCauses();
+            final Job job = (Job) baseTask;
+            final List causes = job.getLastBuild().getCauses();
             System.out.println("Causes: " + causes);
         } catch (Exception e) {
             System.out.println("Exception for " + baseTask);
@@ -121,11 +126,11 @@ public class ComputeEngineRetentionStrategy extends RetentionStrategy<ComputeEng
         }
         return ImmutableList.of(
                 new CauseAction(new Cause.UserIdCause()),
-                new CauseAction(new RebuidCause())
+                new CauseAction(new RebuildCause())
         );
     }
     
-    public static class RebuidCause extends Cause {
+    public static class RebuildCause extends Cause {
         @Override
         public String getShortDescription() {
             return "Rebuilding preempted job";
