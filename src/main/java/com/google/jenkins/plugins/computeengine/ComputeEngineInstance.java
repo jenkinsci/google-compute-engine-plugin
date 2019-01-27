@@ -81,6 +81,10 @@ public class ComputeEngineInstance extends AbstractCloudSlave {
 
 
     }
+    
+    public String getCloudName() {
+        return cloudName;
+    }
 
     public void onConnected() {
         this.connected = true;
