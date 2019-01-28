@@ -284,7 +284,7 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
         try {
             Instance instance = instance();
             // TODO: JENKINS-55285
-            Operation operation = cloud.client.insertInstance(cloud.projectId, Optional.ofNullable(template), instance);
+            Operation operation = cloud.client.insertInstance(cloud.projectId, template, instance);
             logger.println("Sent insert request");
             String targetRemoteFs = this.remoteFs;
             ComputeEngineComputerLauncher launcher = null;
