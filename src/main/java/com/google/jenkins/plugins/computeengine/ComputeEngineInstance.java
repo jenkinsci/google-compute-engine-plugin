@@ -18,7 +18,6 @@ package com.google.jenkins.plugins.computeengine;
 
 import hudson.Extension;
 import hudson.model.Descriptor;
-import hudson.model.Node;
 import hudson.model.TaskListener;
 import hudson.slaves.*;
 import jenkins.model.Jenkins;
@@ -31,6 +30,8 @@ import java.util.Optional;
 public class ComputeEngineInstance extends AbstractCloudSlave {
     private static final long serialVersionUID = 1;
     private static final Logger LOGGER = Logger.getLogger(ComputeEngineInstance.class.getName());
+    
+    // TODO: https://issues.jenkins-ci.org/browse/JENKINS-55518
     public final String zone;
     public final String cloudName;
     public final String sshUser;
@@ -46,7 +47,7 @@ public class ComputeEngineInstance extends AbstractCloudSlave {
                                  String remoteFS,
                                  Optional<WindowsConfiguration> windowsConfig,
                                  int numExecutors,
-                                 Node.Mode mode,
+                                 Mode mode,
                                  String labelString,
                                  ComputerLauncher launcher,
                                  RetentionStrategy retentionStrategy,
