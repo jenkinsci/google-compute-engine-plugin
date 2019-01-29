@@ -340,10 +340,10 @@ public class ComputeClient {
         return subnetworks;
     }
 
-    public Operation insertInstance(String projectId, Optional<String> template, Instance instance) throws IOException {
+    public Operation insertInstance(String projectId, String template, Instance instance) throws IOException {
         final Compute.Instances.Insert insert = compute.instances().insert(projectId, instance.getZone(), instance);
-        if (template.isPresent()) {
-            insert.setSourceInstanceTemplate(template.get());
+        if (!Strings.isNullOrEmpty(template)) {
+            insert.setSourceInstanceTemplate(template);
         }
         return insert.execute();
     }

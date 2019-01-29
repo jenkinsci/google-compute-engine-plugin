@@ -58,6 +58,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.logging.Level;
 import java.util.logging.LogRecord;
 import java.util.logging.Logger;
@@ -201,25 +202,21 @@ public class ComputeEngineCloud extends AbstractCloudImpl {
 
                 final ComputeEngineInstance node = config.provision(StreamTaskListener.fromStdout());
                 Jenkins.getInstance().addNode(node);
-                r.add(new PlannedNode(node.getNodeName(), Computer.threadPoolForRemoting.submit(new Callable<Node>() {
-                    public Node call() throws Exception {
-                        long startTime = System.currentTimeMillis();
-                        LOGGER.log(Level.INFO, String.format("Waiting %dms for node %s to connect", config.getLaunchTimeoutMillis(), node.getNodeName()));
-                        try {
-                            Computer c = node.toComputer();
-                            if (c != null) {
-                                c.connect(false).get(config.getLaunchTimeoutMillis(), TimeUnit.MILLISECONDS);
-                                LOGGER.log(Level.INFO, String.format("%dms elapsed waiting for node %s to connect", System.currentTimeMillis() - startTime, node.getNodeName()));
-                                return null;
-                            } else {
-                                LOGGER.log(Level.INFO, String.format("No computer for node %s found", node.getNodeName()));
-                            }
-                        } catch (Exception e) {
-                            LOGGER.log(Level.WARNING, String.format("Exception waiting for node %s to connect", node.getNodeName()), e);
-                            node.terminate();
+                r.add(new PlannedNode(node.getNodeName(), Computer.threadPoolForRemoting.submit(() -> {
+                    long startTime = System.currentTimeMillis();
+                    LOGGER.log(Level.INFO, String.format("Waiting %dms for node %s to connect", config.getLaunchTimeoutMillis(), node.getNodeName()));
+                    try {
+                        Computer c = node.toComputer();
+                        if (c != null) {
+                            c.connect(false).get(config.getLaunchTimeoutMillis(), TimeUnit.MILLISECONDS);
+                            LOGGER.log(Level.INFO, String.format("%dms elapsed waiting for node %s to connect", System.currentTimeMillis() - startTime, node.getNodeName()));
+                        } else {
+                            LOGGER.log(Level.WARNING, String.format("No computer for node %s found", node.getNodeName()));
                         }
-                        return null;
+                    } catch (TimeoutException e) {
+                        LOGGER.log(Level.WARNING, String.format("Timeout waiting for node %s to connect", node.getNodeName()), e);
                     }
+                    return null;
                 }), node.getNumExecutors()));
                 excessWorkload -= node.getNumExecutors();
             }
