@@ -19,7 +19,6 @@ package com.google.jenkins.plugins.computeengine.client;
 import com.google.api.services.compute.Compute;
 import com.google.api.services.compute.model.*;
 import com.google.common.base.Strings;
-import org.apache.commons.lang.StringUtils;
 
 import java.io.IOException;
 import java.util.*;
@@ -340,7 +339,7 @@ public class ComputeClient {
 
     public Operation insertInstance(String projectId, String template, Instance instance) throws IOException {
         final Compute.Instances.Insert insert = compute.instances().insert(projectId, instance.getZone(), instance);
-        if (StringUtils.isNotEmpty(template)) {
+        if (!Strings.isNullOrEmpty(template)) {
             insert.setSourceInstanceTemplate(template);
         }
         return insert.execute();
