@@ -418,9 +418,6 @@ public class ComputeClient {
         return instanceTemplates;
     }
 
-    //TODO: my stuff lol
-    // disk seems to be the actual name of my image. ok disk, node.getNodeName()
-
     /**
      * Creates persistent disk snapshot for Compute Engine instance.
      * This method blocks until the operation completes.
@@ -441,7 +438,7 @@ public class ComputeClient {
         System.out.println("projectId is " + projectId);
         System.out.println("disk name is " + instanceId);
         Snapshot snapshot = new Snapshot();
-        //TODO: better name
+        //TODO: better name. ask about also if i should catch here or just throw
         snapshot.setName("meow-" + System.currentTimeMillis());
         Operation op = compute.disks().createSnapshot(projectId, zone, instanceId, snapshot).execute();
 

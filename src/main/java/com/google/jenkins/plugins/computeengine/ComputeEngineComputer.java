@@ -25,6 +25,7 @@ import org.kohsuke.stapler.HttpRedirect;
 import org.kohsuke.stapler.HttpResponse;
 
 import java.io.IOException;
+import java.util.logging.Logger;
 
 public class ComputeEngineComputer extends AbstractCloudComputer<ComputeEngineInstance> {
 
@@ -33,6 +34,8 @@ public class ComputeEngineComputer extends AbstractCloudComputer<ComputeEngineIn
     public ComputeEngineComputer(ComputeEngineInstance slave) {
         super(slave);
     }
+
+    private static final Logger LOGGER = Logger.getLogger(ComputeEngineCloud.class.getName());
 
     @Override
     public ComputeEngineInstance getNode() {
@@ -136,11 +139,9 @@ public class ComputeEngineComputer extends AbstractCloudComputer<ComputeEngineIn
 
                 node.terminate();
             } catch (InterruptedException ie) {
-                //TODO: log
-                //TODO: do I have to do logger or can i sys out println?
-                System.out.println("interrupted exception for snapshot: " + ie);
-            } catch (IOException e) {
-                System.out.println("IOException for snapshot: " + e);
+                LOGGER.info("Interrupted exception for snapshot: " + ie);
+            } catch (IOException ioe) {
+                LOGGER.info("IOException for snapshot: " + ioe);
             }
         }
         return new HttpRedirect("..");
