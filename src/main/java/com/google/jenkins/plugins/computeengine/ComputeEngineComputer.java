@@ -139,7 +139,7 @@ public class ComputeEngineComputer extends AbstractCloudComputer<ComputeEngineIn
 
                 node.terminate();
             } catch (InterruptedException ie) {
-                LOGGER.info("Interrupted exception for snapshot: " + ie);
+                LOGGER.info("Interrupted exception: " + ie);
             } catch (IOException ioe) {
                 LOGGER.info("IOException for snapshot: " + ioe);
             }
