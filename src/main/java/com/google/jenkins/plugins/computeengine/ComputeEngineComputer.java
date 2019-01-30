@@ -129,10 +129,11 @@ public class ComputeEngineComputer extends AbstractCloudComputer<ComputeEngineIn
             try {
                 ComputeEngineCloud cloud = getCloud();
 
+                // Checks for failed jobs for this computer's node
                 if (!this.getBuilds().failureOnly().isEmpty()) {
                     createSnapshot(cloud);
                 }
-//                createSnapshot(cloud);
+
                 node.terminate();
             } catch (InterruptedException ie) {
                 //TODO: log
