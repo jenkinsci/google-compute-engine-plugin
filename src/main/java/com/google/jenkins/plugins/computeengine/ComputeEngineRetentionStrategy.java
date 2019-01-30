@@ -65,7 +65,6 @@ public class ComputeEngineRetentionStrategy extends RetentionStrategy<ComputeEng
 
     @Override
     public void taskAccepted(Executor executor, Queue.Task task) {
-        getBaseTask(task);
         if (oneShot) {
             delegate.taskAccepted(executor, task);
         }
@@ -88,10 +87,8 @@ public class ComputeEngineRetentionStrategy extends RetentionStrategy<ComputeEng
     }
 
     private Queue.Task getBaseTask(Queue.Task task) {
-        System.out.print("Task: " + task + "\n\n");
         Queue.Task parent = Tasks.getOwnerTaskOf(task);
         while (task != parent) {
-            System.out.print("Owner: " + parent + "\n\n");
             task = parent;
             parent = Tasks.getOwnerTaskOf(task);
         }
