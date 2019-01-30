@@ -69,24 +69,14 @@ public class ComputeEngineInstance extends AbstractCloudSlave {
     }
 
     @Override
-    protected void _terminate(TaskListener listener) {
+    protected void _terminate(TaskListener listener) throws IOException, InterruptedException {
         try {
             ComputeEngineCloud cloud = getCloud();
-
-                createSnapshot(cloud);
-
             // If the instance is running, attempt to terminate it. This is an asynch call and we
             // return immediately, hoping for the best.
             cloud.client.terminateInstanceWithStatus(cloud.projectId, zone, name, "RUNNING");
         } catch (CloudNotFoundException cnfe) {
             listener.error(cnfe.getMessage());
-            return;
-        } catch (InterruptedException e) {
-            //TODO: do I have to do logger or can i sys out println?
-            System.out.println("interrupted exception for snapshot: " + e);
-            return;
-        } catch (IOException e) {
-            System.out.println("IOException for snapshot: " + e);
             return;
         }
 
@@ -95,12 +85,6 @@ public class ComputeEngineInstance extends AbstractCloudSlave {
     
     public String getCloudName() {
         return cloudName;
-    }
-
-
-    private Operation.Error createSnapshot(ComputeEngineCloud cloud) throws IOException, InterruptedException {
-        ComputeClient client = cloud.client;
-        return client.createSnapshot(cloud.projectId, zone, this.getNodeName());
     }
 
     public void onConnected() {

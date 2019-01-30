@@ -17,6 +17,8 @@
 package com.google.jenkins.plugins.computeengine;
 
 import com.google.api.services.compute.model.Instance;
+import com.google.api.services.compute.model.Operation;
+import com.google.jenkins.plugins.computeengine.client.ComputeClient;
 import hudson.slaves.AbstractCloudComputer;
 import org.kohsuke.stapler.DataBoundSetter;
 import org.kohsuke.stapler.HttpRedirect;
@@ -108,6 +110,14 @@ public class ComputeEngineComputer extends AbstractCloudComputer<ComputeEngineIn
         return node.getCloud();
     }
 
+
+
+    private Operation.Error createSnapshot(ComputeEngineCloud cloud) throws IOException, InterruptedException {
+        ComputeEngineInstance node = getNode();
+        ComputeClient client = cloud.client;
+        return client.createSnapshot(cloud.projectId, node.zone, node.getNodeName());
+    }
+
     /**
      * When the slave is deleted, terminate the instance.
      */
@@ -117,9 +127,19 @@ public class ComputeEngineComputer extends AbstractCloudComputer<ComputeEngineIn
         ComputeEngineInstance node = getNode();
         if (node != null) {
             try {
+                ComputeEngineCloud cloud = getCloud();
+
+                if (!this.getBuilds().failureOnly().isEmpty()) {
+                    createSnapshot(cloud);
+                }
+//                createSnapshot(cloud);
                 node.terminate();
             } catch (InterruptedException ie) {
                 //TODO: log
+                //TODO: do I have to do logger or can i sys out println?
+                System.out.println("interrupted exception for snapshot: " + ie);
+            } catch (IOException e) {
+                System.out.println("IOException for snapshot: " + e);
             }
         }
         return new HttpRedirect("..");
