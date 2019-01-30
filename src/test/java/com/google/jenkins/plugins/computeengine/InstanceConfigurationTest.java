@@ -247,7 +247,6 @@ public class InstanceConfigurationTest {
                 NODE_MODE,
                 new AcceleratorConfiguration(ACCELERATOR_NAME, ACCELERATOR_COUNT),
                 RUN_AS_USER,
-                false,
                 null);
     }
 

@@ -15,9 +15,6 @@
             <f:entry title="${%Node Retention Time (minutes)}" field="retentionTimeMinutesStr">
                 <f:textbox default="${descriptor.defaultRetentionTimeMinutes()}"/>
             </f:entry>
-            <f:entry title="${%One shot node?}" field="oneShot">
-                <f:checkbox/>
-            </f:entry>
             <f:slave-mode name="mode" node="${instance}"/>
             <f:entry title="${%Labels}" field="labelString">
                 <f:textbox/>
