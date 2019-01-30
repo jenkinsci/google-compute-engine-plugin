@@ -188,10 +188,8 @@ public class ComputeEngineCloudWindowsIT {
         // There should be a planned node
         assertEquals(logs(), 1, planned.size());
 
-        String name = planned.iterator().next().displayName;
-        
         // Wait for the node creation to finish
-        planned.iterator().next().future.get();
+        String name = planned.iterator().next().future.get().getNodeName();
 
         // There should be no warning logs
         assertEquals(logs(), false, logs().contains("WARNING"));
@@ -265,7 +263,6 @@ public class ComputeEngineCloudWindowsIT {
                 NODE_MODE,
                 new AcceleratorConfiguration(ACCELERATOR_NAME, ACCELERATOR_COUNT),
                 RUN_AS_USER,
-                false,
                 null);
         ic.appendLabels(INTEGRATION_LABEL);
         return ic;

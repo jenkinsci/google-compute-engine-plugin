@@ -22,8 +22,6 @@ import com.google.common.base.Strings;
 
 import java.io.IOException;
 import java.util.*;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 /**
  * Client for communicating with the Google Compute API
@@ -31,7 +29,6 @@ import java.util.logging.Logger;
  * @see <a href="https://cloud.google.com/compute/">Cloud Engine</a>
  */
 public class ComputeClient {
-    private static final Logger LOGGER = Logger.getLogger(ComputeClient.class.getName());
     private Compute compute;
 
     public static String nameFromSelfLink(String selfLink) { 
@@ -479,7 +476,7 @@ public class ComputeClient {
             if (elapsed >= timeout) {
                 throw new InterruptedException("Timed out waiting for operation to complete");
             }
-            LOGGER.log(Level.FINE, "Waiting for operation " + operationId + " to complete..");
+            System.out.println("waiting...");
             if (zone != null) {
                 Compute.ZoneOperations.Get get = compute.zoneOperations().get(projectId, zone, operationId);
                 operation = get.execute();

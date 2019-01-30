@@ -26,12 +26,7 @@ import com.google.jenkins.plugins.computeengine.client.ClientFactory;
 import com.google.jenkins.plugins.computeengine.client.ComputeClient;
 import com.google.jenkins.plugins.credentials.oauth.GoogleOAuth2Credentials;
 import hudson.Extension;
-import hudson.model.Computer;
-import hudson.model.Descriptor;
-import hudson.model.Item;
-import hudson.model.Label;
-import hudson.model.Node;
-import hudson.model.TaskListener;
+import hudson.model.*;
 import hudson.security.ACL;
 import hudson.slaves.AbstractCloudImpl;
 import hudson.slaves.Cloud;
@@ -50,15 +45,8 @@ import javax.annotation.Nonnull;
 import javax.servlet.ServletException;
 import java.io.IOException;
 import java.io.PrintStream;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.Callable;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 import java.util.logging.Level;
 import java.util.logging.LogRecord;
 import java.util.logging.Logger;
@@ -202,21 +190,26 @@ public class ComputeEngineCloud extends AbstractCloudImpl {
 
                 final ComputeEngineInstance node = config.provision(StreamTaskListener.fromStdout());
                 Jenkins.getInstance().addNode(node);
-                r.add(new PlannedNode(node.getNodeName(), Computer.threadPoolForRemoting.submit(() -> {
-                    long startTime = System.currentTimeMillis();
-                    LOGGER.log(Level.INFO, String.format("Waiting %dms for node %s to connect", config.getLaunchTimeoutMillis(), node.getNodeName()));
-                    try {
-                        Computer c = node.toComputer();
-                        if (c != null) {
-                            c.connect(false).get(config.getLaunchTimeoutMillis(), TimeUnit.MILLISECONDS);
+                r.add(new PlannedNode(node.getNodeName(), Computer.threadPoolForRemoting.submit(new Callable<Node>() {
+                    public Node call() throws Exception {
+                        long startTime = System.currentTimeMillis();
+                        LOGGER.log(Level.INFO, String.format("Waiting %dms for node %s to connect", config.getLaunchTimeoutMillis(), node.getNodeName()));
+                        while ((System.currentTimeMillis() - startTime) < config.getLaunchTimeoutMillis()) {
                             LOGGER.log(Level.INFO, String.format("%dms elapsed waiting for node %s to connect", System.currentTimeMillis() - startTime, node.getNodeName()));
-                        } else {
-                            LOGGER.log(Level.WARNING, String.format("No computer for node %s found", node.getNodeName()));
+                            Computer c;
+                            try {
+                                c = node.toComputer();
+                                if (c != null) {
+                                    c.connect(false).get();
+                                }
+                            } catch (Exception e) {
+                                LOGGER.log(Level.WARNING, String.format("Exception waiting for node %s to connect", node.getNodeName()), e);
+                            }
+                            return node;
                         }
-                    } catch (TimeoutException e) {
-                        LOGGER.log(Level.WARNING, String.format("Timeout waiting for node %s to connect", node.getNodeName()), e);
+                        LOGGER.log(Level.WARNING, "Failed to connect to node within launch timeout");
+                        return node;
                     }
-                    return null;
                 }), node.getNumExecutors()));
                 excessWorkload -= node.getNumExecutors();
             }

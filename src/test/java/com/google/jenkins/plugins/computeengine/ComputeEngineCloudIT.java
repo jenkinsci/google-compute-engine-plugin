@@ -37,14 +37,9 @@ import com.google.jenkins.plugins.computeengine.client.ClientFactory;
 import com.google.jenkins.plugins.computeengine.client.ComputeClient;
 import com.google.jenkins.plugins.credentials.oauth.GoogleRobotPrivateKeyCredentials;
 import com.google.jenkins.plugins.credentials.oauth.ServiceAccountConfig;
-import hudson.model.FreeStyleBuild;
-import hudson.model.FreeStyleProject;
 import hudson.model.Node;
 import hudson.model.labels.LabelAtom;
 import hudson.slaves.NodeProvisioner;
-import hudson.tasks.Builder;
-import hudson.tasks.Shell;
-import org.awaitility.Awaitility;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -56,11 +51,9 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.TimeUnit;
 import java.util.logging.LogManager;
 import java.util.logging.Logger;
 import java.util.logging.SimpleFormatter;
@@ -205,6 +198,7 @@ public class ComputeEngineCloudIT {
     public void after() {
         ComputeEngineCloud cloud = (ComputeEngineCloud) r.jenkins.clouds.get(0);
         cloud.configurations.clear();
+
     }
 
     @Test
@@ -234,10 +228,8 @@ public class ComputeEngineCloudIT {
         // There should be a planned node
         assertEquals(logs(), 1, planned.size());
 
-        String name = planned.iterator().next().displayName;
-        
         // Wait for the node creation to finish
-        planned.iterator().next().future.get();
+        String name = planned.iterator().next().future.get().getNodeName();
 
         // There should be no warning logs
         assertFalse(logs(), logs().contains("WARNING"));
@@ -291,11 +283,7 @@ public class ComputeEngineCloudIT {
         // Add a new node
         Collection<NodeProvisioner.PlannedNode> planned = cloud.provision(new LabelAtom(LABEL), 1);
 
-        String name = planned.iterator().next().displayName;
-
-        planned.iterator().next().future.get();
-        
-        String provisionedLabels = r.jenkins.getNode(name).getLabelString();
+        String provisionedLabels = planned.iterator().next().future.get().getLabelString();
         // There should be a planned node TODO
         assertEquals(logs(), MULTIPLE_LABEL, provisionedLabels);
     }
@@ -306,7 +294,7 @@ public class ComputeEngineCloudIT {
         logOutput.reset();
 
         ComputeEngineCloud cloud = (ComputeEngineCloud) r.jenkins.clouds.get(0);
-        cloud.addConfiguration(invalidInstanceConfiguration());
+        cloud.addConfiguration(invalidInstanceConfiguration1());
 
         // Add a new node
         Collection<NodeProvisioner.PlannedNode> planned = cloud.provision(new LabelAtom(LABEL), 1);
@@ -318,34 +306,9 @@ public class ComputeEngineCloudIT {
         planned.iterator().next().future.get();
 
         // There should be warning logs
-        assertTrue(logs(), logs().contains("WARNING"));
+        assertEquals(logs(), true, logs().contains("WARNING"));
     }
 
-    @Test(timeout = 500000)
-    public void testOneShotInstances() throws Exception {
-        ComputeEngineCloud cloud = (ComputeEngineCloud) r.jenkins.clouds.get(0);
-        cloud.addConfiguration(validInstanceConfigurationWithOneShot());
-
-        r.jenkins.getNodesObject().setNodes(Collections.emptyList());
-        
-        // Assert that there is 0 nodes
-        assertTrue(r.jenkins.getNodes().isEmpty());
-
-        FreeStyleProject project = r.createFreeStyleProject();
-        Builder step = new Shell("echo works");
-        project.getBuildersList().add(step);
-        project.setAssignedLabel(new LabelAtom(LABEL));
-        
-        // Enqueue a build of the project, wait for it to complete, and assert success
-        FreeStyleBuild build = r.buildAndAssertSuccess(project);
-        
-        // Assert that the console log contains the output we expect
-        r.assertLogContains("works", build);
-        
-        // Assert that there is 0 nodes after job finished
-        Awaitility.await().timeout(10, TimeUnit.SECONDS).until(() -> r.jenkins.getNodes().isEmpty());
-    }
-    
     @Test(timeout = 300000)
     public void testTemplate() throws Exception {
         ComputeEngineCloud cloud = (ComputeEngineCloud) r.jenkins.clouds.get(0);
@@ -359,11 +322,9 @@ public class ComputeEngineCloudIT {
 
             // There should be a planned node
             assertEquals(logs(), 1, planned.size());
-            
-            String name = planned.iterator().next().displayName;
-            
+
             // Wait for the node creation to finish
-            planned.iterator().next().future.get();
+            String name = planned.iterator().next().future.get().getNodeName();
 
             // There should be no warning logs
             assertFalse(logs(), logs().contains("WARNING"));
@@ -431,34 +392,31 @@ public class ComputeEngineCloudIT {
     }
 
     private static InstanceConfiguration validInstanceConfiguration() {
-        return instanceConfiguration(DEB_JAVA_STARTUP_SCRIPT, NUM_EXECUTORS, LABEL, false, NULL_TEMPLATE);
+        return instanceConfiguration(DEB_JAVA_STARTUP_SCRIPT, NUM_EXECUTORS, LABEL, NULL_TEMPLATE);
     }
 
     private static InstanceConfiguration validInstanceConfigurationWithLabels(String labels) {
-        return instanceConfiguration(DEB_JAVA_STARTUP_SCRIPT, NUM_EXECUTORS, labels, false, NULL_TEMPLATE);
+        return instanceConfiguration(DEB_JAVA_STARTUP_SCRIPT, NUM_EXECUTORS, labels, NULL_TEMPLATE);
     }
 
     private static InstanceConfiguration validInstanceConfigurationWithExecutors(String numExecutors) {
-        return instanceConfiguration(DEB_JAVA_STARTUP_SCRIPT, numExecutors, LABEL, false, NULL_TEMPLATE);
+        return instanceConfiguration(DEB_JAVA_STARTUP_SCRIPT, numExecutors, LABEL, NULL_TEMPLATE);
     }
 
     private static InstanceConfiguration validInstanceConfigurationWithTemplate(String template) {
-        return instanceConfiguration(DEB_JAVA_STARTUP_SCRIPT, NUM_EXECUTORS, LABEL, false, template);
+        return instanceConfiguration(DEB_JAVA_STARTUP_SCRIPT, NUM_EXECUTORS, LABEL, template);
     }
 
-    private static InstanceConfiguration validInstanceConfigurationWithOneShot() {
-        return instanceConfiguration(DEB_JAVA_STARTUP_SCRIPT, NUM_EXECUTORS, LABEL, true, NULL_TEMPLATE);
-    }
     /**
      * This configuration creates an instance with no Java installed.
      *
      * @return
      */
-    private static InstanceConfiguration invalidInstanceConfiguration() {
-        return instanceConfiguration("", NUM_EXECUTORS, LABEL, false, NULL_TEMPLATE);
+    private static InstanceConfiguration invalidInstanceConfiguration1() {
+        return instanceConfiguration("", NUM_EXECUTORS, LABEL, NULL_TEMPLATE);
     }
 
-    private static InstanceConfiguration instanceConfiguration(String startupScript, String numExecutors, String labels, boolean oneShot, String template) {
+    private static InstanceConfiguration instanceConfiguration(String startupScript, String numExecutors, String labels, String template) {
         InstanceConfiguration ic = new InstanceConfiguration(
                 NAME_PREFIX,
                 REGION,
@@ -490,7 +448,6 @@ public class ComputeEngineCloudIT {
                 NODE_MODE,
                 new AcceleratorConfiguration(ACCELERATOR_NAME, ACCELERATOR_COUNT),
                 RUN_AS_USER,
-                oneShot,
                 template
         );
         ic.appendLabels(INTEGRATION_LABEL);
