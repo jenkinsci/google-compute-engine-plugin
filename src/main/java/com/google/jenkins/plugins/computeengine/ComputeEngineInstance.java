@@ -37,7 +37,7 @@ public class ComputeEngineInstance extends AbstractCloudSlave {
     public final String sshUser;
     public transient final Optional<WindowsConfiguration> windowsConfig;
     public Integer launchTimeout; // Seconds
-    public Boolean connected;
+    private Boolean connected;
 
     public ComputeEngineInstance(String cloudName,
                                  String name,
@@ -83,10 +83,6 @@ public class ComputeEngineInstance extends AbstractCloudSlave {
         return cloudName;
     }
     
-    public String getCloudName() {
-        return cloudName;
-    }
-
     public void onConnected() {
         this.connected = true;
     }
