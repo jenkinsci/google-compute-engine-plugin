@@ -431,15 +431,17 @@ public class ComputeClient {
      */
     public Operation.Error createSnapshot(String projectId, String zone, String instanceId) throws IOException, InterruptedException{
         //TODO: cleanup in the case of a failed snapshot creation (try catch?)
+        // TODO: how to handle these exceptions?
         // can catch the exceptions, but i want a case where any exception of op.getError() is non null
         //cause CreateSnapshot extends ComputeRequest<Operation>
         zone = nameFromSelfLink(zone);
+        //TODO remove later since these were for debugging
         System.out.println("zone is " + zone);
         System.out.println("projectId is " + projectId);
         System.out.println("disk name is " + instanceId);
         Snapshot snapshot = new Snapshot();
-        //TODO: better name. ask about also if i should catch here or just throw
-        snapshot.setName("meow-" + System.currentTimeMillis());
+
+        snapshot.setName(instanceId + "-" + System.currentTimeMillis());
         Operation op = compute.disks().createSnapshot(projectId, zone, instanceId, snapshot).execute();
 
         // poll for result
