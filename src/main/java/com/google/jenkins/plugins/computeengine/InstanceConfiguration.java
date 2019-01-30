@@ -34,6 +34,8 @@ import hudson.Util;
 import hudson.model.*;
 import hudson.model.labels.LabelAtom;
 import hudson.security.ACL;
+import hudson.util.FormValidation;
+import hudson.util.ListBoxModel;
 import jenkins.model.Jenkins;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.text.RandomStringGenerator;
