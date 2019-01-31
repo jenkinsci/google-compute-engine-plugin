@@ -37,9 +37,14 @@ import com.google.jenkins.plugins.computeengine.client.ClientFactory;
 import com.google.jenkins.plugins.computeengine.client.ComputeClient;
 import com.google.jenkins.plugins.credentials.oauth.GoogleRobotPrivateKeyCredentials;
 import com.google.jenkins.plugins.credentials.oauth.ServiceAccountConfig;
+import hudson.model.Computer;
+import hudson.model.FreeStyleBuild;
+import hudson.model.FreeStyleProject;
 import hudson.model.Node;
 import hudson.model.labels.LabelAtom;
 import hudson.slaves.NodeProvisioner;
+import hudson.tasks.Builder;
+import hudson.tasks.Shell;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -213,7 +218,7 @@ public class ComputeEngineCloudIT {
         Image i = cloud.client.getImage("debian-cloud", "debian-9-stretch-v20180820");
         assertNotNull(i);
     }
-
+/*
     @Test(timeout = 300000)
     public void testWorkerCreated() throws Exception {
         //TODO: each test method should probably have its own handler.
@@ -227,6 +232,8 @@ public class ComputeEngineCloudIT {
 
         // There should be a planned node
         assertEquals(logs(), 1, planned.size());
+
+        String name = planned.iterator().next().displayName;
 
         // Wait for the node creation to finish
         String name = planned.iterator().next().future.get().getNodeName();
@@ -284,6 +291,7 @@ public class ComputeEngineCloudIT {
         Collection<NodeProvisioner.PlannedNode> planned = cloud.provision(new LabelAtom(LABEL), 1);
 
         String provisionedLabels = planned.iterator().next().future.get().getLabelString();
+
         // There should be a planned node TODO
         assertEquals(logs(), MULTIPLE_LABEL, provisionedLabels);
     }
@@ -308,7 +316,32 @@ public class ComputeEngineCloudIT {
         // There should be warning logs
         assertEquals(logs(), true, logs().contains("WARNING"));
     }
+*/
 
+   @Test(timeout = 300000)
+    public void testNoSnapshotCreated() throws Exception {
+        logOutput.reset();
+
+        ComputeEngineCloud cloud = (ComputeEngineCloud) r.jenkins.clouds.get(0);
+        cloud.addConfiguration(validInstanceConfiguration());
+
+        Collection<NodeProvisioner.PlannedNode> planned = cloud.provision(new LabelAtom(LABEL), 1);
+        Node worker = planned.iterator().next().future.get();
+
+        FreeStyleProject project = r.createFreeStyleProject();
+        Builder step = new Shell("echo works");
+        project.getBuildersList().add(step);
+        project.setAssignedLabel(new LabelAtom(LABEL));
+
+        FreeStyleBuild build = r.buildAndAssertSuccess(project);
+        Computer computer = worker.toComputer();
+        computer.doDoDelete();
+
+       assertFalse(logs(), logs().contains("snapshot"));
+
+   }
+
+    /*
     @Test(timeout = 300000)
     public void testTemplate() throws Exception {
         ComputeEngineCloud cloud = (ComputeEngineCloud) r.jenkins.clouds.get(0);
@@ -360,7 +393,7 @@ public class ComputeEngineCloudIT {
             } catch (Exception e) {
             }
         }
-    }
+    }*/
 
     private static InstanceTemplate createTemplate(Map<String, String> googleLabels) {
         InstanceTemplate instanceTemplate = new InstanceTemplate();

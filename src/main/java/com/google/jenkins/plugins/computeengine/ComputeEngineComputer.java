@@ -31,11 +31,11 @@ public class ComputeEngineComputer extends AbstractCloudComputer<ComputeEngineIn
 
     private volatile Instance instance;
 
+    private static final Logger LOGGER = Logger.getLogger(ComputeEngineCloud.class.getName());
+
     public ComputeEngineComputer(ComputeEngineInstance slave) {
         super(slave);
     }
-
-    private static final Logger LOGGER = Logger.getLogger(ComputeEngineCloud.class.getName());
 
     @Override
     public ComputeEngineInstance getNode() {
@@ -113,14 +113,6 @@ public class ComputeEngineComputer extends AbstractCloudComputer<ComputeEngineIn
         return node.getCloud();
     }
 
-
-
-    private Operation.Error createSnapshot(ComputeEngineCloud cloud) throws IOException, InterruptedException {
-        ComputeEngineInstance node = getNode();
-        ComputeClient client = cloud.client;
-        return client.createSnapshot(cloud.projectId, node.zone, node.getNodeName());
-    }
-
     /**
      * When the slave is deleted, terminate the instance.
      */
@@ -133,8 +125,10 @@ public class ComputeEngineComputer extends AbstractCloudComputer<ComputeEngineIn
                 ComputeEngineCloud cloud = getCloud();
 
                 // Checks for failed jobs for this computer's node
-                if (!this.getBuilds().failureOnly().isEmpty()) {
-                    createSnapshot(cloud);
+                if (cloud != null && !this.getBuilds().failureOnly().isEmpty()) {
+                    LOGGER.info("Creating snapshot...");
+                    ComputeClient client = cloud.client;
+                    client.createSnapshot(cloud.projectId, node.zone, node.getNodeName());
                 }
 
                 node.terminate();
