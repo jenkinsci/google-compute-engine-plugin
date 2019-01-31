@@ -60,6 +60,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.LogManager;
 import java.util.logging.Logger;
@@ -235,7 +236,7 @@ public class ComputeEngineCloudIT {
         assertEquals(logs(), 1, planned.size());
 
         String name = planned.iterator().next().displayName;
-        
+
         // Wait for the node creation to finish
         planned.iterator().next().future.get();
 
@@ -294,13 +295,13 @@ public class ComputeEngineCloudIT {
         String name = planned.iterator().next().displayName;
 
         planned.iterator().next().future.get();
-        
+
         String provisionedLabels = r.jenkins.getNode(name).getLabelString();
         // There should be a planned node TODO
         assertEquals(logs(), MULTIPLE_LABEL, provisionedLabels);
     }
 
-    @Test(timeout = 300000)
+    @Test(timeout = 300000, expected = ExecutionException.class)
     public void testWorkerFailed() throws Exception {
         //TODO: each test method should probably have its own handler.
         logOutput.reset();
@@ -316,9 +317,6 @@ public class ComputeEngineCloudIT {
 
         // Wait for the node creation to fail
         planned.iterator().next().future.get();
-
-        // There should be warning logs
-        assertTrue(logs(), logs().contains("WARNING"));
     }
 
     @Test(timeout = 500000)
@@ -327,7 +325,7 @@ public class ComputeEngineCloudIT {
         cloud.addConfiguration(validInstanceConfigurationWithOneShot());
 
         r.jenkins.getNodesObject().setNodes(Collections.emptyList());
-        
+
         // Assert that there is 0 nodes
         assertTrue(r.jenkins.getNodes().isEmpty());
 
@@ -335,17 +333,17 @@ public class ComputeEngineCloudIT {
         Builder step = new Shell("echo works");
         project.getBuildersList().add(step);
         project.setAssignedLabel(new LabelAtom(LABEL));
-        
+
         // Enqueue a build of the project, wait for it to complete, and assert success
         FreeStyleBuild build = r.buildAndAssertSuccess(project);
-        
+
         // Assert that the console log contains the output we expect
         r.assertLogContains("works", build);
-        
+
         // Assert that there is 0 nodes after job finished
         Awaitility.await().timeout(10, TimeUnit.SECONDS).until(() -> r.jenkins.getNodes().isEmpty());
     }
-    
+
     @Test(timeout = 300000)
     public void testTemplate() throws Exception {
         ComputeEngineCloud cloud = (ComputeEngineCloud) r.jenkins.clouds.get(0);
@@ -359,9 +357,9 @@ public class ComputeEngineCloudIT {
 
             // There should be a planned node
             assertEquals(logs(), 1, planned.size());
-            
+
             String name = planned.iterator().next().displayName;
-            
+
             // Wait for the node creation to finish
             planned.iterator().next().future.get();
 
@@ -449,6 +447,7 @@ public class ComputeEngineCloudIT {
     private static InstanceConfiguration validInstanceConfigurationWithOneShot() {
         return instanceConfiguration(DEB_JAVA_STARTUP_SCRIPT, NUM_EXECUTORS, LABEL, true, NULL_TEMPLATE);
     }
+
     /**
      * This configuration creates an instance with no Java installed.
      *
