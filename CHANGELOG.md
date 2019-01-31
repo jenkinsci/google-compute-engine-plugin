@@ -3,7 +3,6 @@ All notable changes to this project will be documented in this file.
 
 ## [1.0.9] - 2019-01-30
 ### Added
-- One shot vm instances
 - Cleanup of nodes that weren't terminated properly
 
 ### Fixed
