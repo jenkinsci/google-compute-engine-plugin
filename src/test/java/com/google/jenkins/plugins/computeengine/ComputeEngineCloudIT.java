@@ -344,8 +344,8 @@ public class ComputeEngineCloudIT {
         ComputeEngineCloud cloud = (ComputeEngineCloud) r.jenkins.clouds.get(0);
         cloud.addConfiguration(validInstanceConfiguration());
 
-        Collection<NodeProvisioner.PlannedNode> planned = cloud.provision(new LabelAtom(LABEL), 1);
-        Node worker = planned.iterator().next().future.get();
+//        Collection<NodeProvisioner.PlannedNode> planned = cloud.provision(new LabelAtom(LABEL), 1);
+//        Node worker = planned.iterator().next().future.get();
 
         FreeStyleProject project = r.createFreeStyleProject();
         Builder step = new Shell("exit 1");
@@ -354,7 +354,8 @@ public class ComputeEngineCloudIT {
                 //TODO: might have to get the node actually connected to the build
 
         r.assertBuildStatus(Result.FAILURE, project.scheduleBuild2(0));
-        r.jenkins.removeNode(worker);
+        Node worker = r.jenkins.getNodes().get(0);
+        worker.toComputer().doDoDelete();
 
         assertTrue(logs(), logs().contains("snapshot"));
 
