@@ -331,7 +331,7 @@ public class ComputeEngineCloudIT {
         cloud.addConfiguration(validInstanceConfigurationWithOneShot());
 
         r.jenkins.getNodesObject().setNodes(Collections.emptyList());
-        
+
         // Assert that there is 0 nodes
         assertTrue(r.jenkins.getNodes().isEmpty());
 
@@ -339,17 +339,17 @@ public class ComputeEngineCloudIT {
         Builder step = new Shell("echo works");
         project.getBuildersList().add(step);
         project.setAssignedLabel(new LabelAtom(LABEL));
-        
+
         // Enqueue a build of the project, wait for it to complete, and assert success
         FreeStyleBuild build = r.buildAndAssertSuccess(project);
-        
+
         // Assert that the console log contains the output we expect
         r.assertLogContains("works", build);
-        
+
         // Assert that there is 0 nodes after job finished
         Awaitility.await().timeout(10, TimeUnit.SECONDS).until(() -> r.jenkins.getNodes().isEmpty());
     }
-    
+
     @Test(timeout = 300000)
     public void testTemplate() throws Exception {
         ComputeEngineCloud cloud = (ComputeEngineCloud) r.jenkins.clouds.get(0);
