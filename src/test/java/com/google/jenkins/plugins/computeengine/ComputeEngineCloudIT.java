@@ -407,8 +407,14 @@ public class ComputeEngineCloudIT {
 
         assertTrue(logs(), logs().contains("snapshot"));
 
-        // cleanup: delete the snapshot
-//        client.deleteSnapshot(projectId, ZONE, worker.getNodeName());
+        try {
+            Thread.sleep(5 * 1000);
+            // cleanup: delete the snapshot
+            client.deleteSnapshot(projectId, ZONE, worker.getNodeName());
+        } catch (Exception e) {
+
+        }
+
     }
 
     private static InstanceTemplate createTemplate(Map<String, String> googleLabels) {

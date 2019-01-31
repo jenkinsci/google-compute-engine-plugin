@@ -33,7 +33,7 @@ public class ComputeClient {
     private Compute compute;
 
     private static final Logger LOGGER = Logger.getLogger(ComputeClient.class.getName());
-    private static final long SNAPSHOT_TIMEOUT = 600 * 100;
+    private static final long SNAPSHOT_TIMEOUT = 600 * 1000;
 
     public static String nameFromSelfLink(String selfLink) { 
         return selfLink.substring(selfLink.lastIndexOf("/") + 1, selfLink.length());
