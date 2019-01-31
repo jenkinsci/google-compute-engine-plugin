@@ -334,8 +334,7 @@ public class ComputeEngineCloudIT {
         project.setAssignedLabel(new LabelAtom(LABEL));
 
         FreeStyleBuild build = r.buildAndAssertSuccess(project);
-        Computer computer = worker.toComputer();
-        computer.doDoDelete();
+        r.jenkins.removeNode(worker);
 
        assertFalse(logs(), logs().contains("snapshot"));
 
