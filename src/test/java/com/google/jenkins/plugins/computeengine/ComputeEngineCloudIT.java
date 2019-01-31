@@ -37,13 +37,10 @@ import com.google.jenkins.plugins.computeengine.client.ClientFactory;
 import com.google.jenkins.plugins.computeengine.client.ComputeClient;
 import com.google.jenkins.plugins.credentials.oauth.GoogleRobotPrivateKeyCredentials;
 import com.google.jenkins.plugins.credentials.oauth.ServiceAccountConfig;
-import hudson.model.Computer;
-import hudson.model.FreeStyleBuild;
-import hudson.model.FreeStyleProject;
+import hudson.model.*;
 import hudson.tasks.Builder;
 import hudson.tasks.Shell;
 
-import hudson.model.Node;
 import hudson.model.labels.LabelAtom;
 import hudson.slaves.NodeProvisioner;
 import hudson.tasks.Builder;
@@ -340,6 +337,28 @@ public class ComputeEngineCloudIT {
 
    }
 
+    @Test(timeout = 300000)
+    public void testSnapshotCreated() throws Exception {
+        logOutput.reset();
+
+        ComputeEngineCloud cloud = (ComputeEngineCloud) r.jenkins.clouds.get(0);
+        cloud.addConfiguration(validInstanceConfiguration());
+
+        Collection<NodeProvisioner.PlannedNode> planned = cloud.provision(new LabelAtom(LABEL), 1);
+        Node worker = planned.iterator().next().future.get();
+
+        FreeStyleProject project = r.createFreeStyleProject();
+        Builder step = new Shell("exit 1");
+        project.getBuildersList().add(step);
+        project.setAssignedLabel(new LabelAtom(LABEL));
+                //TODO: might have to get the node actually connected to the build
+
+        r.assertBuildStatus(Result.FAILURE, project.scheduleBuild2(0));
+        r.jenkins.removeNode(worker);
+
+        assertTrue(logs(), logs().contains("snapshot"));
+
+    }
     /*
     @Test(timeout = 300000)
     public void testTemplate() throws Exception {
