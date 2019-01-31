@@ -322,15 +322,13 @@ public class ComputeEngineCloudIT {
         ComputeEngineCloud cloud = (ComputeEngineCloud) r.jenkins.clouds.get(0);
         cloud.addConfiguration(validInstanceConfiguration());
 
-        Collection<NodeProvisioner.PlannedNode> planned = cloud.provision(new LabelAtom(LABEL), 1);
-        Node worker = planned.iterator().next().future.get();
-
         FreeStyleProject project = r.createFreeStyleProject();
         Builder step = new Shell("echo works");
         project.getBuildersList().add(step);
         project.setAssignedLabel(new LabelAtom(LABEL));
 
         FreeStyleBuild build = r.buildAndAssertSuccess(project);
+        Node worker = r.jenkins.getNodes().get(0);
         r.jenkins.removeNode(worker);
 
        assertFalse(logs(), logs().contains("snapshot"));
@@ -343,9 +341,6 @@ public class ComputeEngineCloudIT {
 
         ComputeEngineCloud cloud = (ComputeEngineCloud) r.jenkins.clouds.get(0);
         cloud.addConfiguration(validInstanceConfiguration());
-
-//        Collection<NodeProvisioner.PlannedNode> planned = cloud.provision(new LabelAtom(LABEL), 1);
-//        Node worker = planned.iterator().next().future.get();
 
         FreeStyleProject project = r.createFreeStyleProject();
         Builder step = new Shell("exit 1");
