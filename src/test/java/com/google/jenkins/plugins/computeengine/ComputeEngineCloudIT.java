@@ -40,6 +40,9 @@ import com.google.jenkins.plugins.credentials.oauth.ServiceAccountConfig;
 import hudson.model.Computer;
 import hudson.model.FreeStyleBuild;
 import hudson.model.FreeStyleProject;
+import hudson.tasks.Builder;
+import hudson.tasks.Shell;
+
 import hudson.model.Node;
 import hudson.model.labels.LabelAtom;
 import hudson.slaves.NodeProvisioner;
@@ -233,8 +236,6 @@ public class ComputeEngineCloudIT {
         // There should be a planned node
         assertEquals(logs(), 1, planned.size());
 
-        String name = planned.iterator().next().displayName;
-
         // Wait for the node creation to finish
         String name = planned.iterator().next().future.get().getNodeName();
 
@@ -291,7 +292,6 @@ public class ComputeEngineCloudIT {
         Collection<NodeProvisioner.PlannedNode> planned = cloud.provision(new LabelAtom(LABEL), 1);
 
         String provisionedLabels = planned.iterator().next().future.get().getLabelString();
-
         // There should be a planned node TODO
         assertEquals(logs(), MULTIPLE_LABEL, provisionedLabels);
     }
