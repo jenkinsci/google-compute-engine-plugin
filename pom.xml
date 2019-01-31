@@ -11,7 +11,7 @@
     <version>1.0.10-SNAPSHOT</version>
     <packaging>hpi</packaging>
     <properties>
-        <jenkins.version>2.7.3</jenkins.version>
+        <jenkins.version>2.37</jenkins.version>
         <jenkinsRuleTimeout>0</jenkinsRuleTimeout>
         <java.level>8</java.level>
         <maven.compiler.source>1.8</maven.compiler.source>
@@ -101,10 +101,21 @@
             <artifactId>trilead-ssh2</artifactId>
             <version>build-217-jenkins-11</version>
         </dependency>
+        <dependency> <!-- OnceRetentionStrategy -->
+            <groupId>org.jenkins-ci.plugins</groupId>
+            <artifactId>durable-task</artifactId>
+            <version>1.28</version>
+        </dependency>
         <dependency>
             <groupId>junit</groupId>
             <artifactId>junit</artifactId>
             <version>4.12</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.awaitility</groupId>
+            <artifactId>awaitility</artifactId>
+            <version>3.0.0</version>
             <scope>test</scope>
         </dependency>
     </dependencies>
@@ -134,6 +145,12 @@
                 <configuration>
                     <disableXmlReport>true</disableXmlReport>
                     <useFile>false</useFile>
+                    <systemPropertyVariables>
+                        <hudson.model.LoadStatistics.clock>500</hudson.model.LoadStatistics.clock>
+                        <hudson.model.LoadStatistics.decay>0.5</hudson.model.LoadStatistics.decay>
+                        <hudson.agents.NodeProvisioner.MARGIN>100</hudson.agents.NodeProvisioner.MARGIN>
+                        <hudson.agents.NodeProvisioner.MARGIN0>1.0</hudson.agents.NodeProvisioner.MARGIN0>
+                    </systemPropertyVariables>
                     <excludes>
                         <exclude>**/ComputeEngineCloudWindowsIT.java</exclude>
                     </excludes>
