@@ -331,7 +331,7 @@ public class ComputeEngineCloudIT {
         cloud.addConfiguration(validInstanceConfigurationWithOneShot());
 
         r.jenkins.getNodesObject().setNodes(Collections.emptyList());
-
+        
         // Assert that there is 0 nodes
         assertTrue(r.jenkins.getNodes().isEmpty());
 
@@ -339,17 +339,17 @@ public class ComputeEngineCloudIT {
         Builder step = new Shell("echo works");
         project.getBuildersList().add(step);
         project.setAssignedLabel(new LabelAtom(LABEL));
-
+        
         // Enqueue a build of the project, wait for it to complete, and assert success
         FreeStyleBuild build = r.buildAndAssertSuccess(project);
-
+        
         // Assert that the console log contains the output we expect
         r.assertLogContains("works", build);
-
+        
         // Assert that there is 0 nodes after job finished
         Awaitility.await().timeout(10, TimeUnit.SECONDS).until(() -> r.jenkins.getNodes().isEmpty());
     }
-
+    
     @Test(timeout = 300000)
     public void testTemplate() throws Exception {
         ComputeEngineCloud cloud = (ComputeEngineCloud) r.jenkins.clouds.get(0);
@@ -488,27 +488,27 @@ public class ComputeEngineCloudIT {
 
     private static InstanceConfiguration snapshotInstanceConfiguration() {
         // Snapshot label needed since the freestyle project could use a previously provisioned node instead of this configuration's.
-        return instanceConfiguration(DEB_JAVA_STARTUP_SCRIPT, NUM_EXECUTORS, SNAPSHOT_LABEL, true, NULL_TEMPLATE);
+        return instanceConfiguration(DEB_JAVA_STARTUP_SCRIPT, NUM_EXECUTORS, SNAPSHOT_LABEL, true, false, NULL_TEMPLATE);
     }
 
     private static InstanceConfiguration validInstanceConfiguration() {
-        return instanceConfiguration(DEB_JAVA_STARTUP_SCRIPT, NUM_EXECUTORS, LABEL, false, NULL_TEMPLATE);
+        return instanceConfiguration(DEB_JAVA_STARTUP_SCRIPT, NUM_EXECUTORS, LABEL, false, false, NULL_TEMPLATE);
     }
 
     private static InstanceConfiguration validInstanceConfigurationWithLabels(String labels) {
-        return instanceConfiguration(DEB_JAVA_STARTUP_SCRIPT, NUM_EXECUTORS, labels, false, NULL_TEMPLATE);
+        return instanceConfiguration(DEB_JAVA_STARTUP_SCRIPT, NUM_EXECUTORS, labels, false, false, NULL_TEMPLATE);
     }
 
     private static InstanceConfiguration validInstanceConfigurationWithExecutors(String numExecutors) {
-        return instanceConfiguration(DEB_JAVA_STARTUP_SCRIPT, numExecutors, LABEL, false, NULL_TEMPLATE);
+        return instanceConfiguration(DEB_JAVA_STARTUP_SCRIPT, numExecutors, LABEL, false, false, NULL_TEMPLATE);
     }
 
     private static InstanceConfiguration validInstanceConfigurationWithTemplate(String template) {
-        return instanceConfiguration(DEB_JAVA_STARTUP_SCRIPT, NUM_EXECUTORS, LABEL, false, template);
+        return instanceConfiguration(DEB_JAVA_STARTUP_SCRIPT, NUM_EXECUTORS, LABEL, false,false, template);
     }
 
     private static InstanceConfiguration validInstanceConfigurationWithOneShot() {
-        return instanceConfiguration(DEB_JAVA_STARTUP_SCRIPT, NUM_EXECUTORS, LABEL, true, NULL_TEMPLATE);
+        return instanceConfiguration(DEB_JAVA_STARTUP_SCRIPT, NUM_EXECUTORS, LABEL, false, true, NULL_TEMPLATE);
     }
 
     /**
@@ -516,12 +516,12 @@ public class ComputeEngineCloudIT {
      *
      * @return
      */
-    private static InstanceConfiguration invalidInstanceConfiguration1() {
-        return instanceConfiguration("", NUM_EXECUTORS, LABEL, false, NULL_TEMPLATE);
+    private static InstanceConfiguration invalidInstanceConfiguration() {
+        return instanceConfiguration("", NUM_EXECUTORS, LABEL, false, false, NULL_TEMPLATE);
     }
 
     private static InstanceConfiguration instanceConfiguration(String startupScript, String numExecutors, String labels,
-                                                               boolean createSnapshot, String template) {
+                                                               boolean createSnapshot, boolean oneShot, String template) {
         InstanceConfiguration ic = new InstanceConfiguration(
                 NAME_PREFIX,
                 REGION,
