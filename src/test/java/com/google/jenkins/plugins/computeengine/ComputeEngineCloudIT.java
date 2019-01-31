@@ -354,6 +354,8 @@ public class ComputeEngineCloudIT {
 
         assertTrue(logs(), logs().contains("snapshot"));
 
+        //TODO: deletion. We will need the snapshot resource name (problem). I could send an optional name through the instance config?
+
     }
     /*
     @Test(timeout = 300000)
