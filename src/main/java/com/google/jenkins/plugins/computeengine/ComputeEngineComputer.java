@@ -127,15 +127,15 @@ public class ComputeEngineComputer extends AbstractCloudComputer<ComputeEngineIn
                 // Checks for failed jobs for this computer's node
                 if (cloud != null && !this.getBuilds().failureOnly().isEmpty()) {
                     LOGGER.info("Creating snapshot...");
-                    ComputeClient client = cloud.client;
-                    client.createSnapshot(cloud.projectId, node.zone, node.getNodeName());
+                    cloud.client.createSnapshot(cloud.projectId, node.zone, node.getNodeName());
                 }
 
                 node.terminate();
             } catch (InterruptedException ie) {
-                LOGGER.info("Interrupted exception: " + ie);
+                // Termination Exception
+                LOGGER.warning("Node termination error: " + ie);
             } catch (IOException ioe) {
-                LOGGER.info("IOException for snapshot: " + ioe);
+                LOGGER.warning("Error in creating snapshot: " + ioe);
             }
         }
         return new HttpRedirect("..");

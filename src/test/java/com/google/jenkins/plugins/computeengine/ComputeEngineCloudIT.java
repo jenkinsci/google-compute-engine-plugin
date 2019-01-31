@@ -218,7 +218,7 @@ public class ComputeEngineCloudIT {
         Image i = cloud.client.getImage("debian-cloud", "debian-9-stretch-v20180820");
         assertNotNull(i);
     }
-/*
+
     @Test(timeout = 300000)
     public void testWorkerCreated() throws Exception {
         //TODO: each test method should probably have its own handler.
@@ -313,51 +313,7 @@ public class ComputeEngineCloudIT {
         // There should be warning logs
         assertEquals(logs(), true, logs().contains("WARNING"));
     }
-*/
 
-   @Test(timeout = 300000)
-    public void testNoSnapshotCreated() throws Exception {
-        logOutput.reset();
-
-        ComputeEngineCloud cloud = (ComputeEngineCloud) r.jenkins.clouds.get(0);
-        cloud.addConfiguration(validInstanceConfiguration());
-
-        FreeStyleProject project = r.createFreeStyleProject();
-        Builder step = new Shell("echo works");
-        project.getBuildersList().add(step);
-        project.setAssignedLabel(new LabelAtom(LABEL));
-
-        FreeStyleBuild build = r.buildAndAssertSuccess(project);
-        Node worker = r.jenkins.getNodes().get(0);
-        r.jenkins.removeNode(worker);
-
-       assertFalse(logs(), logs().contains("snapshot"));
-
-   }
-
-    @Test(timeout = 300000)
-    public void testSnapshotCreated() throws Exception {
-        logOutput.reset();
-
-        ComputeEngineCloud cloud = (ComputeEngineCloud) r.jenkins.clouds.get(0);
-        cloud.addConfiguration(validInstanceConfiguration());
-
-        FreeStyleProject project = r.createFreeStyleProject();
-        Builder step = new Shell("exit 1");
-        project.getBuildersList().add(step);
-        project.setAssignedLabel(new LabelAtom(LABEL));
-                //TODO: might have to get the node actually connected to the build
-
-        r.assertBuildStatus(Result.FAILURE, project.scheduleBuild2(0));
-        Node worker = r.jenkins.getNodes().get(0);
-        worker.toComputer().doDoDelete();
-
-        assertTrue(logs(), logs().contains("snapshot"));
-
-        //TODO: deletion. We will need the snapshot resource name (problem). I could send an optional name through the instance config?
-
-    }
-    /*
     @Test(timeout = 300000)
     public void testTemplate() throws Exception {
         ComputeEngineCloud cloud = (ComputeEngineCloud) r.jenkins.clouds.get(0);
@@ -409,7 +365,51 @@ public class ComputeEngineCloudIT {
             } catch (Exception e) {
             }
         }
-    }*/
+    }
+
+    // Tests that no snapshot is created when we only have successful builds for given node
+    @Test(timeout = 300000)
+    public void testNoSnapshotCreated() throws Exception {
+        logOutput.reset();
+
+        ComputeEngineCloud cloud = (ComputeEngineCloud) r.jenkins.clouds.get(0);
+        cloud.addConfiguration(validInstanceConfiguration());
+
+        FreeStyleProject project = r.createFreeStyleProject();
+        Builder step = new Shell("echo works");
+        project.getBuildersList().add(step);
+        project.setAssignedLabel(new LabelAtom(LABEL));
+
+        r.buildAndAssertSuccess(project);
+        Node worker = r.jenkins.getNodes().get(0);
+        worker.toComputer().doDoDelete();
+
+        assertFalse(logs(), logs().contains("snapshot"));
+
+    }
+
+    // Tests snapshot is created when we have failure builds for given node
+    @Test(timeout = 300000)
+    public void testSnapshotCreated() throws Exception {
+        logOutput.reset();
+
+        ComputeEngineCloud cloud = (ComputeEngineCloud) r.jenkins.clouds.get(0);
+        cloud.addConfiguration(validInstanceConfiguration());
+
+        FreeStyleProject project = r.createFreeStyleProject();
+        Builder step = new Shell("exit 1");
+        project.getBuildersList().add(step);
+        project.setAssignedLabel(new LabelAtom(LABEL));
+
+        r.assertBuildStatus(Result.FAILURE, project.scheduleBuild2(0));
+        Node worker = r.jenkins.getNodes().get(0);
+        worker.toComputer().doDoDelete();
+
+        assertTrue(logs(), logs().contains("snapshot"));
+
+        // cleanup: delete the snapshot
+//        client.deleteSnapshot(projectId, ZONE, worker.getNodeName());
+    }
 
     private static InstanceTemplate createTemplate(Map<String, String> googleLabels) {
         InstanceTemplate instanceTemplate = new InstanceTemplate();

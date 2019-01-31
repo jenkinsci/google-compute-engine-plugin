@@ -22,6 +22,7 @@ import com.google.common.base.Strings;
 
 import java.io.IOException;
 import java.util.*;
+import java.util.logging.Logger;
 
 /**
  * Client for communicating with the Google Compute API
@@ -30,6 +31,9 @@ import java.util.*;
  */
 public class ComputeClient {
     private Compute compute;
+
+    private static final Logger LOGGER = Logger.getLogger(ComputeClient.class.getName());
+    private static final long SNAPSHOT_TIMEOUT = 600 * 100;
 
     public static String nameFromSelfLink(String selfLink) { 
         return selfLink.substring(selfLink.lastIndexOf("/") + 1, selfLink.length());
@@ -422,32 +426,35 @@ public class ComputeClient {
      * Creates persistent disk snapshot for Compute Engine instance.
      * This method blocks until the operation completes.
      *
-     * @param projectId
-     * @param zone
-     * @param instanceId
-     * @return
+     * @param projectId Google cloud project id (e.g. my-project)
+     * @param zone Instance's zone
+     * @param instanceId Instance's name
+     *
      * @throws IOException
      * @throws InterruptedException
      */
-    public Operation.Error createSnapshot(String projectId, String zone, String instanceId) throws IOException, InterruptedException{
-        //TODO: cleanup in the case of a failed snapshot creation (try catch?)
-        // TODO: how to handle these exceptions?
-        // can catch the exceptions, but i want a case where any exception of op.getError() is non null
-        //cause CreateSnapshot extends ComputeRequest<Operation>
-        zone = nameFromSelfLink(zone);
-        //TODO remove later since these were for debugging
-        System.out.println("zone is " + zone);
-        System.out.println("projectId is " + projectId);
-        System.out.println("disk name is " + instanceId);
+    public void createSnapshot(String projectId, String zone, String instanceId) throws IOException, InterruptedException {
         Snapshot snapshot = new Snapshot();
+        try {
+            zone = nameFromSelfLink(zone);
 
-        snapshot.setName(instanceId + "-" + System.currentTimeMillis());
-        Operation op = compute.disks().createSnapshot(projectId, zone, instanceId, snapshot).execute();
+            snapshot.setName(instanceId);
+            Operation op = compute.disks().createSnapshot(projectId, zone, instanceId, snapshot).execute();
 
-        // poll for result
-        return waitForOperationCompletion(projectId, op.getName(), op.getZone(), 600 * 1000);
+            // poll for result
+            waitForOperationCompletion(projectId, op.getName(), op.getZone(), SNAPSHOT_TIMEOUT);
+        } catch (InterruptedException ie) {
+            // catching InterruptedException here because calling function also can throw InterruptedException from trying to terminate node
+            LOGGER.warning("Error in creating snapshot: " + ie);
+        }
+
     }
 
+    public void deleteSnapshot(String projectId, String zone, String instanceId) throws IOException, InterruptedException{
+        Operation op = compute.snapshots().delete(projectId, instanceId).execute();
+        //TODO replace timeout with constant
+        waitForOperationCompletion(projectId, op.getName(), zone, SNAPSHOT_TIMEOUT);
+    }
     /**
      * Appends metadata to an instance. Any metadata items with existing keys will be overwritten. Otherwise, metadata
      * is preserved. This method blocks until the operation completes.
