@@ -451,9 +451,12 @@ public class ComputeClient {
     }
 
     public void deleteSnapshot(String projectId, String zone, String instanceId) throws IOException, InterruptedException{
-        Operation op = compute.snapshots().delete(projectId, instanceId).execute();
-        //TODO replace timeout with constant
-        waitForOperationCompletion(projectId, op.getName(), zone, SNAPSHOT_TIMEOUT);
+        LOGGER.info("ready to delete snapshot");
+        compute.snapshots().delete(projectId, instanceId).execute();
+    }
+
+    public Snapshot getSnapshot(String projectId, String snapshotName) throws IOException {
+        return compute.snapshots().get(projectId, snapshotName).execute();
     }
     /**
      * Appends metadata to an instance. Any metadata items with existing keys will be overwritten. Otherwise, metadata
@@ -525,6 +528,7 @@ public class ComputeClient {
                 status = operation.getStatus();
             }
         }
+        LOGGER.info("operation is done");
         return operation.getError();
     }
 }

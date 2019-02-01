@@ -21,17 +21,7 @@ import com.cloudbees.plugins.credentials.CredentialsStore;
 import com.cloudbees.plugins.credentials.SystemCredentialsProvider;
 import com.cloudbees.plugins.credentials.domains.Domain;
 import com.cloudbees.plugins.credentials.domains.DomainRequirement;
-import com.google.api.services.compute.model.AccessConfig;
-import com.google.api.services.compute.model.AttachedDisk;
-import com.google.api.services.compute.model.AttachedDiskInitializeParams;
-import com.google.api.services.compute.model.Image;
-import com.google.api.services.compute.model.Instance;
-import com.google.api.services.compute.model.InstanceProperties;
-import com.google.api.services.compute.model.InstanceTemplate;
-import com.google.api.services.compute.model.Metadata;
-import com.google.api.services.compute.model.NetworkInterface;
-import com.google.api.services.compute.model.Operation;
-import com.google.api.services.compute.model.Tags;
+import com.google.api.services.compute.model.*;
 import com.google.common.collect.ImmutableMap;
 import com.google.jenkins.plugins.computeengine.client.ClientFactory;
 import com.google.jenkins.plugins.computeengine.client.ComputeClient;
@@ -219,153 +209,153 @@ public class ComputeEngineCloudIT {
         assertNotNull(i);
     }
 
-    @Test(timeout = 300000)
-    public void testWorkerCreated() throws Exception {
-        //TODO: each test method should probably have its own handler.
-        logOutput.reset();
-
-        ComputeEngineCloud cloud = (ComputeEngineCloud) r.jenkins.clouds.get(0);
-        InstanceConfiguration ic = validInstanceConfiguration();
-        cloud.addConfiguration(ic);
-        // Add a new node
-        Collection<NodeProvisioner.PlannedNode> planned = cloud.provision(new LabelAtom(LABEL), 1);
-
-        // There should be a planned node
-        assertEquals(logs(), 1, planned.size());
-
-        // Wait for the node creation to finish
-        String name = planned.iterator().next().future.get().getNodeName();
-
-        // There should be no warning logs
-        assertFalse(logs(), logs().contains("WARNING"));
-
-        Instance i = cloud.client.getInstance(projectId, ZONE, name);
-
-        // The created instance should have 3 labels
-        assertEquals(logs(), 3, i.getLabels().size());
-
-        // Instance should have a label with key CONFIG_LABEL_KEY and value equal to the config's name prefix
-        assertEquals(logs(), ic.namePrefix, i.getLabels().get(ComputeEngineCloud.CONFIG_LABEL_KEY));
-        assertEquals(logs(), cloud.getInstanceUniqueId(), i.getLabels().get(ComputeEngineCloud.CLOUD_ID_LABEL_KEY));
-    }
-
-    @Test(timeout = 300000)
-    public void test1WorkerCreatedFor2Executors() throws Exception {
-        logOutput.reset();
-
-        ComputeEngineCloud cloud = (ComputeEngineCloud) r.jenkins.clouds.get(0);
-        cloud.addConfiguration(validInstanceConfigurationWithExecutors(MULTIPLE_NUM_EXECUTORS));
-        // Add a new node
-        Collection<NodeProvisioner.PlannedNode> planned = cloud.provision(new LabelAtom(LABEL), 2);
-
-        // There should be a planned node
-        assertEquals(logs(), 1, planned.size());
-    }
-
-    @Test(timeout = 300000)
-    public void testMultipleLabelsForJob() throws Exception {
-        // For a configuration with multiple labels, test if job label matches one of the configuration's labels
-        logOutput.reset();
-
-        ComputeEngineCloud cloud = (ComputeEngineCloud) r.jenkins.clouds.get(0);
-        InstanceConfiguration ic = validInstanceConfigurationWithLabels(MULTIPLE_LABEL);
-        cloud.addConfiguration(ic);
-        // Add a new node
-        Collection<NodeProvisioner.PlannedNode> planned = cloud.provision(new LabelAtom(LABEL), 1);
-
-        // There should be a planned node
-        assertEquals(logs(), 1, planned.size());
-    }
-
-    @Test(timeout = 300000)
-    public void testMultipleLabelsInConfig() throws Exception {
-        // For a configuration with multiple labels, test if job label matches one of the configuration's labels
-        logOutput.reset();
-
-        ComputeEngineCloud cloud = (ComputeEngineCloud) r.jenkins.clouds.get(0);
-        InstanceConfiguration ic = validInstanceConfigurationWithLabels(MULTIPLE_LABEL);
-        cloud.addConfiguration(ic);
-        // Add a new node
-        Collection<NodeProvisioner.PlannedNode> planned = cloud.provision(new LabelAtom(LABEL), 1);
-
-        String provisionedLabels = planned.iterator().next().future.get().getLabelString();
-        // There should be a planned node TODO
-        assertEquals(logs(), MULTIPLE_LABEL, provisionedLabels);
-    }
-
-    @Test(timeout = 300000)
-    public void testWorkerFailed() throws Exception {
-        //TODO: each test method should probably have its own handler.
-        logOutput.reset();
-
-        ComputeEngineCloud cloud = (ComputeEngineCloud) r.jenkins.clouds.get(0);
-        cloud.addConfiguration(invalidInstanceConfiguration1());
-
-        // Add a new node
-        Collection<NodeProvisioner.PlannedNode> planned = cloud.provision(new LabelAtom(LABEL), 1);
-
-        // There should be a planned node
-        assertEquals(logs(), 1, planned.size());
-
-        // Wait for the node creation to fail
-        planned.iterator().next().future.get();
-
-        // There should be warning logs
-        assertEquals(logs(), true, logs().contains("WARNING"));
-    }
-
-    @Test(timeout = 300000)
-    public void testTemplate() throws Exception {
-        ComputeEngineCloud cloud = (ComputeEngineCloud) r.jenkins.clouds.get(0);
-        cloud.addConfiguration(validInstanceConfigurationWithTemplate(TEMPLATE));
-        try {
-            InstanceTemplate instanceTemplate = createTemplate(ImmutableMap.of("test-label", "label-value"));
-            client.insertTemplate(cloud.projectId, instanceTemplate);
-
-            // Add a new node
-            Collection<NodeProvisioner.PlannedNode> planned = cloud.provision(new LabelAtom(LABEL), 1);
-
-            // There should be a planned node
-            assertEquals(logs(), 1, planned.size());
-
-            // Wait for the node creation to finish
-            String name = planned.iterator().next().future.get().getNodeName();
-
-            // There should be no warning logs
-            assertFalse(logs(), logs().contains("WARNING"));
-
-            Instance instance = client.getInstance(projectId, ZONE, name);
-            assertTrue(logs(), instance.getLabels().containsKey("test-label"));
-            assertEquals(logs(), String.valueOf(cloud.name.hashCode()), instance.getLabels().get(ComputeEngineCloud.CLOUD_ID_LABEL_KEY));
-        } finally {
-            try {
-                client.deleteTemplate(cloud.projectId, nameFromSelfLink(TEMPLATE));
-            } catch (Exception e) {
-                // noop
-            }
-        }
-    }
-
-    @Test(timeout = 300000)
-    public void testTemplateNoGoogleLabels() throws Exception {
-        ComputeEngineCloud cloud = (ComputeEngineCloud) r.jenkins.clouds.get(0);
-        cloud.addConfiguration(validInstanceConfigurationWithTemplate(TEMPLATE));
-        try {
-            InstanceTemplate instanceTemplate = createTemplate(null);
-            client.insertTemplate(cloud.projectId, instanceTemplate);
-
-            // Add a new node
-            Collection<NodeProvisioner.PlannedNode> planned = cloud.provision(new LabelAtom(LABEL), 1);
-
-            // There should be a successful planned node even without google labels
-            assertEquals(logs(), 1, planned.size());
-        } finally {
-            try {
-                client.deleteTemplate(cloud.projectId, nameFromSelfLink(TEMPLATE));
-            } catch (Exception e) {
-            }
-        }
-    }
+//    @Test(timeout = 300000)
+//    public void testWorkerCreated() throws Exception {
+//        //TODO: each test method should probably have its own handler.
+//        logOutput.reset();
+//
+//        ComputeEngineCloud cloud = (ComputeEngineCloud) r.jenkins.clouds.get(0);
+//        InstanceConfiguration ic = validInstanceConfiguration();
+//        cloud.addConfiguration(ic);
+//        // Add a new node
+//        Collection<NodeProvisioner.PlannedNode> planned = cloud.provision(new LabelAtom(LABEL), 1);
+//
+//        // There should be a planned node
+//        assertEquals(logs(), 1, planned.size());
+//
+//        // Wait for the node creation to finish
+//        String name = planned.iterator().next().future.get().getNodeName();
+//
+//        // There should be no warning logs
+//        assertFalse(logs(), logs().contains("WARNING"));
+//
+//        Instance i = cloud.client.getInstance(projectId, ZONE, name);
+//
+//        // The created instance should have 3 labels
+//        assertEquals(logs(), 3, i.getLabels().size());
+//
+//        // Instance should have a label with key CONFIG_LABEL_KEY and value equal to the config's name prefix
+//        assertEquals(logs(), ic.namePrefix, i.getLabels().get(ComputeEngineCloud.CONFIG_LABEL_KEY));
+//        assertEquals(logs(), cloud.getInstanceUniqueId(), i.getLabels().get(ComputeEngineCloud.CLOUD_ID_LABEL_KEY));
+//    }
+//
+//    @Test(timeout = 300000)
+//    public void test1WorkerCreatedFor2Executors() throws Exception {
+//        logOutput.reset();
+//
+//        ComputeEngineCloud cloud = (ComputeEngineCloud) r.jenkins.clouds.get(0);
+//        cloud.addConfiguration(validInstanceConfigurationWithExecutors(MULTIPLE_NUM_EXECUTORS));
+//        // Add a new node
+//        Collection<NodeProvisioner.PlannedNode> planned = cloud.provision(new LabelAtom(LABEL), 2);
+//
+//        // There should be a planned node
+//        assertEquals(logs(), 1, planned.size());
+//    }
+//
+//    @Test(timeout = 300000)
+//    public void testMultipleLabelsForJob() throws Exception {
+//        // For a configuration with multiple labels, test if job label matches one of the configuration's labels
+//        logOutput.reset();
+//
+//        ComputeEngineCloud cloud = (ComputeEngineCloud) r.jenkins.clouds.get(0);
+//        InstanceConfiguration ic = validInstanceConfigurationWithLabels(MULTIPLE_LABEL);
+//        cloud.addConfiguration(ic);
+//        // Add a new node
+//        Collection<NodeProvisioner.PlannedNode> planned = cloud.provision(new LabelAtom(LABEL), 1);
+//
+//        // There should be a planned node
+//        assertEquals(logs(), 1, planned.size());
+//    }
+//
+//    @Test(timeout = 300000)
+//    public void testMultipleLabelsInConfig() throws Exception {
+//        // For a configuration with multiple labels, test if job label matches one of the configuration's labels
+//        logOutput.reset();
+//
+//        ComputeEngineCloud cloud = (ComputeEngineCloud) r.jenkins.clouds.get(0);
+//        InstanceConfiguration ic = validInstanceConfigurationWithLabels(MULTIPLE_LABEL);
+//        cloud.addConfiguration(ic);
+//        // Add a new node
+//        Collection<NodeProvisioner.PlannedNode> planned = cloud.provision(new LabelAtom(LABEL), 1);
+//
+//        String provisionedLabels = planned.iterator().next().future.get().getLabelString();
+//        // There should be a planned node TODO
+//        assertEquals(logs(), MULTIPLE_LABEL, provisionedLabels);
+//    }
+//
+//    @Test(timeout = 300000)
+//    public void testWorkerFailed() throws Exception {
+//        //TODO: each test method should probably have its own handler.
+//        logOutput.reset();
+//
+//        ComputeEngineCloud cloud = (ComputeEngineCloud) r.jenkins.clouds.get(0);
+//        cloud.addConfiguration(invalidInstanceConfiguration1());
+//
+//        // Add a new node
+//        Collection<NodeProvisioner.PlannedNode> planned = cloud.provision(new LabelAtom(LABEL), 1);
+//
+//        // There should be a planned node
+//        assertEquals(logs(), 1, planned.size());
+//
+//        // Wait for the node creation to fail
+//        planned.iterator().next().future.get();
+//
+//        // There should be warning logs
+//        assertEquals(logs(), true, logs().contains("WARNING"));
+//    }
+//
+//    @Test(timeout = 300000)
+//    public void testTemplate() throws Exception {
+//        ComputeEngineCloud cloud = (ComputeEngineCloud) r.jenkins.clouds.get(0);
+//        cloud.addConfiguration(validInstanceConfigurationWithTemplate(TEMPLATE));
+//        try {
+//            InstanceTemplate instanceTemplate = createTemplate(ImmutableMap.of("test-label", "label-value"));
+//            client.insertTemplate(cloud.projectId, instanceTemplate);
+//
+//            // Add a new node
+//            Collection<NodeProvisioner.PlannedNode> planned = cloud.provision(new LabelAtom(LABEL), 1);
+//
+//            // There should be a planned node
+//            assertEquals(logs(), 1, planned.size());
+//
+//            // Wait for the node creation to finish
+//            String name = planned.iterator().next().future.get().getNodeName();
+//
+//            // There should be no warning logs
+//            assertFalse(logs(), logs().contains("WARNING"));
+//
+//            Instance instance = client.getInstance(projectId, ZONE, name);
+//            assertTrue(logs(), instance.getLabels().containsKey("test-label"));
+//            assertEquals(logs(), String.valueOf(cloud.name.hashCode()), instance.getLabels().get(ComputeEngineCloud.CLOUD_ID_LABEL_KEY));
+//        } finally {
+//            try {
+//                client.deleteTemplate(cloud.projectId, nameFromSelfLink(TEMPLATE));
+//            } catch (Exception e) {
+//                // noop
+//            }
+//        }
+//    }
+//
+//    @Test(timeout = 300000)
+//    public void testTemplateNoGoogleLabels() throws Exception {
+//        ComputeEngineCloud cloud = (ComputeEngineCloud) r.jenkins.clouds.get(0);
+//        cloud.addConfiguration(validInstanceConfigurationWithTemplate(TEMPLATE));
+//        try {
+//            InstanceTemplate instanceTemplate = createTemplate(null);
+//            client.insertTemplate(cloud.projectId, instanceTemplate);
+//
+//            // Add a new node
+//            Collection<NodeProvisioner.PlannedNode> planned = cloud.provision(new LabelAtom(LABEL), 1);
+//
+//            // There should be a successful planned node even without google labels
+//            assertEquals(logs(), 1, planned.size());
+//        } finally {
+//            try {
+//                client.deleteTemplate(cloud.projectId, nameFromSelfLink(TEMPLATE));
+//            } catch (Exception e) {
+//            }
+//        }
+//    }
 
     // Tests that no snapshot is created when we only have successful builds for given node
     @Test(timeout = 300000)
@@ -380,8 +370,8 @@ public class ComputeEngineCloudIT {
         project.getBuildersList().add(step);
         project.setAssignedLabel(new LabelAtom(LABEL));
 
-        r.buildAndAssertSuccess(project);
-        Node worker = r.jenkins.getNodes().get(0);
+        FreeStyleBuild build = r.buildAndAssertSuccess(project);
+        Node worker = build.getBuiltOn();
         worker.toComputer().doDoDelete();
 
         assertFalse(logs(), logs().contains("snapshot"));
@@ -401,19 +391,26 @@ public class ComputeEngineCloudIT {
         project.getBuildersList().add(step);
         project.setAssignedLabel(new LabelAtom(LABEL));
 
-        r.assertBuildStatus(Result.FAILURE, project.scheduleBuild2(0));
-        Node worker = r.jenkins.getNodes().get(0);
+        FreeStyleBuild build = r.assertBuildStatus(Result.FAILURE, project.scheduleBuild2(0));
+        Node worker = build.getBuiltOn();
+        log.info("snapshot node is " + worker.getNodeName());
+        // think teardown might be interfering
+        // wait dthat doesn't make sense
         worker.toComputer().doDoDelete();
 
-        assertTrue(logs(), logs().contains("snapshot"));
-
-        try {
-            Thread.sleep(5 * 1000);
-            // cleanup: delete the snapshot
+        Snapshot createdSnapshot = client.getSnapshot(projectId, worker.getNodeName());
+        log.info("snapshot status is " + createdSnapshot.getStatus());
+        assertEquals(logs(), createdSnapshot.getStatus(), "READY");
+        // why is it that deletion messes with creation @.@
+        //TODO: log when operation is over and when we start deleting snapshot
+        //TODO: log which node is here and which is actually getting created (computeenginecomputer)
+//        try {
+//            Thread.sleep(5 * 1000);
+//            // cleanup: delete the snapshot
             client.deleteSnapshot(projectId, ZONE, worker.getNodeName());
-        } catch (Exception e) {
-
-        }
+//        } catch (Exception e) {
+//        }
+//        Thread.sleep(30 * 1000);
 
     }
 
