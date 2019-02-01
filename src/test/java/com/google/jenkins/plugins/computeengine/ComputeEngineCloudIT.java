@@ -393,25 +393,13 @@ public class ComputeEngineCloudIT {
 
         FreeStyleBuild build = r.assertBuildStatus(Result.FAILURE, project.scheduleBuild2(0));
         Node worker = build.getBuiltOn();
-        log.info("snapshot node is " + worker.getNodeName());
-        // think teardown might be interfering
-        // wait dthat doesn't make sense
         worker.toComputer().doDoDelete();
 
         Snapshot createdSnapshot = client.getSnapshot(projectId, worker.getNodeName());
-        log.info("snapshot status is " + createdSnapshot.getStatus());
         assertEquals(logs(), createdSnapshot.getStatus(), "READY");
-        // why is it that deletion messes with creation @.@
-        //TODO: log when operation is over and when we start deleting snapshot
-        //TODO: log which node is here and which is actually getting created (computeenginecomputer)
-//        try {
-//            Thread.sleep(5 * 1000);
-//            // cleanup: delete the snapshot
-            client.deleteSnapshot(projectId, ZONE, worker.getNodeName());
-//        } catch (Exception e) {
-//        }
-//        Thread.sleep(30 * 1000);
 
+        //cleanup
+        client.deleteSnapshot(projectId, worker.getNodeName());
     }
 
     private static InstanceTemplate createTemplate(Map<String, String> googleLabels) {

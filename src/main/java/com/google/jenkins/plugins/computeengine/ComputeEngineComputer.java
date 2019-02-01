@@ -124,13 +124,10 @@ public class ComputeEngineComputer extends AbstractCloudComputer<ComputeEngineIn
             try {
                 ComputeEngineCloud cloud = getCloud();
 
-                LOGGER.info("about to delete in computer");
-                LOGGER.info("cloud is " + cloud);
-                LOGGER.info("were there failed builds? " + !this.getBuilds().failureOnly().isEmpty());
                 // Checks for failed jobs for this computer's node
                 if (cloud != null && !this.getBuilds().failureOnly().isEmpty()) {
                     LOGGER.info("Creating snapshot for node ... " + node.getNodeName());
-                    cloud.client.createSnapshot(cloud.projectId, node.zone, node.getNodeName());
+                    cloud.getClient().createSnapshot(cloud.projectId, node.zone, node.getNodeName());
                 }
 
                 node.terminate();

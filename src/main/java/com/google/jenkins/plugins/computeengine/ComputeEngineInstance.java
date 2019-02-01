@@ -16,8 +16,6 @@
 
 package com.google.jenkins.plugins.computeengine;
 
-import com.google.api.services.compute.model.Operation;
-import com.google.jenkins.plugins.computeengine.client.ComputeClient;
 import hudson.Extension;
 import hudson.model.Descriptor;
 import hudson.model.Node;

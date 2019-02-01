@@ -450,7 +450,8 @@ public class ComputeClient {
 
     }
 
-    public void deleteSnapshot(String projectId, String zone, String instanceId) throws IOException, InterruptedException{
+    // Deletes snapshot. This method does not block
+    public void deleteSnapshot(String projectId, String instanceId) throws IOException, InterruptedException{
         LOGGER.info("ready to delete snapshot");
         compute.snapshots().delete(projectId, instanceId).execute();
     }
