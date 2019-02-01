@@ -134,8 +134,6 @@ public class ComputeEngineComputer extends AbstractCloudComputer<ComputeEngineIn
             } catch (InterruptedException ie) {
                 // Termination Exception
                 LOGGER.warning("Node termination error: " + ie);
-            } catch (IOException ioe) {
-                LOGGER.warning("Error in creating snapshot: " + ioe);
             }
         }
         return new HttpRedirect("..");

@@ -426,14 +426,14 @@ public class ComputeClient {
      * Creates persistent disk snapshot for Compute Engine instance.
      * This method blocks until the operation completes.
      *
-     * @param projectId Google cloud project id (e.g. my-project)
-     * @param zone Instance's zone
-     * @param instanceId Instance's name
+     * @param projectId Google cloud project id (e.g. my-project).
+     * @param zone Instance's zone.
+     * @param instanceId Instance's name.
      *
-     * @throws IOException
-     * @throws InterruptedException
+     * @throws IOException If an error occured in snapshot creation.
+     * @throws InterruptedException If snapshot creation is interrupted.
      */
-    public void createSnapshot(String projectId, String zone, String instanceId) throws IOException, InterruptedException {
+    public void createSnapshot(String projectId, String zone, String instanceId) {
         Snapshot snapshot = new Snapshot();
         try {
             zone = nameFromSelfLink(zone);
@@ -446,16 +446,31 @@ public class ComputeClient {
         } catch (InterruptedException ie) {
             // catching InterruptedException here because calling function also can throw InterruptedException from trying to terminate node
             LOGGER.warning("Error in creating snapshot: " + ie);
+        } catch (IOException ioe) {
+            LOGGER.warning("Interruption in creating snapshot: " + ioe);
         }
 
     }
 
-    // Deletes snapshot. This method does not block
-    public void deleteSnapshot(String projectId, String instanceId) throws IOException, InterruptedException{
-        LOGGER.info("ready to delete snapshot");
-        compute.snapshots().delete(projectId, instanceId).execute();
+    /**
+     * Deletes persistent disk snapshot. Does not block.
+     *
+     * @param projectId Google cloud project id (e.g. my-project).
+     * @param snapshotName Name of the snapshot to be deleted.
+     * @throws IOException If an error occurred in deleting the snapshot.
+     */
+    public void deleteSnapshot(String projectId, String snapshotName) throws IOException {
+        compute.snapshots().delete(projectId, snapshotName).execute();
     }
 
+    /**
+     * Returns snapshot with name snapshotName
+     *
+     * @param projectId Google cloud project id (e.g. my-project).
+     * @param snapshotName Name of the snapshot to get.
+     * @return Snapshot object with given snapshotName.
+     * @throws IOException If an error occurred in retrieving the snapshot.
+     */
     public Snapshot getSnapshot(String projectId, String snapshotName) throws IOException {
         return compute.snapshots().get(projectId, snapshotName).execute();
     }
@@ -529,7 +544,6 @@ public class ComputeClient {
                 status = operation.getStatus();
             }
         }
-        LOGGER.info("operation is done");
         return operation.getError();
     }
 }
