@@ -446,7 +446,7 @@ public class ComputeClient {
             // catching InterruptedException here because calling function also can throw InterruptedException from trying to terminate node
             LOGGER.log(Level.WARNING,"Error in creating snapshot.", ie);
         } catch (IOException ioe) {
-            LOGGER.log(Level.WARNING,"Interruption in creating snapshot", ioe);
+            LOGGER.log(Level.WARNING,"Interruption in creating snapshot.", ioe);
         }
     }
 
