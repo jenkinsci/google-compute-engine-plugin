@@ -431,8 +431,10 @@ public class ComputeClient {
      * @param zone Instance's zone.
      * @param instanceId Instance's name.
      *
+     * @throws IOException If an error occured in snapshot creation.
+     * @throws InterruptedException If snapshot creation is interrupted.
      */
-    public void createSnapshot(String projectId, String zone, String instanceId) {
+    public void createSnapshot(String projectId, String zone, String instanceId) throws IOException, InterruptedException {
         Snapshot snapshot = new Snapshot();
         try {
             zone = nameFromSelfLink(zone);
@@ -445,8 +447,10 @@ public class ComputeClient {
         } catch (InterruptedException ie) {
             // catching InterruptedException here because calling function also can throw InterruptedException from trying to terminate node
             LOGGER.log(Level.WARNING,"Error in creating snapshot.", ie);
+            throw ie;
         } catch (IOException ioe) {
             LOGGER.log(Level.WARNING,"Interruption in creating snapshot.", ioe);
+            throw ioe;
         }
     }
 
