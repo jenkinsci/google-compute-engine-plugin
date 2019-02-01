@@ -22,6 +22,7 @@ import com.google.common.base.Strings;
 
 import java.io.IOException;
 import java.util.*;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
@@ -33,7 +34,7 @@ public class ComputeClient {
     private Compute compute;
 
     private static final Logger LOGGER = Logger.getLogger(ComputeClient.class.getName());
-    private static final long SNAPSHOT_TIMEOUT = 600 * 1000;
+    private static final long SNAPSHOT_TIMEOUT_MILLISECONDS = 600 * 1000;
 
     public static String nameFromSelfLink(String selfLink) { 
         return selfLink.substring(selfLink.lastIndexOf("/") + 1, selfLink.length());
@@ -430,8 +431,6 @@ public class ComputeClient {
      * @param zone Instance's zone.
      * @param instanceId Instance's name.
      *
-     * @throws IOException If an error occured in snapshot creation.
-     * @throws InterruptedException If snapshot creation is interrupted.
      */
     public void createSnapshot(String projectId, String zone, String instanceId) {
         Snapshot snapshot = new Snapshot();
@@ -442,14 +441,13 @@ public class ComputeClient {
             Operation op = compute.disks().createSnapshot(projectId, zone, instanceId, snapshot).execute();
 
             // poll for result
-            waitForOperationCompletion(projectId, op.getName(), op.getZone(), SNAPSHOT_TIMEOUT);
+            waitForOperationCompletion(projectId, op.getName(), op.getZone(), SNAPSHOT_TIMEOUT_MILLISECONDS);
         } catch (InterruptedException ie) {
             // catching InterruptedException here because calling function also can throw InterruptedException from trying to terminate node
-            LOGGER.warning("Error in creating snapshot: " + ie);
+            LOGGER.log(Level.WARNING,"Error in creating snapshot.", ie);
         } catch (IOException ioe) {
-            LOGGER.warning("Interruption in creating snapshot: " + ioe);
+            LOGGER.log(Level.WARNING,"Interruption in creating snapshot", ioe);
         }
-
     }
 
     /**

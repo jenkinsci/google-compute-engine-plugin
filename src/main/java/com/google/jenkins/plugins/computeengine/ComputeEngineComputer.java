@@ -25,6 +25,7 @@ import org.kohsuke.stapler.HttpRedirect;
 import org.kohsuke.stapler.HttpResponse;
 
 import java.io.IOException;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 
 public class ComputeEngineComputer extends AbstractCloudComputer<ComputeEngineInstance> {
@@ -133,7 +134,7 @@ public class ComputeEngineComputer extends AbstractCloudComputer<ComputeEngineIn
                 node.terminate();
             } catch (InterruptedException ie) {
                 // Termination Exception
-                LOGGER.warning("Node termination error: " + ie);
+                LOGGER.log(Level.WARNING, "Node Termination Error", ie);
             }
         }
         return new HttpRedirect("..");

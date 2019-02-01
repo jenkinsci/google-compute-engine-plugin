@@ -21,7 +21,7 @@ import com.cloudbees.plugins.credentials.CredentialsStore;
 import com.cloudbees.plugins.credentials.SystemCredentialsProvider;
 import com.cloudbees.plugins.credentials.domains.Domain;
 import com.cloudbees.plugins.credentials.domains.DomainRequirement;
-import com.google.api.services.compute.model.AccessConfig;	import com.google.api.services.compute.model.*;
+import com.google.api.services.compute.model.AccessConfig;
 import com.google.api.services.compute.model.AttachedDisk;
 import com.google.api.services.compute.model.AttachedDiskInitializeParams;
 import com.google.api.services.compute.model.Image;
@@ -31,7 +31,9 @@ import com.google.api.services.compute.model.InstanceTemplate;
 import com.google.api.services.compute.model.Metadata;
 import com.google.api.services.compute.model.NetworkInterface;
 import com.google.api.services.compute.model.Operation;
-import com.google.api.services.compute.model.Tags;import com.google.common.collect.ImmutableMap;
+import com.google.api.services.compute.model.Snapshot;
+import com.google.api.services.compute.model.Tags;
+import com.google.common.collect.ImmutableMap;
 import com.google.jenkins.plugins.computeengine.client.ClientFactory;
 import com.google.jenkins.plugins.computeengine.client.ComputeClient;
 import com.google.jenkins.plugins.credentials.oauth.GoogleRobotPrivateKeyCredentials;
@@ -42,7 +44,6 @@ import hudson.model.Node;
 import hudson.model.Result;
 import hudson.tasks.Builder;
 import hudson.tasks.Shell;
-
 import hudson.model.labels.LabelAtom;
 import hudson.slaves.NodeProvisioner;
 import org.junit.After;
@@ -385,7 +386,6 @@ public class ComputeEngineCloudIT {
         worker.toComputer().doDoDelete();
 
         assertFalse(logs(), logs().contains("snapshot"));
-
     }
 
     // Tests snapshot is created when we have failure builds for given node
