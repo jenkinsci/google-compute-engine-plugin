@@ -81,7 +81,7 @@
                     <f:entry title="${%Network tags}" field="networkTags">
                         <f:textbox/>
                     </f:entry>
-                    <f:entry field="externalAddress" title="${%External IP?}">
+                    <f:entry field="externalAddress" title="${%Attach External IP?}">
                         <f:checkbox/>
                     </f:entry>
                     <f:entry field="useInternalAddress" title="${%Use Internal IP?}">
