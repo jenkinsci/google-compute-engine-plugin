@@ -384,7 +384,7 @@ public class ComputeEngineCloudIT {
 
         FreeStyleBuild build = r.buildAndAssertSuccess(project);
         Node worker = build.getBuiltOn();
-        worker.toComputer().doDoDelete();
+        r.jenkins.getNode(worker.getNodeName()).toComputer().doDoDelete();
 
         assertFalse(logs(), logs().contains("snapshot"));
         client.getSnapshot(projectId, worker.getNodeName());
@@ -405,7 +405,7 @@ public class ComputeEngineCloudIT {
 
         FreeStyleBuild build = r.assertBuildStatus(Result.FAILURE, project.scheduleBuild2(0));
         Node worker = build.getBuiltOn();
-        worker.toComputer().doDoDelete();
+        r.jenkins.getNode(worker.getNodeName()).toComputer().doDoDelete();
 
         Snapshot createdSnapshot = client.getSnapshot(projectId, worker.getNodeName());
         assertEquals(logs(), createdSnapshot.getStatus(), "READY");

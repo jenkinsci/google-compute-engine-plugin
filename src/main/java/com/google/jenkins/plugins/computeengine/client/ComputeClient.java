@@ -22,6 +22,7 @@ import com.google.common.base.Strings;
 
 import java.io.IOException;
 import java.util.*;
+import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -34,7 +35,7 @@ public class ComputeClient {
     private Compute compute;
 
     private static final Logger LOGGER = Logger.getLogger(ComputeClient.class.getName());
-    private static final long SNAPSHOT_TIMEOUT_MILLISECONDS = 600 * 1000;
+    private static final long SNAPSHOT_TIMEOUT_MILLISECONDS = TimeUnit.MINUTES.toMillis(5);
 
     public static String nameFromSelfLink(String selfLink) { 
         return selfLink.substring(selfLink.lastIndexOf("/") + 1, selfLink.length());
@@ -429,18 +430,18 @@ public class ComputeClient {
      *
      * @param projectId Google cloud project id (e.g. my-project).
      * @param zone Instance's zone.
-     * @param instanceId Instance's name.
+     * @param diskId Name of the disk to take a snapshot of. Same as name of instance in this case.
      *
      * @throws IOException If an error occured in snapshot creation.
      * @throws InterruptedException If snapshot creation is interrupted.
      */
-    public void createSnapshot(String projectId, String zone, String instanceId) throws IOException, InterruptedException {
+    public void createSnapshot(String projectId, String zone, String diskId) throws IOException, InterruptedException {
         Snapshot snapshot = new Snapshot();
         try {
             zone = nameFromSelfLink(zone);
 
-            snapshot.setName(instanceId);
-            Operation op = compute.disks().createSnapshot(projectId, zone, instanceId, snapshot).execute();
+            snapshot.setName(diskId);
+            Operation op = compute.disks().createSnapshot(projectId, zone, diskId, snapshot).execute();
 
             // poll for result
             waitForOperationCompletion(projectId, op.getName(), op.getZone(), SNAPSHOT_TIMEOUT_MILLISECONDS);
