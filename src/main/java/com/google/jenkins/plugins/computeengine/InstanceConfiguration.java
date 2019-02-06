@@ -16,6 +16,13 @@
 
 package com.google.jenkins.plugins.computeengine;
 
+import com.cloudbees.jenkins.plugins.sshcredentials.impl.BasicSSHUserPrivateKey;
+import com.cloudbees.plugins.credentials.CredentialsMatchers;
+import com.cloudbees.plugins.credentials.CredentialsProvider;
+import com.cloudbees.plugins.credentials.common.StandardListBoxModel;
+import com.cloudbees.plugins.credentials.common.StandardUsernameCredentials;
+import com.cloudbees.plugins.credentials.common.StandardUsernameListBoxModel;
+import com.cloudbees.plugins.credentials.common.StandardUsernamePasswordCredentials;
 import com.cloudbees.plugins.credentials.domains.DomainRequirement;
 import com.google.api.services.compute.model.*;
 import com.google.common.base.Strings;
@@ -26,10 +33,12 @@ import hudson.RelativePath;
 import hudson.Util;
 import hudson.model.*;
 import hudson.model.labels.LabelAtom;
+import hudson.security.ACL;
 import hudson.slaves.CloudRetentionStrategy;
 import hudson.util.FormValidation;
 import hudson.util.ListBoxModel;
 import jenkins.model.Jenkins;
+import org.apache.commons.lang.StringUtils;
 import org.apache.commons.text.RandomStringGenerator;
 import org.kohsuke.stapler.AncestorInPath;
 import org.kohsuke.stapler.DataBoundConstructor;
@@ -37,7 +46,17 @@ import org.kohsuke.stapler.QueryParameter;
 
 import java.io.IOException;
 import java.io.PrintStream;
-import java.util.*;
+import java.util.Arrays;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Set;
+import java.util.Iterator;
+import java.util.Optional;
+
+import static com.google.jenkins.plugins.computeengine.client.ComputeClient.nameFromSelfLink;
 
 public class InstanceConfiguration implements Describable<InstanceConfiguration> {
     public static final Long DEFAULT_BOOT_DISK_SIZE_GB = 10L;
@@ -46,10 +65,11 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
     public static final Integer DEFAULT_RETENTION_TIME_MINUTES = (DEFAULT_LAUNCH_TIMEOUT_SECONDS / 60) + 1;
     public static final String DEFAULT_RUN_AS_USER = "jenkins";
     public static final String ERROR_NO_SUBNETS = "No subnetworks exist in the given network and region.";
-    public static final String METADATA_STARTUP_SCRIPT_KEY = "startup-script";
+    public static final String METADATA_LINUX_STARTUP_SCRIPT_KEY = "startup-script";
+    public static final String METADATA_WINDOWS_STARTUP_SCRIPT_KEY = "windows-startup-script-ps1";
     public static final String NAT_TYPE = "ONE_TO_ONE_NAT";
     public static final String NAT_NAME = "External NAT";
-    public static final List<String> KNOWN_LINUX_IMAGE_PROJECTS = Collections.unmodifiableList(new ArrayList<String>() {{
+    public static final List<String> KNOWN_IMAGE_PROJECTS = Collections.unmodifiableList(new ArrayList<String>() {{
         add("centos-cloud");
         add("coreos-cloud");
         add("cos-cloud");
@@ -58,6 +78,8 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
         add("suse-cloud");
         add("suse-sap-cloud");
         add("ubuntu-os-cloud");
+        add("windows-cloud");
+        add("windows-sql-cloud");
     }});
     public final String description;
     public final String namePrefix;
@@ -67,6 +89,7 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
     public final String numExecutorsStr;
     public final String startupScript;
     public final boolean preemptible;
+    public final String minCpuPlatform;
     public final String labels;
     public final String runAsUser;
     public final String bootDiskType;
@@ -83,6 +106,12 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
     public final String retentionTimeMinutesStr;
     public final String launchTimeoutSecondsStr;
     public final String bootDiskSizeGbStr;
+    public final String template;
+    public final boolean windows;
+    public final String windowsPasswordCredentialsId;
+    public final String windowsPrivateKeyCredentialsId;
+    public final Optional<WindowsConfiguration> windowsConfig;
+    public final String remoteFs;
     public Map<String, String> googleLabels;
     public Integer numExecutors;
     public Integer retentionTimeMinutes;
@@ -99,6 +128,7 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
                                  String numExecutorsStr,
                                  String startupScript,
                                  boolean preemptible,
+                                 String minCpuPlatform,
                                  String labelString,
                                  String description,
                                  String bootDiskType,
@@ -106,6 +136,11 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
                                  String bootDiskSourceImageName,
                                  String bootDiskSourceImageProject,
                                  String bootDiskSizeGbStr,
+                                 boolean windows,
+                                 String windowsUsername,
+                                 String windowsPasswordCredentialsId,
+                                 String windowsPrivateKeyCredentialsId,
+                                 String remoteFs,
                                  NetworkConfiguration networkConfiguration,
                                  boolean externalAddress,
                                  boolean useInternalAddress,
@@ -115,7 +150,8 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
                                  String launchTimeoutSecondsStr,
                                  Node.Mode mode,
                                  AcceleratorConfiguration acceleratorConfiguration,
-                                 String runAsUser) {
+                                 String runAsUser,
+                                 String template) {
         this.namePrefix = namePrefix;
         this.region = region;
         this.zone = zone;
@@ -123,7 +159,22 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
         this.description = description;
         this.startupScript = startupScript;
         this.preemptible = preemptible;
+
+        this.windows = windows;
+        if (windows) {
+            this.windowsConfig = Optional.of(new WindowsConfiguration(windowsUsername, windowsPasswordCredentialsId,
+                    windowsPrivateKeyCredentialsId));
+        } else {
+            this.windowsConfig = Optional.empty();
+        }
+
+        // these are needed for the credentials to persist in the UI
+        this.windowsPasswordCredentialsId = windowsPasswordCredentialsId;
+        this.windowsPrivateKeyCredentialsId = windowsPrivateKeyCredentialsId;
+
+        this.minCpuPlatform = minCpuPlatform;
         this.numExecutors = intOrDefault(numExecutorsStr, DEFAULT_NUM_EXECUTORS);
+        this.template = template;
         this.numExecutorsStr = numExecutors.toString();
         this.retentionTimeMinutes = intOrDefault(retentionTimeMinutesStr, DEFAULT_RETENTION_TIME_MINUTES);
         this.retentionTimeMinutesStr = retentionTimeMinutes.toString();
@@ -138,6 +189,9 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
         this.bootDiskSizeGb = longOrDefault(bootDiskSizeGbStr, DEFAULT_BOOT_DISK_SIZE_GB);
         this.bootDiskSizeGbStr = bootDiskSizeGb.toString();
 
+        // Remote filesystem location.
+        this.remoteFs = remoteFs;
+        
         // Network
         this.networkConfiguration = networkConfiguration;
         this.externalAddress = externalAddress;
@@ -225,14 +279,41 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
         googleLabels.put(key, value);
     }
 
-    public ComputeEngineInstance provision(TaskListener listener, Label requiredLabel) throws IOException {
+    public ComputeEngineInstance provision(TaskListener listener) throws IOException {
         PrintStream logger = listener.getLogger();
         try {
-            Instance i = instance();
-            Operation operation = cloud.client.insertInstance(cloud.projectId, i);
+            Instance instance = instance();
+            // TODO: JENKINS-55285
+            Operation operation = cloud.client.insertInstance(cloud.projectId, template, instance);
             logger.println("Sent insert request");
-            ComputeEngineInstance instance = new ComputeEngineInstance(cloud.name, i.getName(), i.getZone(), i.getDescription(), runAsUser, "./.jenkins-slave", numExecutors, mode, requiredLabel == null ? "" : requiredLabel.getName(), new ComputeEngineLinuxLauncher(cloud.getCloudName(), operation, this.useInternalAddress), new CloudRetentionStrategy(retentionTimeMinutes), getLaunchTimeoutMillis());
-            return instance;
+            String targetRemoteFs = this.remoteFs;
+            ComputeEngineComputerLauncher launcher = null;
+            if (this.windows) {
+                launcher = new ComputeEngineWindowsLauncher(cloud.getCloudName(), operation, this.useInternalAddress);
+                if (targetRemoteFs == null || targetRemoteFs.isEmpty()) {
+                    targetRemoteFs = "C:\\JenkinsSlave";
+                }
+            } else {
+                launcher = new ComputeEngineLinuxLauncher(cloud.getCloudName(), operation, this.useInternalAddress);
+                if (targetRemoteFs == null || targetRemoteFs.isEmpty()) {
+                    targetRemoteFs = "./.jenkins-slave";
+                }
+            }
+            ComputeEngineInstance computeEngineInstance = new ComputeEngineInstance(
+                    cloud.name,
+                    instance.getName(),
+                    instance.getZone(), 
+                    instance.getDescription(),
+                    runAsUser,
+                    targetRemoteFs,
+                    windowsConfig,
+                    numExecutors, 
+                    mode, 
+                    labels,
+                    launcher,
+                    new CloudRetentionStrategy(retentionTimeMinutes), 
+                    getLaunchTimeoutMillis());
+            return computeEngineInstance;
         } catch (Descriptor.FormException fe) {
             logger.printf("Error provisioning instance: %s", fe.getMessage());
             return null;
@@ -249,21 +330,38 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
         return this;
     }
 
-    public Instance instance() {
-        Instance i = new Instance();
-        i.setName(uniqueName());
-        i.setLabels(googleLabels);
-        i.setDescription(description);
-        i.setZone(ComputeClient.zoneFromSelfLink(zone));
-        i.setMachineType(stripSelfLinkPrefix(machineType));
-        i.setMetadata(metadata());
-        i.setTags(tags());
-        i.setScheduling(scheduling());
-        i.setDisks(disks());
-        i.setGuestAccelerators(accelerators());
-        i.setNetworkInterfaces(networkInterfaces());
-        i.setServiceAccounts(serviceAccounts());
-        return i;
+    public Instance instance() throws IOException {
+        Instance instance = new Instance();
+        instance.setName(uniqueName());
+        instance.setDescription(description);
+        instance.setZone(nameFromSelfLink(zone));
+        
+        if (StringUtils.isNotEmpty(template)) {
+            // TODO: JENKINS-55285
+            InstanceTemplate instanceTemplate = cloud.client.getTemplate(nameFromSelfLink(cloud.projectId), nameFromSelfLink(template));
+            Map<String, String> mergedLabels = new HashMap<>(googleLabels);
+            if (instanceTemplate.getProperties().getLabels() != null) {
+                Map<String, String> templateLabels = instanceTemplate.getProperties().getLabels();
+                mergedLabels.putAll(templateLabels);
+            }
+            instance.setLabels(mergedLabels);
+        } else {
+            instance.setLabels(googleLabels);
+            instance.setMachineType(stripSelfLinkPrefix(machineType));
+            instance.setMetadata(metadata());
+            instance.setTags(tags());
+            instance.setScheduling(scheduling());
+            instance.setDisks(disks());
+            instance.setGuestAccelerators(accelerators());
+            instance.setNetworkInterfaces(networkInterfaces());
+            instance.setServiceAccounts(serviceAccounts());
+
+            //optional
+            if (notNullOrEmpty(minCpuPlatform)) {
+                instance.setMinCpuPlatform(minCpuPlatform);
+            }
+        }
+        return instance;
     }
 
     private String uniqueName() {
@@ -285,7 +383,11 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
         if (notNullOrEmpty(startupScript)) {
             Metadata metadata = new Metadata();
             List<Metadata.Items> items = new ArrayList<>();
-            items.add(new Metadata.Items().setKey(METADATA_STARTUP_SCRIPT_KEY).setValue(startupScript));
+            if (this.windows) {
+                items.add(new Metadata.Items().setKey(METADATA_WINDOWS_STARTUP_SCRIPT_KEY).setValue(startupScript));
+            } else {
+                items.add(new Metadata.Items().setKey(METADATA_LINUX_STARTUP_SCRIPT_KEY).setValue(startupScript));
+            }
             metadata.setItems(items);
             return metadata;
         }
@@ -491,6 +593,26 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
                 return items;
             }
         }
+        
+        public ListBoxModel doFillTemplateItems(@AncestorInPath Jenkins context,
+                                              @QueryParameter("projectId") @RelativePath("..") final String projectId,
+                                              @QueryParameter("credentialsId") @RelativePath("..") final String credentialsId) {
+            ListBoxModel items = new ListBoxModel();
+            items.add("");
+            try {
+                ComputeClient compute = computeClient(context, credentialsId);
+                List<InstanceTemplate> instanceTemplates = compute.getTemplates(projectId);
+
+                for (InstanceTemplate instanceTemplate : instanceTemplates) {
+                    items.add(instanceTemplate.getName(), instanceTemplate.getSelfLink());
+                }
+                return items;
+            } catch (IOException ioe) {
+                items.clear();
+                items.add("Error retrieving instanceTemplates");
+                return items;
+            }
+        }
 
         public FormValidation doCheckRegion(@QueryParameter String value) {
             if (value.equals("")) {
@@ -561,6 +683,30 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
             return FormValidation.ok();
         }
 
+        public ListBoxModel doFillMinCpuPlatformItems(@AncestorInPath Jenkins context,
+                                               @QueryParameter("projectId") @RelativePath("..") final String projectId,
+                                               @QueryParameter("zone") final String zone,
+                                               @QueryParameter("credentialsId") @RelativePath("..") final String credentialsId)
+        {
+            ListBoxModel items = new ListBoxModel();
+            items.add("");
+            try {
+                ComputeClient compute = computeClient(context, credentialsId);
+                List<String> cpuPlatforms = compute.cpuPlatforms(projectId, zone);
+
+                for (String cpuPlatform : cpuPlatforms) {
+                    items.add(cpuPlatform);
+                }
+                return items;
+            } catch (IOException ioe) {
+                items.clear();
+                items.add("Error retrieving cpu Platforms");
+                return items;
+            } catch (IllegalArgumentException iae) {
+                //TODO log
+                return null;
+            }
+        }
 
         public ListBoxModel doFillBootDiskTypeItems(@AncestorInPath Jenkins context,
                                                     @QueryParameter("projectId") @RelativePath("..") final String projectId,
@@ -590,7 +736,7 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
             ListBoxModel items = new ListBoxModel();
             items.add("");
             items.add(projectId);
-            for (String v : KNOWN_LINUX_IMAGE_PROJECTS) {
+            for (String v : KNOWN_IMAGE_PROJECTS) {
                 items.add(v);
             }
             return items;
@@ -642,7 +788,7 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
 
             try {
                 ComputeClient compute = computeClient(context, credentialsId);
-                Image i = compute.getImage(ComputeClient.lastParam(projectId), ComputeClient.lastParam(imageName));
+                Image i = compute.getImage(nameFromSelfLink(projectId), nameFromSelfLink(imageName));
                 if (i == null)
                     return FormValidation.error("Could not find image " + imageName);
                 Long bootDiskSizeGb = Long.parseLong(value);
@@ -659,6 +805,44 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
             if (mode == Node.Mode.EXCLUSIVE && (value == null || value.trim().isEmpty())) {
                 return FormValidation.warning("You may want to assign labels to this node;"
                         + " it's marked to only run jobs that are exclusively tied to itself or a label.");
+            }
+            return FormValidation.ok();
+        }
+
+        public ListBoxModel doFillWindowsPasswordCredentialsIdItems(@AncestorInPath Jenkins context, @QueryParameter String value) {
+            if (context == null || !context.hasPermission(Item.CONFIGURE)) {
+                return new StandardListBoxModel();
+            }
+            List<DomainRequirement> domainRequirements = new ArrayList<DomainRequirement>();
+            return new StandardListBoxModel()
+                    .withEmptySelection()
+                    .withMatching(
+                            CredentialsMatchers.instanceOf(StandardUsernamePasswordCredentials.class),
+                            CredentialsProvider.lookupCredentials(
+                                    StandardUsernamePasswordCredentials.class, context, ACL.SYSTEM,
+                                    domainRequirements));
+        }
+
+        public ListBoxModel doFillWindowsPrivateKeyCredentialsIdItems(@AncestorInPath Jenkins context, @QueryParameter String value) {
+            if (context == null || !context.hasPermission(Item.CONFIGURE)) {
+                return new StandardUsernameListBoxModel();
+            }
+            List<DomainRequirement> domainRequirements = new ArrayList<DomainRequirement>();
+            return new StandardUsernameListBoxModel()
+                    .withEmptySelection()
+                    .withMatching(
+                            CredentialsMatchers.instanceOf(BasicSSHUserPrivateKey.class),
+                            CredentialsProvider.lookupCredentials(
+                                    StandardUsernameCredentials.class, context, ACL.SYSTEM,
+                                    domainRequirements));
+        }
+
+        public FormValidation doCheckWindowsPrivateKeyCredentialsId(@AncestorInPath Jenkins context,
+                                                                    @QueryParameter String value,
+                                                                    @QueryParameter("windows") boolean windows,
+                                                                    @QueryParameter("windowsPasswordCredentialsId") String windowsPasswordCredentialsId) {
+            if (windows && (Strings.isNullOrEmpty(value) && Strings.isNullOrEmpty(windowsPasswordCredentialsId))) {
+                return FormValidation.error("A password or private key credential is required");
             }
             return FormValidation.ok();
         }

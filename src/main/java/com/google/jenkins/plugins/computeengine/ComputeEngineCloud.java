@@ -129,12 +129,44 @@ public class ComputeEngineCloud extends AbstractCloudImpl {
             c.cloud = this;
             // Apply a label that associates an instance configuration with
             // this cloud provider
-            c.appendLabel(CLOUD_ID_LABEL_KEY, String.valueOf(this.name.hashCode()));
+            c.appendLabel(CLOUD_ID_LABEL_KEY, getInstanceUniqueId());
 
             // Apply a label that identifies the name of this instance configuration
             c.appendLabel(CONFIG_LABEL_KEY, c.namePrefix);
         }
         return this;
+    }
+
+
+    /**
+     * Returns unique ID of that cloud instance.
+     * 
+     * This ID allows us to find machines from our cloud in GCP.
+     * Current implementation is bit naive and generate ID based on name hashCode.
+     *
+     * @return instance unique ID
+     */
+    public String getInstanceUniqueId() {
+        // Semi unique ID
+        return String.valueOf(name.hashCode());
+    }
+
+    /**
+     * Returns GCP client for that cloud.
+     * 
+     * @return GCP client object.
+     */
+    public ComputeClient getClient() {
+        return client;
+    }
+
+    /**
+     * Returns GCP projectId for that cloud.
+     * 
+     * @return projectId
+     */
+    public String getProjectId() {
+        return projectId;
     }
 
     public void addConfiguration(InstanceConfiguration config) {
@@ -156,7 +188,7 @@ public class ComputeEngineCloud extends AbstractCloudImpl {
                     break;
                 }
 
-                final ComputeEngineInstance node = config.provision(StreamTaskListener.fromStdout(), label);
+                final ComputeEngineInstance node = config.provision(StreamTaskListener.fromStdout());
                 Jenkins.getInstance().addNode(node);
                 r.add(new PlannedNode(node.getNodeName(), Computer.threadPoolForRemoting.submit(new Callable<Node>() {
                     public Node call() throws Exception {
@@ -179,7 +211,7 @@ public class ComputeEngineCloud extends AbstractCloudImpl {
                         return node;
                     }
                 }), node.getNumExecutors()));
-                excessWorkload -= 1;
+                excessWorkload -= node.getNumExecutors();
             }
         } catch (IOException ioe) {
             LOGGER.log(Level.WARNING, "Error provisioning node", ioe);
@@ -200,7 +232,7 @@ public class ComputeEngineCloud extends AbstractCloudImpl {
             // We only care about instances that have a label indicating they
             // belong to this cloud
             Map<String, String> filterLabel = new HashMap<>();
-            filterLabel.put(CLOUD_ID_LABEL_KEY, String.valueOf(this.name.hashCode()));
+            filterLabel.put(CLOUD_ID_LABEL_KEY, getInstanceUniqueId());
             List<Instance> instances = client.getInstancesWithLabel(projectId, filterLabel);
 
             // Don't count instances that are not running (or starting up)
@@ -220,14 +252,6 @@ public class ComputeEngineCloud extends AbstractCloudImpl {
         } catch (IOException ioe) {
             LOGGER.warning(String.format("An error occurred counting the number of existing instances in cloud %s: %s", getCloudName(), ioe.getMessage()));
             throw ioe;
-        }
-    }
-
-    private synchronized ComputeEngineInstance getAnAgent(InstanceConfiguration config, Label requiredLabel) {
-        try {
-            return config.provision(StreamTaskListener.fromStdout(), requiredLabel);
-        } catch (Exception e) {
-            return null;
         }
     }
 
@@ -285,7 +309,7 @@ public class ComputeEngineCloud extends AbstractCloudImpl {
             throw HttpResponses.error(SC_BAD_REQUEST, "No such Instance Configuration: " + configuration);
         }
 
-        ComputeEngineInstance node = c.provision(StreamTaskListener.fromStdout(), null);
+        ComputeEngineInstance node = c.provision(StreamTaskListener.fromStdout());
         if (node == null)
             throw HttpResponses.error(SC_BAD_REQUEST, "Could not provision new node.");
         Jenkins.getInstance().addNode(node);
