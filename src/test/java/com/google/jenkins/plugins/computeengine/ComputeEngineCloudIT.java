@@ -405,13 +405,19 @@ public class ComputeEngineCloudIT {
 
         FreeStyleBuild build = r.assertBuildStatus(Result.FAILURE, project.scheduleBuild2(0));
         Node worker = build.getBuiltOn();
-        r.jenkins.getNode(worker.getNodeName()).toComputer().doDoDelete();
+        try {
+            r.jenkins.getNode(worker.getNodeName()).toComputer().doDoDelete();
 
-        Snapshot createdSnapshot = client.getSnapshot(projectId, worker.getNodeName());
-        assertEquals(logs(), createdSnapshot.getStatus(), "READY");
+            Snapshot createdSnapshot = client.getSnapshot(projectId, worker.getNodeName());
+            assertEquals(logs(), createdSnapshot.getStatus(), "READY");
+        } finally {
+            try {
+                //cleanup
+                client.deleteSnapshot(projectId, worker.getNodeName());
+            } catch (Exception e) {
+            }
 
-        //cleanup
-        client.deleteSnapshot(projectId, worker.getNodeName());
+        }
     }
 
     private static InstanceTemplate createTemplate(Map<String, String> googleLabels) {
