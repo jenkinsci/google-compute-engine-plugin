@@ -34,6 +34,7 @@ public class ComputeEngineInstance extends AbstractCloudSlave {
     public final String cloudName;
     public final String sshUser;
     public transient final Optional<WindowsConfiguration> windowsConfig;
+    public final boolean createSnapshot;
     public Integer launchTimeout; // Seconds
     private Boolean connected;
 
@@ -44,6 +45,7 @@ public class ComputeEngineInstance extends AbstractCloudSlave {
                                  String sshUser,
                                  String remoteFS,
                                  Optional<WindowsConfiguration> windowsConfig,
+                                 boolean createSnapshot,
                                  int numExecutors,
                                  Node.Mode mode,
                                  String labelString,
@@ -58,6 +60,7 @@ public class ComputeEngineInstance extends AbstractCloudSlave {
         this.cloudName = cloudName;
         this.sshUser = sshUser;
         this.windowsConfig = windowsConfig;
+        this.createSnapshot = createSnapshot;
     }
 
     @Override
@@ -79,7 +82,11 @@ public class ComputeEngineInstance extends AbstractCloudSlave {
 
 
     }
-    
+
+    public Boolean getCreateSnapshot() {
+        return createSnapshot;
+    }
+
     public String getCloudName() {
         return cloudName;
     }

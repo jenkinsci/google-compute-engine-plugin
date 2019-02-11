@@ -40,6 +40,9 @@
             <f:entry field="windowsPrivateKeyCredentialsId" title="${%Windows SSH Private Key Credentials}">
                 <c:select/>
             </f:entry>
+            <f:entry field="createSnapshot" title="${%Create Snapshot?}">
+                <f:checkbox/>
+            </f:entry>
         </f:section>
 
         <f:section title="Location">

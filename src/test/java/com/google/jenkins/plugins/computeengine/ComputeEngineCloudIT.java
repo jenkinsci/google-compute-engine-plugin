@@ -371,7 +371,7 @@ public class ComputeEngineCloudIT {
         logOutput.reset();
 
         ComputeEngineCloud cloud = (ComputeEngineCloud) r.jenkins.clouds.get(0);
-        cloud.addConfiguration(validInstanceConfiguration());
+        cloud.addConfiguration(snapshotInstanceConfiguration());
 
         FreeStyleProject project = r.createFreeStyleProject();
         Builder step = new Shell("echo works");
@@ -392,7 +392,7 @@ public class ComputeEngineCloudIT {
         logOutput.reset();
 
         ComputeEngineCloud cloud = (ComputeEngineCloud) r.jenkins.clouds.get(0);
-        cloud.addConfiguration(validInstanceConfiguration());
+        cloud.addConfiguration(snapshotInstanceConfiguration());
 
         FreeStyleProject project = r.createFreeStyleProject();
         Builder step = new Shell("exit 1");
@@ -445,20 +445,24 @@ public class ComputeEngineCloudIT {
         return instanceTemplate;
     }
 
+    private static InstanceConfiguration snapshotInstanceConfiguration() {
+        return instanceConfiguration(DEB_JAVA_STARTUP_SCRIPT, NUM_EXECUTORS, LABEL, true, NULL_TEMPLATE);
+    }
+
     private static InstanceConfiguration validInstanceConfiguration() {
-        return instanceConfiguration(DEB_JAVA_STARTUP_SCRIPT, NUM_EXECUTORS, LABEL, NULL_TEMPLATE);
+        return instanceConfiguration(DEB_JAVA_STARTUP_SCRIPT, NUM_EXECUTORS, LABEL, false, NULL_TEMPLATE);
     }
 
     private static InstanceConfiguration validInstanceConfigurationWithLabels(String labels) {
-        return instanceConfiguration(DEB_JAVA_STARTUP_SCRIPT, NUM_EXECUTORS, labels, NULL_TEMPLATE);
+        return instanceConfiguration(DEB_JAVA_STARTUP_SCRIPT, NUM_EXECUTORS, labels, false, NULL_TEMPLATE);
     }
 
     private static InstanceConfiguration validInstanceConfigurationWithExecutors(String numExecutors) {
-        return instanceConfiguration(DEB_JAVA_STARTUP_SCRIPT, numExecutors, LABEL, NULL_TEMPLATE);
+        return instanceConfiguration(DEB_JAVA_STARTUP_SCRIPT, numExecutors, LABEL, false, NULL_TEMPLATE);
     }
 
     private static InstanceConfiguration validInstanceConfigurationWithTemplate(String template) {
-        return instanceConfiguration(DEB_JAVA_STARTUP_SCRIPT, NUM_EXECUTORS, LABEL, template);
+        return instanceConfiguration(DEB_JAVA_STARTUP_SCRIPT, NUM_EXECUTORS, LABEL, false, template);
     }
 
     /**
@@ -467,10 +471,11 @@ public class ComputeEngineCloudIT {
      * @return
      */
     private static InstanceConfiguration invalidInstanceConfiguration1() {
-        return instanceConfiguration("", NUM_EXECUTORS, LABEL, NULL_TEMPLATE);
+        return instanceConfiguration("", NUM_EXECUTORS, LABEL, false, NULL_TEMPLATE);
     }
 
-    private static InstanceConfiguration instanceConfiguration(String startupScript, String numExecutors, String labels, String template) {
+    private static InstanceConfiguration instanceConfiguration(String startupScript, String numExecutors, String labels,
+                                                               Boolean createSnapshot, String template) {
         InstanceConfiguration ic = new InstanceConfiguration(
                 NAME_PREFIX,
                 REGION,
@@ -491,6 +496,7 @@ public class ComputeEngineCloudIT {
                 "",
                 "",
                 "",
+                createSnapshot,
                 null,
                 new AutofilledNetworkConfiguration(NETWORK_NAME, SUBNETWORK_NAME),
                 EXTERNAL_ADDR,

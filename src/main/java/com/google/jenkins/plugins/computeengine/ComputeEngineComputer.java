@@ -126,7 +126,7 @@ public class ComputeEngineComputer extends AbstractCloudComputer<ComputeEngineIn
                 ComputeEngineCloud cloud = getCloud();
 
                 // Checks for failed jobs for this computer's node
-                if (cloud != null && !this.getBuilds().failureOnly().isEmpty()) {
+                if (cloud != null && node.getCreateSnapshot() && !this.getBuilds().failureOnly().isEmpty()) {
                     LOGGER.info("Creating snapshot for node ... " + node.getNodeName());
                     cloud.getClient().createSnapshot(cloud.projectId, node.zone, node.getNodeName());
                 }

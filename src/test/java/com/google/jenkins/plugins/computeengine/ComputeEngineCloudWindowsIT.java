@@ -252,6 +252,7 @@ public class ComputeEngineCloudWindowsIT {
                 WINDOWS_USER,
                 "",
                 windowsPrivateKeyCredential.getId(),
+                false,
                 null,
                 new AutofilledNetworkConfiguration(NETWORK_NAME, SUBNETWORK_NAME),
                 EXTERNAL_ADDR,
