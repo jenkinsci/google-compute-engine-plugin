@@ -430,21 +430,20 @@ public class ComputeClient {
      *
      * @param projectId Google cloud project id (e.g. my-project).
      * @param zone Instance's zone.
-     * @param diskId Name of the disk to take a snapshot of. Same as name of instance in this case.
+     * @param instanceId Name of the instance whose disks to take a snapshot of.
      *
      * @throws IOException If an error occured in snapshot creation.
      * @throws InterruptedException If snapshot creation is interrupted.
      */
-    public void createSnapshot(String projectId, String zone, String diskId) throws IOException, InterruptedException {
-        Snapshot snapshot = new Snapshot();
+    public void createSnapshot(String projectId, String zone, String instanceId) throws IOException, InterruptedException {
         try {
             zone = nameFromSelfLink(zone);
+            Instance instance = compute.instances().get(projectId, zone, instanceId).execute();
 
-            snapshot.setName(diskId);
-            Operation op = compute.disks().createSnapshot(projectId, zone, diskId, snapshot).execute();
-
-            // poll for result
-            waitForOperationCompletion(projectId, op.getName(), op.getZone(), SNAPSHOT_TIMEOUT_MILLISECONDS);
+            for (AttachedDisk disk : instance.getDisks()) {
+                    String diskId = nameFromSelfLink(disk.getSource());
+                    createSnapshotForDisk(projectId, zone, diskId);
+            }
         } catch (InterruptedException ie) {
             // catching InterruptedException here because calling function also can throw InterruptedException from trying to terminate node
             LOGGER.log(Level.WARNING,"Error in creating snapshot.", ie);
@@ -453,6 +452,25 @@ public class ComputeClient {
             LOGGER.log(Level.WARNING,"Interruption in creating snapshot.", ioe);
             throw ioe;
         }
+    }
+
+    /**
+     * Given a disk's name, create a snapshot for said disk.
+     *
+     * @param projectId Google cloud project id (e.g. my-project).
+     * @param zone Zone of disk.
+     * @param diskId Name of disk to create a snapshot for.
+     *
+     * @throws IOException If an error occured in snapshot creation.
+     * @throws InterruptedException If snapshot creation is interrupted.
+     */
+    public void createSnapshotForDisk(String projectId, String zone, String diskId) throws IOException, InterruptedException {
+        Snapshot snapshot = new Snapshot();
+        snapshot.setName(diskId);
+
+        Operation op = compute.disks().createSnapshot(projectId, zone, diskId, snapshot).execute();
+        // poll for result
+        waitForOperationCompletion(projectId, op.getName(), op.getZone(), SNAPSHOT_TIMEOUT_MILLISECONDS);
     }
 
     /**
