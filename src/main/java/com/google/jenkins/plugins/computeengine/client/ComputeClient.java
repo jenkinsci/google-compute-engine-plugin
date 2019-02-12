@@ -441,6 +441,7 @@ public class ComputeClient {
             zone = nameFromSelfLink(zone);
             Instance instance = compute.instances().get(projectId, zone, instanceId).execute();
 
+            //TODO: JENKINS-56113 parallelize snapshot creation
             for (AttachedDisk disk : instance.getDisks()) {
                     String diskId = nameFromSelfLink(disk.getSource());
                     createSnapshotForDisk(projectId, zone, diskId);
