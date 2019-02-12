@@ -21,7 +21,6 @@ import com.cloudbees.plugins.credentials.CredentialsStore;
 import com.cloudbees.plugins.credentials.SystemCredentialsProvider;
 import com.cloudbees.plugins.credentials.domains.Domain;
 import com.cloudbees.plugins.credentials.domains.DomainRequirement;
-import com.google.api.client.googleapis.json.GoogleJsonResponseException;
 import com.google.api.services.compute.model.AccessConfig;
 import com.google.api.services.compute.model.AttachedDisk;
 import com.google.api.services.compute.model.AttachedDiskInitializeParams;
@@ -71,10 +70,7 @@ import static com.google.jenkins.plugins.computeengine.InstanceConfiguration.MET
 import static com.google.jenkins.plugins.computeengine.InstanceConfiguration.NAT_NAME;
 import static com.google.jenkins.plugins.computeengine.InstanceConfiguration.NAT_TYPE;
 import static com.google.jenkins.plugins.computeengine.client.ComputeClient.nameFromSelfLink;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.*;
 
 public class ComputeEngineCloudIT {
     private static Logger log = Logger.getLogger(ComputeEngineCloudIT.class.getName());
@@ -370,7 +366,7 @@ public class ComputeEngineCloudIT {
     }
 
     // Tests that no snapshot is created when we only have successful builds for given node
-    @Test(timeout = 300000, expected = GoogleJsonResponseException.class)
+    @Test(timeout = 300000)
     public void testNoSnapshotCreated() throws Exception {
         logOutput.reset();
 
@@ -387,7 +383,7 @@ public class ComputeEngineCloudIT {
         r.jenkins.getNode(worker.getNodeName()).toComputer().doDoDelete();
 
         assertFalse(logs(), logs().contains("snapshot"));
-        client.getSnapshot(projectId, worker.getNodeName());
+        assertNull(client.getSnapshot(projectId, worker.getNodeName()));
     }
 
     // Tests snapshot is created when we have failure builds for given node

@@ -16,6 +16,7 @@
 
 package com.google.jenkins.plugins.computeengine.client;
 
+import com.google.api.client.googleapis.json.GoogleJsonResponseException;
 import com.google.api.services.compute.Compute;
 import com.google.api.services.compute.model.*;
 import com.google.common.base.Strings;
@@ -489,12 +490,19 @@ public class ComputeClient {
      *
      * @param projectId Google cloud project id (e.g. my-project).
      * @param snapshotName Name of the snapshot to get.
-     * @return Snapshot object with given snapshotName.
+     * @return Snapshot object with given snapshotName. Null if not found.
      * @throws IOException If an error occurred in retrieving the snapshot.
      */
     public Snapshot getSnapshot(String projectId, String snapshotName) throws IOException {
-        return compute.snapshots().get(projectId, snapshotName).execute();
+        try {
+            return compute.snapshots().get(projectId, snapshotName).execute();
+        } catch (GoogleJsonResponseException e) {
+            // Instead of returning null for a snapshot not found, API throws an exception.
+            // We will return null instead.
+            return null;
+        }
     }
+
     /**
      * Appends metadata to an instance. Any metadata items with existing keys will be overwritten. Otherwise, metadata
      * is preserved. This method blocks until the operation completes.
