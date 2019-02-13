@@ -18,11 +18,31 @@ package com.google.jenkins.plugins.computeengine.client;
 
 import com.google.api.client.googleapis.json.GoogleJsonResponseException;
 import com.google.api.services.compute.Compute;
-import com.google.api.services.compute.model.*;
+
+import com.google.api.services.compute.model.AcceleratorType;
+import com.google.api.services.compute.model.AttachedDisk;
+import com.google.api.services.compute.model.DiskType;
+import com.google.api.services.compute.model.Image;
+import com.google.api.services.compute.model.Instance;
+import com.google.api.services.compute.model.InstanceTemplate;
+import com.google.api.services.compute.model.InstancesScopedList;
+import com.google.api.services.compute.model.MachineType;
+import com.google.api.services.compute.model.Metadata;
+import com.google.api.services.compute.model.Network;
+import com.google.api.services.compute.model.Operation;
+import com.google.api.services.compute.model.Region;
+import com.google.api.services.compute.model.Snapshot;
+import com.google.api.services.compute.model.Subnetwork;
+import com.google.api.services.compute.model.Zone;
 import com.google.common.base.Strings;
 
 import java.io.IOException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;

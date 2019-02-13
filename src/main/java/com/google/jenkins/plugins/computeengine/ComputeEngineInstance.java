@@ -83,7 +83,11 @@ public class ComputeEngineInstance extends AbstractCloudSlave {
 
     }
 
-    public boolean getCreateSnapshot() {
+    /**
+     * Based on the instance configuration, whether to create snapshot for an instance with failed builds at deletion tiem.
+     * @return boolean; whether or not to create the snapshot.
+     */
+    public boolean isCreateSnapshot() {
         return createSnapshot;
     }
 
