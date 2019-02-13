@@ -70,7 +70,11 @@ import static com.google.jenkins.plugins.computeengine.InstanceConfiguration.MET
 import static com.google.jenkins.plugins.computeengine.InstanceConfiguration.NAT_NAME;
 import static com.google.jenkins.plugins.computeengine.InstanceConfiguration.NAT_TYPE;
 import static com.google.jenkins.plugins.computeengine.client.ComputeClient.nameFromSelfLink;
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
 
 public class ComputeEngineCloudIT {
     private static Logger log = Logger.getLogger(ComputeEngineCloudIT.class.getName());
