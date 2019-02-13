@@ -371,6 +371,7 @@ public class ComputeEngineCloudIT {
         logOutput.reset();
 
         ComputeEngineCloud cloud = (ComputeEngineCloud) r.jenkins.clouds.get(0);
+        assertTrue(cloud.configurations.size() == 0);
         cloud.addConfiguration(snapshotInstanceConfiguration());
 
         FreeStyleProject project = r.createFreeStyleProject();
@@ -387,17 +388,20 @@ public class ComputeEngineCloudIT {
     }
 
     // Tests snapshot is created when we have failure builds for given node
+    // TODO: create a snapshot label maybe cause i think weird stuff happens with freestyle build
     @Test(timeout = 300000)
     public void testSnapshotCreated() throws Exception {
         logOutput.reset();
 
         ComputeEngineCloud cloud = (ComputeEngineCloud) r.jenkins.clouds.get(0);
+        assertTrue(cloud.configurations.size() == 0);
         cloud.addConfiguration(snapshotInstanceConfiguration());
+        // TODO: does this configuration actually provision a node...
 
         FreeStyleProject project = r.createFreeStyleProject();
         Builder step = new Shell("exit 1");
         project.getBuildersList().add(step);
-        project.setAssignedLabel(new LabelAtom(LABEL));
+        project.setAssignedLabel(new LabelAtom("SNAPSHOT"));
 
         FreeStyleBuild build = r.assertBuildStatus(Result.FAILURE, project.scheduleBuild2(0));
         Node worker = build.getBuiltOn();
@@ -446,7 +450,7 @@ public class ComputeEngineCloudIT {
     }
 
     private static InstanceConfiguration snapshotInstanceConfiguration() {
-        return instanceConfiguration(DEB_JAVA_STARTUP_SCRIPT, NUM_EXECUTORS, LABEL, true, NULL_TEMPLATE);
+        return instanceConfiguration(DEB_JAVA_STARTUP_SCRIPT, NUM_EXECUTORS, "SNAPSHOT", true, NULL_TEMPLATE);
     }
 
     private static InstanceConfiguration validInstanceConfiguration() {
@@ -475,7 +479,7 @@ public class ComputeEngineCloudIT {
     }
 
     private static InstanceConfiguration instanceConfiguration(String startupScript, String numExecutors, String labels,
-                                                               Boolean createSnapshot, String template) {
+                                                               boolean createSnapshot, String template) {
         InstanceConfiguration ic = new InstanceConfiguration(
                 NAME_PREFIX,
                 REGION,

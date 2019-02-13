@@ -83,7 +83,7 @@ public class ComputeEngineInstance extends AbstractCloudSlave {
 
     }
 
-    public Boolean getCreateSnapshot() {
+    public boolean getCreateSnapshot() {
         return createSnapshot;
     }
 
