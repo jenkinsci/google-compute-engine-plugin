@@ -91,6 +91,7 @@ public class ComputeEngineCloudIT {
     private static final String ZONE_BASE = format("projects/%s/zones/" + ZONE);
     private static final String LABEL = "integration";
     private static final String MULTIPLE_LABEL = "integration test";
+    private static final String SNAPSHOT_LABEL = "snapshot";
     private static final String MACHINE_TYPE = ZONE_BASE + "/machineTypes/n1-standard-1";
     private static final String NUM_EXECUTORS = "1";
     private static final String MULTIPLE_NUM_EXECUTORS = "2";
@@ -377,31 +378,27 @@ public class ComputeEngineCloudIT {
         FreeStyleProject project = r.createFreeStyleProject();
         Builder step = new Shell("echo works");
         project.getBuildersList().add(step);
-        project.setAssignedLabel(new LabelAtom(LABEL));
+        project.setAssignedLabel(new LabelAtom(SNAPSHOT_LABEL));
 
         FreeStyleBuild build = r.buildAndAssertSuccess(project);
         Node worker = build.getBuiltOn();
         r.jenkins.getNode(worker.getNodeName()).toComputer().doDoDelete();
 
-        assertFalse(logs(), logs().contains("snapshot"));
         assertNull(client.getSnapshot(projectId, worker.getNodeName()));
     }
 
     // Tests snapshot is created when we have failure builds for given node
-    // TODO: create a snapshot label maybe cause i think weird stuff happens with freestyle build
     @Test(timeout = 300000)
     public void testSnapshotCreated() throws Exception {
         logOutput.reset();
 
         ComputeEngineCloud cloud = (ComputeEngineCloud) r.jenkins.clouds.get(0);
-        assertTrue(cloud.configurations.size() == 0);
         cloud.addConfiguration(snapshotInstanceConfiguration());
-        // TODO: does this configuration actually provision a node...
 
         FreeStyleProject project = r.createFreeStyleProject();
         Builder step = new Shell("exit 1");
         project.getBuildersList().add(step);
-        project.setAssignedLabel(new LabelAtom("SNAPSHOT"));
+        project.setAssignedLabel(new LabelAtom(SNAPSHOT_LABEL));
 
         FreeStyleBuild build = r.assertBuildStatus(Result.FAILURE, project.scheduleBuild2(0));
         Node worker = build.getBuiltOn();
@@ -450,7 +447,8 @@ public class ComputeEngineCloudIT {
     }
 
     private static InstanceConfiguration snapshotInstanceConfiguration() {
-        return instanceConfiguration(DEB_JAVA_STARTUP_SCRIPT, NUM_EXECUTORS, "SNAPSHOT", true, NULL_TEMPLATE);
+        // Snapshot label needed since the freestyle project could use a previously provisioned node instead of this configuration's.
+        return instanceConfiguration(DEB_JAVA_STARTUP_SCRIPT, NUM_EXECUTORS, SNAPSHOT_LABEL, true, NULL_TEMPLATE);
     }
 
     private static InstanceConfiguration validInstanceConfiguration() {
