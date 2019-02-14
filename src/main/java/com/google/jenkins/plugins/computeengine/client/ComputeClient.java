@@ -32,6 +32,7 @@ import com.google.api.services.compute.model.Network;
 import com.google.api.services.compute.model.Operation;
 import com.google.api.services.compute.model.Region;
 import com.google.api.services.compute.model.Snapshot;
+import com.google.api.services.compute.model.SnapshotList;
 import com.google.api.services.compute.model.Subnetwork;
 import com.google.api.services.compute.model.Zone;
 import com.google.common.base.Strings;
@@ -46,6 +47,7 @@ import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import org.apache.commons.lang.StringUtils;
 
 /**
  * Client for communicating with the Google Compute API
@@ -515,13 +517,22 @@ public class ComputeClient {
      * @throws IOException If an error occurred in retrieving the snapshot.
      */
     public Snapshot getSnapshot(String projectId, String snapshotName) throws IOException {
-        try {
-            return compute.snapshots().get(projectId, snapshotName).execute();
-        } catch (GoogleJsonResponseException e) {
-            // Instead of returning null for a snapshot not found, API throws an exception.
-            // We will return null instead.
-            return null;
-        }
+        SnapshotList response;
+        Compute.Snapshots.List request = compute.snapshots().list(projectId);
+
+        do {
+            response = request.execute();
+            if (response.getItems() == null) {
+                continue;
+            }
+            for (Snapshot snapshot : response.getItems()) {
+                if (StringUtils.equals(snapshotName, snapshot.getName()))
+                    return snapshot;
+            }
+            request.setPageToken(response.getNextPageToken());
+        } while (response.getNextPageToken() != null);
+
+        return null;
     }
 
     /**
