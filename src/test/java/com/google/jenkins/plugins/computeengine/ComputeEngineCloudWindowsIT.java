@@ -89,6 +89,9 @@ public class ComputeEngineCloudWindowsIT {
     private static String bootDiskProjectId;
     private static String bootDiskImageName;
 
+    private static String publicKey;
+    private static String windowsPrivateKeyCredentialId;
+
     private static String format(String s) {
         String projectId = System.getenv("GOOGLE_PROJECT_ID");
         if (projectId == null) {
@@ -124,6 +127,17 @@ public class ComputeEngineCloudWindowsIT {
 
         CredentialsStore store = new SystemCredentialsProvider.ProviderImpl().getStore(r.jenkins);
         store.addCredentials(Domain.global(), c);
+
+        // Create credentials for SSH
+        GoogleKeyPair kp = GoogleKeyPair.generate("");
+        // Have to reformat since GoogleKeyPair's format is for metadata server and not typical public key format
+        publicKey = kp.getPublicKey().trim().substring(1);
+
+        StandardUsernameCredentials windowsPrivateKeyCredential = new BasicSSHUserPrivateKey(CredentialsScope.GLOBAL, null, WINDOWS_USER,
+                new BasicSSHUserPrivateKey.DirectEntryPrivateKeySource(kp.getPrivateKey()), null,
+                "integration test private key for windows");
+        store.addCredentials(Domain.global(), windowsPrivateKeyCredential);
+        windowsPrivateKeyCredentialId = windowsPrivateKeyCredential.getId();
 
         // Add Cloud plugin
         ComputeEngineCloud gcp = new ComputeEngineCloud(CLOUD_NAME, projectId, projectId, "10", null);
@@ -167,7 +181,7 @@ public class ComputeEngineCloudWindowsIT {
     @Test
     public void testGoogleCredentialsCreated() {
         List<Credentials> creds = new SystemCredentialsProvider.ProviderImpl().getStore(r.jenkins).getCredentials(Domain.global());
-        assertEquals(1, creds.size());
+        assertEquals(2, creds.size());
     }
 
     @Test //TODO: Group client tests into their own test class
@@ -185,11 +199,6 @@ public class ComputeEngineCloudWindowsIT {
         InstanceConfiguration ic = validInstanceConfiguration1(LABEL, false);
         ComputeEngineCloud cloud = (ComputeEngineCloud) r.jenkins.clouds.get(0);
         cloud.addConfiguration(ic);
-
-        // Test our private key credentials were created properly
-        //TODO: fix the credentials test, make the credentials global
-//        List<Credentials> creds = new SystemCredentialsProvider.ProviderImpl().getStore(r.jenkins).getCredentials(Domain.global());
-//        assertEquals(2, creds.size());
 
         // Add a new node
         Collection<NodeProvisioner.PlannedNode> planned = cloud.provision(new LabelAtom(LABEL), 1);
@@ -215,6 +224,7 @@ public class ComputeEngineCloudWindowsIT {
     }
 
     // Tests snapshot is created when we have failure builds for given node
+    // Snapshot creation is longer for windows vm's.
     @Test(timeout = 0)
     public void testSnapshotCreated() throws Exception {
         logOutput.reset();
@@ -244,15 +254,22 @@ public class ComputeEngineCloudWindowsIT {
         }
     }
 
-    //TODO: method headers
-    private static InstanceConfiguration snapshotInstanceConfiguration() throws IOException {
+    /**
+     * Creates an instance configuration for a node that will get a snapshot created upon deletion if there is a build failure.
+     * @return InstanceConfiguration proper instance configuration to test snapshot creation.
+     */
+    private static InstanceConfiguration snapshotInstanceConfiguration() {
         return validInstanceConfiguration1(SNAPSHOT_LABEL, true);
     }
 
-    private static InstanceConfiguration validInstanceConfiguration1(String labels, boolean createSnapshot) throws IOException {
-        GoogleKeyPair kp = GoogleKeyPair.generate("");
-        // Have to reformat since GoogleKeyPair's format is for metadata server and not typical public key format
-        String publicKey = kp.getPublicKey().trim().substring(1);
+    /**
+     * Given a job label and whether or not to create a snapshot upon deletion, gives working
+     * instance configuration to launch an instance.
+     * @param labels What job label to run the instance on.
+     * @param createSnapshot Whether or not to create a snapshot for the provisioned instance upon deletion.
+     * @return InstanceConfiguration working instance configuration to provision an instance.
+     */
+    private static InstanceConfiguration validInstanceConfiguration1(String labels, boolean createSnapshot) {
 
         String startupScript = "Stop-Service sshd\n" +
                 "$ConfiguredPublicKey = " + "\"" + publicKey + "\"\n" +
@@ -264,14 +281,6 @@ public class ComputeEngineCloudWindowsIT {
                 "icacls $env:PROGRAMDATA\\ssh\\administrators_authorized_keys /grant SYSTEM:`(F`)\n" +
                 "icacls $env:PROGRAMDATA\\ssh\\administrators_authorized_keys /grant BUILTIN\\Administrators:`(F`)\n" +
                 "Restart-Service sshd";
-
-
-        StandardUsernameCredentials windowsPrivateKeyCredential = new BasicSSHUserPrivateKey(CredentialsScope.GLOBAL, null, WINDOWS_USER,
-                new BasicSSHUserPrivateKey.DirectEntryPrivateKeySource(kp.getPrivateKey()), null,
-                "integration test private key for windows");
-
-        CredentialsStore store = new SystemCredentialsProvider.ProviderImpl().getStore(r.jenkins);
-        store.addCredentials(Domain.global(), windowsPrivateKeyCredential);
 
         InstanceConfiguration ic = new InstanceConfiguration(
                 NAME_PREFIX,
@@ -292,7 +301,7 @@ public class ComputeEngineCloudWindowsIT {
                 true,
                 WINDOWS_USER,
                 "",
-                windowsPrivateKeyCredential.getId(),
+                windowsPrivateKeyCredentialId,
                 createSnapshot,
                 null,
                 new AutofilledNetworkConfiguration(NETWORK_NAME, SUBNETWORK_NAME),
