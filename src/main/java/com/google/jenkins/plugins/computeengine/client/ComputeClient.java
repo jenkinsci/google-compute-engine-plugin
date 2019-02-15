@@ -481,7 +481,7 @@ public class ComputeClient {
     /**
      * Given a disk's name, create a snapshot for said disk.
      *
-     * @param projectId Google cloud project id (e.g. my-project).
+     * @param projectId Google cloud project id.
      * @param zone Zone of disk.
      * @param diskId Name of disk to create a snapshot for.
      *
@@ -500,7 +500,7 @@ public class ComputeClient {
     /**
      * Deletes persistent disk snapshot. Does not block.
      *
-     * @param projectId Google cloud project id (e.g. my-project).
+     * @param projectId Google cloud project id.
      * @param snapshotName Name of the snapshot to be deleted.
      * @throws IOException If an error occurred in deleting the snapshot.
      */
@@ -511,7 +511,7 @@ public class ComputeClient {
     /**
      * Returns snapshot with name snapshotName
      *
-     * @param projectId Google cloud project id (e.g. my-project).
+     * @param projectId Google cloud project id.
      * @param snapshotName Name of the snapshot to get.
      * @return Snapshot object with given snapshotName. Null if not found.
      * @throws IOException If an error occurred in retrieving the snapshot.

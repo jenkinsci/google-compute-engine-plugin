@@ -244,6 +244,7 @@ public class ComputeEngineCloudWindowsIT {
 
             Snapshot createdSnapshot = client.getSnapshot(projectId, worker.getNodeName());
             assertEquals(logs(), createdSnapshot.getStatus(), "READY");
+            assertNotNull(logs(), createdSnapshot);
         } finally {
             try {
                 //cleanup

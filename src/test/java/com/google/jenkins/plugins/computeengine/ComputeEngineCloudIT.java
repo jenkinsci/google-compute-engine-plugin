@@ -388,7 +388,7 @@ public class ComputeEngineCloudIT {
         Node worker = build.getBuiltOn();
         r.jenkins.getNode(worker.getNodeName()).toComputer().doDoDelete();
 
-        assertNull(client.getSnapshot(projectId, worker.getNodeName()));
+        assertNull(logs(), client.getSnapshot(projectId, worker.getNodeName()));
     }
 
     // Tests snapshot is created when we have failure builds for given node
@@ -411,6 +411,7 @@ public class ComputeEngineCloudIT {
 
             Snapshot createdSnapshot = client.getSnapshot(projectId, worker.getNodeName());
             assertEquals(logs(), createdSnapshot.getStatus(), "READY");
+            assertNotNull(logs(), createdSnapshot);
         } finally {
             try {
                 //cleanup
