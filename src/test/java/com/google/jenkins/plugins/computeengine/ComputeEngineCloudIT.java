@@ -410,8 +410,8 @@ public class ComputeEngineCloudIT {
             r.jenkins.getNode(worker.getNodeName()).toComputer().doDoDelete();
 
             Snapshot createdSnapshot = client.getSnapshot(projectId, worker.getNodeName());
-            assertEquals(logs(), createdSnapshot.getStatus(), "READY");
             assertNotNull(logs(), createdSnapshot);
+            assertEquals(logs(), createdSnapshot.getStatus(), "READY");
         } finally {
             try {
                 //cleanup
