@@ -55,7 +55,6 @@ import org.apache.commons.lang.StringUtils;
  * @see <a href="https://cloud.google.com/compute/">Cloud Engine</a>
  */
 public class ComputeClient {
-    private static final Logger LOGGER = Logger.getLogger(ComputeClient.class.getName());
     private Compute compute;
 
     private static final Logger LOGGER = Logger.getLogger(ComputeClient.class.getName());
