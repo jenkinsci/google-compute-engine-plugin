@@ -17,16 +17,22 @@
 package com.google.jenkins.plugins.computeengine;
 
 import com.google.api.services.compute.model.Instance;
+import com.google.api.services.compute.model.Operation;
+import com.google.jenkins.plugins.computeengine.client.ComputeClient;
 import hudson.slaves.AbstractCloudComputer;
 import org.kohsuke.stapler.DataBoundSetter;
 import org.kohsuke.stapler.HttpRedirect;
 import org.kohsuke.stapler.HttpResponse;
 
 import java.io.IOException;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 public class ComputeEngineComputer extends AbstractCloudComputer<ComputeEngineInstance> {
 
     private volatile Instance instance;
+
+    private static final Logger LOGGER = Logger.getLogger(ComputeEngineCloud.class.getName());
 
     public ComputeEngineComputer(ComputeEngineInstance slave) {
         super(slave);
@@ -117,9 +123,18 @@ public class ComputeEngineComputer extends AbstractCloudComputer<ComputeEngineIn
         ComputeEngineInstance node = getNode();
         if (node != null) {
             try {
+                ComputeEngineCloud cloud = getCloud();
+
+                // Checks for failed jobs for this computer's node
+                if (cloud != null && node.isCreateSnapshot() && !this.getBuilds().failureOnly().isEmpty()) {
+                    LOGGER.log(Level.INFO, "Creating snapshot for node ... " + node.getNodeName());
+                    cloud.getClient().createSnapshot(cloud.projectId, node.zone, node.getNodeName());
+                }
+
                 node.terminate();
             } catch (InterruptedException ie) {
-                //TODO: log
+                // Termination Exception
+                LOGGER.log(Level.WARNING, "Node Termination Error", ie);
             }
         }
         return new HttpRedirect("..");

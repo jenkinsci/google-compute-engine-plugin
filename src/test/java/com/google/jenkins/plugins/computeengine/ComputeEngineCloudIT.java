@@ -31,13 +31,19 @@ import com.google.api.services.compute.model.InstanceTemplate;
 import com.google.api.services.compute.model.Metadata;
 import com.google.api.services.compute.model.NetworkInterface;
 import com.google.api.services.compute.model.Operation;
+import com.google.api.services.compute.model.Snapshot;
 import com.google.api.services.compute.model.Tags;
 import com.google.common.collect.ImmutableMap;
 import com.google.jenkins.plugins.computeengine.client.ClientFactory;
 import com.google.jenkins.plugins.computeengine.client.ComputeClient;
 import com.google.jenkins.plugins.credentials.oauth.GoogleRobotPrivateKeyCredentials;
 import com.google.jenkins.plugins.credentials.oauth.ServiceAccountConfig;
+import hudson.model.FreeStyleBuild;
+import hudson.model.FreeStyleProject;
 import hudson.model.Node;
+import hudson.model.Result;
+import hudson.tasks.Builder;
+import hudson.tasks.Shell;
 import hudson.model.labels.LabelAtom;
 import hudson.slaves.NodeProvisioner;
 import org.junit.After;
@@ -67,6 +73,7 @@ import static com.google.jenkins.plugins.computeengine.client.ComputeClient.name
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
 public class ComputeEngineCloudIT {
@@ -88,6 +95,7 @@ public class ComputeEngineCloudIT {
     private static final String ZONE_BASE = format("projects/%s/zones/" + ZONE);
     private static final String LABEL = "integration";
     private static final String MULTIPLE_LABEL = "integration test";
+    private static final String SNAPSHOT_LABEL = "snapshot";
     private static final String MACHINE_TYPE = ZONE_BASE + "/machineTypes/n1-standard-1";
     private static final String NUM_EXECUTORS = "1";
     private static final String MULTIPLE_NUM_EXECUTORS = "2";
@@ -362,6 +370,58 @@ public class ComputeEngineCloudIT {
         }
     }
 
+    // Tests that no snapshot is created when we only have successful builds for given node
+    @Test(timeout = 300000)
+    public void testNoSnapshotCreated() throws Exception {
+        logOutput.reset();
+
+        ComputeEngineCloud cloud = (ComputeEngineCloud) r.jenkins.clouds.get(0);
+        assertTrue(cloud.configurations.size() == 0);
+        cloud.addConfiguration(snapshotInstanceConfiguration());
+
+        FreeStyleProject project = r.createFreeStyleProject();
+        Builder step = new Shell("echo works");
+        project.getBuildersList().add(step);
+        project.setAssignedLabel(new LabelAtom(SNAPSHOT_LABEL));
+
+        FreeStyleBuild build = r.buildAndAssertSuccess(project);
+        Node worker = build.getBuiltOn();
+        r.jenkins.getNode(worker.getNodeName()).toComputer().doDoDelete();
+
+        assertNull(logs(), client.getSnapshot(projectId, worker.getNodeName()));
+    }
+
+    // Tests snapshot is created when we have failure builds for given node
+    @Test(timeout = 300000)
+    public void testSnapshotCreated() throws Exception {
+        logOutput.reset();
+
+        ComputeEngineCloud cloud = (ComputeEngineCloud) r.jenkins.clouds.get(0);
+        cloud.addConfiguration(snapshotInstanceConfiguration());
+
+        FreeStyleProject project = r.createFreeStyleProject();
+        Builder step = new Shell("exit 1");
+        project.getBuildersList().add(step);
+        project.setAssignedLabel(new LabelAtom(SNAPSHOT_LABEL));
+
+        FreeStyleBuild build = r.assertBuildStatus(Result.FAILURE, project.scheduleBuild2(0));
+        Node worker = build.getBuiltOn();
+        try {
+            r.jenkins.getNode(worker.getNodeName()).toComputer().doDoDelete();
+
+            Snapshot createdSnapshot = client.getSnapshot(projectId, worker.getNodeName());
+            assertNotNull(logs(), createdSnapshot);
+            assertEquals(logs(), createdSnapshot.getStatus(), "READY");
+        } finally {
+            try {
+                //cleanup
+                client.deleteSnapshot(projectId, worker.getNodeName());
+            } catch (Exception e) {
+            }
+
+        }
+    }
+
     private static InstanceTemplate createTemplate(Map<String, String> googleLabels) {
         InstanceTemplate instanceTemplate = new InstanceTemplate();
         instanceTemplate.setName(nameFromSelfLink(TEMPLATE));
@@ -391,20 +451,25 @@ public class ComputeEngineCloudIT {
         return instanceTemplate;
     }
 
+    private static InstanceConfiguration snapshotInstanceConfiguration() {
+        // Snapshot label needed since the freestyle project could use a previously provisioned node instead of this configuration's.
+        return instanceConfiguration(DEB_JAVA_STARTUP_SCRIPT, NUM_EXECUTORS, SNAPSHOT_LABEL, true, NULL_TEMPLATE);
+    }
+
     private static InstanceConfiguration validInstanceConfiguration() {
-        return instanceConfiguration(DEB_JAVA_STARTUP_SCRIPT, NUM_EXECUTORS, LABEL, NULL_TEMPLATE);
+        return instanceConfiguration(DEB_JAVA_STARTUP_SCRIPT, NUM_EXECUTORS, LABEL, false, NULL_TEMPLATE);
     }
 
     private static InstanceConfiguration validInstanceConfigurationWithLabels(String labels) {
-        return instanceConfiguration(DEB_JAVA_STARTUP_SCRIPT, NUM_EXECUTORS, labels, NULL_TEMPLATE);
+        return instanceConfiguration(DEB_JAVA_STARTUP_SCRIPT, NUM_EXECUTORS, labels, false, NULL_TEMPLATE);
     }
 
     private static InstanceConfiguration validInstanceConfigurationWithExecutors(String numExecutors) {
-        return instanceConfiguration(DEB_JAVA_STARTUP_SCRIPT, numExecutors, LABEL, NULL_TEMPLATE);
+        return instanceConfiguration(DEB_JAVA_STARTUP_SCRIPT, numExecutors, LABEL, false, NULL_TEMPLATE);
     }
 
     private static InstanceConfiguration validInstanceConfigurationWithTemplate(String template) {
-        return instanceConfiguration(DEB_JAVA_STARTUP_SCRIPT, NUM_EXECUTORS, LABEL, template);
+        return instanceConfiguration(DEB_JAVA_STARTUP_SCRIPT, NUM_EXECUTORS, LABEL, false, template);
     }
 
     /**
@@ -413,10 +478,11 @@ public class ComputeEngineCloudIT {
      * @return
      */
     private static InstanceConfiguration invalidInstanceConfiguration1() {
-        return instanceConfiguration("", NUM_EXECUTORS, LABEL, NULL_TEMPLATE);
+        return instanceConfiguration("", NUM_EXECUTORS, LABEL, false, NULL_TEMPLATE);
     }
 
-    private static InstanceConfiguration instanceConfiguration(String startupScript, String numExecutors, String labels, String template) {
+    private static InstanceConfiguration instanceConfiguration(String startupScript, String numExecutors, String labels,
+                                                               boolean createSnapshot, String template) {
         InstanceConfiguration ic = new InstanceConfiguration(
                 NAME_PREFIX,
                 REGION,
@@ -437,6 +503,7 @@ public class ComputeEngineCloudIT {
                 "",
                 "",
                 "",
+                createSnapshot,
                 null,
                 new AutofilledNetworkConfiguration(NETWORK_NAME, SUBNETWORK_NAME),
                 EXTERNAL_ADDR,

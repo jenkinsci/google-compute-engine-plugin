@@ -111,6 +111,7 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
     public final String windowsPasswordCredentialsId;
     public final String windowsPrivateKeyCredentialsId;
     public final Optional<WindowsConfiguration> windowsConfig;
+    public final boolean createSnapshot;
     public final String remoteFs;
     public Map<String, String> googleLabels;
     public Integer numExecutors;
@@ -140,6 +141,7 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
                                  String windowsUsername,
                                  String windowsPasswordCredentialsId,
                                  String windowsPrivateKeyCredentialsId,
+                                 boolean createSnapshot,
                                  String remoteFs,
                                  NetworkConfiguration networkConfiguration,
                                  boolean externalAddress,
@@ -172,6 +174,7 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
         this.windowsPasswordCredentialsId = windowsPasswordCredentialsId;
         this.windowsPrivateKeyCredentialsId = windowsPrivateKeyCredentialsId;
 
+        this.createSnapshot = createSnapshot;
         this.minCpuPlatform = minCpuPlatform;
         this.numExecutors = intOrDefault(numExecutorsStr, DEFAULT_NUM_EXECUTORS);
         this.template = template;
@@ -307,6 +310,7 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
                     runAsUser,
                     targetRemoteFs,
                     windowsConfig,
+                    createSnapshot,
                     numExecutors, 
                     mode, 
                     labels,
