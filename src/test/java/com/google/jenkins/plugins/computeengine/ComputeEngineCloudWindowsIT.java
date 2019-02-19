@@ -8,14 +8,20 @@ import com.cloudbees.plugins.credentials.domains.DomainRequirement;
 import com.google.api.services.compute.model.Image;
 import com.google.api.services.compute.model.Instance;
 import com.google.api.services.compute.model.Operation;
+import com.google.api.services.compute.model.Snapshot;
 import com.google.jenkins.plugins.computeengine.client.ClientFactory;
 import com.google.jenkins.plugins.computeengine.client.ComputeClient;
 import com.google.jenkins.plugins.computeengine.ssh.GoogleKeyPair;
 import com.google.jenkins.plugins.credentials.oauth.GoogleRobotPrivateKeyCredentials;
 import com.google.jenkins.plugins.credentials.oauth.ServiceAccountConfig;
+import hudson.model.FreeStyleBuild;
+import hudson.model.FreeStyleProject;
 import hudson.model.Node;
+import hudson.model.Result;
 import hudson.model.labels.LabelAtom;
 import hudson.slaves.NodeProvisioner;
+import hudson.tasks.Builder;
+import hudson.tasks.Shell;
 import org.junit.*;
 import org.jvnet.hudson.test.JenkinsRule;
 
@@ -42,6 +48,7 @@ public class ComputeEngineCloudWindowsIT {
     private static final String ZONE = "us-west1-a";
     private static final String ZONE_BASE = format("projects/%s/zones/" + ZONE);
     private static final String LABEL = "integration";
+    private static final String SNAPSHOT_LABEL = "snapshot";
     private static final String MACHINE_TYPE = ZONE_BASE + "/machineTypes/n1-standard-1";
     private static final String NUM_EXECUTORS = "1";
     private static final boolean PREEMPTIBLE = false;
@@ -82,6 +89,9 @@ public class ComputeEngineCloudWindowsIT {
     private static String bootDiskProjectId;
     private static String bootDiskImageName;
 
+    private static String publicKey;
+    private static String windowsPrivateKeyCredentialId;
+
     private static String format(String s) {
         String projectId = System.getenv("GOOGLE_PROJECT_ID");
         if (projectId == null) {
@@ -117,6 +127,17 @@ public class ComputeEngineCloudWindowsIT {
 
         CredentialsStore store = new SystemCredentialsProvider.ProviderImpl().getStore(r.jenkins);
         store.addCredentials(Domain.global(), c);
+
+        // Create credentials for SSH
+        GoogleKeyPair kp = GoogleKeyPair.generate("");
+        // Have to reformat since GoogleKeyPair's format is for metadata server and not typical public key format
+        publicKey = kp.getPublicKey().trim().substring(1);
+
+        StandardUsernameCredentials windowsPrivateKeyCredential = new BasicSSHUserPrivateKey(CredentialsScope.GLOBAL, null, WINDOWS_USER,
+                new BasicSSHUserPrivateKey.DirectEntryPrivateKeySource(kp.getPrivateKey()), null,
+                "integration test private key for windows");
+        store.addCredentials(Domain.global(), windowsPrivateKeyCredential);
+        windowsPrivateKeyCredentialId = windowsPrivateKeyCredential.getId();
 
         // Add Cloud plugin
         ComputeEngineCloud gcp = new ComputeEngineCloud(CLOUD_NAME, projectId, projectId, "10", null);
@@ -160,7 +181,7 @@ public class ComputeEngineCloudWindowsIT {
     @Test
     public void testGoogleCredentialsCreated() {
         List<Credentials> creds = new SystemCredentialsProvider.ProviderImpl().getStore(r.jenkins).getCredentials(Domain.global());
-        assertEquals(1, creds.size());
+        assertEquals(2, creds.size());
     }
 
     @Test //TODO: Group client tests into their own test class
@@ -170,17 +191,15 @@ public class ComputeEngineCloudWindowsIT {
         assertNotNull(i);
     }
 
+    //TODO: JENKINS-56163 need to de-dupe integration tests
     @Test(timeout = 300000)
     public void testWorkerCreated() throws Exception {
         //TODO: each test method should probably have its own handler.
         logOutput.reset();
 
+        InstanceConfiguration ic = validInstanceConfiguration1(LABEL, false);
         ComputeEngineCloud cloud = (ComputeEngineCloud) r.jenkins.clouds.get(0);
-        cloud.addConfiguration(validInstanceConfiguration1());
-
-        // Test our private key credentials were created properly
-        List<Credentials> creds = new SystemCredentialsProvider.ProviderImpl().getStore(r.jenkins).getCredentials(Domain.global());
-        assertEquals(2, creds.size());
+        cloud.addConfiguration(ic);
 
         // Add a new node
         Collection<NodeProvisioner.PlannedNode> planned = cloud.provision(new LabelAtom(LABEL), 1);
@@ -202,37 +221,70 @@ public class ComputeEngineCloudWindowsIT {
         assertEquals(logs(),3, i.getLabels().size());
 
         // Instance should have a label with key CONFIG_LABEL_KEY and value equal to the config's name prefix
-        assertEquals(logs(), validInstanceConfiguration1().namePrefix, i.getLabels().get(ComputeEngineCloud.CONFIG_LABEL_KEY));
+        assertEquals(logs(), ic.namePrefix, i.getLabels().get(ComputeEngineCloud.CONFIG_LABEL_KEY));
         // proper id label to properly count instances
         assertEquals(logs(), cloud.getInstanceUniqueId(), i.getLabels().get(ComputeEngineCloud.CLOUD_ID_LABEL_KEY));
     }
 
-    private static InstanceConfiguration validInstanceConfiguration1() throws Exception{
-        GoogleKeyPair kp = GoogleKeyPair.generate("");
-        // Have to reformat since GoogleKeyPair's format is for metadata server and not typical public key format
-        String publicKey = kp.getPublicKey().trim().substring(1);
+    // Tests snapshot is created when we have failure builds for given node
+    // Snapshot creation is longer for windows vm's.
+    @Test(timeout = 0)
+    public void testSnapshotCreated() throws Exception {
+        logOutput.reset();
 
-        String startupScript = String.format("Stop-Service sshd\n" +
-                "$username = " + "\"%1$s\"\n" +
-                "$ConfiguredPublicKey = "  + "\"%2$s\"\n" +
+        ComputeEngineCloud cloud = (ComputeEngineCloud) r.jenkins.clouds.get(0);
+        cloud.addConfiguration(snapshotInstanceConfiguration());
+
+        FreeStyleProject project = r.createFreeStyleProject();
+        Builder step = new Shell("exit 1");
+        project.getBuildersList().add(step);
+        project.setAssignedLabel(new LabelAtom(SNAPSHOT_LABEL));
+
+        FreeStyleBuild build = r.assertBuildStatus(Result.FAILURE, project.scheduleBuild2(0));
+        Node worker = build.getBuiltOn();
+        try {
+            r.jenkins.getNode(worker.getNodeName()).toComputer().doDoDelete();
+
+            Snapshot createdSnapshot = client.getSnapshot(projectId, worker.getNodeName());
+            assertNotNull(logs(), createdSnapshot);
+            assertEquals(logs(), createdSnapshot.getStatus(), "READY");
+        } finally {
+            try {
+                //cleanup
+                client.deleteSnapshot(projectId, worker.getNodeName());
+            } catch (Exception e) {
+            }
+
+        }
+    }
+
+    /**
+     * Creates an instance configuration for a node that will get a snapshot created upon deletion if there is a build failure.
+     * @return InstanceConfiguration proper instance configuration to test snapshot creation.
+     */
+    private static InstanceConfiguration snapshotInstanceConfiguration() {
+        return validInstanceConfiguration1(SNAPSHOT_LABEL, true);
+    }
+
+    /**
+     * Given a job label and whether or not to create a snapshot upon deletion, gives working
+     * instance configuration to launch an instance.
+     * @param labels What job label to run the instance on.
+     * @param createSnapshot Whether or not to create a snapshot for the provisioned instance upon deletion.
+     * @return InstanceConfiguration working instance configuration to provision an instance.
+     */
+    private static InstanceConfiguration validInstanceConfiguration1(String labels, boolean createSnapshot) {
+
+        String startupScript = "Stop-Service sshd\n" +
+                "$ConfiguredPublicKey = " + "\"" + publicKey + "\"\n" +
                 "Write-Output \"Second phase\"\n" +
                 "# We are in the second phase of startup where we need to set up authorized_keys for the specified user.\n" +
-                "$UserSid = Get-WmiObject win32_useraccount -Filter \"name = '$username'\" | select-object sid -ExpandProperty SID\n" +
-                "$UserProfilePath = Get-ItemProperty -Path  \"HKLM:\\Software\\Microsoft\\Windows NT\\CurrentVersion\\ProfileList\\$UserSid\" -Name ProfileImagePath | select-object profileimagepath -ExpandProperty ProfileImagePath\n" +
                 "# Create the .ssh folder and authorized_keys file.\n" +
-                "mkdir $UserProfilePath\\.ssh\n" +
-                "Set-Content -Path $UserProfilePath\\.ssh\\authorized_keys -Value $ConfiguredPublicKey\n" +
-                "# Fix up permissions on authorized_keys\n" +
-                "Import-Module \"$env:PROGRAMFILES\\OpenSSH-Win64\\OpenSSHUtils.psd1\" -Force\n" +
-                "Repair-AuthorizedKeyPermission -FilePath  $UserProfilePath\\.ssh\\authorized_keys\n" +
-                "Restart-Service sshd", WINDOWS_USER, publicKey);
-
-        StandardUsernameCredentials windowsPrivateKeyCredential = new BasicSSHUserPrivateKey(CredentialsScope.GLOBAL, null, WINDOWS_USER,
-                new BasicSSHUserPrivateKey.DirectEntryPrivateKeySource(kp.getPrivateKey()), null,
-                "integration test private key for windows");
-
-        CredentialsStore store = new SystemCredentialsProvider.ProviderImpl().getStore(r.jenkins);
-        store.addCredentials(Domain.global(), windowsPrivateKeyCredential);
+                "Set-Content -Path $env:PROGRAMDATA\\ssh\\administrators_authorized_keys -Value $ConfiguredPublicKey\n" +
+                "icacls $env:PROGRAMDATA\\ssh\\administrators_authorized_keys /inheritance:r\n" +
+                "icacls $env:PROGRAMDATA\\ssh\\administrators_authorized_keys /grant SYSTEM:`(F`)\n" +
+                "icacls $env:PROGRAMDATA\\ssh\\administrators_authorized_keys /grant BUILTIN\\Administrators:`(F`)\n" +
+                "Restart-Service sshd";
 
         InstanceConfiguration ic = new InstanceConfiguration(
                 NAME_PREFIX,
@@ -243,7 +295,7 @@ public class ComputeEngineCloudWindowsIT {
                 startupScript,
                 PREEMPTIBLE,
                 MIN_CPU_PLATFORM,
-                LABEL,
+                labels,
                 CONFIG_DESC,
                 BOOT_DISK_TYPE,
                 BOOT_DISK_AUTODELETE,
@@ -253,7 +305,8 @@ public class ComputeEngineCloudWindowsIT {
                 true,
                 WINDOWS_USER,
                 "",
-                windowsPrivateKeyCredential.getId(),
+                windowsPrivateKeyCredentialId,
+                createSnapshot,
                 null,
                 new AutofilledNetworkConfiguration(NETWORK_NAME, SUBNETWORK_NAME),
                 EXTERNAL_ADDR,

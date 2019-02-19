@@ -36,6 +36,7 @@ public class ComputeEngineInstance extends AbstractCloudSlave {
     public final String cloudName;
     public final String sshUser;
     public transient final Optional<WindowsConfiguration> windowsConfig;
+    public final boolean createSnapshot;
     public Integer launchTimeout; // Seconds
     private Boolean connected;
 
@@ -46,6 +47,7 @@ public class ComputeEngineInstance extends AbstractCloudSlave {
                                  String sshUser,
                                  String remoteFS,
                                  Optional<WindowsConfiguration> windowsConfig,
+                                 boolean createSnapshot,
                                  int numExecutors,
                                  Mode mode,
                                  String labelString,
@@ -60,6 +62,7 @@ public class ComputeEngineInstance extends AbstractCloudSlave {
         this.cloudName = cloudName;
         this.sshUser = sshUser;
         this.windowsConfig = windowsConfig;
+        this.createSnapshot = createSnapshot;
     }
 
     @Override
@@ -81,7 +84,15 @@ public class ComputeEngineInstance extends AbstractCloudSlave {
 
 
     }
-    
+
+    /**
+     * Based on the instance configuration, whether to create snapshot for an instance with failed builds at deletion time.
+     * @return Whether or not to create the snapshot.
+     */
+    public boolean isCreateSnapshot() {
+        return createSnapshot;
+    }
+
     public String getCloudName() {
         return cloudName;
     }

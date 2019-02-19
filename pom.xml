@@ -8,7 +8,7 @@
         <relativePath />
     </parent>
     <artifactId>google-compute-engine</artifactId>
-    <version>1.0.10-SNAPSHOT</version>
+    <version>1.0.11-SNAPSHOT</version>
     <packaging>hpi</packaging>
     <properties>
         <jenkins.version>2.37</jenkins.version>

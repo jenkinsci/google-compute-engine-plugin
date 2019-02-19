@@ -43,6 +43,9 @@
             <f:entry field="windowsPrivateKeyCredentialsId" title="${%Windows SSH Private Key Credentials}">
                 <c:select/>
             </f:entry>
+            <f:entry field="createSnapshot" title="${%Create Snapshot?}">
+                <f:checkbox/>
+            </f:entry>
         </f:section>
 
         <f:section title="Location">
@@ -84,7 +87,7 @@
                     <f:entry title="${%Network tags}" field="networkTags">
                         <f:textbox/>
                     </f:entry>
-                    <f:entry field="externalAddress" title="${%External IP?}">
+                    <f:entry field="externalAddress" title="${%Attach External IP?}">
                         <f:checkbox/>
                     </f:entry>
                     <f:entry field="useInternalAddress" title="${%Use Internal IP?}">
