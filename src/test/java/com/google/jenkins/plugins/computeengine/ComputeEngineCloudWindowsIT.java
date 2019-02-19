@@ -191,6 +191,7 @@ public class ComputeEngineCloudWindowsIT {
         assertNotNull(i);
     }
 
+    //TODO: JENKINS-56163 need to de-dupe integration tests
     @Test(timeout = 300000)
     public void testWorkerCreated() throws Exception {
         //TODO: each test method should probably have its own handler.
