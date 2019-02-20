@@ -40,6 +40,7 @@ import hudson.util.ListBoxModel;
 import jenkins.model.Jenkins;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.text.RandomStringGenerator;
+import org.jenkinsci.plugins.durabletask.executors.OnceRetentionStrategy;
 import org.kohsuke.stapler.AncestorInPath;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.QueryParameter;
@@ -106,6 +107,7 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
     public final String retentionTimeMinutesStr;
     public final String launchTimeoutSecondsStr;
     public final String bootDiskSizeGbStr;
+    public final boolean oneShot;
     public final String template;
     public final boolean windows;
     public final String windowsPasswordCredentialsId;
@@ -153,6 +155,7 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
                                  Node.Mode mode,
                                  AcceleratorConfiguration acceleratorConfiguration,
                                  String runAsUser,
+                                 boolean oneShot,
                                  String template) {
         this.namePrefix = namePrefix;
         this.region = region;
@@ -177,6 +180,7 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
         this.createSnapshot = createSnapshot;
         this.minCpuPlatform = minCpuPlatform;
         this.numExecutors = intOrDefault(numExecutorsStr, DEFAULT_NUM_EXECUTORS);
+        this.oneShot = oneShot;
         this.template = template;
         this.numExecutorsStr = numExecutors.toString();
         this.retentionTimeMinutes = intOrDefault(retentionTimeMinutesStr, DEFAULT_RETENTION_TIME_MINUTES);
@@ -315,7 +319,7 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
                     mode, 
                     labels,
                     launcher,
-                    new CloudRetentionStrategy(retentionTimeMinutes), 
+                    (oneShot ? new OnceRetentionStrategy(retentionTimeMinutes) : new CloudRetentionStrategy(retentionTimeMinutes)),
                     getLaunchTimeoutMillis());
             return computeEngineInstance;
         } catch (Descriptor.FormException fe) {

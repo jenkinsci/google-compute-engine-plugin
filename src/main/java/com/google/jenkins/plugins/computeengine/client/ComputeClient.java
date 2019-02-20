@@ -593,7 +593,7 @@ public class ComputeClient {
             if (elapsed >= timeout) {
                 throw new InterruptedException("Timed out waiting for operation to complete");
             }
-            System.out.println("waiting...");
+            LOGGER.log(Level.FINE, "Waiting for operation " + operationId + " to complete..");
             if (zone != null) {
                 Compute.ZoneOperations.Get get = compute.zoneOperations().get(projectId, zone, operationId);
                 operation = get.execute();
