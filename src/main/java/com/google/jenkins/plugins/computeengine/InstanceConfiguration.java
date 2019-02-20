@@ -293,7 +293,6 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
             // TODO: JENKINS-55285
             Operation operation = cloud.client.insertInstance(cloud.projectId, template, instance);
             logger.println("Sent insert request");
-            logger.println("oneshot is " + this.oneShot);
             String targetRemoteFs = this.remoteFs;
             ComputeEngineComputerLauncher launcher = null;
             if (this.windows) {
@@ -316,6 +315,7 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
                     targetRemoteFs,
                     windowsConfig,
                     createSnapshot,
+                    oneShot,
                     numExecutors, 
                     mode, 
                     labels,

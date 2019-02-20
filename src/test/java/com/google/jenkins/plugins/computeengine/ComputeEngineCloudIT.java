@@ -421,7 +421,9 @@ public class ComputeEngineCloudIT {
 
         FreeStyleBuild build = r.buildAndAssertSuccess(project);
         Node worker = build.getBuiltOn();
-        r.jenkins.getNode(worker.getNodeName()).toComputer().doDoDelete();
+
+        // Need time for one-shot instance to terminate and create the snapshot
+        Awaitility.await().timeout(60, TimeUnit.SECONDS).until(() -> r.jenkins.getNode(worker.getNodeName()) == null);
 
         assertNull(logs(), client.getSnapshot(projectId, worker.getNodeName()));
     }
@@ -441,8 +443,10 @@ public class ComputeEngineCloudIT {
 
         FreeStyleBuild build = r.assertBuildStatus(Result.FAILURE, project.scheduleBuild2(0));
         Node worker = build.getBuiltOn();
+
         try {
-            r.jenkins.getNode(worker.getNodeName()).toComputer().doDoDelete();
+            // Need time for one-shot instance to terminate and create the snapshot
+            Awaitility.await().timeout(60, TimeUnit.SECONDS).until(() -> r.jenkins.getNode(worker.getNodeName()) == null);
 
             Snapshot createdSnapshot = client.getSnapshot(projectId, worker.getNodeName());
             assertNotNull(logs(), createdSnapshot);
@@ -488,7 +492,7 @@ public class ComputeEngineCloudIT {
 
     private static InstanceConfiguration snapshotInstanceConfiguration() {
         // Snapshot label needed since the freestyle project could use a previously provisioned node instead of this configuration's.
-        return instanceConfiguration(DEB_JAVA_STARTUP_SCRIPT, NUM_EXECUTORS, SNAPSHOT_LABEL, true, false, NULL_TEMPLATE);
+        return instanceConfiguration(DEB_JAVA_STARTUP_SCRIPT, NUM_EXECUTORS, SNAPSHOT_LABEL, true, true, NULL_TEMPLATE);
     }
 
     private static InstanceConfiguration validInstanceConfiguration() {
