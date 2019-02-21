@@ -9,6 +9,7 @@ image_resource:
 
 inputs:
 - name: plugin
+- name: ci
 
 run:
-  path: plugin/ci/tasks/test-unit.sh
+  path: ci/ci/tasks/test-unit.sh

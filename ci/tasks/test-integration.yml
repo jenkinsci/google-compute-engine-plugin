@@ -9,9 +9,10 @@ image_resource:
 
 inputs:
 - name: plugin
+- name: ci
 
 run:
-  path: plugin/ci/tasks/test-integration.sh
+  path: ci/ci/tasks/test-integration.sh
 
 params:
   service_account_json: change-me
