@@ -135,6 +135,7 @@ public class ComputeEngineCloudIT {
     private static final String SERVICE_ACCOUNT_EMAIL = "";
     private static final String RETENTION_TIME_MINUTES_STR = "";
     private static final String LAUNCH_TIMEOUT_SECONDS_STR = "";
+    private static final int SNAPSHOT_TEST_TIMEOUT = 120;
 
     private static Logger cloudLogger;
     private static Logger clientLogger;
@@ -423,7 +424,7 @@ public class ComputeEngineCloudIT {
         Node worker = build.getBuiltOn();
 
         // Need time for one-shot instance to terminate and create the snapshot
-        Awaitility.await().timeout(60, TimeUnit.SECONDS).until(() -> r.jenkins.getNode(worker.getNodeName()) == null);
+        Awaitility.await().timeout(SNAPSHOT_TEST_TIMEOUT, TimeUnit.SECONDS).until(() -> r.jenkins.getNode(worker.getNodeName()) == null);
 
         assertNull(logs(), client.getSnapshot(projectId, worker.getNodeName()));
     }
@@ -446,7 +447,7 @@ public class ComputeEngineCloudIT {
 
         try {
             // Need time for one-shot instance to terminate and create the snapshot
-            Awaitility.await().timeout(60, TimeUnit.SECONDS).until(() -> r.jenkins.getNode(worker.getNodeName()) == null);
+            Awaitility.await().timeout(SNAPSHOT_TEST_TIMEOUT, TimeUnit.SECONDS).until(() -> r.jenkins.getNode(worker.getNodeName()) == null);
 
             Snapshot createdSnapshot = client.getSnapshot(projectId, worker.getNodeName());
             assertNotNull(logs(), createdSnapshot);
