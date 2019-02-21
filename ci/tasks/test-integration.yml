@@ -1,0 +1,18 @@
+---
+platform: linux
+
+image_resource:
+  type: docker-image
+  source:
+    repository: maven
+    tag: '3.6.0-jdk-8-alpine'
+
+inputs:
+- name: plugin
+
+run:
+  path: plugin/ci/tasks/test-integration.sh
+
+params:
+  service_account_json: change-me
+  project_id:           change-me
