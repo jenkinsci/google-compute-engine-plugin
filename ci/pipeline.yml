@@ -1,0 +1,38 @@
+jobs:
+  - name: test-unit
+    serial: true
+    plan:
+      - get: plugin-master
+        trigger: true
+      - get: ci
+      - task: test-unit
+        file: ci/ci/tasks/test-unit.yml
+        input_mapping: {plugin: plugin-master}
+
+  - name: test-integration
+    serial: true
+    plan:
+      - get: plugin-master
+        passed: [test-unit]
+        trigger: true
+      - get: ci
+      - task: test-integration
+        file: ci/ci/tasks/test-integration.yml
+        input_mapping: {plugin: plugin-master}
+        params:
+          service_account_json: ((service_account_json))
+          project_id:           ((project_id))
+
+resources:
+- name: plugin-master
+  type: git
+  source:
+    uri: https://github.com/jenkinsci/google-compute-engine-plugin.git
+    branch: master
+- name: ci
+  type: git
+  source:
+    uri: https://github.com/jenkinsci/google-compute-engine-plugin.git
+    branch: master
+    paths:
+        - ci/*
