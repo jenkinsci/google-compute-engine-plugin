@@ -9,7 +9,6 @@ import com.google.api.services.compute.model.Image;
 import com.google.api.services.compute.model.Instance;
 import com.google.api.services.compute.model.Operation;
 import com.google.api.services.compute.model.Snapshot;
-import com.google.common.base.Strings;
 import com.google.jenkins.plugins.computeengine.client.ClientFactory;
 import com.google.jenkins.plugins.computeengine.client.ComputeClient;
 import com.google.jenkins.plugins.computeengine.ssh.GoogleKeyPair;
@@ -38,7 +37,6 @@ import java.util.logging.StreamHandler;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
-import org.apache.commons.lang.StringUtils;
 
 /**
  * Integration test for launching windows VM. Tests that agents can be created properly.
