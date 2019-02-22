@@ -23,6 +23,10 @@ cat >maven-settings.xml <<EOL
 </settings>
 EOL
 
+# Maven will use git to make a commit. It should be configured.
+git config --global user.email "release-robot@cloud-graphite.com"
+git config --global user.name "release-robot"
+
 pushd plugin
   GOOGLE_PROJECT_ID=$project_id GOOGLE_CREDENTIALS=$service_account_json \
     mvn \
