@@ -44,6 +44,9 @@ pushd plugin
     mvn \
     -B \
     -Dmaven.test.skip=true \
+    -Dmaven.test.skipTests=true \
+    -DskipTests \
+    -Darguments=-DskipTests \
     -Dtag=google-compute-engine-$version \
     -DreleaseVersion=$version \
     -DdevelopmentVersion=$version \
