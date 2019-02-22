@@ -42,8 +42,8 @@
         </developer>
     </developers>
     <scm>
-      <connection>scm:git:ssh://github.com/jenkinsci/google-compute-engine-plugin.git</connection>
-      <developerConnection>scm:git:ssh://git@github.com/jenkinsci/google-compute-engine-plugin.git</developerConnection>
+      <connection>scm:git:https://github.com/jenkinsci/google-compute-engine-plugin</connection>
+      <developerConnection>scm:git:https://github.com/jenkinsci/google-compute-engine-plugin</developerConnection>
       <url>https://github.com/jenkinsci/google-compute-engine-plugin</url>
       <tag>HEAD</tag>
   </scm>

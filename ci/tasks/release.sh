@@ -2,9 +2,15 @@
 
 set -e -u -x
 
-apk add --no-cache git
+apk add --no-cache git openssh
 
 version=$(cat version/version)
+
+mkdir -p $HOME/.ssh
+cat >$HOME/.ssh/config <<EOL
+Host github.com
+    StrictHostKeyChecking no
+EOL
 
 # Write a Maven config file that allows uploading the build artifact
 # to the Jenkins repository.
