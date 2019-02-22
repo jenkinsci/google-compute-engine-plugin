@@ -6,7 +6,7 @@ version=$(cat version/version)
 
 # Write a Maven config file that allows uploading the build artifact
 # to the Jenkins repository.
-cat >$HOME/.m2/settings.xml <<EOL
+cat >maven-settings.xml <<EOL
 <settings xmlns="http://maven.apache.org/SETTINGS/1.0.0"
   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
   xsi:schemaLocation="http://maven.apache.org/SETTINGS/1.0.0
@@ -24,6 +24,7 @@ EOL
 pushd plugin
   GOOGLE_PROJECT_ID=$project_id GOOGLE_CREDENTIALS=$service_account_json \
     mvn \
+    --settings ../maven-settings.xml \
     -B \
     -Dtag=google-compute-engine-$version \
     -DdryRun=true \
