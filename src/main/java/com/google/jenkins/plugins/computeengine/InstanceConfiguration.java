@@ -865,7 +865,7 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
                                                                              @QueryParameter boolean value,
                                                                              @QueryParameter("oneShot") boolean oneShot) {
             if (!oneShot && value) {
-                return FormValidation.error("One-shot must be enabled to create snapshots");
+                return FormValidation.error(Messages.InstanceConfiguration_SnapshotConfigError());
             }
             return FormValidation.ok();
         }
