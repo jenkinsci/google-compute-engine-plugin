@@ -50,7 +50,7 @@ jobs:
       - put: version
         params: {file: version/version}
       - put: plugin-release
-        params: {repository: plugin-release}
+        params: {repository: plugin}
 
   - name: release-minor
     serial: true
@@ -70,7 +70,7 @@ jobs:
       - put: version
         params: {file: version/version}
       - put: plugin-release
-        params: {repository: plugin-release}
+        params: {repository: plugin}
 
   - name: release-patch
     plan:
@@ -89,7 +89,7 @@ jobs:
       - put: version
         params: {file: version/version}
       - put: plugin-release
-        params: {repository: plugin-release}
+        params: {repository: plugin}
 
 resources:
 - name: plugin
