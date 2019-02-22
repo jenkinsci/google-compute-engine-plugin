@@ -41,6 +41,7 @@ jobs:
         params: {bump: major}
       - task: release
         file: ci/ci/tasks/release.yml
+        input_mapping: {"plugin": "plugin-release"}
       - put: version
         params: {file: version/version}
 
