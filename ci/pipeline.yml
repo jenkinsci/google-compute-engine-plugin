@@ -42,6 +42,11 @@ jobs:
       - task: release
         file: ci/ci/tasks/release.yml
         input_mapping: {plugin: plugin-release}
+        params:
+          service_account_json: ((service_account_json))
+          project_id:           ((project_id))
+          artifactory_username: ((artifactory_username))
+          artifactory_password: ((artifactory_password))
       - put: version
         params: {file: version/version}
 
@@ -55,6 +60,11 @@ jobs:
       - task: release
         file: ci/ci/tasks/release.yml
         input_mapping: {plugin: plugin-release}
+        params:
+          service_account_json: ((service_account_json))
+          project_id:           ((project_id))
+          artifactory_username: ((artifactory_username))
+          artifactory_password: ((artifactory_password))
       - put: version
         params: {file: version/version}
 
@@ -67,6 +77,11 @@ jobs:
       - task: release
         file: ci/ci/tasks/release.yml
         input_mapping: {plugin: plugin-release}
+        params:
+          service_account_json: ((service_account_json))
+          project_id:           ((project_id))
+          artifactory_username: ((artifactory_username))
+          artifactory_password: ((artifactory_password))
       - put: version
         params: {file: version/version}
 

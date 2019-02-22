@@ -18,3 +18,5 @@ run:
 params:
   service_account_json: change-me
   project_id:           change-me
+  artifactory_username: change-me
+  artifactory_password: change-me
