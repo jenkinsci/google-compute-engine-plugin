@@ -28,6 +28,7 @@ pushd plugin
     -Dtag=google-compute-engine-$version \
     -DreleaseVersion=$version \
     -DdevelopmentVersion=$version \
+    -DpushChanges=false \
     release:prepare \
     release:perform
 popd

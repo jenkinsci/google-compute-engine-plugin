@@ -49,6 +49,8 @@ jobs:
           artifactory_password: ((artifactory_password))
       - put: version
         params: {file: version/version}
+      - put: plugin-release
+        params: {repository: plugin-release}
 
   - name: release-minor
     serial: true
@@ -67,6 +69,8 @@ jobs:
           artifactory_password: ((artifactory_password))
       - put: version
         params: {file: version/version}
+      - put: plugin-release
+        params: {repository: plugin-release}
 
   - name: release-patch
     plan:
@@ -84,6 +88,8 @@ jobs:
           artifactory_password: ((artifactory_password))
       - put: version
         params: {file: version/version}
+      - put: plugin-release
+        params: {repository: plugin-release}
 
 resources:
 - name: plugin
@@ -95,7 +101,8 @@ resources:
 - name: plugin-release
   type: git
   source:
-    uri: ((repo_uri))
+    uri: ((release_repo_uri))
+    private_key: ((git_private_key))
     branch: ((release_branch))
 
 - name: ci
@@ -111,6 +118,7 @@ resources:
   source:
     driver: git
     initial_version: 1.0.10
-    uri: ((repo_uri))
+    uri: ((release_repo_uri))
+    private_key: ((git_private_key))
     branch: ((release_branch))
     file: version
