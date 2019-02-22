@@ -37,6 +37,7 @@ pushd plugin
   GOOGLE_PROJECT_ID=$project_id GOOGLE_CREDENTIALS=$service_account_json \
     mvn \
     -B \
+    -Dmaven.test.skip=true \ #TODO delete
     -Dtag=google-compute-engine-$version \
     -DreleaseVersion=$version \
     -DdevelopmentVersion=$version \
