@@ -12,8 +12,11 @@ inputs:
 - name: ci
 - name: version
 
+outputs:
+- name: version
+
 run:
-  path: ci/ci/tasks/test-integration.sh
+  path: ci/ci/tasks/release.sh
 
 params:
   service_account_json: change-me
