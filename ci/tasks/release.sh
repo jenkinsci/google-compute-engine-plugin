@@ -2,6 +2,8 @@
 
 set -e -u -x
 
+apk add --no-cache git
+
 version=$(cat version/version)
 
 # Write a Maven config file that allows uploading the build artifact
