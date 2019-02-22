@@ -47,6 +47,7 @@ jobs:
           project_id:           ((project_id))
           artifactory_username: ((artifactory_username))
           artifactory_password: ((artifactory_password))
+          git_private_key:      ((git_private_key))
       - put: version
         params: {file: version/version}
       - put: plugin-release
@@ -67,6 +68,7 @@ jobs:
           project_id:           ((project_id))
           artifactory_username: ((artifactory_username))
           artifactory_password: ((artifactory_password))
+          git_private_key:      ((git_private_key))
       - put: version
         params: {file: version/version}
       - put: plugin-release
@@ -86,6 +88,7 @@ jobs:
           project_id:           ((project_id))
           artifactory_username: ((artifactory_username))
           artifactory_password: ((artifactory_password))
+          git_private_key:      ((git_private_key))
       - put: version
         params: {file: version/version}
       - put: plugin-release

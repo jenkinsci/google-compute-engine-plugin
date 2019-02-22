@@ -20,3 +20,4 @@ params:
   project_id:           change-me
   artifactory_username: change-me
   artifactory_password: change-me
+  git_private_key:      change-me

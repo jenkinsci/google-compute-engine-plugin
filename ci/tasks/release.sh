@@ -10,7 +10,11 @@ mkdir -p $HOME/.ssh
 cat >$HOME/.ssh/config <<EOL
 Host github.com
     StrictHostKeyChecking no
+    IdentityFile ~/.ssh/key
 EOL
+
+echo "$git_private_key" >$HOME/.ssh/key
+chmod 0400 $HOME/.ssh/key
 
 # Write a Maven config file that allows uploading the build artifact
 # to the Jenkins repository.
@@ -33,11 +37,13 @@ EOL
 git config --global user.email "release-robot@cloud-graphite.com"
 git config --global user.name "release-robot"
 
+#TODO: delete maven.test.skip=true
+#TODO: add custom maven settings file
 pushd plugin
   GOOGLE_PROJECT_ID=$project_id GOOGLE_CREDENTIALS=$service_account_json \
     mvn \
     -B \
-    -Dmaven.test.skip=true \ #TODO delete
+    -Dmaven.test.skip=true \
     -Dtag=google-compute-engine-$version \
     -DreleaseVersion=$version \
     -DdevelopmentVersion=$version \
