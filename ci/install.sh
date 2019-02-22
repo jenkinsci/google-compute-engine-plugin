@@ -9,5 +9,7 @@ fly -t jenkins set-pipeline \
   -v project_id=$PROJECT_ID \
   -v service_account_json="$SERVICE_ACCOUNT_JSON" \
   -v plugin_branch=$BRANCH \
+  -v release_branch=$BRANCH \
   -v ci_branch=ci \
+  -v repo_uri=https://github.com/jenkinsci/google-compute-engine-plugin.git \
   -p compute-engine-plugin-$BRANCH

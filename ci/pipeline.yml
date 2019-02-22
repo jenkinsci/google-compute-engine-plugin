@@ -1,3 +1,14 @@
+groups:
+- name: develop
+  jobs:
+  - test-unit
+  - test-integration
+- name: release
+  jobs:
+  - release-major
+  - release-minor
+  - release-patch
+
 jobs:
   - name: test-unit
     serial: true
@@ -21,16 +32,67 @@ jobs:
           service_account_json: ((service_account_json))
           project_id:           ((project_id))
 
+  - name: release-major
+    serial: true
+    plan:
+      - get: plugin-release
+      - get: ci
+      - get: version
+        params: {bump: major}
+      - task: release
+        file: ci/ci/tasks/release.yml
+      - put: version
+        params: {file: version/version}
+
+  - name: release-minor
+    serial: true
+    plan:
+      - get: plugin-release
+      - get: ci
+      - get: version
+        params: {bump: minor}
+      - task: release
+        file: ci/ci/tasks/release.yml
+      - put: version
+        params: {file: version/version}
+
+  - name: release-patch
+    plan:
+      - get: plugin-release
+      - get: ci
+      - get: version
+        params: {bump: patch}
+      - task: release
+        file: ci/ci/tasks/release.yml
+      - put: version
+        params: {file: version/version}
+
 resources:
 - name: plugin
   type: git
   source:
-    uri: https://github.com/jenkinsci/google-compute-engine-plugin.git
+    uri: ((repo_uri))
     branch: ((plugin_branch))
+
+- name: plugin-release
+  type: git
+  source:
+    uri: ((repo_uri))
+    branch: ((release_branch))
+
 - name: ci
   type: git
   source:
-    uri: https://github.com/jenkinsci/google-compute-engine-plugin.git
+    uri: ((repo_uri))
     branch: ((ci_branch))
     paths:
         - ci/*
+
+- name: version
+  type: semver
+  source:
+    driver: git
+    initial_version: 1.0.10
+    uri: ((repo_uri))
+    branch: ((release_branch))
+    file: version
