@@ -12,9 +12,6 @@ inputs:
 - name: ci
 - name: version
 
-outputs:
-- name: version
-
 run:
   path: ci/ci/tasks/release.sh
 
