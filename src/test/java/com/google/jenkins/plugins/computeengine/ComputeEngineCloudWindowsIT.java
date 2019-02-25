@@ -22,12 +22,14 @@ import hudson.model.labels.LabelAtom;
 import hudson.slaves.NodeProvisioner;
 import hudson.tasks.Builder;
 import hudson.tasks.Shell;
+import org.awaitility.Awaitility;
 import org.junit.*;
 import org.jvnet.hudson.test.JenkinsRule;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.*;
+import java.util.concurrent.TimeUnit;
 import java.util.logging.LogManager;
 import java.util.logging.Logger;
 import java.util.logging.SimpleFormatter;
@@ -197,7 +199,7 @@ public class ComputeEngineCloudWindowsIT {
         //TODO: each test method should probably have its own handler.
         logOutput.reset();
 
-        InstanceConfiguration ic = validInstanceConfiguration1(LABEL, false);
+        InstanceConfiguration ic = validInstanceConfiguration1(LABEL, false, false);
         ComputeEngineCloud cloud = (ComputeEngineCloud) r.jenkins.clouds.get(0);
         cloud.addConfiguration(ic);
 
@@ -227,7 +229,7 @@ public class ComputeEngineCloudWindowsIT {
     }
 
     // Tests snapshot is created when we have failure builds for given node
-    // Snapshot creation is longer for windows vm's.
+    // Snapshot creation is longer for windows one-shot vm's.
     @Test(timeout = 0)
     public void testSnapshotCreated() throws Exception {
         logOutput.reset();
@@ -242,8 +244,10 @@ public class ComputeEngineCloudWindowsIT {
 
         FreeStyleBuild build = r.assertBuildStatus(Result.FAILURE, project.scheduleBuild2(0));
         Node worker = build.getBuiltOn();
+
         try {
-            r.jenkins.getNode(worker.getNodeName()).toComputer().doDoDelete();
+            // Need time for one-shot instance to terminate and create the snapshot
+            Awaitility.await().timeout(15, TimeUnit.MINUTES).until(() -> r.jenkins.getNode(worker.getNodeName()) == null);            // Assert that there is 0 nodes after job finished
 
             Snapshot createdSnapshot = client.getSnapshot(projectId, worker.getNodeName());
             assertNotNull(logs(), createdSnapshot);
@@ -263,7 +267,7 @@ public class ComputeEngineCloudWindowsIT {
      * @return InstanceConfiguration proper instance configuration to test snapshot creation.
      */
     private static InstanceConfiguration snapshotInstanceConfiguration() {
-        return validInstanceConfiguration1(SNAPSHOT_LABEL, true);
+        return validInstanceConfiguration1(SNAPSHOT_LABEL, true, true);
     }
 
     /**
@@ -273,7 +277,7 @@ public class ComputeEngineCloudWindowsIT {
      * @param createSnapshot Whether or not to create a snapshot for the provisioned instance upon deletion.
      * @return InstanceConfiguration working instance configuration to provision an instance.
      */
-    private static InstanceConfiguration validInstanceConfiguration1(String labels, boolean createSnapshot) {
+    private static InstanceConfiguration validInstanceConfiguration1(String labels, boolean createSnapshot, boolean oneShot) {
 
         String startupScript = "Stop-Service sshd\n" +
                 "$ConfiguredPublicKey = " + "\"" + publicKey + "\"\n" +
@@ -318,7 +322,7 @@ public class ComputeEngineCloudWindowsIT {
                 NODE_MODE,
                 new AcceleratorConfiguration(ACCELERATOR_NAME, ACCELERATOR_COUNT),
                 RUN_AS_USER,
-                false,
+                oneShot,
                 null);
         ic.appendLabels(INTEGRATION_LABEL);
         return ic;

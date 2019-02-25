@@ -177,7 +177,12 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
         this.windowsPasswordCredentialsId = windowsPasswordCredentialsId;
         this.windowsPrivateKeyCredentialsId = windowsPrivateKeyCredentialsId;
 
-        this.createSnapshot = createSnapshot;
+        // We only create snapshots for one-shot instances
+        if (oneShot) {
+            this.createSnapshot = createSnapshot;
+        } else {
+            this.createSnapshot = false;
+        }
         this.minCpuPlatform = minCpuPlatform;
         this.numExecutors = intOrDefault(numExecutorsStr, DEFAULT_NUM_EXECUTORS);
         this.oneShot = oneShot;
@@ -315,6 +320,7 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
                     targetRemoteFs,
                     windowsConfig,
                     createSnapshot,
+                    oneShot,
                     numExecutors, 
                     mode, 
                     labels,
@@ -851,6 +857,15 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
                                                                     @QueryParameter("windowsPasswordCredentialsId") String windowsPasswordCredentialsId) {
             if (windows && (Strings.isNullOrEmpty(value) && Strings.isNullOrEmpty(windowsPasswordCredentialsId))) {
                 return FormValidation.error("A password or private key credential is required");
+            }
+            return FormValidation.ok();
+        }
+
+        public FormValidation doCheckCreateSnapshot(@AncestorInPath Jenkins context,
+                                                                             @QueryParameter boolean value,
+                                                                             @QueryParameter("oneShot") boolean oneShot) {
+            if (!oneShot && value) {
+                return FormValidation.error(Messages.InstanceConfiguration_SnapshotConfigError());
             }
             return FormValidation.ok();
         }

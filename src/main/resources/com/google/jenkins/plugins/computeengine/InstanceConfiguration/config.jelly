@@ -15,9 +15,6 @@
             <f:entry title="${%Node Retention Time (minutes)}" field="retentionTimeMinutesStr">
                 <f:textbox default="${descriptor.defaultRetentionTimeMinutes()}"/>
             </f:entry>
-            <f:entry title="${%One shot node?}" field="oneShot">
-                <f:checkbox/>
-            </f:entry>
             <f:slave-mode name="mode" node="${instance}"/>
             <f:entry title="${%Labels}" field="labelString">
                 <f:textbox/>
@@ -43,7 +40,13 @@
             <f:entry field="windowsPrivateKeyCredentialsId" title="${%Windows SSH Private Key Credentials}">
                 <c:select/>
             </f:entry>
-            <f:entry field="createSnapshot" title="${%Create Snapshot?}">
+        </f:section>
+
+        <f:section title="One-Shot">
+            <f:entry field="oneShot" title="${%Enabled}">
+                <f:checkbox/>
+            </f:entry>
+            <f:entry field="createSnapshot" title="${%Create snapshot?}">
                 <f:checkbox/>
             </f:entry>
         </f:section>
