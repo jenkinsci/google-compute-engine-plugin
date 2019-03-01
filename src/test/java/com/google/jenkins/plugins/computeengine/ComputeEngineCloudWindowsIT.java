@@ -62,7 +62,7 @@ public class ComputeEngineCloudWindowsIT {
     private static final Node.Mode NODE_MODE = Node.Mode.EXCLUSIVE;
     private static final String ACCELERATOR_NAME = "";
     private static final String ACCELERATOR_COUNT = "";
-    private static final String RUN_AS_USER = "jenkins";
+    private static final String RUN_AS_USER = "Build";
 
     private static Map<String, String> INTEGRATION_LABEL;
 
