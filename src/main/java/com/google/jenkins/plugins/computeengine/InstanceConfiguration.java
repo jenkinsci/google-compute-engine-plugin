@@ -140,7 +140,6 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
                                  String bootDiskSourceImageProject,
                                  String bootDiskSizeGbStr,
                                  boolean windows,
-                                 String windowsUsername,
                                  String windowsPasswordCredentialsId,
                                  String windowsPrivateKeyCredentialsId,
                                  boolean createSnapshot,
@@ -167,7 +166,7 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
 
         this.windows = windows;
         if (windows) {
-            this.windowsConfig = Optional.of(new WindowsConfiguration(windowsUsername, windowsPasswordCredentialsId,
+            this.windowsConfig = Optional.of(new WindowsConfiguration(runAsUser, windowsPasswordCredentialsId,
                     windowsPrivateKeyCredentialsId));
         } else {
             this.windowsConfig = Optional.empty();
