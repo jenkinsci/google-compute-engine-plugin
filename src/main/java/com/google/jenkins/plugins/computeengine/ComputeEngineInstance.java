@@ -77,7 +77,7 @@ public class ComputeEngineInstance extends AbstractCloudSlave {
     }
 
     @Override
-    protected void _terminate(TaskListener listener) throws IOException {
+    protected void _terminate(TaskListener listener) throws IOException, InterruptedException {
         try {
             ComputeEngineCloud cloud = getCloud();
 
