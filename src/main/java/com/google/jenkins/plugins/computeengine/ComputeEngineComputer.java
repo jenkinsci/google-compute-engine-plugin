@@ -164,9 +164,12 @@ public class ComputeEngineComputer extends AbstractCloudComputer<ComputeEngineIn
         ComputeEngineInstance node = getNode();
         if (node != null) {
             try {
+                ComputeEngineCloud cloud = getCloud();
+
                 node.terminate();
             } catch (InterruptedException ie) {
-                //TODO: log
+                // Termination Exception
+                LOGGER.log(Level.WARNING, "Node Termination Error", ie);
             }
         }
         return new HttpRedirect("..");

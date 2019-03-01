@@ -111,6 +111,7 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
     public final String windowsPasswordCredentialsId;
     public final String windowsPrivateKeyCredentialsId;
     public final Optional<WindowsConfiguration> windowsConfig;
+    public final boolean createSnapshot;
     public final String remoteFs;
     public Map<String, String> googleLabels;
     public Integer numExecutors;
@@ -140,6 +141,7 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
                                  String windowsUsername,
                                  String windowsPasswordCredentialsId,
                                  String windowsPrivateKeyCredentialsId,
+                                 boolean createSnapshot,
                                  String remoteFs,
                                  NetworkConfiguration networkConfiguration,
                                  boolean externalAddress,
@@ -173,6 +175,12 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
         this.windowsPasswordCredentialsId = windowsPasswordCredentialsId;
         this.windowsPrivateKeyCredentialsId = windowsPrivateKeyCredentialsId;
 
+        // We only create snapshots for one-shot instances
+        if (oneShot) {
+            this.createSnapshot = createSnapshot;
+        } else {
+            this.createSnapshot = false;
+        }
         this.minCpuPlatform = minCpuPlatform;
         this.numExecutors = intOrDefault(numExecutorsStr, DEFAULT_NUM_EXECUTORS);
         this.oneShot = oneShot;
@@ -309,6 +317,8 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
                     runAsUser,
                     targetRemoteFs,
                     windowsConfig,
+                    createSnapshot,
+                    oneShot,
                     numExecutors, 
                     mode, 
                     labels,
@@ -845,6 +855,15 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
                                                                     @QueryParameter("windowsPasswordCredentialsId") String windowsPasswordCredentialsId) {
             if (windows && (Strings.isNullOrEmpty(value) && Strings.isNullOrEmpty(windowsPasswordCredentialsId))) {
                 return FormValidation.error("A password or private key credential is required");
+            }
+            return FormValidation.ok();
+        }
+
+        public FormValidation doCheckCreateSnapshot(@AncestorInPath Jenkins context,
+                                                                             @QueryParameter boolean value,
+                                                                             @QueryParameter("oneShot") boolean oneShot) {
+            if (!oneShot && value) {
+                return FormValidation.error(Messages.InstanceConfiguration_SnapshotConfigError());
             }
             return FormValidation.ok();
         }

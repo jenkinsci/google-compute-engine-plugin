@@ -16,7 +16,9 @@
 
 package com.google.jenkins.plugins.computeengine;
 
+import com.google.api.services.compute.Compute;
 import hudson.Extension;
+import hudson.model.Computer;
 import hudson.model.Descriptor;
 import hudson.model.TaskListener;
 import hudson.slaves.*;
@@ -24,6 +26,7 @@ import jenkins.model.Jenkins;
 
 import java.io.IOException;
 import java.util.Collections;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.Optional;
 
@@ -36,6 +39,8 @@ public class ComputeEngineInstance extends AbstractCloudSlave {
     public final String cloudName;
     public final String sshUser;
     public transient final Optional<WindowsConfiguration> windowsConfig;
+    public final boolean createSnapshot;
+    public final boolean oneShot;
     public Integer launchTimeout; // Seconds
     private Boolean connected;
 
@@ -46,6 +51,8 @@ public class ComputeEngineInstance extends AbstractCloudSlave {
                                  String sshUser,
                                  String remoteFS,
                                  Optional<WindowsConfiguration> windowsConfig,
+                                 boolean createSnapshot,
+                                 boolean oneShot,
                                  int numExecutors,
                                  Mode mode,
                                  String labelString,
@@ -60,6 +67,8 @@ public class ComputeEngineInstance extends AbstractCloudSlave {
         this.cloudName = cloudName;
         this.sshUser = sshUser;
         this.windowsConfig = windowsConfig;
+        this.createSnapshot = createSnapshot;
+        this.oneShot = oneShot;
     }
 
     @Override
@@ -71,6 +80,13 @@ public class ComputeEngineInstance extends AbstractCloudSlave {
     protected void _terminate(TaskListener listener) throws IOException {
         try {
             ComputeEngineCloud cloud = getCloud();
+
+            Computer computer = this.toComputer();
+            if (this.oneShot && this.createSnapshot && computer != null && !computer.getBuilds().failureOnly().isEmpty()) {
+                LOGGER.log(Level.INFO, "Creating snapshot for node ... " + this.getNodeName());
+                cloud.getClient().createSnapshot(cloud.projectId, this.zone, this.getNodeName());
+            }
+
             // If the instance is running, attempt to terminate it. This is an asynch call and we
             // return immediately, hoping for the best.
             cloud.getClient().terminateInstance(cloud.getProjectId(), zone, name);
@@ -78,7 +94,15 @@ public class ComputeEngineInstance extends AbstractCloudSlave {
             listener.error(cnfe.getMessage());
         }
     }
-    
+
+    /**
+     * Based on the instance configuration, whether to create snapshot for an instance with failed builds at deletion time.
+     * @return Whether or not to create the snapshot.
+     */
+    public boolean isCreateSnapshot() {
+        return createSnapshot;
+    }
+
     public String getCloudName() {
         return cloudName;
     }

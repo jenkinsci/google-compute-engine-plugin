@@ -31,6 +31,7 @@ import com.google.api.services.compute.model.InstanceTemplate;
 import com.google.api.services.compute.model.Metadata;
 import com.google.api.services.compute.model.NetworkInterface;
 import com.google.api.services.compute.model.Operation;
+import com.google.api.services.compute.model.Snapshot;
 import com.google.api.services.compute.model.Tags;
 import com.google.common.collect.ImmutableMap;
 import com.google.jenkins.plugins.computeengine.client.ClientFactory;
@@ -40,6 +41,9 @@ import com.google.jenkins.plugins.credentials.oauth.ServiceAccountConfig;
 import hudson.model.FreeStyleBuild;
 import hudson.model.FreeStyleProject;
 import hudson.model.Node;
+import hudson.model.Result;
+import hudson.tasks.Builder;
+import hudson.tasks.Shell;
 import hudson.model.labels.LabelAtom;
 import hudson.slaves.NodeProvisioner;
 import hudson.tasks.Builder;
@@ -60,6 +64,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.LogManager;
 import java.util.logging.Logger;
@@ -74,6 +79,7 @@ import static com.google.jenkins.plugins.computeengine.client.ComputeClient.name
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
 public class ComputeEngineCloudIT {
@@ -95,6 +101,7 @@ public class ComputeEngineCloudIT {
     private static final String ZONE_BASE = format("projects/%s/zones/" + ZONE);
     private static final String LABEL = "integration";
     private static final String MULTIPLE_LABEL = "integration test";
+    private static final String SNAPSHOT_LABEL = "snapshot";
     private static final String MACHINE_TYPE = ZONE_BASE + "/machineTypes/n1-standard-1";
     private static final String NUM_EXECUTORS = "1";
     private static final String MULTIPLE_NUM_EXECUTORS = "2";
@@ -128,6 +135,7 @@ public class ComputeEngineCloudIT {
     private static final String SERVICE_ACCOUNT_EMAIL = "";
     private static final String RETENTION_TIME_MINUTES_STR = "";
     private static final String LAUNCH_TIMEOUT_SECONDS_STR = "";
+    private static final int SNAPSHOT_TEST_TIMEOUT = 120;
 
     private static Logger cloudLogger;
     private static Logger clientLogger;
@@ -235,7 +243,7 @@ public class ComputeEngineCloudIT {
         assertEquals(logs(), 1, planned.size());
 
         String name = planned.iterator().next().displayName;
-        
+
         // Wait for the node creation to finish
         planned.iterator().next().future.get();
 
@@ -294,13 +302,13 @@ public class ComputeEngineCloudIT {
         String name = planned.iterator().next().displayName;
 
         planned.iterator().next().future.get();
-        
+
         String provisionedLabels = r.jenkins.getNode(name).getLabelString();
         // There should be a planned node TODO
         assertEquals(logs(), MULTIPLE_LABEL, provisionedLabels);
     }
 
-    @Test(timeout = 300000)
+    @Test(timeout = 300000, expected = ExecutionException.class)
     public void testWorkerFailed() throws Exception {
         //TODO: each test method should probably have its own handler.
         logOutput.reset();
@@ -316,9 +324,6 @@ public class ComputeEngineCloudIT {
 
         // Wait for the node creation to fail
         planned.iterator().next().future.get();
-
-        // There should be warning logs
-        assertTrue(logs(), logs().contains("WARNING"));
     }
 
     @Test(timeout = 500000)
@@ -327,7 +332,7 @@ public class ComputeEngineCloudIT {
         cloud.addConfiguration(validInstanceConfigurationWithOneShot());
 
         r.jenkins.getNodesObject().setNodes(Collections.emptyList());
-        
+
         // Assert that there is 0 nodes
         assertTrue(r.jenkins.getNodes().isEmpty());
 
@@ -335,17 +340,17 @@ public class ComputeEngineCloudIT {
         Builder step = new Shell("echo works");
         project.getBuildersList().add(step);
         project.setAssignedLabel(new LabelAtom(LABEL));
-        
+
         // Enqueue a build of the project, wait for it to complete, and assert success
         FreeStyleBuild build = r.buildAndAssertSuccess(project);
-        
+
         // Assert that the console log contains the output we expect
         r.assertLogContains("works", build);
-        
+
         // Assert that there is 0 nodes after job finished
         Awaitility.await().timeout(10, TimeUnit.SECONDS).until(() -> r.jenkins.getNodes().isEmpty());
     }
-    
+
     @Test(timeout = 300000)
     public void testTemplate() throws Exception {
         ComputeEngineCloud cloud = (ComputeEngineCloud) r.jenkins.clouds.get(0);
@@ -359,9 +364,9 @@ public class ComputeEngineCloudIT {
 
             // There should be a planned node
             assertEquals(logs(), 1, planned.size());
-            
+
             String name = planned.iterator().next().displayName;
-            
+
             // Wait for the node creation to finish
             planned.iterator().next().future.get();
 
@@ -401,6 +406,62 @@ public class ComputeEngineCloudIT {
         }
     }
 
+    // Tests that no snapshot is created when we only have successful builds for given node
+    @Test(timeout = 300000)
+    public void testNoSnapshotCreated() throws Exception {
+        logOutput.reset();
+
+        ComputeEngineCloud cloud = (ComputeEngineCloud) r.jenkins.clouds.get(0);
+        assertTrue(cloud.configurations.size() == 0);
+        cloud.addConfiguration(snapshotInstanceConfiguration());
+
+        FreeStyleProject project = r.createFreeStyleProject();
+        Builder step = new Shell("echo works");
+        project.getBuildersList().add(step);
+        project.setAssignedLabel(new LabelAtom(SNAPSHOT_LABEL));
+
+        FreeStyleBuild build = r.buildAndAssertSuccess(project);
+        Node worker = build.getBuiltOn();
+
+        // Need time for one-shot instance to terminate and create the snapshot
+        Awaitility.await().timeout(SNAPSHOT_TEST_TIMEOUT, TimeUnit.SECONDS).until(() -> r.jenkins.getNode(worker.getNodeName()) == null);
+
+        assertNull(logs(), client.getSnapshot(projectId, worker.getNodeName()));
+    }
+
+    // Tests snapshot is created when we have failure builds for given node
+    @Test(timeout = 300000)
+    public void testSnapshotCreated() throws Exception {
+        logOutput.reset();
+
+        ComputeEngineCloud cloud = (ComputeEngineCloud) r.jenkins.clouds.get(0);
+        cloud.addConfiguration(snapshotInstanceConfiguration());
+
+        FreeStyleProject project = r.createFreeStyleProject();
+        Builder step = new Shell("exit 1");
+        project.getBuildersList().add(step);
+        project.setAssignedLabel(new LabelAtom(SNAPSHOT_LABEL));
+
+        FreeStyleBuild build = r.assertBuildStatus(Result.FAILURE, project.scheduleBuild2(0));
+        Node worker = build.getBuiltOn();
+
+        try {
+            // Need time for one-shot instance to terminate and create the snapshot
+            Awaitility.await().timeout(SNAPSHOT_TEST_TIMEOUT, TimeUnit.SECONDS).until(() -> r.jenkins.getNode(worker.getNodeName()) == null);
+
+            Snapshot createdSnapshot = client.getSnapshot(projectId, worker.getNodeName());
+            assertNotNull(logs(), createdSnapshot);
+            assertEquals(logs(), createdSnapshot.getStatus(), "READY");
+        } finally {
+            try {
+                //cleanup
+                client.deleteSnapshot(projectId, worker.getNodeName());
+            } catch (Exception e) {
+            }
+
+        }
+    }
+
     private static InstanceTemplate createTemplate(Map<String, String> googleLabels) {
         InstanceTemplate instanceTemplate = new InstanceTemplate();
         instanceTemplate.setName(nameFromSelfLink(TEMPLATE));
@@ -430,35 +491,42 @@ public class ComputeEngineCloudIT {
         return instanceTemplate;
     }
 
+    private static InstanceConfiguration snapshotInstanceConfiguration() {
+        // Snapshot label needed since the freestyle project could use a previously provisioned node instead of this configuration's.
+        return instanceConfiguration(DEB_JAVA_STARTUP_SCRIPT, NUM_EXECUTORS, SNAPSHOT_LABEL, true, true, NULL_TEMPLATE);
+    }
+
     private static InstanceConfiguration validInstanceConfiguration() {
-        return instanceConfiguration(DEB_JAVA_STARTUP_SCRIPT, NUM_EXECUTORS, LABEL, false, NULL_TEMPLATE);
+        return instanceConfiguration(DEB_JAVA_STARTUP_SCRIPT, NUM_EXECUTORS, LABEL, false, false, NULL_TEMPLATE);
     }
 
     private static InstanceConfiguration validInstanceConfigurationWithLabels(String labels) {
-        return instanceConfiguration(DEB_JAVA_STARTUP_SCRIPT, NUM_EXECUTORS, labels, false, NULL_TEMPLATE);
+        return instanceConfiguration(DEB_JAVA_STARTUP_SCRIPT, NUM_EXECUTORS, labels, false, false, NULL_TEMPLATE);
     }
 
     private static InstanceConfiguration validInstanceConfigurationWithExecutors(String numExecutors) {
-        return instanceConfiguration(DEB_JAVA_STARTUP_SCRIPT, numExecutors, LABEL, false, NULL_TEMPLATE);
+        return instanceConfiguration(DEB_JAVA_STARTUP_SCRIPT, numExecutors, LABEL, false, false, NULL_TEMPLATE);
     }
 
     private static InstanceConfiguration validInstanceConfigurationWithTemplate(String template) {
-        return instanceConfiguration(DEB_JAVA_STARTUP_SCRIPT, NUM_EXECUTORS, LABEL, false, template);
+        return instanceConfiguration(DEB_JAVA_STARTUP_SCRIPT, NUM_EXECUTORS, LABEL, false,false, template);
     }
 
     private static InstanceConfiguration validInstanceConfigurationWithOneShot() {
-        return instanceConfiguration(DEB_JAVA_STARTUP_SCRIPT, NUM_EXECUTORS, LABEL, true, NULL_TEMPLATE);
+        return instanceConfiguration(DEB_JAVA_STARTUP_SCRIPT, NUM_EXECUTORS, LABEL, false, true, NULL_TEMPLATE);
     }
+
     /**
      * This configuration creates an instance with no Java installed.
      *
      * @return
      */
     private static InstanceConfiguration invalidInstanceConfiguration() {
-        return instanceConfiguration("", NUM_EXECUTORS, LABEL, false, NULL_TEMPLATE);
+        return instanceConfiguration("", NUM_EXECUTORS, LABEL, false, false, NULL_TEMPLATE);
     }
 
-    private static InstanceConfiguration instanceConfiguration(String startupScript, String numExecutors, String labels, boolean oneShot, String template) {
+    private static InstanceConfiguration instanceConfiguration(String startupScript, String numExecutors, String labels,
+                                                               boolean createSnapshot, boolean oneShot, String template) {
         InstanceConfiguration ic = new InstanceConfiguration(
                 NAME_PREFIX,
                 REGION,
@@ -479,6 +547,7 @@ public class ComputeEngineCloudIT {
                 "",
                 "",
                 "",
+                createSnapshot,
                 null,
                 new AutofilledNetworkConfiguration(NETWORK_NAME, SUBNETWORK_NAME),
                 EXTERNAL_ADDR,

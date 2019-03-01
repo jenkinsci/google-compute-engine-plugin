@@ -16,14 +16,38 @@
 
 package com.google.jenkins.plugins.computeengine.client;
 
+import com.google.api.client.googleapis.json.GoogleJsonResponseException;
 import com.google.api.services.compute.Compute;
-import com.google.api.services.compute.model.*;
+
+import com.google.api.services.compute.model.AcceleratorType;
+import com.google.api.services.compute.model.AttachedDisk;
+import com.google.api.services.compute.model.DiskType;
+import com.google.api.services.compute.model.Image;
+import com.google.api.services.compute.model.Instance;
+import com.google.api.services.compute.model.InstanceTemplate;
+import com.google.api.services.compute.model.InstancesScopedList;
+import com.google.api.services.compute.model.MachineType;
+import com.google.api.services.compute.model.Metadata;
+import com.google.api.services.compute.model.Network;
+import com.google.api.services.compute.model.Operation;
+import com.google.api.services.compute.model.Region;
+import com.google.api.services.compute.model.Snapshot;
+import com.google.api.services.compute.model.SnapshotList;
+import com.google.api.services.compute.model.Subnetwork;
+import com.google.api.services.compute.model.Zone;
 import com.google.common.base.Strings;
 
 import java.io.IOException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import org.apache.commons.lang.StringUtils;
 
 /**
  * Client for communicating with the Google Compute API
@@ -31,10 +55,12 @@ import java.util.logging.Logger;
  * @see <a href="https://cloud.google.com/compute/">Cloud Engine</a>
  */
 public class ComputeClient {
-    private static final Logger LOGGER = Logger.getLogger(ComputeClient.class.getName());
     private Compute compute;
 
-    public static String nameFromSelfLink(String selfLink) {
+    private static final Logger LOGGER = Logger.getLogger(ComputeClient.class.getName());
+    private static final long SNAPSHOT_TIMEOUT_MILLISECONDS = TimeUnit.MINUTES.toMillis(10);
+
+    public static String nameFromSelfLink(String selfLink) { 
         return selfLink.substring(selfLink.lastIndexOf("/") + 1, selfLink.length());
     }
 
@@ -419,6 +445,94 @@ public class ComputeClient {
         instanceTemplates.sort(Comparator.comparing(InstanceTemplate::getName));
 
         return instanceTemplates;
+    }
+
+    /**
+     * Creates persistent disk snapshot for Compute Engine instance.
+     * This method blocks until the operation completes.
+     *
+     * @param projectId Google cloud project id (e.g. my-project).
+     * @param zone Instance's zone.
+     * @param instanceId Name of the instance whose disks to take a snapshot of.
+     *
+     * @throws IOException If an error occured in snapshot creation.
+     * @throws InterruptedException If snapshot creation is interrupted.
+     */
+    public void createSnapshot(String projectId, String zone, String instanceId) throws IOException, InterruptedException {
+        try {
+            zone = nameFromSelfLink(zone);
+            Instance instance = compute.instances().get(projectId, zone, instanceId).execute();
+
+            //TODO: JENKINS-56113 parallelize snapshot creation
+            for (AttachedDisk disk : instance.getDisks()) {
+                    String diskId = nameFromSelfLink(disk.getSource());
+                    createSnapshotForDisk(projectId, zone, diskId);
+            }
+        } catch (InterruptedException ie) {
+            // catching InterruptedException here because calling function also can throw InterruptedException from trying to terminate node
+            LOGGER.log(Level.WARNING,"Error in creating snapshot.", ie);
+            throw ie;
+        } catch (IOException ioe) {
+            LOGGER.log(Level.WARNING,"Interruption in creating snapshot.", ioe);
+            throw ioe;
+        }
+    }
+
+    /**
+     * Given a disk's name, create a snapshot for said disk.
+     *
+     * @param projectId Google cloud project id.
+     * @param zone Zone of disk.
+     * @param diskId Name of disk to create a snapshot for.
+     *
+     * @throws IOException If an error occured in snapshot creation.
+     * @throws InterruptedException If snapshot creation is interrupted.
+     */
+    public void createSnapshotForDisk(String projectId, String zone, String diskId) throws IOException, InterruptedException {
+        Snapshot snapshot = new Snapshot();
+        snapshot.setName(diskId);
+
+        Operation op = compute.disks().createSnapshot(projectId, zone, diskId, snapshot).execute();
+        // poll for result
+        waitForOperationCompletion(projectId, op.getName(), op.getZone(), SNAPSHOT_TIMEOUT_MILLISECONDS);
+    }
+
+    /**
+     * Deletes persistent disk snapshot. Does not block.
+     *
+     * @param projectId Google cloud project id.
+     * @param snapshotName Name of the snapshot to be deleted.
+     * @throws IOException If an error occurred in deleting the snapshot.
+     */
+    public void deleteSnapshot(String projectId, String snapshotName) throws IOException {
+        compute.snapshots().delete(projectId, snapshotName).execute();
+    }
+
+    /**
+     * Returns snapshot with name snapshotName
+     *
+     * @param projectId Google cloud project id.
+     * @param snapshotName Name of the snapshot to get.
+     * @return Snapshot object with given snapshotName. Null if not found.
+     * @throws IOException If an error occurred in retrieving the snapshot.
+     */
+    public Snapshot getSnapshot(String projectId, String snapshotName) throws IOException {
+        SnapshotList response;
+        Compute.Snapshots.List request = compute.snapshots().list(projectId);
+
+        do {
+            response = request.execute();
+            if (response.getItems() == null) {
+                continue;
+            }
+            for (Snapshot snapshot : response.getItems()) {
+                if (StringUtils.equals(snapshotName, snapshot.getName()))
+                    return snapshot;
+            }
+            request.setPageToken(response.getNextPageToken());
+        } while (response.getNextPageToken() != null);
+
+        return null;
     }
 
     /**
