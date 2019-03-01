@@ -34,7 +34,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 public class ComputeEngineComputer extends AbstractCloudComputer<ComputeEngineInstance> {
-    private static final Logger LOGGER = Logger.getLogger(ComputeEngineComputerListener.class.getName());
+    private static final Logger LOGGER = Logger.getLogger(ComputeEngineCloud.class.getName());
 
     private volatile Instance instance;
     private Future<Boolean> preemptedFuture;
@@ -54,9 +54,9 @@ public class ComputeEngineComputer extends AbstractCloudComputer<ComputeEngineIn
                 getChannel().addListener(new Channel.Listener() {
                     @Override
                     public void onClosed(Channel channel, IOException cause) {
-                        LOGGER.log(Level.INFO, "Goc channel close event");
+                        LOGGER.log(Level.INFO, "Got channel close event");
                         if (getPreempted()) {
-                            LOGGER.log(Level.INFO, "Goc channel close and its preempied");
+                            LOGGER.log(Level.INFO, "Goc channel close and its preempted");
                             getExecutors().forEach(executor -> interruptExecutor(executor, nodeName));
                         }
                     }
@@ -174,5 +174,4 @@ public class ComputeEngineComputer extends AbstractCloudComputer<ComputeEngineIn
         }
         return new HttpRedirect("..");
     }
-
 }
