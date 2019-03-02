@@ -22,7 +22,7 @@ choco install -y jre8
 
 # No need to add a user if you've already configured one.
 Write-Output "Adding build user..."
-$username = "Build"
+$username = "jenkins"
 $password = ConvertTo-SecureString "P4ssword1" -AsPlainText -Force
 
 New-LocalUser -Name $username -Password $password
