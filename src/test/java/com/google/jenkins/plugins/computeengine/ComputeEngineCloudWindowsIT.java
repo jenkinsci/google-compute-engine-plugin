@@ -64,8 +64,6 @@ public class ComputeEngineCloudWindowsIT {
     private static final String ACCELERATOR_COUNT = "";
     private static final String RUN_AS_USER = "jenkins";
 
-    private static final String WINDOWS_USER = "Build";
-
     private static Map<String, String> INTEGRATION_LABEL;
 
     static {
@@ -135,7 +133,7 @@ public class ComputeEngineCloudWindowsIT {
         // Have to reformat since GoogleKeyPair's format is for metadata server and not typical public key format
         publicKey = kp.getPublicKey().trim().substring(1);
 
-        StandardUsernameCredentials windowsPrivateKeyCredential = new BasicSSHUserPrivateKey(CredentialsScope.GLOBAL, null, WINDOWS_USER,
+        StandardUsernameCredentials windowsPrivateKeyCredential = new BasicSSHUserPrivateKey(CredentialsScope.GLOBAL, null, RUN_AS_USER,
                 new BasicSSHUserPrivateKey.DirectEntryPrivateKeySource(kp.getPrivateKey()), null,
                 "integration test private key for windows");
         store.addCredentials(Domain.global(), windowsPrivateKeyCredential);
@@ -307,7 +305,6 @@ public class ComputeEngineCloudWindowsIT {
                 bootDiskProjectId,
                 BOOT_DISK_SIZE_GB_STR,
                 true,
-                WINDOWS_USER,
                 "",
                 windowsPrivateKeyCredentialId,
                 createSnapshot,

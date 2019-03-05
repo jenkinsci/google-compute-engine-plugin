@@ -235,7 +235,6 @@ public class InstanceConfigurationTest {
                 WINDOWS,
                 "",
                 "",
-                "",
                 false,
                 null,
                 new AutofilledNetworkConfiguration(NETWORK_NAME, SUBNETWORK_NAME),

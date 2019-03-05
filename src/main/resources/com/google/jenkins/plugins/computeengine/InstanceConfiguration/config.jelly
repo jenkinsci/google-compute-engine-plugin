@@ -31,9 +31,6 @@
             <f:entry field="windows" title="${%Windows?}">
                 <f:checkbox/>
             </f:entry>
-            <f:entry field="windowsUsername" title="${%Windows Username}">
-                <f:textbox default="Build"/>
-            </f:entry>
             <f:entry field="windowsPasswordCredentialsId" title="${%Windows Account Credentials}">
                 <c:select/>
             </f:entry>
