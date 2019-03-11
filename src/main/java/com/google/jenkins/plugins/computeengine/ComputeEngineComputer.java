@@ -17,8 +17,6 @@
 package com.google.jenkins.plugins.computeengine;
 
 import com.google.api.services.compute.model.Instance;
-import com.google.api.services.compute.model.Operation;
-import com.google.jenkins.plugins.computeengine.client.ComputeClient;
 import hudson.slaves.AbstractCloudComputer;
 import org.kohsuke.stapler.DataBoundSetter;
 import org.kohsuke.stapler.HttpRedirect;

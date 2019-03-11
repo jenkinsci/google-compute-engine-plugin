@@ -114,7 +114,7 @@ public class ComputeEngineWindowsLauncher extends ComputeEngineComputerLauncher 
             SCPClient scp = conn.createSCPClient();
 
             logInfo(computer, listener, "Copying slave.jar to: " + TMPDIR);
-            scp.put(Jenkins.getInstance().getJnlpJars("slave.jar").readFully(), "slave.jar", TMPDIR);
+            scp.put(Jenkins.get().getJnlpJars("slave.jar").readFully(), "slave.jar", TMPDIR);
 
             // Confirm Java is installed
             if (!testCommand(computer, conn, "java -fullversion", logger, listener)) {
@@ -246,7 +246,7 @@ public class ComputeEngineWindowsLauncher extends ComputeEngineComputerLauncher 
                 logInfo(computer, listener, "Connecting to " + host + " on port " + port + ", with timeout " + SSH_TIMEOUT
                         + ".");
                 Connection conn = new Connection(host, port);
-                ProxyConfiguration proxyConfig = Jenkins.getInstance().proxy;
+                ProxyConfiguration proxyConfig = Jenkins.get().proxy;
                 Proxy proxy = proxyConfig == null ? Proxy.NO_PROXY : proxyConfig.createProxy(host);
                 if (!proxy.equals(Proxy.NO_PROXY) && proxy.address() instanceof InetSocketAddress) {
                     InetSocketAddress address = (InetSocketAddress) proxy.address();

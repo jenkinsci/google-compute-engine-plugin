@@ -16,10 +16,18 @@
 
 package com.google.jenkins.plugins.computeengine;
 
-import com.google.api.services.compute.model.*;
+import com.google.api.services.compute.model.AccessConfig;
+import com.google.api.services.compute.model.Instance;
+import com.google.api.services.compute.model.Metadata;
+import com.google.api.services.compute.model.NetworkInterface;
+import com.google.api.services.compute.model.Operation;
 import com.google.jenkins.plugins.computeengine.client.ComputeClient;
 import com.google.jenkins.plugins.computeengine.ssh.GoogleKeyPair;
-import com.trilead.ssh2.*;
+import com.trilead.ssh2.Connection;
+import com.trilead.ssh2.HTTPProxyData;
+import com.trilead.ssh2.SCPClient;
+import com.trilead.ssh2.ServerHostKeyVerifier;
+import com.trilead.ssh2.Session;
 import hudson.ProxyConfiguration;
 import hudson.model.TaskListener;
 import hudson.remoting.Channel;
@@ -113,7 +121,7 @@ public class ComputeEngineLinuxLauncher extends ComputeEngineComputerLauncher {
             SCPClient scp = conn.createSCPClient();
             String tmpDir = "/tmp";
             logInfo(computer, listener, "Copying slave.jar to: " + tmpDir);
-            scp.put(Jenkins.getInstance().getJnlpJars("slave.jar").readFully(), "slave.jar", tmpDir);
+            scp.put(Jenkins.get().getJnlpJars("slave.jar").readFully(), "slave.jar", tmpDir);
 
             // Confirm Java is installed
             if (!testCommand(computer, conn, "java -fullversion", logger, listener)) {
@@ -251,7 +259,7 @@ public class ComputeEngineLinuxLauncher extends ComputeEngineComputerLauncher {
                 logInfo(computer, listener, "Connecting to " + host + " on port " + port + ", with timeout " + SSH_TIMEOUT
                         + ".");
                 Connection conn = new Connection(host, port);
-                ProxyConfiguration proxyConfig = Jenkins.getInstance().proxy;
+                ProxyConfiguration proxyConfig = Jenkins.get().proxy;
                 Proxy proxy = proxyConfig == null ? Proxy.NO_PROXY : proxyConfig.createProxy(host);
                 if (!proxy.equals(Proxy.NO_PROXY) && proxy.address() instanceof InetSocketAddress) {
                     InetSocketAddress address = (InetSocketAddress) proxy.address();
