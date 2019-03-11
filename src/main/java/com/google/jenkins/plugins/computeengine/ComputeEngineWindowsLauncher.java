@@ -42,7 +42,7 @@ public class ComputeEngineWindowsLauncher extends ComputeEngineComputerLauncher 
     private static final Logger LOGGER = Logger.getLogger(ComputeEngineLinuxLauncher.class.getName());
     private static final String TMPDIR = "C:\\";
     //TODO: allow jvmopt configuration
-    private static final String LAUNCHSTRING = "java -jar C:\\slave.jar";
+    private static final String LAUNCHSTRING = "java -jar C:\\agent.jar";
     private static int bootstrapAuthTries = 30;
     private static int bootstrapAuthSleepMs = 15000;
 
@@ -113,8 +113,8 @@ public class ComputeEngineWindowsLauncher extends ComputeEngineComputerLauncher 
 
             SCPClient scp = conn.createSCPClient();
 
-            logInfo(computer, listener, "Copying slave.jar to: " + TMPDIR);
-            scp.put(Jenkins.get().getJnlpJars("slave.jar").readFully(), "slave.jar", TMPDIR);
+            logInfo(computer, listener, "Copying agent.jar to: " + TMPDIR);
+            scp.put(Jenkins.get().getJnlpJars("agent.jar").readFully(), "agent.jar", TMPDIR);
 
             // Confirm Java is installed
             if (!testCommand(computer, conn, "java -fullversion", logger, listener)) {
