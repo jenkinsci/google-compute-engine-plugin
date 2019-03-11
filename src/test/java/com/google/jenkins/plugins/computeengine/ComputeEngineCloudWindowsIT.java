@@ -1,7 +1,10 @@
 package com.google.jenkins.plugins.computeengine;
 
 import com.cloudbees.jenkins.plugins.sshcredentials.impl.BasicSSHUserPrivateKey;
-import com.cloudbees.plugins.credentials.*;
+import com.cloudbees.plugins.credentials.Credentials;
+import com.cloudbees.plugins.credentials.CredentialsScope;
+import com.cloudbees.plugins.credentials.CredentialsStore;
+import com.cloudbees.plugins.credentials.SystemCredentialsProvider;
 import com.cloudbees.plugins.credentials.common.StandardUsernameCredentials;
 import com.cloudbees.plugins.credentials.domains.Domain;
 import com.cloudbees.plugins.credentials.domains.DomainRequirement;
@@ -20,15 +23,24 @@ import hudson.model.Node;
 import hudson.model.Result;
 import hudson.model.labels.LabelAtom;
 import hudson.slaves.NodeProvisioner;
+import hudson.tasks.BatchFile;
 import hudson.tasks.Builder;
-import hudson.tasks.Shell;
+
 import org.awaitility.Awaitility;
-import org.junit.*;
+import org.junit.After;
+import org.junit.AfterClass;
+import org.junit.BeforeClass;
+import org.junit.ClassRule;
+import org.junit.Test;
 import org.jvnet.hudson.test.JenkinsRule;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.LogManager;
 import java.util.logging.Logger;
@@ -208,7 +220,7 @@ public class ComputeEngineCloudWindowsIT {
         assertEquals(logs(), 1, planned.size());
 
         String name = planned.iterator().next().displayName;
-        
+
         // Wait for the node creation to finish
         planned.iterator().next().future.get();
 
@@ -236,7 +248,7 @@ public class ComputeEngineCloudWindowsIT {
         cloud.addConfiguration(snapshotInstanceConfiguration());
 
         FreeStyleProject project = r.createFreeStyleProject();
-        Builder step = new Shell("exit 1");
+        Builder step = new BatchFile("exit 1");
         project.getBuildersList().add(step);
         project.setAssignedLabel(new LabelAtom(SNAPSHOT_LABEL));
 

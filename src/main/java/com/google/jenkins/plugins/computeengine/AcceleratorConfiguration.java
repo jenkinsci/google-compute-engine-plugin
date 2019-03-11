@@ -50,7 +50,7 @@ public class AcceleratorConfiguration implements Describable<AcceleratorConfigur
     }
 
     public Descriptor<AcceleratorConfiguration> getDescriptor() {
-        return Jenkins.getInstance().getDescriptor(getClass());
+        return Jenkins.get().getDescriptor(getClass());
     }
 
     @Override

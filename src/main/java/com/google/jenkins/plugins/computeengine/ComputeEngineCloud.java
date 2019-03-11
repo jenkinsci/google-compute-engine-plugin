@@ -129,7 +129,7 @@ public class ComputeEngineCloud extends AbstractCloudImpl {
 
     protected Object readResolve() {
         try {
-            ClientFactory clientFactory = new ClientFactory(Jenkins.getInstance(), new ArrayList<DomainRequirement>(),
+            ClientFactory clientFactory = new ClientFactory(Jenkins.get(), new ArrayList<DomainRequirement>(),
                     credentialsId);
             this.client = clientFactory.compute();
         } catch (IOException e) {
@@ -152,7 +152,7 @@ public class ComputeEngineCloud extends AbstractCloudImpl {
 
     /**
      * Returns unique ID of that cloud instance.
-     * 
+     *
      * This ID allows us to find machines from our cloud in GCP.
      * Current implementation is bit naive and generate ID based on name hashCode.
      *
@@ -165,7 +165,7 @@ public class ComputeEngineCloud extends AbstractCloudImpl {
 
     /**
      * Returns GCP client for that cloud.
-     * 
+     *
      * @return GCP client object.
      */
     public ComputeClient getClient() {
@@ -174,7 +174,7 @@ public class ComputeEngineCloud extends AbstractCloudImpl {
 
     /**
      * Returns GCP projectId for that cloud.
-     * 
+     *
      * @return projectId
      */
     public String getProjectId() {
@@ -201,7 +201,7 @@ public class ComputeEngineCloud extends AbstractCloudImpl {
                 }
 
                 final ComputeEngineInstance node = config.provision(StreamTaskListener.fromStdout());
-                Jenkins.getInstance().addNode(node);
+                Jenkins.get().addNode(node);
                 r.add(new PlannedNode(node.getNodeName(), Computer.threadPoolForRemoting.submit(() -> {
                     long startTime = System.currentTimeMillis();
                     LOGGER.log(Level.INFO, String.format("Waiting %dms for node %s to connect", config.getLaunchTimeoutMillis(), node.getNodeName()));
@@ -319,7 +319,7 @@ public class ComputeEngineCloud extends AbstractCloudImpl {
         ComputeEngineInstance node = c.provision(StreamTaskListener.fromStdout());
         if (node == null)
             throw HttpResponses.error(SC_BAD_REQUEST, "Could not provision new node.");
-        Jenkins.getInstance().addNode(node);
+        Jenkins.get().addNode(node);
 
         return HttpResponses.redirectViaContextPath("/computer/" + node.getNodeName());
     }

@@ -24,7 +24,12 @@ import com.google.jenkins.plugins.credentials.oauth.ServiceAccountConfig;
 import jenkins.model.Jenkins;
 import org.kohsuke.stapler.DataBoundConstructor;
 
-import java.io.*;
+import java.io.ByteArrayInputStream;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.StringReader;
 import java.nio.charset.StandardCharsets;
 import java.security.KeyFactory;
 import java.security.NoSuchAlgorithmException;
@@ -69,7 +74,7 @@ public class StringJsonServiceAccountConfig extends ServiceAccountConfig {
 
     @Override
     public com.google.jenkins.plugins.credentials.oauth.JsonServiceAccountConfig.DescriptorImpl getDescriptor() {
-        return (com.google.jenkins.plugins.credentials.oauth.JsonServiceAccountConfig.DescriptorImpl) Jenkins.getInstance()
+        return (com.google.jenkins.plugins.credentials.oauth.JsonServiceAccountConfig.DescriptorImpl) Jenkins.get()
                 .getDescriptorOrDie(com.google.jenkins.plugins.credentials.oauth.JsonServiceAccountConfig.class);
     }
 
