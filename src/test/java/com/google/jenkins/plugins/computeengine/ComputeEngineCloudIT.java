@@ -135,7 +135,8 @@ public class ComputeEngineCloudIT {
     private static final String SERVICE_ACCOUNT_EMAIL = "";
     private static final String RETENTION_TIME_MINUTES_STR = "";
     private static final String LAUNCH_TIMEOUT_SECONDS_STR = "";
-    private static final int SNAPSHOT_TEST_TIMEOUT = 120;
+    private static final int SNAPSHOT_TEST_TIMEOUT = 300;
+    private static final int SNAPSHOT_TEST_DELAY = 60;
 
     private static Logger cloudLogger;
     private static Logger clientLogger;
@@ -423,8 +424,10 @@ public class ComputeEngineCloudIT {
         FreeStyleBuild build = r.buildAndAssertSuccess(project);
         Node worker = build.getBuiltOn();
 
-        // Need time for one-shot instance to terminate and create the snapshot
+        // Need time for one-shot instance to begin to terminate and create the snapshot
         Awaitility.await().timeout(SNAPSHOT_TEST_TIMEOUT, TimeUnit.SECONDS).until(() -> r.jenkins.getNode(worker.getNodeName()) == null);
+        // Delay to prevent false positive since creation may not have initiated yet
+        Awaitility.await().timeout(SNAPSHOT_TEST_TIMEOUT, TimeUnit.SECONDS).pollDelay(SNAPSHOT_TEST_DELAY, TimeUnit.SECONDS).until(() -> client.getSnapshot(projectId, worker.getNodeName()) == null);
 
         assertNull(logs(), client.getSnapshot(projectId, worker.getNodeName()));
     }
@@ -446,12 +449,12 @@ public class ComputeEngineCloudIT {
         Node worker = build.getBuiltOn();
 
         try {
-            // Need time for one-shot instance to terminate and create the snapshot
+            // Need time for one-shot instance to begin to terminate and create the snapshot
             Awaitility.await().timeout(SNAPSHOT_TEST_TIMEOUT, TimeUnit.SECONDS).until(() -> r.jenkins.getNode(worker.getNodeName()) == null);
+            Awaitility.await().timeout(SNAPSHOT_TEST_TIMEOUT, TimeUnit.SECONDS).pollDelay(SNAPSHOT_TEST_DELAY, TimeUnit.SECONDS).until(() -> client.getSnapshot(projectId, worker.getNodeName()) != null);
+            // If snapshot creation is successful, that means instance was not deleted prior to snapshot creation.
+            Awaitility.await().timeout(SNAPSHOT_TEST_TIMEOUT, TimeUnit.SECONDS).until(() -> client.getSnapshot(projectId, worker.getNodeName()).getStatus().equals("READY"));
 
-            Snapshot createdSnapshot = client.getSnapshot(projectId, worker.getNodeName());
-            assertNotNull(logs(), createdSnapshot);
-            assertEquals(logs(), createdSnapshot.getStatus(), "READY");
         } finally {
             try {
                 //cleanup

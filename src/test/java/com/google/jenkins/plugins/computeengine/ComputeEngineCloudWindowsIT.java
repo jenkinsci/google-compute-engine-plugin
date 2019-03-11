@@ -90,6 +90,9 @@ public class ComputeEngineCloudWindowsIT {
     private static final String SERVICE_ACCOUNT_EMAIL = "";
     private static final String RETENTION_TIME_MINUTES_STR = "600";
     private static final String LAUNCH_TIMEOUT_SECONDS_STR = "3000";
+    private int SNAPSHOT_TEST_TIMEOUT = 300;
+    private int SNAPSHOT_TEST_CREATION_TIMEOUT = 15;
+    private int SNAPSHOT_TEST_DELAY = 60;
 
     private static Logger cloudLogger;
     private static Logger clientLogger;
@@ -256,12 +259,12 @@ public class ComputeEngineCloudWindowsIT {
         Node worker = build.getBuiltOn();
 
         try {
-            // Need time for one-shot instance to terminate and create the snapshot
-            Awaitility.await().timeout(15, TimeUnit.MINUTES).until(() -> r.jenkins.getNode(worker.getNodeName()) == null);            // Assert that there is 0 nodes after job finished
+            // Need time for one-shot instance to begin to terminate and create the snapshot
+            Awaitility.await().timeout(SNAPSHOT_TEST_TIMEOUT, TimeUnit.SECONDS).until(() -> r.jenkins.getNode(worker.getNodeName()) == null);
+            Awaitility.await().timeout(SNAPSHOT_TEST_TIMEOUT, TimeUnit.SECONDS).pollDelay(SNAPSHOT_TEST_DELAY, TimeUnit.SECONDS).until(() -> client.getSnapshot(projectId, worker.getNodeName()) != null);
+            // If snapshot creation is successful, that means instance was not deleted prior to snapshot creation.
+            Awaitility.await().timeout(SNAPSHOT_TEST_CREATION_TIMEOUT, TimeUnit.MINUTES).until(() -> client.getSnapshot(projectId, worker.getNodeName()).getStatus().equals("READY"));
 
-            Snapshot createdSnapshot = client.getSnapshot(projectId, worker.getNodeName());
-            assertNotNull(logs(), createdSnapshot);
-            assertEquals(logs(), createdSnapshot.getStatus(), "READY");
         } finally {
             try {
                 //cleanup

@@ -121,8 +121,6 @@ public class ComputeEngineComputer extends AbstractCloudComputer<ComputeEngineIn
         ComputeEngineInstance node = getNode();
         if (node != null) {
             try {
-                ComputeEngineCloud cloud = getCloud();
-
                 node.terminate();
             } catch (InterruptedException ie) {
                 // Termination Exception

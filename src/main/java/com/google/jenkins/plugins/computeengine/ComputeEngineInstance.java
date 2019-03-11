@@ -16,6 +16,8 @@
 
 package com.google.jenkins.plugins.computeengine;
 
+import com.google.api.services.compute.model.Operation;
+import com.google.jenkins.plugins.computeengine.client.ComputeClient;
 import hudson.Extension;
 import hudson.model.Computer;
 import hudson.model.Descriptor;
@@ -29,6 +31,10 @@ import jenkins.model.Jenkins;
 
 import java.io.IOException;
 import java.util.Collections;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.Optional;
@@ -84,21 +90,66 @@ public class ComputeEngineInstance extends AbstractCloudSlave {
         try {
             ComputeEngineCloud cloud = getCloud();
 
-            Computer computer = this.toComputer();
-            if (this.oneShot && this.createSnapshot && computer != null && !computer.getBuilds().failureOnly().isEmpty()) {
-                LOGGER.log(Level.INFO, "Creating snapshot for node ... " + this.getNodeName());
-                cloud.getClient().createSnapshot(cloud.projectId, this.zone, this.getNodeName());
-            }
+            ExecutorService executor = Executors.newFixedThreadPool(1);
 
-            // If the instance is running, attempt to terminate it. This is an asynch call and we
-            // return immediately, hoping for the best.
-            cloud.client.terminateInstanceWithStatus(cloud.projectId, zone, name, "RUNNING");
+            executor.submit(new TerminateRunnable(this, cloud));
+            //TODO: if termination fails, then jenkins doesn't know, deleted node from pool,
         } catch (CloudNotFoundException cnfe) {
             listener.error(cnfe.getMessage());
             return;
         }
 
+    }
 
+    /**
+     * Runnable to parallelize the termination and snapshot creation process.
+     */
+    private class TerminateRunnable implements Runnable {
+        private ComputeEngineCloud cloud;
+        private Computer computer;
+        private ComputeEngineInstance computeEngineInstance;
+
+        /**
+         * Constructor.
+         *
+         * @param computeEngineInstance
+         * @param cloud
+         */
+        TerminateRunnable(ComputeEngineInstance computeEngineInstance, ComputeEngineCloud cloud) {
+            this.cloud = cloud;
+            this.computer = computeEngineInstance.toComputer();
+            this.computeEngineInstance = computeEngineInstance;
+        }
+
+        /**
+         * Checks to see if snapshot creation at deletion time requirements are fulfilled and creates if true.
+         * Terminates the instance afterwards.
+         */
+        @Override
+        public void run() {
+            String projectId = cloud.getProjectId();
+            if (computeEngineInstance.oneShot && computeEngineInstance.createSnapshot && computer != null &&
+                    !computer.getBuilds().failureOnly().isEmpty()) {
+                LOGGER.log(Level.INFO, "Creating snapshot for node " + name);
+                try {
+                    cloud.getClient().createSnapshot(projectId, zone, name);
+                } catch (IOException | InterruptedException e) {
+                    // exceptions thrown by snapshot creation are InterruptedException and IOException
+                    LOGGER.log(Level.WARNING, "Error creating snapshot for instance " + name + ". " + e);
+                }
+            }
+
+            // If the instance is running, attempt to terminate it. This is an asynch call and we
+            // return immediately, hoping for the best.
+            try {
+                ComputeClient client = cloud.getClient();
+                Operation deleteOperation = client.terminateInstanceWithStatus(cloud.projectId, zone, name, "RUNNING");
+                // Ensure erros from the execution of the operation itself are logged.
+                client.waitForOperationCompletion(projectId, deleteOperation.getName(), zone, 300 * 1000);
+            } catch (IOException | InterruptedException e) {
+                LOGGER.log(Level.WARNING, "Error deleting instance " + name + ". " + e);
+            }
+        }
     }
 
     /**
