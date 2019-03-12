@@ -120,10 +120,10 @@ public class ComputeEngineWindowsLauncher extends ComputeEngineComputerLauncher 
                 return;
             }
 
-            String LAUNCHSTRING = "java -jar " + jenkinsDir + "\\agent.jar";
-            logInfo(computer, listener, "Launching Jenkins agent via plugin SSH: " + LAUNCHSTRING);
+            String launchString = "java -jar " + jenkinsDir + "\\agent.jar";
+            logInfo(computer, listener, "Launching Jenkins agent via plugin SSH: " + launchString);
             final Session sess = conn.openSession();
-            sess.execCommand(LAUNCHSTRING);
+            sess.execCommand(launchString);
             computer.setChannel(sess.getStdout(), sess.getStdin(), logger, new Channel.Listener() {
                 @Override
                 public void onClosed(Channel channel, IOException cause) {
