@@ -22,7 +22,7 @@ choco install -y jre8
 
 # Following Step is needed for the startup script in the integration test to work, even if you already configured your own user.
 Write-Output "Adding build user..."
-$username = "Build"
+$username = "jenkins"
 $password = ConvertTo-SecureString "P4ssword1" -AsPlainText -Force
 New-LocalUser -Name $username -Password $password
 Add-LocalGroupMember -Group "Administrators" -Member "$username"

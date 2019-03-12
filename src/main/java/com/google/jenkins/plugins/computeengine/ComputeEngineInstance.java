@@ -16,12 +16,15 @@
 
 package com.google.jenkins.plugins.computeengine;
 
-import com.google.api.services.compute.Compute;
 import hudson.Extension;
 import hudson.model.Computer;
 import hudson.model.Descriptor;
 import hudson.model.TaskListener;
-import hudson.slaves.*;
+import hudson.slaves.AbstractCloudComputer;
+import hudson.slaves.AbstractCloudSlave;
+import hudson.slaves.ComputerLauncher;
+import hudson.slaves.NodeProperty;
+import hudson.slaves.RetentionStrategy;
 import jenkins.model.Jenkins;
 
 import java.io.IOException;
@@ -33,7 +36,7 @@ import java.util.Optional;
 public class ComputeEngineInstance extends AbstractCloudSlave {
     private static final long serialVersionUID = 1;
     private static final Logger LOGGER = Logger.getLogger(ComputeEngineInstance.class.getName());
-    
+
     // TODO: https://issues.jenkins-ci.org/browse/JENKINS-55518
     public final String zone;
     public final String cloudName;
@@ -120,7 +123,7 @@ public class ComputeEngineInstance extends AbstractCloudSlave {
     }
 
     public ComputeEngineCloud getCloud() throws CloudNotFoundException {
-        ComputeEngineCloud cloud = (ComputeEngineCloud) Jenkins.getInstance().getCloud(cloudName);
+        ComputeEngineCloud cloud = (ComputeEngineCloud) Jenkins.get().getCloud(cloudName);
         if (cloud == null)
             throw new CloudNotFoundException(String.format("Could not find cloud %s in Jenkins configuration", cloudName));
         return cloud;

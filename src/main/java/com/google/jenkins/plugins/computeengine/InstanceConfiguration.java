@@ -24,14 +24,35 @@ import com.cloudbees.plugins.credentials.common.StandardUsernameCredentials;
 import com.cloudbees.plugins.credentials.common.StandardUsernameListBoxModel;
 import com.cloudbees.plugins.credentials.common.StandardUsernamePasswordCredentials;
 import com.cloudbees.plugins.credentials.domains.DomainRequirement;
-import com.google.api.services.compute.model.*;
+import com.google.api.services.compute.model.AcceleratorConfig;
+import com.google.api.services.compute.model.AccessConfig;
+import com.google.api.services.compute.model.AttachedDisk;
+import com.google.api.services.compute.model.AttachedDiskInitializeParams;
+import com.google.api.services.compute.model.DiskType;
+import com.google.api.services.compute.model.Image;
+import com.google.api.services.compute.model.Instance;
+import com.google.api.services.compute.model.InstanceTemplate;
+import com.google.api.services.compute.model.MachineType;
+import com.google.api.services.compute.model.Metadata;
+import com.google.api.services.compute.model.NetworkInterface;
+import com.google.api.services.compute.model.Operation;
+import com.google.api.services.compute.model.Region;
+import com.google.api.services.compute.model.Scheduling;
+import com.google.api.services.compute.model.ServiceAccount;
+import com.google.api.services.compute.model.Tags;
+import com.google.api.services.compute.model.Zone;
 import com.google.common.base.Strings;
 import com.google.jenkins.plugins.computeengine.client.ClientFactory;
 import com.google.jenkins.plugins.computeengine.client.ComputeClient;
 import hudson.Extension;
 import hudson.RelativePath;
 import hudson.Util;
-import hudson.model.*;
+import hudson.model.Describable;
+import hudson.model.Descriptor;
+import hudson.model.Item;
+import hudson.model.Label;
+import hudson.model.Node;
+import hudson.model.TaskListener;
 import hudson.model.labels.LabelAtom;
 import hudson.security.ACL;
 import hudson.util.FormValidation;
@@ -138,7 +159,6 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
                                  String bootDiskSourceImageProject,
                                  String bootDiskSizeGbStr,
                                  boolean windows,
-                                 String windowsUsername,
                                  String windowsPasswordCredentialsId,
                                  String windowsPrivateKeyCredentialsId,
                                  boolean createSnapshot,
@@ -165,7 +185,7 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
 
         this.windows = windows;
         if (windows) {
-            this.windowsConfig = Optional.of(new WindowsConfiguration(windowsUsername, windowsPasswordCredentialsId,
+            this.windowsConfig = Optional.of(new WindowsConfiguration(runAsUser, windowsPasswordCredentialsId,
                     windowsPrivateKeyCredentialsId));
         } else {
             this.windowsConfig = Optional.empty();
@@ -201,7 +221,7 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
 
         // Remote filesystem location.
         this.remoteFs = remoteFs;
-        
+
         // Network
         this.networkConfiguration = networkConfiguration;
         this.externalAddress = externalAddress;
@@ -252,7 +272,7 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
     }
 
     public Descriptor<InstanceConfiguration> getDescriptor() {
-        return Jenkins.getInstance().getDescriptor(getClass());
+        return Jenkins.get().getDescriptor(getClass());
     }
 
     public String getLabelString() {
@@ -312,15 +332,15 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
             ComputeEngineInstance computeEngineInstance = new ComputeEngineInstance(
                     cloud.name,
                     instance.getName(),
-                    instance.getZone(), 
+                    instance.getZone(),
                     instance.getDescription(),
                     runAsUser,
                     targetRemoteFs,
                     windowsConfig,
                     createSnapshot,
                     oneShot,
-                    numExecutors, 
-                    mode, 
+                    numExecutors,
+                    mode,
                     labels,
                     launcher,
                     new ComputeEngineRetentionStrategy(retentionTimeMinutes, oneShot),
@@ -336,7 +356,7 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
      * Initializes transient properties
      */
     protected Object readResolve() {
-        Jenkins.getInstance().checkPermission(Jenkins.RUN_SCRIPTS);
+        Jenkins.get().checkPermission(Jenkins.RUN_SCRIPTS);
 
         labelSet = Label.parse(labels);
         return this;
@@ -347,7 +367,7 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
         instance.setName(uniqueName());
         instance.setDescription(description);
         instance.setZone(nameFromSelfLink(zone));
-        
+
         if (StringUtils.isNotEmpty(template)) {
             // TODO: JENKINS-55285
             InstanceTemplate instanceTemplate = cloud.client.getTemplate(nameFromSelfLink(cloud.projectId), nameFromSelfLink(template));
@@ -527,7 +547,7 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
         public String getHelpFile(String fieldName) {
             String p = super.getHelpFile(fieldName);
             if (p == null) {
-                Descriptor d = Jenkins.getInstance().getDescriptor(ComputeEngineInstance.class);
+                Descriptor d = Jenkins.get().getDescriptor(ComputeEngineInstance.class);
                 if (d != null)
                     p = d.getHelpFile(fieldName);
             }
@@ -535,7 +555,7 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
         }
 
         public List<NetworkConfiguration.NetworkConfigurationDescriptor> getNetworkConfigurationDescriptors() {
-            List<NetworkConfiguration.NetworkConfigurationDescriptor> d = Jenkins.getInstance().getDescriptorList(NetworkConfiguration.class);
+            List<NetworkConfiguration.NetworkConfigurationDescriptor> d = Jenkins.get().getDescriptorList(NetworkConfiguration.class);
             // No deprecated regions
             Iterator it = d.iterator();
             while (it.hasNext()) {
@@ -605,7 +625,7 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
                 return items;
             }
         }
-        
+
         public ListBoxModel doFillTemplateItems(@AncestorInPath Jenkins context,
                                               @QueryParameter("projectId") @RelativePath("..") final String projectId,
                                               @QueryParameter("credentialsId") @RelativePath("..") final String credentialsId) {

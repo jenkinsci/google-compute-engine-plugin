@@ -90,7 +90,7 @@ public class CleanLostNodesWork extends PeriodicWork {
     }
 
     private List<ComputeEngineCloud> getClouds() {
-        return Jenkins.getInstance().clouds
+        return Jenkins.get().clouds
                 .stream()
                 .filter(cloud -> cloud instanceof ComputeEngineCloud)
                 .map(cloud -> (ComputeEngineCloud) cloud)
@@ -98,7 +98,7 @@ public class CleanLostNodesWork extends PeriodicWork {
     }
 
     private Set<String> findLocalInstances(ComputeEngineCloud cloud) {
-        return Jenkins.getInstance()
+        return Jenkins.get()
                 .getNodes()
                 .stream()
                 .filter(node -> node instanceof ComputeEngineInstance)

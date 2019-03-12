@@ -546,7 +546,6 @@ public class ComputeEngineCloudIT {
                 false,
                 "",
                 "",
-                "",
                 createSnapshot,
                 null,
                 new AutofilledNetworkConfiguration(NETWORK_NAME, SUBNETWORK_NAME),

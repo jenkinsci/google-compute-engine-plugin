@@ -45,7 +45,7 @@ public abstract class NetworkConfiguration implements Describable<NetworkConfigu
     }
 
     public Descriptor<NetworkConfiguration> getDescriptor() {
-        return Jenkins.getInstance().getDescriptor(getClass());
+        return Jenkins.get().getDescriptor(getClass());
     }
 
     @Override
