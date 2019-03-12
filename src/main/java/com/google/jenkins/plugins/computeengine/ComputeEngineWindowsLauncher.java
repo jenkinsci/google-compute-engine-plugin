@@ -120,7 +120,7 @@ public class ComputeEngineWindowsLauncher extends ComputeEngineComputerLauncher 
                 return;
             }
 
-            String LAUNCHSTRING = "java -jar " + jenkinsDir + "/agent.jar";
+            String LAUNCHSTRING = "java -jar " + jenkinsDir + "\\agent.jar";
             logInfo(computer, listener, "Launching Jenkins agent via plugin SSH: " + LAUNCHSTRING);
             final Session sess = conn.openSession();
             sess.execCommand(LAUNCHSTRING);
