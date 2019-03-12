@@ -119,9 +119,9 @@ public class ComputeEngineLinuxLauncher extends ComputeEngineComputerLauncher {
             conn = cleanupConn;
 
             SCPClient scp = conn.createSCPClient();
-            String tmpDir = "/tmp";
-            logInfo(computer, listener, "Copying agent.jar to: " + tmpDir);
-            scp.put(Jenkins.get().getJnlpJars("agent.jar").readFully(), "agent.jar", tmpDir);
+            String jenkinsDir = node.getRemoteFS();
+            logInfo(computer, listener, "Copying agent.jar to: " + jenkinsDir);
+            scp.put(Jenkins.get().getJnlpJars("agent.jar").readFully(), "agent.jar", jenkinsDir);
 
             // Confirm Java is installed
             if (!testCommand(computer, conn, "java -fullversion", logger, listener)) {
@@ -130,7 +130,7 @@ public class ComputeEngineLinuxLauncher extends ComputeEngineComputerLauncher {
 
 
             //TODO: allow jvmopt configuration
-            String launchString = "java -jar " + tmpDir + "/agent.jar";
+            String launchString = "java -jar " + jenkinsDir + "/agent.jar";
 
             logInfo(computer, listener, "Launching Jenkins agent via plugin SSH: " + launchString);
             final Session sess = conn.openSession();
