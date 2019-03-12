@@ -1,6 +1,11 @@
 # Changelog
 All notable changes to this project will be documented in this file.
 
+## [2.1.0] - 2019-03-12
+### Fixed
+- Removed windows username field from instance configuration; use runAsUser instead
+- Cleaned up imports, removed outdated terminology, and fixed type of shell for Windodws integration tests.
+
 ## [2.0.0] - 2019-02-26
 ### Added
 - One-shot instances feature
