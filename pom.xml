@@ -8,7 +8,7 @@
         <relativePath />
     </parent>
     <artifactId>google-compute-engine</artifactId>
-    <version>2.0.1-SNAPSHOT</version>
+    <version>3.0.0</version>
     <packaging>hpi</packaging>
     <properties>
         <jenkins.version>2.107.1</jenkins.version>
@@ -45,7 +45,7 @@
       <connection>scm:git:ssh://github.com/jenkinsci/google-compute-engine-plugin.git</connection>
       <developerConnection>scm:git:ssh://git@github.com/jenkinsci/google-compute-engine-plugin.git</developerConnection>
       <url>https://github.com/jenkinsci/google-compute-engine-plugin</url>
-      <tag>HEAD</tag>
+      <tag>google-compute-engine-3.0.0</tag>
   </scm>
     <repositories>
         <repository>
