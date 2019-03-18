@@ -323,12 +323,12 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
             if (this.windows) {
                 launcher = new ComputeEngineWindowsLauncher(cloud.getCloudName(), operation, this.useInternalAddress);
                 if (targetRemoteFs == null || targetRemoteFs.isEmpty()) {
-                    targetRemoteFs = "C:\\JenkinsSlave";
+                    targetRemoteFs = "C:\\";
                 }
             } else {
                 launcher = new ComputeEngineLinuxLauncher(cloud.getCloudName(), operation, this.useInternalAddress);
                 if (targetRemoteFs == null || targetRemoteFs.isEmpty()) {
-                    targetRemoteFs = "./.jenkins-slave";
+                    targetRemoteFs = "/tmp";
                 }
             }
             ComputeEngineInstance computeEngineInstance = new ComputeEngineInstance(
