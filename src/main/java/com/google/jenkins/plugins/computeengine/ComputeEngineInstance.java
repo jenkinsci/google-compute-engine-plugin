@@ -93,7 +93,6 @@ public class ComputeEngineInstance extends AbstractCloudSlave {
             ExecutorService executor = Executors.newFixedThreadPool(1);
 
             executor.submit(new TerminateRunnable(this, cloud));
-            //TODO: if termination fails, then jenkins doesn't know, deleted node from pool,
         } catch (CloudNotFoundException cnfe) {
             listener.error(cnfe.getMessage());
             return;
