@@ -1,6 +1,11 @@
 # Changelog
 All notable changes to this project will be documented in this file.
 
+## [3.0.0] - 2019-03-13
+### Fixed
+- Removed windows username field from instance configuration; use runAsUser instead. Default user changed to jenkins from Build.
+- Cleaned up imports, removed outdated terminology, and fixed type of shell for Windodws integration tests.
+
 ## [2.0.0] - 2019-02-26
 ### Added
 - One-shot instances feature

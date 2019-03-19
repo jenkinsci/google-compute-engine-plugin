@@ -69,7 +69,7 @@ public class WindowsConfiguration {
 
         StandardUsernamePasswordCredentials cred = CredentialsMatchers.firstOrNull(
                 CredentialsProvider.lookupCredentials(StandardUsernamePasswordCredentials.class,
-                        Jenkins.getInstance(), ACL.SYSTEM, domainRequirements),
+                        Jenkins.get(), ACL.SYSTEM, domainRequirements),
                 CredentialsMatchers.withId(passwordCredentialsId.get()));
 
         if (cred == null) {
@@ -86,7 +86,7 @@ public class WindowsConfiguration {
     public StandardUsernameCredentials getPrivateKeyCredentials() {
         StandardUsernameCredentials cred = CredentialsMatchers.firstOrNull(
                 new SystemCredentialsProvider.ProviderImpl().getCredentials(BasicSSHUserPrivateKey.class,
-                        Jenkins.getInstance(), ACL.SYSTEM),
+                        Jenkins.get(), ACL.SYSTEM),
                 CredentialsMatchers.withId(privateKeyCredentialsId.get()));
         return cred;
     }

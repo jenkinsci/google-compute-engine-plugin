@@ -40,9 +40,6 @@ public class ComputeEngineWindowsLauncher extends ComputeEngineComputerLauncher 
     public static final Integer SSH_PORT = 22;
     public static final Integer SSH_TIMEOUT = 10000;
     private static final Logger LOGGER = Logger.getLogger(ComputeEngineLinuxLauncher.class.getName());
-    private static final String TMPDIR = "C:\\";
-    //TODO: allow jvmopt configuration
-    private static final String LAUNCHSTRING = "java -jar C:\\slave.jar";
     private static int bootstrapAuthTries = 30;
     private static int bootstrapAuthSleepMs = 15000;
 
@@ -113,8 +110,9 @@ public class ComputeEngineWindowsLauncher extends ComputeEngineComputerLauncher 
 
             SCPClient scp = conn.createSCPClient();
 
-            logInfo(computer, listener, "Copying slave.jar to: " + TMPDIR);
-            scp.put(Jenkins.getInstance().getJnlpJars("slave.jar").readFully(), "slave.jar", TMPDIR);
+            String jenkinsDir = node.getRemoteFS();
+            logInfo(computer, listener, "Copying agent.jar to: " + jenkinsDir);
+            scp.put(Jenkins.get().getJnlpJars("agent.jar").readFully(), "agent.jar", jenkinsDir);
 
             // Confirm Java is installed
             if (!testCommand(computer, conn, "java -fullversion", logger, listener)) {
@@ -122,9 +120,10 @@ public class ComputeEngineWindowsLauncher extends ComputeEngineComputerLauncher 
                 return;
             }
 
-            logInfo(computer, listener, "Launching Jenkins agent via plugin SSH: " + LAUNCHSTRING);
+            String launchString = "java -jar " + jenkinsDir + "\\agent.jar";
+            logInfo(computer, listener, "Launching Jenkins agent via plugin SSH: " + launchString);
             final Session sess = conn.openSession();
-            sess.execCommand(LAUNCHSTRING);
+            sess.execCommand(launchString);
             computer.setChannel(sess.getStdout(), sess.getStdin(), logger, new Channel.Listener() {
                 @Override
                 public void onClosed(Channel channel, IOException cause) {
@@ -246,7 +245,7 @@ public class ComputeEngineWindowsLauncher extends ComputeEngineComputerLauncher 
                 logInfo(computer, listener, "Connecting to " + host + " on port " + port + ", with timeout " + SSH_TIMEOUT
                         + ".");
                 Connection conn = new Connection(host, port);
-                ProxyConfiguration proxyConfig = Jenkins.getInstance().proxy;
+                ProxyConfiguration proxyConfig = Jenkins.get().proxy;
                 Proxy proxy = proxyConfig == null ? Proxy.NO_PROXY : proxyConfig.createProxy(host);
                 if (!proxy.equals(Proxy.NO_PROXY) && proxy.address() instanceof InetSocketAddress) {
                     InetSocketAddress address = (InetSocketAddress) proxy.address();
