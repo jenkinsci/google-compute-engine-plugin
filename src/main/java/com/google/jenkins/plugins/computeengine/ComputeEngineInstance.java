@@ -29,9 +29,9 @@ import jenkins.model.Jenkins;
 
 import java.io.IOException;
 import java.util.Collections;
+import java.util.Optional;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import java.util.Optional;
 
 public class ComputeEngineInstance extends AbstractCloudSlave {
     private static final long serialVersionUID = 1;
@@ -100,6 +100,7 @@ public class ComputeEngineInstance extends AbstractCloudSlave {
 
     /**
      * Based on the instance configuration, whether to create snapshot for an instance with failed builds at deletion time.
+     *
      * @return Whether or not to create the snapshot.
      */
     public boolean isCreateSnapshot() {
@@ -109,7 +110,7 @@ public class ComputeEngineInstance extends AbstractCloudSlave {
     public String getCloudName() {
         return cloudName;
     }
-    
+
     public void onConnected() {
         this.connected = true;
     }

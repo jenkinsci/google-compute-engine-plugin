@@ -23,7 +23,6 @@ import hudson.slaves.ComputerListener;
 
 import java.io.IOException;
 
-
 @Extension
 public class ComputeEngineComputerListener extends ComputerListener {
     @Override

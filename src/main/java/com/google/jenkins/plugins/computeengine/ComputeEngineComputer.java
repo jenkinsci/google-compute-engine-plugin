@@ -54,9 +54,9 @@ public class ComputeEngineComputer extends AbstractCloudComputer<ComputeEngineIn
                 getChannel().addListener(new Channel.Listener() {
                     @Override
                     public void onClosed(Channel channel, IOException cause) {
-                        LOGGER.log(Level.INFO, "Got channel close event");
+                        LOGGER.log(Level.FINE, "Got channel close event");
                         if (getPreempted()) {
-                            LOGGER.log(Level.INFO, "Goc channel close and its preempted");
+                            LOGGER.log(Level.FINE, "Preempted node channel closed, terminating all executors");
                             getExecutors().forEach(executor -> interruptExecutor(executor, nodeName));
                         }
                     }

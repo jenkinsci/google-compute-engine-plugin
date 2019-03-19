@@ -23,20 +23,22 @@ import hudson.model.Executor;
 import hudson.model.ExecutorListener;
 import hudson.model.Job;
 import hudson.model.Queue;
-import hudson.model.queue.Tasks;
 import hudson.security.ACL;
 import hudson.security.ACLContext;
 import hudson.slaves.RetentionStrategy;
 import jenkins.model.Jenkins;
 import org.jenkinsci.plugins.durabletask.executors.OnceRetentionStrategy;
 
-import javax.annotation.Nonnull;
 import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+/**
+ * A strategy that allows:
+ * - setting one shot instances {@link OnceRetentionStrategy}
+ * - in case of preemption of GCP instance to restart preempted tasks
+ */
 public class ComputeEngineRetentionStrategy extends RetentionStrategy<ComputeEngineComputer> implements ExecutorListener {
-
     private static final Logger LOGGER = Logger.getLogger(ComputeEngineRetentionStrategy.class.getName());
 
     private final OnceRetentionStrategy delegate;
@@ -54,12 +56,12 @@ public class ComputeEngineRetentionStrategy extends RetentionStrategy<ComputeEng
     }
 
     @Override
-    public long check(@Nonnull ComputeEngineComputer c) {
+    public long check(ComputeEngineComputer c) {
         return delegate.check(c);
     }
 
     @Override
-    public void start(@Nonnull ComputeEngineComputer c) {
+    public void start(ComputeEngineComputer c) {
         delegate.start(c);
     }
 
@@ -87,10 +89,10 @@ public class ComputeEngineRetentionStrategy extends RetentionStrategy<ComputeEng
     }
 
     private Queue.Task getBaseTask(Queue.Task task) {
-        Queue.Task parent = Tasks.getOwnerTaskOf(task);
+        Queue.Task parent = task.getOwnerTask();
         while (task != parent) {
             task = parent;
-            parent = Tasks.getOwnerTaskOf(task);
+            parent = task.getOwnerTask();
         }
         return parent;
     }
@@ -103,8 +105,8 @@ public class ComputeEngineRetentionStrategy extends RetentionStrategy<ComputeEng
         if (preemptible && preempted) {
             LOGGER.log(Level.INFO, baseTask + " is preemptive and was preempted");
             List<Action> actions = generateActionsForTask(task);
-            try (ACLContext context = ACL.as(task.getDefaultAuthentication())) {
-                Jenkins.getInstance().getQueue().schedule2(baseTask, 0, actions);
+            try (ACLContext notUsed = ACL.as(task.getDefaultAuthentication())) {
+                Jenkins.get().getQueue().schedule2(baseTask, 0, actions);
             }
         } else if (preemptible) {
             LOGGER.log(Level.INFO, baseTask + " is preemptive and was NOT preempted");
@@ -116,21 +118,20 @@ public class ComputeEngineRetentionStrategy extends RetentionStrategy<ComputeEng
         try {
             final Job job = (Job) baseTask;
             final List causes = job.getLastBuild().getCauses();
-            System.out.println("Causes: " + causes);
+            LOGGER.log(Level.FINE, "Causes: " + causes);
         } catch (Exception e) {
-            System.out.println("Exception for " + baseTask);
-            e.printStackTrace();
+            LOGGER.log(Level.WARNING, "Exception for " + baseTask, e);
         }
         return ImmutableList.of(
                 new CauseAction(new Cause.UserIdCause()),
                 new CauseAction(new RebuildCause())
         );
     }
-    
+
     public static class RebuildCause extends Cause {
         @Override
         public String getShortDescription() {
-            return "Rebuilding preempted job";
+            return Messages.RebuildCause_ShortDescription();
         }
     }
 } 

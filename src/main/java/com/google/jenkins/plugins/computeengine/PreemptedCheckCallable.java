@@ -28,15 +28,32 @@ import org.apache.commons.io.IOUtils;
 
 import java.io.IOException;
 
+/**
+ * Slave callback class checking if instance was preempted.
+ * All of code here is serialized and executed on node.
+ */
 final class PreemptedCheckCallable extends MasterToSlaveCallable<Boolean, IOException> {
     private static final String METADATA_SERVER_URL = "http://metadata.google.internal/computeMetadata/v1/instance/preempted?wait_for_change=true";
 
     private final TaskListener listener;
 
+    /**
+     * Callback constructor.
+     * @param listener Node listener on which we can add extra information from slave side.
+     */
     PreemptedCheckCallable(TaskListener listener) {
         this.listener = listener;
     }
 
+    /**
+     * Actual callback code, executed on node side.
+     * Checks in Google metadata server if instance was preempted.
+     * 
+     * See https://cloud.google.com/compute/docs/instances/create-start-preemptible-instance#detecting_if_an_instance_was_preempted
+     * 
+     * @return True if node was preempted.
+     * @throws IOException Exception when calling Google metadata API
+     */
     @Override
     public Boolean call() throws IOException {
         HttpTransport transport = new NetHttpTransport();
@@ -44,7 +61,7 @@ final class PreemptedCheckCallable extends MasterToSlaveCallable<Boolean, IOExce
         HttpRequest request = transport.createRequestFactory().buildGetRequest(metadata);
         request.setHeaders(new HttpHeaders().set("Metadata-Flavor", "Google"));
         request.setReadTimeout(Integer.MAX_VALUE);
-        listener.getLogger().println("Preemptible instance, listening metadata for preemption event");
+        listener.getLogger().println("Preemptive instance, listening metadata for preemption event");
         HttpResponse response = request.execute();
         final String result = IOUtils.toString(response.getContent(), Charsets.UTF_8);
         listener.getLogger().println("Got preemption event " + result);
