@@ -25,7 +25,7 @@ Please see the [Google Compute Engine Plugin](https://wiki.jenkins.io/display/JE
 1. Click the **Upload** button.
 
 ## Feature requests and bug reports
-Please file feature requests and bug reports under the `google-compute-engine-plugin` component of the [Jenkins CI JIRA](https://issues.jenkins-ci.org).
+Please file feature requests and bug reports under [issues](https://github.com/jenkinsci/google-compute-engine-plugin/issues).
 
 ## Contributing
 See [CONTRIBUTING.md](CONTRIBUTING.md)
