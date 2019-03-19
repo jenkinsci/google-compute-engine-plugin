@@ -61,7 +61,7 @@ final class PreemptedCheckCallable extends MasterToSlaveCallable<Boolean, IOExce
         HttpRequest request = transport.createRequestFactory().buildGetRequest(metadata);
         request.setHeaders(new HttpHeaders().set("Metadata-Flavor", "Google"));
         request.setReadTimeout(Integer.MAX_VALUE);
-        listener.getLogger().println("Preemptive instance, listening metadata for preemption event");
+        listener.getLogger().println("Preemptive instance, listening to metadata for preemption event");
         HttpResponse response = request.execute();
         final String result = IOUtils.toString(response.getContent(), Charsets.UTF_8);
         listener.getLogger().println("Got preemption event " + result);
