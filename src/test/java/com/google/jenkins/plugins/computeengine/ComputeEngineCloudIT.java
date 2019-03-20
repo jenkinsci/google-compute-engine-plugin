@@ -46,8 +46,6 @@ import hudson.tasks.Builder;
 import hudson.tasks.Shell;
 import hudson.model.labels.LabelAtom;
 import hudson.slaves.NodeProvisioner;
-import hudson.tasks.Builder;
-import hudson.tasks.Shell;
 import org.awaitility.Awaitility;
 import org.junit.After;
 import org.junit.AfterClass;
@@ -177,7 +175,7 @@ public class ComputeEngineCloudIT {
         store.addCredentials(Domain.global(), c);
 
         // Add Cloud plugin
-        ComputeEngineCloud gcp = new ComputeEngineCloud(CLOUD_NAME, projectId, projectId, "10", null);
+        ComputeEngineCloud gcp = new ComputeEngineCloud(null, CLOUD_NAME, projectId, projectId, "10", null);
 
         // Capture log output to make sense of most failures
         cloudLogger = LogManager.getLogManager().getLogger("com.google.jenkins.plugins.computeengine.ComputeEngineCloud");
@@ -257,7 +255,7 @@ public class ComputeEngineCloudIT {
 
         // Instance should have a label with key CONFIG_LABEL_KEY and value equal to the config's name prefix
         assertEquals(logs(), ic.namePrefix, i.getLabels().get(ComputeEngineCloud.CONFIG_LABEL_KEY));
-        assertEquals(logs(), cloud.getInstanceUniqueId(), i.getLabels().get(ComputeEngineCloud.CLOUD_ID_LABEL_KEY));
+        assertEquals(logs(), cloud.getInstanceId(), i.getLabels().get(ComputeEngineCloud.CLOUD_ID_LABEL_KEY));
     }
 
     @Test(timeout = 300000)

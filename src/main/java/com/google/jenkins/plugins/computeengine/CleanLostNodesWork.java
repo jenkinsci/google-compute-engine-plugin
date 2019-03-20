@@ -109,7 +109,7 @@ public class CleanLostNodesWork extends PeriodicWork {
     }
 
     private List<Instance> findRemoteInstances(ComputeEngineCloud cloud) {
-        Map<String, String> filterLabel = of(CLOUD_ID_LABEL_KEY, cloud.getInstanceUniqueId());
+        Map<String, String> filterLabel = of(CLOUD_ID_LABEL_KEY, cloud.getInstanceId());
         try {
             return cloud.getClient()
                     .getInstancesWithLabel(cloud.getProjectId(), filterLabel)

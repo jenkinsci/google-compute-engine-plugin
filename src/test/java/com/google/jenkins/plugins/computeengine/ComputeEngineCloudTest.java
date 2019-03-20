@@ -70,7 +70,7 @@ public class ComputeEngineCloudTest {
         List<InstanceConfiguration> ics = new ArrayList<>();
         ics.add(InstanceConfigurationTest.instanceConfiguration());
         ics.add(InstanceConfigurationTest.instanceConfiguration());
-        ComputeEngineCloud cloud = new ComputeEngineCloud(CLOUD_NAME, PROJECT_ID, PROJECT_ID, INSTANCE_CAP_STR, ics);
+        ComputeEngineCloud cloud = new ComputeEngineCloud(null, CLOUD_NAME, PROJECT_ID, PROJECT_ID, INSTANCE_CAP_STR, ics);
 
         // Ensure names are set
         Assert.assertEquals(ComputeEngineCloud.CLOUD_PREFIX + CLOUD_NAME, cloud.name);
@@ -103,7 +103,7 @@ public class ComputeEngineCloudTest {
         // Add a few InstanceConfigurations
         List<InstanceConfiguration> ics = new ArrayList<>();
         ics.add(InstanceConfigurationTest.instanceConfiguration());
-        ComputeEngineCloud cloud = new ComputeEngineCloud(CLOUD_NAME, PROJECT_ID, PROJECT_ID, INSTANCE_CAP_STR, ics);
+        ComputeEngineCloud cloud = new ComputeEngineCloud(null, CLOUD_NAME, PROJECT_ID, PROJECT_ID, INSTANCE_CAP_STR, ics);
 
         // Should be able to provision a label
         Label l = new LabelAtom(InstanceConfigurationTest.A_LABEL);
