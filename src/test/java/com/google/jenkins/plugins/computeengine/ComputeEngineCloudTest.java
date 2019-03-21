@@ -39,6 +39,8 @@ import java.util.List;
 
 import static com.google.jenkins.plugins.computeengine.client.ClientFactoryTest.ACCOUNT_ID;
 import static com.google.jenkins.plugins.computeengine.client.ClientFactoryTest.PRIVATE_KEY;
+import static org.hamcrest.Matchers.isEmptyOrNullString;
+import static org.hamcrest.Matchers.not;
 
 @RunWith(MockitoJUnitRunner.class)
 public class ComputeEngineCloudTest {
@@ -98,8 +100,7 @@ public class ComputeEngineCloudTest {
     @Test
     public void instanceIdWasGenerated() throws Exception {
         ComputeEngineCloud cloud = new ComputeEngineCloud(INSTANCE_ID, CLOUD_NAME, PROJECT_ID, PROJECT_ID, INSTANCE_CAP_STR, null);
-
-        Assert.assertNotNull("Instance ID was not generated in constructor", cloud.getInstanceId());
+        Assert.assertThat("Instance ID was not generated in constructor", cloud.getInstanceId(), not(isEmptyOrNullString()));
     }
 
     @Test

@@ -22,6 +22,7 @@ import com.cloudbees.plugins.credentials.common.StandardCredentials;
 import com.cloudbees.plugins.credentials.common.StandardListBoxModel;
 import com.cloudbees.plugins.credentials.domains.DomainRequirement;
 import com.google.api.services.compute.model.Instance;
+import com.google.common.base.Strings;
 import com.google.jenkins.plugins.computeengine.client.ClientFactory;
 import com.google.jenkins.plugins.computeengine.client.ComputeClient;
 import com.google.jenkins.plugins.credentials.oauth.GoogleOAuth2Credentials;
@@ -41,7 +42,6 @@ import hudson.util.HttpResponses;
 import hudson.util.ListBoxModel;
 import hudson.util.StreamTaskListener;
 import jenkins.model.Jenkins;
-import org.apache.commons.lang3.StringUtils;
 import org.kohsuke.stapler.AncestorInPath;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.HttpResponse;
@@ -90,10 +90,11 @@ public class ComputeEngineCloud extends AbstractCloudImpl {
             List<InstanceConfiguration> configurations) {
         super(createCloudId(cloudName), instanceCapStr);
         
-        if (StringUtils.isNotBlank(instanceId))
-            this.instanceId = instanceId;
-        else
+        if (Strings.isNullOrEmpty(instanceId)) {
             this.instanceId = UUID.randomUUID().toString();
+        } else {
+            this.instanceId = instanceId;
+        }
 
         if (configurations == null) {
             this.configurations = new ArrayList<>();
