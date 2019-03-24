@@ -79,7 +79,7 @@ public class ComputeEngineCloudTest {
         Assert.assertNotEquals(CLOUD_NAME, cloud.name);
 
         // Ensure ComputeClient is created
-        Assert.assertNotNull("ComputeClient was not initialized", cloud.client);
+        Assert.assertNotNull("ComputeClient was not initialized", cloud.getClient());
 
         // Ensure transient properties were initialized
         for (InstanceConfiguration ic : ics) {

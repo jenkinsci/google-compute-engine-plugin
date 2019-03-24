@@ -213,7 +213,7 @@ public class ComputeEngineCloudWindowsIT {
     @Test //TODO: Group client tests into their own test class
     public void testGetImage() throws Exception {
         ComputeEngineCloud cloud = (ComputeEngineCloud) r.jenkins.clouds.get(0);
-        Image i = cloud.client.getImage(this.bootDiskProjectId, this.bootDiskImageName);
+        Image i = cloud.getClient().getImage(this.bootDiskProjectId, this.bootDiskImageName);
         assertNotNull(i);
     }
 
@@ -241,7 +241,7 @@ public class ComputeEngineCloudWindowsIT {
         // There should be no warning logs
         assertEquals(logs(), false, logs().contains("WARNING"));
 
-        Instance i = cloud.client.getInstance(projectId, ZONE, name);
+        Instance i = cloud.getClient().getInstance(projectId, ZONE, name);
 
         // The created instance should have 3 labels
         assertEquals(logs(),3, i.getLabels().size());
