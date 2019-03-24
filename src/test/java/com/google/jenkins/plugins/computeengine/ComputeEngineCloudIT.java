@@ -373,7 +373,7 @@ public class ComputeEngineCloudIT {
 
             Instance instance = client.getInstance(projectId, ZONE, name);
             assertTrue(logs(), instance.getLabels().containsKey("test-label"));
-            assertEquals(logs(), String.valueOf(cloud.name.hashCode()), instance.getLabels().get(ComputeEngineCloud.CLOUD_ID_LABEL_KEY));
+            assertEquals(logs(), cloud.getInstanceId(), instance.getLabels().get(ComputeEngineCloud.CLOUD_ID_LABEL_KEY));
         } finally {
             try {
                 client.deleteTemplate(cloud.projectId, nameFromSelfLink(TEMPLATE));
