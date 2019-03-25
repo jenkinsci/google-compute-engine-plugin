@@ -47,7 +47,6 @@ public class CleanLostNodesWork extends PeriodicWork {
     /**
      * {@inheritDoc}
      */
-    @SuppressWarnings("unchecked")
     @Override
     public long getRecurrencePeriod() {
         return HOUR;
@@ -56,7 +55,6 @@ public class CleanLostNodesWork extends PeriodicWork {
     /**
      * {@inheritDoc}
      */
-    @SuppressWarnings("unchecked")
     @Override
     protected void doRun() {
         logger.log(Level.FINEST, "Starting clean lost nodes worker");

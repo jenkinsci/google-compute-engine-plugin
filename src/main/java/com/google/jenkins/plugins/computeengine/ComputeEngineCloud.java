@@ -22,6 +22,7 @@ import com.cloudbees.plugins.credentials.common.StandardCredentials;
 import com.cloudbees.plugins.credentials.common.StandardListBoxModel;
 import com.cloudbees.plugins.credentials.domains.DomainRequirement;
 import com.google.api.services.compute.model.Instance;
+import com.google.common.collect.ImmutableMap;
 import com.google.jenkins.plugins.computeengine.client.ClientFactory;
 import com.google.jenkins.plugins.computeengine.client.ComputeClient;
 import com.google.jenkins.plugins.credentials.oauth.GoogleOAuth2Credentials;
@@ -52,13 +53,12 @@ import java.io.IOException;
 import java.io.PrintStream;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.logging.Level;
 import java.util.logging.LogRecord;
 import java.util.logging.Logger;
@@ -77,7 +77,7 @@ public class ComputeEngineCloud extends AbstractCloudImpl {
     public final String credentialsId;
     public final List<InstanceConfiguration> configurations;
     
-    private transient ComputeClient client;
+    private final transient AtomicReference<ComputeClient> clientAtomicReference = new AtomicReference<>();
 
     @DataBoundConstructor
     public ComputeEngineCloud(
@@ -129,8 +129,6 @@ public class ComputeEngineCloud extends AbstractCloudImpl {
     }
 
     protected Object readResolve() {
-        this.client = createClient();
-        
         for (InstanceConfiguration c : configurations) {
             c.cloud = this;
             // Apply a label that associates an instance configuration with
@@ -173,6 +171,16 @@ public class ComputeEngineCloud extends AbstractCloudImpl {
      * @return GCP client object.
      */
     public ComputeClient getClient() {
+        ComputeClient client = clientAtomicReference.get();
+        if (client == null) {
+            synchronized (clientAtomicReference) {
+                client = clientAtomicReference.get();
+                if (client == null) {
+                    client = createClient();
+                    clientAtomicReference.set(client);
+                }
+            }
+        }
         return client;
     }
 
@@ -192,6 +200,7 @@ public class ComputeEngineCloud extends AbstractCloudImpl {
 
     @Override
     public Collection<PlannedNode> provision(Label label, int excessWorkload) {
+        
         List<PlannedNode> r = new ArrayList<PlannedNode>();
         try {
             //TODO: retrieve and iterate a list of InstanceConfiguration that match label
@@ -242,9 +251,8 @@ public class ComputeEngineCloud extends AbstractCloudImpl {
         try {
             // We only care about instances that have a label indicating they
             // belong to this cloud
-            Map<String, String> filterLabel = new HashMap<>();
-            filterLabel.put(CLOUD_ID_LABEL_KEY, getInstanceUniqueId());
-            List<Instance> instances = client.getInstancesWithLabel(projectId, filterLabel);
+            Map<String, String> filterLabel = ImmutableMap.of(CLOUD_ID_LABEL_KEY, getInstanceUniqueId());
+            List<Instance> instances = getClient().getInstancesWithLabel(projectId, filterLabel);
 
             // Don't count instances that are not running (or starting up)
             Iterator it = instances.iterator();
@@ -284,14 +292,14 @@ public class ComputeEngineCloud extends AbstractCloudImpl {
             throw new NoConfigurationException(String.format("Cloud %s does not have any defined instance configurations.", this.getCloudName()));
         }
 
-        for (InstanceConfiguration c : configurations) {
-            if (c.getMode() == Node.Mode.NORMAL) {
-                if (label == null || label.matches(c.getLabelSet())) {
-                    return c;
+        for (InstanceConfiguration configuration : configurations) {
+            if (configuration.getMode() == Node.Mode.NORMAL) {
+                if (label == null || label.matches(configuration.getLabelSet())) {
+                    return configuration;
                 }
-            } else if (c.getMode() == Node.Mode.EXCLUSIVE) {
-                if (label != null && label.matches(c.getLabelSet())) {
-                    return c;
+            } else if (configuration.getMode() == Node.Mode.EXCLUSIVE) {
+                if (label != null && label.matches(configuration.getLabelSet())) {
+                    return configuration;
                 }
             }
         }
