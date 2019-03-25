@@ -1,11 +1,11 @@
 /*
- * Copyright 2018 Google Inc. All Rights Reserved.
+ * Copyright 2018 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ *     https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -21,30 +21,66 @@ import com.cloudbees.plugins.credentials.CredentialsStore;
 import com.cloudbees.plugins.credentials.SystemCredentialsProvider;
 import com.cloudbees.plugins.credentials.domains.Domain;
 import com.cloudbees.plugins.credentials.domains.DomainRequirement;
+import com.google.api.services.compute.model.AccessConfig;
+import com.google.api.services.compute.model.AttachedDisk;
+import com.google.api.services.compute.model.AttachedDiskInitializeParams;
 import com.google.api.services.compute.model.Image;
 import com.google.api.services.compute.model.Instance;
+import com.google.api.services.compute.model.InstanceProperties;
+import com.google.api.services.compute.model.InstanceTemplate;
+import com.google.api.services.compute.model.Metadata;
+import com.google.api.services.compute.model.NetworkInterface;
 import com.google.api.services.compute.model.Operation;
+import com.google.api.services.compute.model.Snapshot;
+import com.google.api.services.compute.model.Tags;
 import com.google.common.collect.ImmutableMap;
 import com.google.jenkins.plugins.computeengine.client.ClientFactory;
 import com.google.jenkins.plugins.computeengine.client.ComputeClient;
 import com.google.jenkins.plugins.credentials.oauth.GoogleRobotPrivateKeyCredentials;
 import com.google.jenkins.plugins.credentials.oauth.ServiceAccountConfig;
+import hudson.model.FreeStyleBuild;
+import hudson.model.FreeStyleProject;
 import hudson.model.Node;
+import hudson.model.Result;
+import hudson.tasks.Builder;
+import hudson.tasks.Shell;
 import hudson.model.labels.LabelAtom;
 import hudson.slaves.NodeProvisioner;
-import org.junit.*;
+import hudson.tasks.Builder;
+import hudson.tasks.Shell;
+import org.awaitility.Awaitility;
+import org.junit.After;
+import org.junit.AfterClass;
+import org.junit.BeforeClass;
+import org.junit.ClassRule;
+import org.junit.Test;
 import org.jvnet.hudson.test.JenkinsRule;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
 import java.util.logging.LogManager;
 import java.util.logging.Logger;
 import java.util.logging.SimpleFormatter;
 import java.util.logging.StreamHandler;
 
+import static com.google.common.collect.ImmutableList.of;
+import static com.google.jenkins.plugins.computeengine.InstanceConfiguration.METADATA_LINUX_STARTUP_SCRIPT_KEY;
+import static com.google.jenkins.plugins.computeengine.InstanceConfiguration.NAT_NAME;
+import static com.google.jenkins.plugins.computeengine.InstanceConfiguration.NAT_TYPE;
+import static com.google.jenkins.plugins.computeengine.client.ComputeClient.nameFromSelfLink;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
 
 public class ComputeEngineCloudIT {
     private static Logger log = Logger.getLogger(ComputeEngineCloudIT.class.getName());
@@ -54,8 +90,8 @@ public class ComputeEngineCloudIT {
             "echo \"deb http://http.debian.net/debian stretch-backports main\" | \\\n" +
             "      sudo tee --append /etc/apt/sources.list > /dev/null\n" +
             "apt-get -y update\n" +
-            "apt-get -y install -t stretch-backports openjdk-9-jdk\n" +
-            "update-java-alternatives -s java-1.9.0-openjdk-amd64\n" +
+            "apt-get -y install -t stretch-backports openjdk-8-jdk\n" +
+            "update-java-alternatives -s java-1.8.0-openjdk-amd64\n" +
             "/etc/init.d/ssh start";
 
     private static final String CLOUD_NAME = "integration";
@@ -63,10 +99,12 @@ public class ComputeEngineCloudIT {
     private static final String REGION = format("projects/%s/regions/us-west1");
     private static final String ZONE = "us-west1-a";
     private static final String ZONE_BASE = format("projects/%s/zones/" + ZONE);
-	private static final String LABEL = "integration";
-	private static final String GOOGLELABEL = "component:integration integration:delete";
+    private static final String LABEL = "integration";
+    private static final String MULTIPLE_LABEL = "integration test";
+    private static final String SNAPSHOT_LABEL = "snapshot";
     private static final String MACHINE_TYPE = ZONE_BASE + "/machineTypes/n1-standard-1";
     private static final String NUM_EXECUTORS = "1";
+    private static final String MULTIPLE_NUM_EXECUTORS = "2";
     private static final boolean PREEMPTIBLE = false;
     //  TODO: Write a test to see if min cpu platform worked by picking a higher version?
     private static final String MIN_CPU_PLATFORM = "Intel Broadwell";
@@ -80,10 +118,15 @@ public class ComputeEngineCloudIT {
     private static final String ACCELERATOR_NAME = "";
     private static final String ACCELERATOR_COUNT = "";
     private static final String RUN_AS_USER = "jenkins";
+    private static final String NULL_TEMPLATE = null;
+    private static final String TEMPLATE = format("projects/%s/global/instanceTemplates/test-template");
 
-    private static Map<String, String> INTEGRATION_LABEL = ImmutableMap.of(
-            "integration", "delete"
-    );
+    private static Map<String, String> INTEGRATION_LABEL;
+
+    static {
+        INTEGRATION_LABEL = new HashMap<>();
+        INTEGRATION_LABEL.put("integration", "delete");
+    }
 
     private static final String NETWORK_NAME = format("projects/%s/global/networks/default");
     private static final String SUBNETWORK_NAME = "default";
@@ -92,6 +135,7 @@ public class ComputeEngineCloudIT {
     private static final String SERVICE_ACCOUNT_EMAIL = "";
     private static final String RETENTION_TIME_MINUTES_STR = "";
     private static final String LAUNCH_TIMEOUT_SECONDS_STR = "";
+    private static final int SNAPSHOT_TEST_TIMEOUT = 120;
 
     private static Logger cloudLogger;
     private static Logger clientLogger;
@@ -190,36 +234,87 @@ public class ComputeEngineCloudIT {
         logOutput.reset();
 
         ComputeEngineCloud cloud = (ComputeEngineCloud) r.jenkins.clouds.get(0);
-        cloud.addConfiguration(validInstanceConfiguration1());
+        InstanceConfiguration ic = validInstanceConfiguration();
+        cloud.addConfiguration(ic);
         // Add a new node
         Collection<NodeProvisioner.PlannedNode> planned = cloud.provision(new LabelAtom(LABEL), 1);
 
         // There should be a planned node
         assertEquals(logs(), 1, planned.size());
 
+        String name = planned.iterator().next().displayName;
+
         // Wait for the node creation to finish
-        String name = planned.iterator().next().future.get().getNodeName();
+        planned.iterator().next().future.get();
 
         // There should be no warning logs
-        assertEquals(logs(), false, logs().contains("WARNING"));
+        assertFalse(logs(), logs().contains("WARNING"));
 
         Instance i = cloud.getClient().getInstance(projectId, ZONE, name);
 
         // The created instance should have 3 labels
-        assertEquals(logs(),3, i.getLabels().size());
+        assertEquals(logs(), 3, i.getLabels().size());
 
         // Instance should have a label with key CONFIG_LABEL_KEY and value equal to the config's name prefix
-        assertEquals(logs(), validInstanceConfiguration1().namePrefix, i.getLabels().get(ComputeEngineCloud.CONFIG_LABEL_KEY));
+        assertEquals(logs(), ic.namePrefix, i.getLabels().get(ComputeEngineCloud.CONFIG_LABEL_KEY));
         assertEquals(logs(), cloud.getInstanceUniqueId(), i.getLabels().get(ComputeEngineCloud.CLOUD_ID_LABEL_KEY));
     }
 
     @Test(timeout = 300000)
+    public void test1WorkerCreatedFor2Executors() throws Exception {
+        logOutput.reset();
+
+        ComputeEngineCloud cloud = (ComputeEngineCloud) r.jenkins.clouds.get(0);
+        cloud.addConfiguration(validInstanceConfigurationWithExecutors(MULTIPLE_NUM_EXECUTORS));
+        // Add a new node
+        Collection<NodeProvisioner.PlannedNode> planned = cloud.provision(new LabelAtom(LABEL), 2);
+
+        // There should be a planned node
+        assertEquals(logs(), 1, planned.size());
+    }
+
+    @Test(timeout = 300000)
+    public void testMultipleLabelsForJob() throws Exception {
+        // For a configuration with multiple labels, test if job label matches one of the configuration's labels
+        logOutput.reset();
+
+        ComputeEngineCloud cloud = (ComputeEngineCloud) r.jenkins.clouds.get(0);
+        InstanceConfiguration ic = validInstanceConfigurationWithLabels(MULTIPLE_LABEL);
+        cloud.addConfiguration(ic);
+        // Add a new node
+        Collection<NodeProvisioner.PlannedNode> planned = cloud.provision(new LabelAtom(LABEL), 1);
+
+        // There should be a planned node
+        assertEquals(logs(), 1, planned.size());
+    }
+
+    @Test(timeout = 300000)
+    public void testMultipleLabelsInConfig() throws Exception {
+        // For a configuration with multiple labels, test if job label matches one of the configuration's labels
+        logOutput.reset();
+
+        ComputeEngineCloud cloud = (ComputeEngineCloud) r.jenkins.clouds.get(0);
+        InstanceConfiguration ic = validInstanceConfigurationWithLabels(MULTIPLE_LABEL);
+        cloud.addConfiguration(ic);
+        // Add a new node
+        Collection<NodeProvisioner.PlannedNode> planned = cloud.provision(new LabelAtom(LABEL), 1);
+
+        String name = planned.iterator().next().displayName;
+
+        planned.iterator().next().future.get();
+
+        String provisionedLabels = r.jenkins.getNode(name).getLabelString();
+        // There should be a planned node TODO
+        assertEquals(logs(), MULTIPLE_LABEL, provisionedLabels);
+    }
+
+    @Test(timeout = 300000, expected = ExecutionException.class)
     public void testWorkerFailed() throws Exception {
         //TODO: each test method should probably have its own handler.
         logOutput.reset();
 
         ComputeEngineCloud cloud = (ComputeEngineCloud) r.jenkins.clouds.get(0);
-        cloud.addConfiguration(invalidInstanceConfiguration1());
+        cloud.addConfiguration(invalidInstanceConfiguration());
 
         // Add a new node
         Collection<NodeProvisioner.PlannedNode> planned = cloud.provision(new LabelAtom(LABEL), 1);
@@ -229,47 +324,196 @@ public class ComputeEngineCloudIT {
 
         // Wait for the node creation to fail
         planned.iterator().next().future.get();
-
-        // There should be warning logs
-        assertEquals(logs(), true, logs().contains("WARNING"));
     }
 
-    private static InstanceConfiguration validInstanceConfiguration1() {
-        InstanceConfiguration ic = new InstanceConfiguration(
-                NAME_PREFIX,
-                REGION,
-                ZONE,
-                MACHINE_TYPE,
-                NUM_EXECUTORS,
-                DEB_JAVA_STARTUP_SCRIPT,
-                PREEMPTIBLE,
-                MIN_CPU_PLATFORM,
-                LABEL,
-                GOOGLELABEL,
-                CONFIG_DESC,
-                BOOT_DISK_TYPE,
-                BOOT_DISK_AUTODELETE,
-                BOOT_DISK_IMAGE_NAME,
-                BOOT_DISK_PROJECT_ID,
-                BOOT_DISK_SIZE_GB_STR,
-                false,
-                "",
-                "",
-                null,
-                0,
-                new AutofilledNetworkConfiguration(NETWORK_NAME, SUBNETWORK_NAME),
-                EXTERNAL_ADDR,
-                false,
-                NETWORK_TAGS,
-                SERVICE_ACCOUNT_EMAIL,
-                RETENTION_TIME_MINUTES_STR,
-                LAUNCH_TIMEOUT_SECONDS_STR,
-                NODE_MODE,
-                new AcceleratorConfiguration(ACCELERATOR_NAME, ACCELERATOR_COUNT),
-                RUN_AS_USER,
-                false,
-                null);
-        return ic;
+    @Test(timeout = 500000)
+    public void testOneShotInstances() throws Exception {
+        ComputeEngineCloud cloud = (ComputeEngineCloud) r.jenkins.clouds.get(0);
+        cloud.addConfiguration(validInstanceConfigurationWithOneShot());
+
+        r.jenkins.getNodesObject().setNodes(Collections.emptyList());
+
+        // Assert that there is 0 nodes
+        assertTrue(r.jenkins.getNodes().isEmpty());
+
+        FreeStyleProject project = r.createFreeStyleProject();
+        Builder step = new Shell("echo works");
+        project.getBuildersList().add(step);
+        project.setAssignedLabel(new LabelAtom(LABEL));
+
+        // Enqueue a build of the project, wait for it to complete, and assert success
+        FreeStyleBuild build = r.buildAndAssertSuccess(project);
+
+        // Assert that the console log contains the output we expect
+        r.assertLogContains("works", build);
+
+        // Assert that there is 0 nodes after job finished
+        Awaitility.await().timeout(10, TimeUnit.SECONDS).until(() -> r.jenkins.getNodes().isEmpty());
+    }
+
+    @Test(timeout = 300000)
+    public void testTemplate() throws Exception {
+        ComputeEngineCloud cloud = (ComputeEngineCloud) r.jenkins.clouds.get(0);
+        cloud.addConfiguration(validInstanceConfigurationWithTemplate(TEMPLATE));
+        try {
+            InstanceTemplate instanceTemplate = createTemplate(ImmutableMap.of("test-label", "label-value"));
+            client.insertTemplate(cloud.projectId, instanceTemplate);
+
+            // Add a new node
+            Collection<NodeProvisioner.PlannedNode> planned = cloud.provision(new LabelAtom(LABEL), 1);
+
+            // There should be a planned node
+            assertEquals(logs(), 1, planned.size());
+
+            String name = planned.iterator().next().displayName;
+
+            // Wait for the node creation to finish
+            planned.iterator().next().future.get();
+
+            // There should be no warning logs
+            assertFalse(logs(), logs().contains("WARNING"));
+
+            Instance instance = client.getInstance(projectId, ZONE, name);
+            assertTrue(logs(), instance.getLabels().containsKey("test-label"));
+            assertEquals(logs(), String.valueOf(cloud.name.hashCode()), instance.getLabels().get(ComputeEngineCloud.CLOUD_ID_LABEL_KEY));
+        } finally {
+            try {
+                client.deleteTemplate(cloud.projectId, nameFromSelfLink(TEMPLATE));
+            } catch (Exception e) {
+                // noop
+            }
+        }
+    }
+
+    @Test(timeout = 300000)
+    public void testTemplateNoGoogleLabels() throws Exception {
+        ComputeEngineCloud cloud = (ComputeEngineCloud) r.jenkins.clouds.get(0);
+        cloud.addConfiguration(validInstanceConfigurationWithTemplate(TEMPLATE));
+        try {
+            InstanceTemplate instanceTemplate = createTemplate(null);
+            client.insertTemplate(cloud.projectId, instanceTemplate);
+
+            // Add a new node
+            Collection<NodeProvisioner.PlannedNode> planned = cloud.provision(new LabelAtom(LABEL), 1);
+
+            // There should be a successful planned node even without google labels
+            assertEquals(logs(), 1, planned.size());
+        } finally {
+            try {
+                client.deleteTemplate(cloud.projectId, nameFromSelfLink(TEMPLATE));
+            } catch (Exception e) {
+            }
+        }
+    }
+
+    // Tests that no snapshot is created when we only have successful builds for given node
+    @Test(timeout = 300000)
+    public void testNoSnapshotCreated() throws Exception {
+        logOutput.reset();
+
+        ComputeEngineCloud cloud = (ComputeEngineCloud) r.jenkins.clouds.get(0);
+        assertTrue(cloud.configurations.size() == 0);
+        cloud.addConfiguration(snapshotInstanceConfiguration());
+
+        FreeStyleProject project = r.createFreeStyleProject();
+        Builder step = new Shell("echo works");
+        project.getBuildersList().add(step);
+        project.setAssignedLabel(new LabelAtom(SNAPSHOT_LABEL));
+
+        FreeStyleBuild build = r.buildAndAssertSuccess(project);
+        Node worker = build.getBuiltOn();
+
+        // Need time for one-shot instance to terminate and create the snapshot
+        Awaitility.await().timeout(SNAPSHOT_TEST_TIMEOUT, TimeUnit.SECONDS).until(() -> r.jenkins.getNode(worker.getNodeName()) == null);
+
+        assertNull(logs(), client.getSnapshot(projectId, worker.getNodeName()));
+    }
+
+    // Tests snapshot is created when we have failure builds for given node
+    @Test(timeout = 300000)
+    public void testSnapshotCreated() throws Exception {
+        logOutput.reset();
+
+        ComputeEngineCloud cloud = (ComputeEngineCloud) r.jenkins.clouds.get(0);
+        cloud.addConfiguration(snapshotInstanceConfiguration());
+
+        FreeStyleProject project = r.createFreeStyleProject();
+        Builder step = new Shell("exit 1");
+        project.getBuildersList().add(step);
+        project.setAssignedLabel(new LabelAtom(SNAPSHOT_LABEL));
+
+        FreeStyleBuild build = r.assertBuildStatus(Result.FAILURE, project.scheduleBuild2(0));
+        Node worker = build.getBuiltOn();
+
+        try {
+            // Need time for one-shot instance to terminate and create the snapshot
+            Awaitility.await().timeout(SNAPSHOT_TEST_TIMEOUT, TimeUnit.SECONDS).until(() -> r.jenkins.getNode(worker.getNodeName()) == null);
+
+            Snapshot createdSnapshot = client.getSnapshot(projectId, worker.getNodeName());
+            assertNotNull(logs(), createdSnapshot);
+            assertEquals(logs(), createdSnapshot.getStatus(), "READY");
+        } finally {
+            try {
+                //cleanup
+                client.deleteSnapshot(projectId, worker.getNodeName());
+            } catch (Exception e) {
+            }
+
+        }
+    }
+
+    private static InstanceTemplate createTemplate(Map<String, String> googleLabels) {
+        InstanceTemplate instanceTemplate = new InstanceTemplate();
+        instanceTemplate.setName(nameFromSelfLink(TEMPLATE));
+        InstanceProperties instanceProperties = new InstanceProperties();
+        instanceProperties.setMachineType(nameFromSelfLink(MACHINE_TYPE));
+        instanceProperties.setLabels(googleLabels);
+        AttachedDisk boot = new AttachedDisk();
+        boot.setBoot(true);
+        boot.setAutoDelete(BOOT_DISK_AUTODELETE);
+        boot.setInitializeParams(new AttachedDiskInitializeParams()
+                .setDiskSizeGb(Long.parseLong(BOOT_DISK_SIZE_GB_STR))
+                .setDiskType(nameFromSelfLink(BOOT_DISK_TYPE))
+                .setSourceImage(BOOT_DISK_IMAGE_NAME)
+        );
+        instanceProperties.setDisks(of(boot));
+        instanceProperties.setTags(new Tags().setItems(of(NETWORK_TAGS)));
+        instanceProperties.setMetadata(new Metadata().setItems(of(new Metadata.Items()
+                .setKey(METADATA_LINUX_STARTUP_SCRIPT_KEY).setValue(DEB_JAVA_STARTUP_SCRIPT))));
+        instanceProperties.setNetworkInterfaces(of(new NetworkInterface()
+                .setName(NETWORK_NAME)
+                .setAccessConfigs(of(new AccessConfig()
+                        .setType(NAT_TYPE)
+                        .setName(NAT_NAME)
+                ))
+        ));
+        instanceTemplate.setProperties(instanceProperties);
+        return instanceTemplate;
+    }
+
+    private static InstanceConfiguration snapshotInstanceConfiguration() {
+        // Snapshot label needed since the freestyle project could use a previously provisioned node instead of this configuration's.
+        return instanceConfiguration(DEB_JAVA_STARTUP_SCRIPT, NUM_EXECUTORS, SNAPSHOT_LABEL, true, true, NULL_TEMPLATE);
+    }
+
+    private static InstanceConfiguration validInstanceConfiguration() {
+        return instanceConfiguration(DEB_JAVA_STARTUP_SCRIPT, NUM_EXECUTORS, LABEL, false, false, NULL_TEMPLATE);
+    }
+
+    private static InstanceConfiguration validInstanceConfigurationWithLabels(String labels) {
+        return instanceConfiguration(DEB_JAVA_STARTUP_SCRIPT, NUM_EXECUTORS, labels, false, false, NULL_TEMPLATE);
+    }
+
+    private static InstanceConfiguration validInstanceConfigurationWithExecutors(String numExecutors) {
+        return instanceConfiguration(DEB_JAVA_STARTUP_SCRIPT, numExecutors, LABEL, false, false, NULL_TEMPLATE);
+    }
+
+    private static InstanceConfiguration validInstanceConfigurationWithTemplate(String template) {
+        return instanceConfiguration(DEB_JAVA_STARTUP_SCRIPT, NUM_EXECUTORS, LABEL, false,false, template);
+    }
+
+    private static InstanceConfiguration validInstanceConfigurationWithOneShot() {
+        return instanceConfiguration(DEB_JAVA_STARTUP_SCRIPT, NUM_EXECUTORS, LABEL, false, true, NULL_TEMPLATE);
     }
 
     /**
@@ -277,18 +521,22 @@ public class ComputeEngineCloudIT {
      *
      * @return
      */
-    private static InstanceConfiguration invalidInstanceConfiguration1() {
+    private static InstanceConfiguration invalidInstanceConfiguration() {
+        return instanceConfiguration("", NUM_EXECUTORS, LABEL, false, false, NULL_TEMPLATE);
+    }
+
+    private static InstanceConfiguration instanceConfiguration(String startupScript, String numExecutors, String labels,
+                                                               boolean createSnapshot, boolean oneShot, String template) {
         InstanceConfiguration ic = new InstanceConfiguration(
                 NAME_PREFIX,
                 REGION,
                 ZONE,
                 MACHINE_TYPE,
-                NUM_EXECUTORS,
-                "",
+                numExecutors,
+                startupScript,
                 PREEMPTIBLE,
                 MIN_CPU_PLATFORM,
-                LABEL,
-                GOOGLELABEL,
+                labels,
                 CONFIG_DESC,
                 BOOT_DISK_TYPE,
                 BOOT_DISK_AUTODELETE,
@@ -298,8 +546,8 @@ public class ComputeEngineCloudIT {
                 false,
                 "",
                 "",
+                createSnapshot,
                 null,
-                0,
                 new AutofilledNetworkConfiguration(NETWORK_NAME, SUBNETWORK_NAME),
                 EXTERNAL_ADDR,
                 false,
@@ -310,15 +558,17 @@ public class ComputeEngineCloudIT {
                 NODE_MODE,
                 new AcceleratorConfiguration(ACCELERATOR_NAME, ACCELERATOR_COUNT),
                 RUN_AS_USER,
-                false,
-                null);
+                oneShot,
+                template
+        );
+        ic.appendLabels(INTEGRATION_LABEL);
         return ic;
     }
 
     private static void deleteIntegrationInstances(boolean waitForCompletion) throws IOException {
         List<Instance> instances = client.getInstancesWithLabel(projectId, INTEGRATION_LABEL);
-        for(Instance i : instances) {
-           safeDelete(i.getName(), waitForCompletion);
+        for (Instance i : instances) {
+            safeDelete(i.getName(), waitForCompletion);
         }
     }
 
