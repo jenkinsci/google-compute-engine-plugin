@@ -46,8 +46,6 @@ import hudson.tasks.Builder;
 import hudson.tasks.Shell;
 import hudson.model.labels.LabelAtom;
 import hudson.slaves.NodeProvisioner;
-import hudson.tasks.Builder;
-import hudson.tasks.Shell;
 import org.awaitility.Awaitility;
 import org.junit.After;
 import org.junit.AfterClass;
@@ -212,7 +210,7 @@ public class ComputeEngineCloudIT {
     @After
     public void after() {
         ComputeEngineCloud cloud = (ComputeEngineCloud) r.jenkins.clouds.get(0);
-        cloud.configurations.clear();
+        cloud.setConfigurations(null);
     }
 
     @Test
@@ -412,7 +410,7 @@ public class ComputeEngineCloudIT {
         logOutput.reset();
 
         ComputeEngineCloud cloud = (ComputeEngineCloud) r.jenkins.clouds.get(0);
-        assertTrue(cloud.configurations.size() == 0);
+        assertTrue(cloud.getConfigurations().isEmpty());
         cloud.addConfiguration(snapshotInstanceConfiguration());
 
         FreeStyleProject project = r.createFreeStyleProject();

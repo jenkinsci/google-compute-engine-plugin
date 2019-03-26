@@ -240,6 +240,7 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
         this.runAsUser = runAsUser;
 
         readResolve();
+        System.out.println("Instance constructor called");
     }
 
     public static Integer intOrDefault(String toParse, Integer defaultTo) {

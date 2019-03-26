@@ -1,0 +1,43 @@
+jenkins:
+  clouds:
+    - computeEngine:
+        cloudName: jenkins-build
+        projectId: gce-jenkins
+        instanceCapStr: 1
+        credentialsId: gce-jenkins
+        configurations:
+          - namePrefix:         jenkins-agent-image
+            description:        Jenkins agent
+            launchTimeoutSecondsStr: 6
+            retentionTimeMinutesStr: 300
+            mode:               EXCLUSIVE
+            labelString:        jenkins-agent
+            numExecutorsStr:    1
+            runAsUser:          jenkins
+            remoteFs:           '' # tried not setting this, field added when 'save' clicked in UI
+            windows:            false
+            windowsPasswordCredentialsId: ''    # tried not setting, added when saved in UI
+            windowsPrivateKeyCredentialsId: ''  # tried not setting, added when saved in UI
+            oneShot:            true
+            createSnapshot:     false
+            region:             "https://www.googleapis.com/compute/v1/projects/gce-jenkins/regions/europe-west1"
+            zone:               "https://www.googleapis.com/compute/v1/projects/gce-jenkins/zones/europe-west1-a"
+            template:           '' # tried not setting, added when 'saved' in UI
+            machineType:        "https://www.googleapis.com/compute/v1/projects/gce-jenkins/zones/europe-west1-a/machineTypes/n1-standard-2"
+            preemptible:        false
+            minCpuPlatform:     '' # tried not setting, added when 'saved' in UI
+            startupScript:      '' # tried not setting, added when 'saved' in UI
+            networkConfiguration:
+              sharedVpc:
+                projectId:      gce-jenkins-cloud-123456
+                region:         europe-west1
+                subnetworkShortName: gce-jenkins-cloud
+            networkTags:        jenkins-agent
+            externalAddress:    true
+            useInternalAddress: false
+            bootDiskSourceImageProject: gce-jenkins
+            bootDiskSourceImageName: "https://www.googleapis.com/compute/v1/projects/gce-jenkins/global/images/gce-jenkins-build-image"
+            bootDiskType:       "https://www.googleapis.com/compute/v1/projects/gce-jenkins/zones/europe-west1-a/diskTypes/pd-standard"
+            bootDiskSizeGbStr:  50
+            bootDiskAutoDelete: true
+            serviceAccountEmail: 'jenkins-test@gce-jenkins-ops.iam.gserviceaccount.com'

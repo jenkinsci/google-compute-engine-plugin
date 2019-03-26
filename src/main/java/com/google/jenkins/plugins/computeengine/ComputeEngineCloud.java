@@ -44,6 +44,7 @@ import hudson.util.StreamTaskListener;
 import jenkins.model.Jenkins;
 import org.kohsuke.stapler.AncestorInPath;
 import org.kohsuke.stapler.DataBoundConstructor;
+import org.kohsuke.stapler.DataBoundSetter;
 import org.kohsuke.stapler.HttpResponse;
 import org.kohsuke.stapler.QueryParameter;
 
@@ -70,34 +71,41 @@ public class ComputeEngineCloud extends AbstractCloudImpl {
     public static final String CLOUD_PREFIX = "gce-";
     public static final String CONFIG_LABEL_KEY = "jenkins_config_name";
     public static final String CLOUD_ID_LABEL_KEY = "jenkins_cloud_id";
+
     private static final Logger LOGGER = Logger.getLogger(ComputeEngineCloud.class.getName());
     private static final SimpleFormatter sf = new SimpleFormatter();
 
     public final String projectId;
     public final String credentialsId;
-    public final List<InstanceConfiguration> configurations;
-    
-    private final transient AtomicReference<ComputeClient> clientAtomicReference = new AtomicReference<>();
+
+    private List<InstanceConfiguration> configurations;
+
+    private transient volatile ComputeClient client;
 
     @DataBoundConstructor
     public ComputeEngineCloud(
             String cloudName,
             String projectId,
             String credentialsId,
-            String instanceCapStr,
-            List<InstanceConfiguration> configurations) {
+            String instanceCapStr) {
         super(createCloudId(cloudName), instanceCapStr);
-
-        if (configurations == null) {
-            this.configurations = new ArrayList<>();
-        } else {
-            this.configurations = configurations;
-        }
+        System.out.println("Data boud constructolr called");
 
         this.credentialsId = credentialsId;
         this.projectId = projectId;
+        setConfigurations(null);
+    }
 
-        readResolve();
+    @Deprecated
+    public ComputeEngineCloud(
+            String cloudName,
+            String projectId,
+            String credentialsId,
+            String instanceCapStr,
+            List<InstanceConfiguration> configurations) {
+        this(cloudName, projectId, credentialsId, instanceCapStr);
+
+        setConfigurations(configurations);
     }
 
     private static String createCloudId(String name) {
@@ -129,14 +137,18 @@ public class ComputeEngineCloud extends AbstractCloudImpl {
     }
 
     protected Object readResolve() {
-        for (InstanceConfiguration c : configurations) {
-            c.cloud = this;
-            // Apply a label that associates an instance configuration with
-            // this cloud provider
-            c.appendLabel(CLOUD_ID_LABEL_KEY, getInstanceUniqueId());
+        System.out.println("Read resolved");
+        if (configurations != null) {
+            for (InstanceConfiguration configuration : configurations) {
+                configuration.cloud = this;
+                configuration.readResolve();
+                // Apply a label that associates an instance configuration with
+                // this cloud provider
+                configuration.appendLabel(CLOUD_ID_LABEL_KEY, getInstanceUniqueId());
 
-            // Apply a label that identifies the name of this instance configuration
-            c.appendLabel(CONFIG_LABEL_KEY, c.namePrefix);
+                // Apply a label that identifies the name of this instance configuration
+                configuration.appendLabel(CONFIG_LABEL_KEY, configuration.namePrefix);
+            }
         }
         return this;
     }
@@ -144,7 +156,7 @@ public class ComputeEngineCloud extends AbstractCloudImpl {
 
     /**
      * Returns unique ID of that cloud instance.
-     *
+     * <p>
      * This ID allows us to find machines from our cloud in GCP.
      * Current implementation is bit naive and generate ID based on name hashCode.
      *
@@ -157,10 +169,11 @@ public class ComputeEngineCloud extends AbstractCloudImpl {
 
     private ComputeClient createClient() {
         try {
-            ClientFactory clientFactory = new ClientFactory(Jenkins.getInstance(), new ArrayList<>(),
+            ClientFactory clientFactory = new ClientFactory(Jenkins.get(), new ArrayList<>(),
                     credentialsId);
             return clientFactory.compute();
         } catch (IOException e) {
+            LOGGER.log(Level.WARNING, "Exception why creating GCE client", e);
             return null;
         }
     }
@@ -171,13 +184,10 @@ public class ComputeEngineCloud extends AbstractCloudImpl {
      * @return GCP client object.
      */
     public ComputeClient getClient() {
-        ComputeClient client = clientAtomicReference.get();
         if (client == null) {
-            synchronized (clientAtomicReference) {
-                client = clientAtomicReference.get();
+            synchronized (this) {
                 if (client == null) {
                     client = createClient();
-                    clientAtomicReference.set(client);
                 }
             }
         }
@@ -193,14 +203,30 @@ public class ComputeEngineCloud extends AbstractCloudImpl {
         return projectId;
     }
 
-    public void addConfiguration(InstanceConfiguration config) {
-        configurations.add(config);
+    public List<InstanceConfiguration> getConfigurations() {
+        return configurations;
+    }
+
+    @DataBoundSetter
+    public void setConfigurations(List<InstanceConfiguration> configurations) {
+        System.out.println("Data boud setter called");
+        if (this.configurations == null) {
+            this.configurations = new ArrayList<>();
+        }
+        this.configurations = configurations;
+        readResolve();
+    }
+
+    public void addConfiguration(InstanceConfiguration configuration) {
+        if (configurations == null) {
+            this.configurations = new ArrayList<>();
+        }        
+        configurations.add(configuration);
         readResolve();
     }
 
     @Override
     public Collection<PlannedNode> provision(Label label, int excessWorkload) {
-        
         List<PlannedNode> r = new ArrayList<PlannedNode>();
         try {
             //TODO: retrieve and iterate a list of InstanceConfiguration that match label
@@ -258,10 +284,9 @@ public class ComputeEngineCloud extends AbstractCloudImpl {
             Iterator it = instances.iterator();
             while (it.hasNext()) {
                 Instance o = (Instance) it.next();
-                if (! (o.getStatus().equals("PROVISIONING") ||
-                       o.getStatus().equals("STAGING") ||
-                       o.getStatus().equals("RUNNING")))
-                        {
+                if (!(o.getStatus().equals("PROVISIONING") ||
+                        o.getStatus().equals("STAGING") ||
+                        o.getStatus().equals("RUNNING"))) {
                     it.remove();
                 }
             }

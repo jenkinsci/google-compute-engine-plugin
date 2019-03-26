@@ -201,7 +201,7 @@ public class ComputeEngineCloudWindowsIT {
     @After
     public void after() {
         ComputeEngineCloud cloud = (ComputeEngineCloud) r.jenkins.clouds.get(0);
-        cloud.configurations.clear();
+        cloud.setConfigurations(null);
     }
 
     @Test
