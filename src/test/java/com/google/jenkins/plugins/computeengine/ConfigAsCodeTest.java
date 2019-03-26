@@ -9,8 +9,11 @@ import com.google.jenkins.plugins.credentials.oauth.ServiceAccountConfig;
 import hudson.slaves.Cloud;
 import io.jenkins.plugins.casc.misc.ConfiguredWithCode;
 import io.jenkins.plugins.casc.misc.JenkinsConfiguredWithCodeRule;
+import org.apache.commons.io.IOUtils;
 import org.junit.Rule;
 import org.junit.Test;
+
+import java.io.InputStream;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
@@ -31,10 +34,8 @@ public class ConfigAsCodeTest {
     @Test
     @ConfiguredWithCode("configuration-as-code.yml")
     public void shouldCreateGCEClientFromCode() throws Exception {
-        String serviceAccountKeyJson = System.getenv("GOOGLE_CREDENTIALS");
-        assertNotNull("GOOGLE_CREDENTIALS env var must be set", serviceAccountKeyJson);
-
-        ServiceAccountConfig sac = new StringJsonServiceAccountConfig(serviceAccountKeyJson);
+        String testKey = IOUtils.toString(this.getClass().getResourceAsStream("gce-test-key.json"));
+        ServiceAccountConfig sac = new StringJsonServiceAccountConfig(testKey);
         Credentials credentials = new GoogleRobotPrivateKeyCredentials("gce-jenkins", sac, null);
 
         CredentialsStore store = new SystemCredentialsProvider.ProviderImpl().getStore(r.jenkins);
