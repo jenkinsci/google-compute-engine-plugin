@@ -16,6 +16,7 @@
 
 package com.google.jenkins.plugins.computeengine;
 
+import com.gargoylesoftware.htmlunit.html.HtmlPage;
 import com.google.api.services.compute.model.AcceleratorType;
 import com.google.api.services.compute.model.DiskType;
 import com.google.api.services.compute.model.Image;
@@ -28,6 +29,7 @@ import com.google.api.services.compute.model.Zone;
 import com.google.jenkins.plugins.computeengine.client.ComputeClient;
 import hudson.model.Node;
 import hudson.util.FormValidation;
+import jenkins.model.JenkinsLocationConfiguration;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -40,6 +42,7 @@ import org.mockito.junit.MockitoJUnitRunner;
 import java.util.ArrayList;
 import java.util.List;
 
+import static junit.framework.TestCase.assertNull;
 import static org.junit.Assert.assertEquals;
 import static org.mockito.ArgumentMatchers.anyString;
 
@@ -147,23 +150,24 @@ public class InstanceConfigurationTest {
         assert (zones.get(1).getName().equals(ZONE));
         assert (zones.get(1).getSelfLink().equals(ZONE));
     }
-
+    
     @Test
     public void testConfigRoundtrip() throws Exception {
-
         InstanceConfiguration want = instanceConfiguration();
 
         InstanceConfiguration.DescriptorImpl.setComputeClient(computeClient);
         AcceleratorConfiguration.DescriptorImpl.setComputeClient(computeClient);
         NetworkConfiguration.NetworkConfigurationDescriptor.setComputeClient(computeClient);
 
-        List<InstanceConfiguration> configs = new ArrayList<InstanceConfiguration>();
+        List<InstanceConfiguration> configs = new ArrayList<>();
         configs.add(want);
 
-        ComputeEngineCloud gcp = new ComputeEngineCloud("test", PROJECT_ID, "testCredentialsId", "1", configs);
+        ComputeEngineCloud gcp = new ComputeEngineCloud("test", PROJECT_ID, "testCredentialsId", "1");
+        gcp.setConfigurations(configs);
         r.jenkins.clouds.add(gcp);
 
-        r.submit(r.createWebClient().goTo("configure").getFormByName("config"));
+        final HtmlPage configure = r.createWebClient().goTo("configure");
+        r.submit(configure.getFormByName("config"));
         InstanceConfiguration got = ((ComputeEngineCloud) r.jenkins.clouds.iterator().next()).getInstanceConfig(CONFIG_DESC);
         r.assertEqualBeans(want, got, "namePrefix,region,zone,machineType,preemptible,windows,minCpuPlatform,startupScript,bootDiskType,bootDiskSourceImageName,bootDiskSourceImageProject,bootDiskSizeGb,acceleratorConfiguration,networkConfiguration,externalAddress,networkTags,serviceAccountEmail");
     }
