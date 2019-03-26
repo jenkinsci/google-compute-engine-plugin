@@ -31,20 +31,17 @@ public class ConfigAsCodeTest {
     @Test
     @ConfiguredWithCode("configuration-as-code.yml")
     public void shouldCreateGCEClientFromCode() throws Exception {
-        String projectId = System.getenv("GOOGLE_PROJECT_ID");
-        assertNotNull("GOOGLE_PROJECT_ID env var must be set", projectId);
-
         String serviceAccountKeyJson = System.getenv("GOOGLE_CREDENTIALS");
         assertNotNull("GOOGLE_CREDENTIALS env var must be set", serviceAccountKeyJson);
 
         ServiceAccountConfig sac = new StringJsonServiceAccountConfig(serviceAccountKeyJson);
-        Credentials c = (Credentials) new GoogleRobotPrivateKeyCredentials(projectId, sac, null);
+        Credentials credentials = new GoogleRobotPrivateKeyCredentials("gce-jenkins", sac, null);
 
         CredentialsStore store = new SystemCredentialsProvider.ProviderImpl().getStore(r.jenkins);
-        store.addCredentials(Domain.global(), c);
+        store.addCredentials(Domain.global(), credentials);
         
         ComputeEngineCloud cloud = (ComputeEngineCloud) r.jenkins.clouds.getByName("gce-jenkins-build");
         assertNotNull("Cloud by name not found", cloud);
-        
+        assertNotNull("GCE client not created", cloud.getClient());
     }
 }
