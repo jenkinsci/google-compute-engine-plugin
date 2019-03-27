@@ -98,11 +98,9 @@ public class ComputeEngineCloudIT {
   private static final String ZONE = "us-west1-a";
   private static final String ZONE_BASE = format("projects/%s/zones/" + ZONE);
   private static final String LABEL = "integration";
-  private static final String MULTIPLE_LABEL = "integration test";
   private static final String SNAPSHOT_LABEL = "snapshot";
   private static final String MACHINE_TYPE = ZONE_BASE + "/machineTypes/n1-standard-1";
   private static final String NUM_EXECUTORS = "1";
-  private static final String MULTIPLE_NUM_EXECUTORS = "2";
   private static final boolean PREEMPTIBLE = false;
   //  TODO: Write a test to see if min cpu platform worked by picking a higher version?
   private static final String MIN_CPU_PLATFORM = "Intel Broadwell";
@@ -231,91 +229,6 @@ public class ComputeEngineCloudIT {
     ComputeEngineCloud cloud = (ComputeEngineCloud) r.jenkins.clouds.get(0);
     Image i = cloud.client.getImage("debian-cloud", "debian-9-stretch-v20180820");
     assertNotNull(i);
-  }
-
-  @Test(timeout = 300000)
-  public void testWorkerCreated() throws Exception {
-    // TODO: each test method should probably have its own handler.
-    logOutput.reset();
-
-    ComputeEngineCloud cloud = (ComputeEngineCloud) r.jenkins.clouds.get(0);
-    InstanceConfiguration ic = validInstanceConfiguration();
-    cloud.addConfiguration(ic);
-    // Add a new node
-    Collection<NodeProvisioner.PlannedNode> planned = cloud.provision(new LabelAtom(LABEL), 1);
-
-    // There should be a planned node
-    assertEquals(logs(), 1, planned.size());
-
-    String name = planned.iterator().next().displayName;
-
-    // Wait for the node creation to finish
-    planned.iterator().next().future.get();
-
-    // There should be no warning logs
-    assertFalse(logs(), logs().contains("WARNING"));
-
-    Instance i = cloud.client.getInstance(projectId, ZONE, name);
-
-    // The created instance should have 3 labels
-    assertEquals(logs(), 3, i.getLabels().size());
-
-    // Instance should have a label with key CONFIG_LABEL_KEY and value equal to the config's name
-    // prefix
-    assertEquals(
-        logs(), ic.getNamePrefix(), i.getLabels().get(ComputeEngineCloud.CONFIG_LABEL_KEY));
-    assertEquals(
-        logs(), cloud.getInstanceId(), i.getLabels().get(ComputeEngineCloud.CLOUD_ID_LABEL_KEY));
-  }
-
-  @Test(timeout = 300000)
-  public void test1WorkerCreatedFor2Executors() throws Exception {
-    logOutput.reset();
-
-    ComputeEngineCloud cloud = (ComputeEngineCloud) r.jenkins.clouds.get(0);
-    cloud.addConfiguration(validInstanceConfigurationWithExecutors(MULTIPLE_NUM_EXECUTORS));
-    // Add a new node
-    Collection<NodeProvisioner.PlannedNode> planned = cloud.provision(new LabelAtom(LABEL), 2);
-
-    // There should be a planned node
-    assertEquals(logs(), 1, planned.size());
-  }
-
-  @Test(timeout = 300000)
-  public void testMultipleLabelsForJob() throws Exception {
-    // For a configuration with multiple labels, test if job label matches one of the
-    // configuration's labels
-    logOutput.reset();
-
-    ComputeEngineCloud cloud = (ComputeEngineCloud) r.jenkins.clouds.get(0);
-    InstanceConfiguration ic = validInstanceConfigurationWithLabels(MULTIPLE_LABEL);
-    cloud.addConfiguration(ic);
-    // Add a new node
-    Collection<NodeProvisioner.PlannedNode> planned = cloud.provision(new LabelAtom(LABEL), 1);
-
-    // There should be a planned node
-    assertEquals(logs(), 1, planned.size());
-  }
-
-  @Test(timeout = 300000)
-  public void testMultipleLabelsInConfig() throws Exception {
-    // For a configuration with multiple labels, test if job label matches one of the
-    // configuration's labels
-    logOutput.reset();
-
-    ComputeEngineCloud cloud = (ComputeEngineCloud) r.jenkins.clouds.get(0);
-    InstanceConfiguration ic = validInstanceConfigurationWithLabels(MULTIPLE_LABEL);
-    cloud.addConfiguration(ic);
-    // Add a new node
-    Collection<NodeProvisioner.PlannedNode> planned = cloud.provision(new LabelAtom(LABEL), 1);
-
-    String name = planned.iterator().next().displayName;
-
-    planned.iterator().next().future.get();
-
-    String provisionedLabels = r.jenkins.getNode(name).getLabelString();
-    // There should be a planned node TODO
-    assertEquals(logs(), MULTIPLE_LABEL, provisionedLabels);
   }
 
   @Test(timeout = 300000, expected = ExecutionException.class)
@@ -516,22 +429,6 @@ public class ComputeEngineCloudIT {
     // instead of this configuration's.
     return instanceConfiguration(
         DEB_JAVA_STARTUP_SCRIPT, NUM_EXECUTORS, SNAPSHOT_LABEL, true, true, NULL_TEMPLATE);
-  }
-
-  private static InstanceConfiguration validInstanceConfiguration() {
-    return instanceConfiguration(
-        DEB_JAVA_STARTUP_SCRIPT, NUM_EXECUTORS, LABEL, false, false, NULL_TEMPLATE);
-  }
-
-  private static InstanceConfiguration validInstanceConfigurationWithLabels(String labels) {
-    return instanceConfiguration(
-        DEB_JAVA_STARTUP_SCRIPT, NUM_EXECUTORS, labels, false, false, NULL_TEMPLATE);
-  }
-
-  private static InstanceConfiguration validInstanceConfigurationWithExecutors(
-      String numExecutors) {
-    return instanceConfiguration(
-        DEB_JAVA_STARTUP_SCRIPT, numExecutors, LABEL, false, false, NULL_TEMPLATE);
   }
 
   private static InstanceConfiguration validInstanceConfigurationWithTemplate(String template) {
