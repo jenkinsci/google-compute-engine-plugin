@@ -45,28 +45,21 @@ public class ComputeEngineCloudWorkerCreatedIT {
   private static ByteArrayOutputStream logOutput = new ByteArrayOutputStream();
   private static StreamHandler sh;
   private static ComputeClient client;
+  private static ComputeEngineCloud cloud;
   private static Map<String, String> label =
       ITUtil.getLabel(ComputeEngineCloudWorkerCreatedIT.class);
+  private static InstanceConfiguration ic;
+  private static Instance i;
 
   @BeforeClass
   public static void init() throws Exception {
     log.info("init");
     ITUtil.initCredentials(r);
-    ITUtil.initCloud(r);
+    cloud = ITUtil.initCloud(r);
     sh = ITUtil.initLogging(logOutput);
     client = ITUtil.initClient(r, label, log);
-  }
 
-  @AfterClass
-  public static void teardown() throws IOException {
-    ITUtil.teardown(sh, logOutput, client, label, log);
-  }
-
-  @Test(timeout = 300000)
-  public void testWorkerCreated() throws Exception {
-    ComputeEngineCloud cloud = (ComputeEngineCloud) r.jenkins.clouds.get(0);
-    InstanceConfiguration ic =
-        ITUtil.instanceConfiguration(
+    ic = ITUtil.instanceConfiguration(
             ITUtil.DEB_JAVA_STARTUP_SCRIPT,
             ITUtil.NUM_EXECUTORS,
             ITUtil.LABEL,
@@ -86,14 +79,28 @@ public class ComputeEngineCloudWorkerCreatedIT {
     // Wait for the node creation to finish
     planned.iterator().next().future.get();
 
+    i = cloud.getClient().getInstance(ITUtil.PROJECT_ID, ITUtil.ZONE, name);
+  }
+
+  @AfterClass
+  public static void teardown() throws IOException {
+    ITUtil.teardown(sh, logOutput, client, label, log);
+  }
+
+  @Test
+  public void testWorkerCreatedNoWarningLogs() {
     // There should be no warning logs
     assertFalse(ITUtil.logs(sh, logOutput), ITUtil.logs(sh, logOutput).contains("WARNING"));
+  }
 
-    Instance i = cloud.getClient().getInstance(ITUtil.PROJECT_ID, ITUtil.ZONE, name);
-
+  @Test
+  public void testWorkerCreatedNumberOfLabels(){
     // The created instance should have 3 labels
     assertEquals(ITUtil.logs(sh, logOutput), 3, i.getLabels().size());
+  }
 
+  @Test
+  public void testWorkerCreatedLabelKeyAndValue() {
     // Instance should have a label with key CONFIG_LABEL_KEY and value equal to the config's name
     // prefix
     assertEquals(

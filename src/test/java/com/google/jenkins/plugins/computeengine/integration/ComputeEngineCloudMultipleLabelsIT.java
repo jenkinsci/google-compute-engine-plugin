@@ -69,6 +69,7 @@ public class ComputeEngineCloudMultipleLabelsIT {
     cloud.addConfiguration(ic);
     // Add a new node
     planned = cloud.provision(new LabelAtom(ITUtil.LABEL), 1);
+    planned.iterator().next().future.get();
   }
 
   @AfterClass
@@ -91,7 +92,6 @@ public class ComputeEngineCloudMultipleLabelsIT {
     // configuration's labels
 
     String name = planned.iterator().next().displayName;
-    planned.iterator().next().future.get();
     String provisionedLabels = r.jenkins.getNode(name).getLabelString();
     // There should be the proper labels provisioned
     assertEquals(ITUtil.logs(sh, logOutput), MULTIPLE_LABEL, provisionedLabels);
