@@ -43,6 +43,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.logging.LogManager;
 import java.util.logging.Logger;
+import java.util.logging.SimpleFormatter;
 import java.util.logging.StreamHandler;
 import org.jvnet.hudson.test.JenkinsRule;
 
@@ -96,47 +97,49 @@ class ITUtil {
     return String.format(s, PROJECT_ID);
   }
 
-  static ComputeClient init(JenkinsRule r, StreamHandler sh, Map<String, String> label, Logger log)
-      throws Exception {
-    log.info("init");
-
+  static Credentials initCredentials(JenkinsRule r) throws Exception {
     assertNotNull("GOOGLE_CREDENTIALS env var must be set", CREDENTIALS);
-
     ServiceAccountConfig sac = new StringJsonServiceAccountConfig(CREDENTIALS);
     Credentials c = new GoogleRobotPrivateKeyCredentials(PROJECT_ID, sac, null);
 
     CredentialsStore store = new SystemCredentialsProvider.ProviderImpl().getStore(r.jenkins);
     assertNotNull("Credentials store can not be null", store);
     store.addCredentials(Domain.global(), c);
+    return c;
+  }
 
-    // Add Cloud plugin
+  // Add Cloud plugin
+  static ComputeEngineCloud initCloud(JenkinsRule r) {
     ComputeEngineCloud gcp = new ComputeEngineCloud(null, CLOUD_NAME, PROJECT_ID, PROJECT_ID, "10", null);
+    assertEquals(0, r.jenkins.clouds.size());
+    r.jenkins.clouds.add(gcp);
+    assertEquals(1, r.jenkins.clouds.size());
+    return gcp;
+  }
 
-    // Capture log output to make sense of most failures
+  // Capture log output to make sense of most failures
+  static StreamHandler initLogging(ByteArrayOutputStream logOutput) {
+    StreamHandler sh = new StreamHandler(logOutput, new SimpleFormatter());
     Logger cloudLogger =
         LogManager.getLogManager()
             .getLogger("com.google.jenkins.plugins.computeengine.ComputeEngineCloud");
     if (cloudLogger != null) {
       cloudLogger.addHandler(sh);
     }
-
-    assertEquals(0, r.jenkins.clouds.size());
-    r.jenkins.clouds.add(gcp);
-    assertEquals(1, r.jenkins.clouds.size());
-
-    // Get a compute client for out-of-band calls to GCE
-    ClientFactory clientFactory = new ClientFactory(r.jenkins, new ArrayList<>(), PROJECT_ID);
-    ComputeClient client = clientFactory.compute();
-    assertNotNull("ComputeClient can not be null", client);
-
-    // Other logging
     Logger clientLogger =
         LogManager.getLogManager()
             .getLogger("com.google.jenkins.plugins.computeengine.ComputeClient");
     if (clientLogger != null) {
       clientLogger.addHandler(sh);
     }
+    return sh;
+  }
 
+  // Get a compute client for out-of-band calls to GCE
+  static ComputeClient initClient(JenkinsRule r, Map<String, String> label, Logger log) throws IOException {
+    ClientFactory clientFactory = new ClientFactory(r.jenkins, new ArrayList<>(), PROJECT_ID);
+    ComputeClient client = clientFactory.compute();
+    assertNotNull("ComputeClient can not be null", client);
     deleteIntegrationInstances(true, client, label, log);
     return client;
   }

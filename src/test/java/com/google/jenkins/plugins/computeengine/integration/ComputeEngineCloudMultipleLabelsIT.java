@@ -28,7 +28,6 @@ import java.io.IOException;
 import java.util.Collection;
 import java.util.Map;
 import java.util.logging.Logger;
-import java.util.logging.SimpleFormatter;
 import java.util.logging.StreamHandler;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -44,7 +43,7 @@ public class ComputeEngineCloudMultipleLabelsIT {
   @ClassRule public static JenkinsRule r = new JenkinsRule();
 
   private static ByteArrayOutputStream logOutput = new ByteArrayOutputStream();
-  private static StreamHandler sh = new StreamHandler(logOutput, new SimpleFormatter());
+  private static StreamHandler sh;
   private static ComputeClient client;
   private static Map<String, String> label =
       ITUtil.getLabel(ComputeEngineCloudMultipleLabelsIT.class);
@@ -52,9 +51,12 @@ public class ComputeEngineCloudMultipleLabelsIT {
 
   @BeforeClass
   public static void init() throws Exception {
-    client = ITUtil.init(r, sh, label, log);
+    log.info("init");
+    ITUtil.initCredentials(r);
+    ComputeEngineCloud cloud = ITUtil.initCloud(r);
+    sh = ITUtil.initLogging(logOutput);
+    client = ITUtil.initClient(r, label, log);
 
-    ComputeEngineCloud cloud = (ComputeEngineCloud) r.jenkins.clouds.get(0);
     InstanceConfiguration ic =
         ITUtil.instanceConfiguration(
             ITUtil.DEB_JAVA_STARTUP_SCRIPT,
