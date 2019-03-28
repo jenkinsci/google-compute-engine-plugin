@@ -182,14 +182,14 @@ class ITUtil {
             BOOT_DISK_IMAGE_NAME,
             BOOT_DISK_PROJECT_ID,
             BOOT_DISK_SIZE_GB_STR,
-            false,
-            "",
-            "",
+            false, /* windows */
+            "", /* windowsPasswordCredentialsId */
+            "", /* windowsPrivateKeyCredentialsId */
             createSnapshot,
-            null,
+            null, /* remoteFs */
             new AutofilledNetworkConfiguration(NETWORK_NAME, SUBNETWORK_NAME),
             EXTERNAL_ADDR,
-            false,
+            false, /*useInternalAddress */
             NETWORK_TAGS,
             SERVICE_ACCOUNT_EMAIL,
             RETENTION_TIME_MINUTES_STR,
@@ -205,6 +205,7 @@ class ITUtil {
 
   static Map<String, String> getLabel(Class testClass) {
     // GCE labels can only be lower case letters, numbers, or dashes
+    // Used to label the nodes created in a given testClass for deletion
     return ImmutableMap.of(testClass.getSimpleName().toLowerCase(), "delete");
   }
 
