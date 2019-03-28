@@ -44,6 +44,7 @@ public class ComputeEngineCloud1WorkerCreatedFor2ExecutorsIT {
 
   private static ByteArrayOutputStream logOutput = new ByteArrayOutputStream();
   private static StreamHandler sh;
+  private static ComputeEngineCloud cloud;
   private static ComputeClient client;
   private static Map<String, String> label =
       ITUtil.getLabel(ComputeEngineCloud1WorkerCreatedFor2ExecutorsIT.class);
@@ -52,7 +53,7 @@ public class ComputeEngineCloud1WorkerCreatedFor2ExecutorsIT {
   public static void init() throws Exception {
     log.info("init");
     ITUtil.initCredentials(r);
-    ITUtil.initCloud(r);
+    cloud = ITUtil.initCloud(r);
     sh = ITUtil.initLogging(logOutput);
     client = ITUtil.initClient(r, label, log);
   }
@@ -64,7 +65,6 @@ public class ComputeEngineCloud1WorkerCreatedFor2ExecutorsIT {
 
   @Test(timeout = 300000)
   public void test1WorkerCreatedFor2Executors() {
-    ComputeEngineCloud cloud = (ComputeEngineCloud) r.jenkins.clouds.get(0);
     cloud.addConfiguration(
         ITUtil.instanceConfiguration(
             ITUtil.DEB_JAVA_STARTUP_SCRIPT,
