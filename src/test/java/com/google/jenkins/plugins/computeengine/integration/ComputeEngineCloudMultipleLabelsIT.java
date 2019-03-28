@@ -77,7 +77,7 @@ public class ComputeEngineCloudMultipleLabelsIT {
     ITUtil.teardown(sh, logOutput, client, label, log);
   }
 
-  @Test(timeout = 300000)
+  @Test
   public void testMultipleLabelsForJob() {
     // For a configuration with multiple labels, test if job label matches one of the
     // configuration's labels
@@ -86,7 +86,7 @@ public class ComputeEngineCloudMultipleLabelsIT {
     assertEquals(ITUtil.logs(sh, logOutput), 1, planned.size());
   }
 
-  @Test(timeout = 300000)
+  @Test
   public void testMultipleLabelsInConfig() throws Exception {
     // For a configuration with multiple labels, test if job label matches one of the
     // configuration's labels
