@@ -86,7 +86,7 @@ public class ComputeEngineCloudWorkerCreatedIT {
     // There should be no warning logs
     assertFalse(ITUtil.logs(sh, logOutput), ITUtil.logs(sh, logOutput).contains("WARNING"));
 
-    Instance i = cloud.getClient().getInstance(ITUtil.projectId, ITUtil.ZONE, name);
+    Instance i = cloud.getClient().getInstance(ITUtil.PROJECT_ID, ITUtil.ZONE, name);
 
     // The created instance should have 3 labels
     assertEquals(ITUtil.logs(sh, logOutput), 3, i.getLabels().size());
