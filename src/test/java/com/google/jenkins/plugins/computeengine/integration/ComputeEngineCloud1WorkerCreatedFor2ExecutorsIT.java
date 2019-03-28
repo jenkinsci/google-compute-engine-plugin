@@ -19,7 +19,6 @@ package com.google.jenkins.plugins.computeengine.integration;
 import static org.junit.Assert.assertEquals;
 
 import com.google.jenkins.plugins.computeengine.ComputeEngineCloud;
-import com.google.jenkins.plugins.computeengine.InstanceConfiguration;
 import com.google.jenkins.plugins.computeengine.client.ComputeClient;
 import hudson.model.labels.LabelAtom;
 import hudson.slaves.NodeProvisioner.PlannedNode;
@@ -63,15 +62,11 @@ public class ComputeEngineCloud1WorkerCreatedFor2ExecutorsIT {
   @Test(timeout = 300000)
   public void test1WorkerCreatedFor2Executors() {
     ComputeEngineCloud cloud = (ComputeEngineCloud) r.jenkins.clouds.get(0);
-    cloud.addConfiguration(validInstanceConfigurationWithExecutors(MULTIPLE_NUM_EXECUTORS));
+    cloud.addConfiguration(ITUtil.instanceConfiguration(ITUtil.DEB_JAVA_STARTUP_SCRIPT, MULTIPLE_NUM_EXECUTORS, ITUtil.LABEL, label, false, false, ITUtil.NULL_TEMPLATE));
     // Add a new node
     Collection<PlannedNode> planned = cloud.provision(new LabelAtom(ITUtil.LABEL), 2);
 
     // There should be a planned node
     assertEquals(ITUtil.logs(sh, logOutput), 1, planned.size());
-  }
-
-  private static InstanceConfiguration validInstanceConfigurationWithExecutors(String numExecutors) {
-    return ITUtil.instanceConfiguration(ITUtil.DEB_JAVA_STARTUP_SCRIPT, numExecutors, ITUtil.LABEL, label, false, false, ITUtil.NULL_TEMPLATE);
   }
 }
