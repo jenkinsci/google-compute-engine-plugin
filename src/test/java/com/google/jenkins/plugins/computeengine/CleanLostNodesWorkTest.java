@@ -55,7 +55,7 @@ public class CleanLostNodesWorkTest {
     public void setup() {
         when(cloud.getClient()).thenReturn(client);
         when(cloud.getProjectId()).thenReturn(TEST_PROJECT_ID);
-        when(cloud.getInstanceUniqueId()).thenReturn("234234355");
+        when(cloud.getInstanceId()).thenReturn("234234355");
     }
 
     @Test

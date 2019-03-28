@@ -160,7 +160,7 @@ public class InstanceConfigurationTest {
         List<InstanceConfiguration> configs = new ArrayList<InstanceConfiguration>();
         configs.add(want);
 
-        ComputeEngineCloud gcp = new ComputeEngineCloud("test", PROJECT_ID, "testCredentialsId", "1", configs);
+        ComputeEngineCloud gcp = new ComputeEngineCloud(null, "test", PROJECT_ID, "testCredentialsId", "1", configs);
         r.jenkins.clouds.add(gcp);
 
         r.submit(r.createWebClient().goTo("configure").getFormByName("config"));

@@ -22,6 +22,7 @@ import com.cloudbees.plugins.credentials.common.StandardCredentials;
 import com.cloudbees.plugins.credentials.common.StandardListBoxModel;
 import com.cloudbees.plugins.credentials.domains.DomainRequirement;
 import com.google.api.services.compute.model.Instance;
+import com.google.common.base.Strings;
 import com.google.jenkins.plugins.computeengine.client.ClientFactory;
 import com.google.jenkins.plugins.computeengine.client.ComputeClient;
 import com.google.jenkins.plugins.credentials.oauth.GoogleOAuth2Credentials;
@@ -56,7 +57,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.Callable;
+import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.logging.Level;
@@ -73,6 +74,7 @@ public class ComputeEngineCloud extends AbstractCloudImpl {
     private static final Logger LOGGER = Logger.getLogger(ComputeEngineCloud.class.getName());
     private static final SimpleFormatter sf = new SimpleFormatter();
 
+    public final String instanceId;
     public final String projectId;
     public final String credentialsId;
     public final List<InstanceConfiguration> configurations;
@@ -80,15 +82,22 @@ public class ComputeEngineCloud extends AbstractCloudImpl {
 
     @DataBoundConstructor
     public ComputeEngineCloud(
+            String instanceId,
             String cloudName,
             String projectId,
             String credentialsId,
             String instanceCapStr,
             List<InstanceConfiguration> configurations) {
         super(createCloudId(cloudName), instanceCapStr);
+        
+        if (Strings.isNullOrEmpty(instanceId)) {
+            this.instanceId = UUID.randomUUID().toString();
+        } else {
+            this.instanceId = instanceId;
+        }
 
         if (configurations == null) {
-            this.configurations = new ArrayList<InstanceConfiguration>();
+            this.configurations = new ArrayList<>();
         } else {
             this.configurations = configurations;
         }
@@ -141,7 +150,7 @@ public class ComputeEngineCloud extends AbstractCloudImpl {
             c.cloud = this;
             // Apply a label that associates an instance configuration with
             // this cloud provider
-            c.appendLabel(CLOUD_ID_LABEL_KEY, getInstanceUniqueId());
+            c.appendLabel(CLOUD_ID_LABEL_KEY, getInstanceId());
 
             // Apply a label that identifies the name of this instance configuration
             c.appendLabel(CONFIG_LABEL_KEY, c.namePrefix);
@@ -158,9 +167,8 @@ public class ComputeEngineCloud extends AbstractCloudImpl {
      *
      * @return instance unique ID
      */
-    public String getInstanceUniqueId() {
-        // Semi unique ID
-        return String.valueOf(name.hashCode());
+    public String getInstanceId() {
+        return instanceId;
     }
 
     /**
@@ -239,7 +247,7 @@ public class ComputeEngineCloud extends AbstractCloudImpl {
             // We only care about instances that have a label indicating they
             // belong to this cloud
             Map<String, String> filterLabel = new HashMap<>();
-            filterLabel.put(CLOUD_ID_LABEL_KEY, getInstanceUniqueId());
+            filterLabel.put(CLOUD_ID_LABEL_KEY, getInstanceId());
             List<Instance> instances = client.getInstancesWithLabel(projectId, filterLabel);
 
             // Don't count instances that are not running (or starting up)
