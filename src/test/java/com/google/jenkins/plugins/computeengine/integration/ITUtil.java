@@ -126,12 +126,14 @@ class ITUtil {
     if (cloudLogger != null) {
       cloudLogger.addHandler(sh);
     }
+
     Logger clientLogger =
         LogManager.getLogManager()
             .getLogger("com.google.jenkins.plugins.computeengine.ComputeClient");
     if (clientLogger != null) {
       clientLogger.addHandler(sh);
     }
+
     return sh;
   }
 
