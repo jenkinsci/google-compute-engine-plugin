@@ -58,6 +58,8 @@ class ITUtil {
           + "update-java-alternatives -s java-1.8.0-openjdk-amd64\n"
           + "/etc/init.d/ssh start";
 
+  static final String PROJECT_ID = System.getenv("GOOGLE_PROJECT_ID");
+  private static final String CREDENTIALS = System.getenv("GOOGLE_CREDENTIALS");
   private static final String CLOUD_NAME = "integration";
   private static final String NAME_PREFIX = "integration";
   private static final String REGION = format("projects/%s/regions/us-west1");
@@ -89,34 +91,26 @@ class ITUtil {
   private static final String RETENTION_TIME_MINUTES_STR = "";
   private static final String LAUNCH_TIMEOUT_SECONDS_STR = "";
 
-  static String projectId = format("%s");
-
   private static String format(String s) {
-    String projectId = System.getenv("GOOGLE_PROJECT_ID");
-    if (projectId == null) {
-      throw new RuntimeException("GOOGLE_PROJECT_ID env var must be set");
-    }
-    return String.format(s, projectId);
+    assertNotNull("GOOGLE_PROJECT_ID env var must be set", PROJECT_ID);
+    return String.format(s, PROJECT_ID);
   }
 
   static ComputeClient init(JenkinsRule r, StreamHandler sh, Map<String, String> label, Logger log)
       throws Exception {
     log.info("init");
 
-    assertNotNull("GOOGLE_PROJECT_ID env var must be set", projectId);
+    assertNotNull("GOOGLE_CREDENTIALS env var must be set", CREDENTIALS);
 
-    String serviceAccountKeyJson = System.getenv("GOOGLE_CREDENTIALS");
-    assertNotNull("GOOGLE_CREDENTIALS env var must be set", serviceAccountKeyJson);
-
-    ServiceAccountConfig sac = new StringJsonServiceAccountConfig(serviceAccountKeyJson);
-    Credentials c = new GoogleRobotPrivateKeyCredentials(projectId, sac, null);
+    ServiceAccountConfig sac = new StringJsonServiceAccountConfig(CREDENTIALS);
+    Credentials c = new GoogleRobotPrivateKeyCredentials(PROJECT_ID, sac, null);
 
     CredentialsStore store = new SystemCredentialsProvider.ProviderImpl().getStore(r.jenkins);
     assertNotNull("Credentials store can not be null", store);
     store.addCredentials(Domain.global(), c);
 
     // Add Cloud plugin
-    ComputeEngineCloud gcp = new ComputeEngineCloud(null, CLOUD_NAME, projectId, projectId, "10", null);
+    ComputeEngineCloud gcp = new ComputeEngineCloud(null, CLOUD_NAME, PROJECT_ID, PROJECT_ID, "10", null);
 
     // Capture log output to make sense of most failures
     Logger cloudLogger =
@@ -131,7 +125,7 @@ class ITUtil {
     assertEquals(1, r.jenkins.clouds.size());
 
     // Get a compute client for out-of-band calls to GCE
-    ClientFactory clientFactory = new ClientFactory(r.jenkins, new ArrayList<>(), projectId);
+    ClientFactory clientFactory = new ClientFactory(r.jenkins, new ArrayList<>(), PROJECT_ID);
     ComputeClient client = clientFactory.compute();
     assertNotNull("ComputeClient can not be null", client);
 
@@ -214,7 +208,7 @@ class ITUtil {
   private static void deleteIntegrationInstances(
       boolean waitForCompletion, ComputeClient client, Map<String, String> label, Logger log)
       throws IOException {
-    List<Instance> instances = client.getInstancesWithLabel(projectId, label);
+    List<Instance> instances = client.getInstancesWithLabel(PROJECT_ID, label);
     for (Instance i : instances) {
       safeDelete(i.getName(), waitForCompletion, client, log);
     }
@@ -223,9 +217,9 @@ class ITUtil {
   private static void safeDelete(
       String instanceId, boolean waitForCompletion, ComputeClient client, Logger log) {
     try {
-      Operation op = client.terminateInstance(projectId, ZONE, instanceId);
+      Operation op = client.terminateInstance(PROJECT_ID, ZONE, instanceId);
       if (waitForCompletion)
-        client.waitForOperationCompletion(projectId, op.getName(), op.getZone(), 3 * 60 * 1000);
+        client.waitForOperationCompletion(PROJECT_ID, op.getName(), op.getZone(), 3 * 60 * 1000);
     } catch (Exception e) {
       log.warning(String.format("Error deleting instance %s: %s", instanceId, e.getMessage()));
     }
