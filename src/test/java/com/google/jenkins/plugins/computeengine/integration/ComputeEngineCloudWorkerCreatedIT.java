@@ -62,7 +62,7 @@ public class ComputeEngineCloudWorkerCreatedIT {
   @Test(timeout = 300000)
   public void testWorkerCreated() throws Exception {
     ComputeEngineCloud cloud = (ComputeEngineCloud) r.jenkins.clouds.get(0);
-    InstanceConfiguration ic = validInstanceConfiguration();
+    InstanceConfiguration ic = ITUtil.instanceConfiguration(ITUtil.DEB_JAVA_STARTUP_SCRIPT, ITUtil.NUM_EXECUTORS, ITUtil.LABEL, label, false, false, ITUtil.NULL_TEMPLATE);
     cloud.addConfiguration(ic);
     // Add a new node
     Collection<PlannedNode> planned = cloud.provision(new LabelAtom(ITUtil.LABEL), 1);
@@ -86,9 +86,5 @@ public class ComputeEngineCloudWorkerCreatedIT {
     // Instance should have a label with key CONFIG_LABEL_KEY and value equal to the config's name prefix
     assertEquals(ITUtil.logs(sh, logOutput), ic.namePrefix, i.getLabels().get(ComputeEngineCloud.CONFIG_LABEL_KEY));
     assertEquals(ITUtil.logs(sh, logOutput), cloud.getInstanceId(), i.getLabels().get(ComputeEngineCloud.CLOUD_ID_LABEL_KEY));
-  }
-
-  private static InstanceConfiguration validInstanceConfiguration() {
-    return ITUtil.instanceConfiguration(ITUtil.DEB_JAVA_STARTUP_SCRIPT, ITUtil.NUM_EXECUTORS, ITUtil.LABEL, label, false, false, ITUtil.NULL_TEMPLATE);
   }
 }

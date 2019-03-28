@@ -55,7 +55,7 @@ public class ComputeEngineCloudMultipleLabelsIT {
     client = ITUtil.init(r, sh, label, log);
 
     ComputeEngineCloud cloud = (ComputeEngineCloud) r.jenkins.clouds.get(0);
-    InstanceConfiguration ic = validInstanceConfigurationWithLabels(MULTIPLE_LABEL);
+    InstanceConfiguration ic = ITUtil.instanceConfiguration(ITUtil.DEB_JAVA_STARTUP_SCRIPT, ITUtil.NUM_EXECUTORS, MULTIPLE_LABEL, label, false, false, ITUtil.NULL_TEMPLATE);
     cloud.addConfiguration(ic);
     // Add a new node
     planned = cloud.provision(new LabelAtom(ITUtil.LABEL), 1);
@@ -84,9 +84,5 @@ public class ComputeEngineCloudMultipleLabelsIT {
     String provisionedLabels = r.jenkins.getNode(name).getLabelString();
     // There should be the proper labels provisioned
     assertEquals(ITUtil.logs(sh, logOutput), MULTIPLE_LABEL, provisionedLabels);
-  }
-
-  private static InstanceConfiguration validInstanceConfigurationWithLabels(String labels) {
-    return ITUtil.instanceConfiguration(ITUtil.DEB_JAVA_STARTUP_SCRIPT, ITUtil.NUM_EXECUTORS, labels, label, false, false, ITUtil.NULL_TEMPLATE);
   }
 }
