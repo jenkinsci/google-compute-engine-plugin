@@ -100,13 +100,18 @@ public class ComputeEngineCloudWorkerCreatedIT {
   }
 
   @Test
-  public void testWorkerCreatedLabelKeyAndValue() {
+  public void testWorkerCreatedConfigLabelLabelKeyAndValue() {
     // Instance should have a label with key CONFIG_LABEL_KEY and value equal to the config's name
     // prefix
     assertEquals(
         ITUtil.logs(sh, logOutput),
         ic.getNamePrefix(),
         i.getLabels().get(ComputeEngineCloud.CONFIG_LABEL_KEY));
+  }
+
+  @Test
+  public void testWorkerCreatedCloudIdKeyAndValue() {
+    // Instance should have a label with key CLOUD_ID_LABEL_KEY and value equal to the instance ID
     assertEquals(
         ITUtil.logs(sh, logOutput),
         cloud.getInstanceId(),
