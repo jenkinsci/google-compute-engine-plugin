@@ -100,7 +100,7 @@ public class ComputeEngineCloudWorkerCreatedIT {
   }
 
   @Test
-  public void testWorkerCreatedConfigLabelLabelKeyAndValue() {
+  public void testWorkerCreatedConfigLabelKeyAndValue() {
     // Instance should have a label with key CONFIG_LABEL_KEY and value equal to the config's name
     // prefix
     assertEquals(
