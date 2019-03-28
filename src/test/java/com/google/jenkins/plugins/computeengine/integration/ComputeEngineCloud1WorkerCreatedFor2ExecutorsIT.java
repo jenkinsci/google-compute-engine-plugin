@@ -36,17 +36,18 @@ import org.junit.Test;
 import org.jvnet.hudson.test.JenkinsRule;
 
 public class ComputeEngineCloud1WorkerCreatedFor2ExecutorsIT {
-  private static Logger log = Logger.getLogger(ComputeEngineCloud1WorkerCreatedFor2ExecutorsIT.class.getName());
+  private static Logger log =
+      Logger.getLogger(ComputeEngineCloud1WorkerCreatedFor2ExecutorsIT.class.getName());
 
   private static final String MULTIPLE_NUM_EXECUTORS = "2";
 
-  @ClassRule
-  public static JenkinsRule r = new JenkinsRule();
+  @ClassRule public static JenkinsRule r = new JenkinsRule();
 
   private static ByteArrayOutputStream logOutput = new ByteArrayOutputStream();
   private static StreamHandler sh = new StreamHandler(logOutput, new SimpleFormatter());
   private static ComputeClient client;
-  private static Map<String, String> label = ITUtil.getLabel(ComputeEngineCloud1WorkerCreatedFor2ExecutorsIT.class);
+  private static Map<String, String> label =
+      ITUtil.getLabel(ComputeEngineCloud1WorkerCreatedFor2ExecutorsIT.class);
 
   @BeforeClass
   public static void init() throws Exception {
@@ -58,11 +59,18 @@ public class ComputeEngineCloud1WorkerCreatedFor2ExecutorsIT {
     ITUtil.teardown(sh, logOutput, client, label, log);
   }
 
-
   @Test(timeout = 300000)
   public void test1WorkerCreatedFor2Executors() {
     ComputeEngineCloud cloud = (ComputeEngineCloud) r.jenkins.clouds.get(0);
-    cloud.addConfiguration(ITUtil.instanceConfiguration(ITUtil.DEB_JAVA_STARTUP_SCRIPT, MULTIPLE_NUM_EXECUTORS, ITUtil.LABEL, label, false, false, ITUtil.NULL_TEMPLATE));
+    cloud.addConfiguration(
+        ITUtil.instanceConfiguration(
+            ITUtil.DEB_JAVA_STARTUP_SCRIPT,
+            MULTIPLE_NUM_EXECUTORS,
+            ITUtil.LABEL,
+            label,
+            false,
+            false,
+            ITUtil.NULL_TEMPLATE));
     // Add a new node
     Collection<PlannedNode> planned = cloud.provision(new LabelAtom(ITUtil.LABEL), 2);
 

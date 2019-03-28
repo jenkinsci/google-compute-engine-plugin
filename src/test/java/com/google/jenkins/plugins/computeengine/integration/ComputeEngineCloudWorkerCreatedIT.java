@@ -41,17 +41,17 @@ import org.jvnet.hudson.test.JenkinsRule;
 public class ComputeEngineCloudWorkerCreatedIT {
   private static Logger log = Logger.getLogger(ComputeEngineCloudWorkerCreatedIT.class.getName());
 
-  @ClassRule
-  public static JenkinsRule r = new JenkinsRule();
+  @ClassRule public static JenkinsRule r = new JenkinsRule();
 
   private static ByteArrayOutputStream logOutput = new ByteArrayOutputStream();
   private static StreamHandler sh = new StreamHandler(logOutput, new SimpleFormatter());
   private static ComputeClient client;
-  private static Map<String, String> label = ITUtil.getLabel(ComputeEngineCloudWorkerCreatedIT.class);
+  private static Map<String, String> label =
+      ITUtil.getLabel(ComputeEngineCloudWorkerCreatedIT.class);
 
   @BeforeClass
   public static void init() throws Exception {
-     client = ITUtil.init(r, sh, label, log);
+    client = ITUtil.init(r, sh, label, log);
   }
 
   @AfterClass
@@ -62,7 +62,15 @@ public class ComputeEngineCloudWorkerCreatedIT {
   @Test(timeout = 300000)
   public void testWorkerCreated() throws Exception {
     ComputeEngineCloud cloud = (ComputeEngineCloud) r.jenkins.clouds.get(0);
-    InstanceConfiguration ic = ITUtil.instanceConfiguration(ITUtil.DEB_JAVA_STARTUP_SCRIPT, ITUtil.NUM_EXECUTORS, ITUtil.LABEL, label, false, false, ITUtil.NULL_TEMPLATE);
+    InstanceConfiguration ic =
+        ITUtil.instanceConfiguration(
+            ITUtil.DEB_JAVA_STARTUP_SCRIPT,
+            ITUtil.NUM_EXECUTORS,
+            ITUtil.LABEL,
+            label,
+            false,
+            false,
+            ITUtil.NULL_TEMPLATE);
     cloud.addConfiguration(ic);
     // Add a new node
     Collection<PlannedNode> planned = cloud.provision(new LabelAtom(ITUtil.LABEL), 1);
@@ -83,8 +91,15 @@ public class ComputeEngineCloudWorkerCreatedIT {
     // The created instance should have 3 labels
     assertEquals(ITUtil.logs(sh, logOutput), 3, i.getLabels().size());
 
-    // Instance should have a label with key CONFIG_LABEL_KEY and value equal to the config's name prefix
-    assertEquals(ITUtil.logs(sh, logOutput), ic.namePrefix, i.getLabels().get(ComputeEngineCloud.CONFIG_LABEL_KEY));
-    assertEquals(ITUtil.logs(sh, logOutput), cloud.getInstanceId(), i.getLabels().get(ComputeEngineCloud.CLOUD_ID_LABEL_KEY));
+    // Instance should have a label with key CONFIG_LABEL_KEY and value equal to the config's name
+    // prefix
+    assertEquals(
+        ITUtil.logs(sh, logOutput),
+        ic.namePrefix,
+        i.getLabels().get(ComputeEngineCloud.CONFIG_LABEL_KEY));
+    assertEquals(
+        ITUtil.logs(sh, logOutput),
+        cloud.getInstanceId(),
+        i.getLabels().get(ComputeEngineCloud.CLOUD_ID_LABEL_KEY));
   }
 }

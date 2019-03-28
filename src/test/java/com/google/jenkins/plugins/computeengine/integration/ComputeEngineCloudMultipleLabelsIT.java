@@ -41,13 +41,13 @@ public class ComputeEngineCloudMultipleLabelsIT {
 
   private static final String MULTIPLE_LABEL = "integration test";
 
-  @ClassRule
-  public static JenkinsRule r = new JenkinsRule();
+  @ClassRule public static JenkinsRule r = new JenkinsRule();
 
   private static ByteArrayOutputStream logOutput = new ByteArrayOutputStream();
   private static StreamHandler sh = new StreamHandler(logOutput, new SimpleFormatter());
   private static ComputeClient client;
-  private static Map<String, String> label = ITUtil.getLabel(ComputeEngineCloudMultipleLabelsIT.class);
+  private static Map<String, String> label =
+      ITUtil.getLabel(ComputeEngineCloudMultipleLabelsIT.class);
   private static Collection<PlannedNode> planned;
 
   @BeforeClass
@@ -55,7 +55,15 @@ public class ComputeEngineCloudMultipleLabelsIT {
     client = ITUtil.init(r, sh, label, log);
 
     ComputeEngineCloud cloud = (ComputeEngineCloud) r.jenkins.clouds.get(0);
-    InstanceConfiguration ic = ITUtil.instanceConfiguration(ITUtil.DEB_JAVA_STARTUP_SCRIPT, ITUtil.NUM_EXECUTORS, MULTIPLE_LABEL, label, false, false, ITUtil.NULL_TEMPLATE);
+    InstanceConfiguration ic =
+        ITUtil.instanceConfiguration(
+            ITUtil.DEB_JAVA_STARTUP_SCRIPT,
+            ITUtil.NUM_EXECUTORS,
+            MULTIPLE_LABEL,
+            label,
+            false,
+            false,
+            ITUtil.NULL_TEMPLATE);
     cloud.addConfiguration(ic);
     // Add a new node
     planned = cloud.provision(new LabelAtom(ITUtil.LABEL), 1);
@@ -66,10 +74,10 @@ public class ComputeEngineCloudMultipleLabelsIT {
     ITUtil.teardown(sh, logOutput, client, label, log);
   }
 
-
   @Test(timeout = 300000)
   public void testMultipleLabelsForJob() {
-    // For a configuration with multiple labels, test if job label matches one of the configuration's labels
+    // For a configuration with multiple labels, test if job label matches one of the
+    // configuration's labels
 
     // There should be a planned node
     assertEquals(ITUtil.logs(sh, logOutput), 1, planned.size());
@@ -77,7 +85,8 @@ public class ComputeEngineCloudMultipleLabelsIT {
 
   @Test(timeout = 300000)
   public void testMultipleLabelsInConfig() throws Exception {
-    // For a configuration with multiple labels, test if job label matches one of the configuration's labels
+    // For a configuration with multiple labels, test if job label matches one of the
+    // configuration's labels
 
     String name = planned.iterator().next().displayName;
     planned.iterator().next().future.get();
