@@ -207,6 +207,7 @@ class ITUtil {
 
   static Map<String, String> getLabel(Class testClass) {
     // GCE labels can only be lower case letters, numbers, or dashes
+    // Used to label the nodes created in a given testClass for deletion
     return ImmutableMap.of(testClass.getSimpleName().toLowerCase(), "delete");
   }
 
