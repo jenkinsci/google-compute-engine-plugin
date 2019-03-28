@@ -48,14 +48,15 @@ import org.jvnet.hudson.test.JenkinsRule;
 
 class ITUtil {
 
-  static final String DEB_JAVA_STARTUP_SCRIPT = "#!/bin/bash\n" +
-      "/etc/init.d/ssh stop\n" +
-      "echo \"deb http://http.debian.net/debian stretch-backports main\" | \\\n" +
-      "      sudo tee --append /etc/apt/sources.list > /dev/null\n" +
-      "apt-get -y update\n" +
-      "apt-get -y install -t stretch-backports openjdk-8-jdk\n" +
-      "update-java-alternatives -s java-1.8.0-openjdk-amd64\n" +
-      "/etc/init.d/ssh start";
+  static final String DEB_JAVA_STARTUP_SCRIPT =
+      "#!/bin/bash\n"
+          + "/etc/init.d/ssh stop\n"
+          + "echo \"deb http://http.debian.net/debian stretch-backports main\" | \\\n"
+          + "      sudo tee --append /etc/apt/sources.list > /dev/null\n"
+          + "apt-get -y update\n"
+          + "apt-get -y install -t stretch-backports openjdk-8-jdk\n"
+          + "update-java-alternatives -s java-1.8.0-openjdk-amd64\n"
+          + "/etc/init.d/ssh start";
 
   private static final String CLOUD_NAME = "integration";
   private static final String NAME_PREFIX = "integration";
@@ -72,7 +73,8 @@ class ITUtil {
   private static final String BOOT_DISK_TYPE = ZONE_BASE + "/diskTypes/pd-ssd";
   private static final boolean BOOT_DISK_AUTODELETE = true;
   private static final String BOOT_DISK_PROJECT_ID = "debian-cloud";
-  private static final String BOOT_DISK_IMAGE_NAME = "projects/debian-cloud/global/images/family/debian-9";
+  private static final String BOOT_DISK_IMAGE_NAME =
+      "projects/debian-cloud/global/images/family/debian-9";
   private static final String BOOT_DISK_SIZE_GB_STR = "10";
   private static final Node.Mode NODE_MODE = Node.Mode.EXCLUSIVE;
   private static final String ACCELERATOR_NAME = "";
@@ -97,7 +99,8 @@ class ITUtil {
     return String.format(s, projectId);
   }
 
-  static ComputeClient init(JenkinsRule r, StreamHandler sh, Map<String, String> label, Logger log) throws Exception {
+  static ComputeClient init(JenkinsRule r, StreamHandler sh, Map<String, String> label, Logger log)
+      throws Exception {
     log.info("init");
 
     assertNotNull("GOOGLE_PROJECT_ID env var must be set", projectId);
@@ -116,7 +119,9 @@ class ITUtil {
     ComputeEngineCloud gcp = new ComputeEngineCloud(null, CLOUD_NAME, projectId, projectId, "10", null);
 
     // Capture log output to make sense of most failures
-    Logger cloudLogger = LogManager.getLogManager().getLogger("com.google.jenkins.plugins.computeengine.ComputeEngineCloud");
+    Logger cloudLogger =
+        LogManager.getLogManager()
+            .getLogger("com.google.jenkins.plugins.computeengine.ComputeEngineCloud");
     if (cloudLogger != null) {
       cloudLogger.addHandler(sh);
     }
@@ -131,7 +136,9 @@ class ITUtil {
     assertNotNull("ComputeClient can not be null", client);
 
     // Other logging
-    Logger clientLogger = LogManager.getLogManager().getLogger("com.google.jenkins.plugins.computeengine.ComputeClient");
+    Logger clientLogger =
+        LogManager.getLogManager()
+            .getLogger("com.google.jenkins.plugins.computeengine.ComputeClient");
     if (clientLogger != null) {
       clientLogger.addHandler(sh);
     }
@@ -140,15 +147,27 @@ class ITUtil {
     return client;
   }
 
-  static void teardown(StreamHandler sh, ByteArrayOutputStream logOutput, ComputeClient client, Map<String, String> label, Logger log) throws IOException {
+  static void teardown(
+      StreamHandler sh,
+      ByteArrayOutputStream logOutput,
+      ComputeClient client,
+      Map<String, String> label,
+      Logger log)
+      throws IOException {
     log.info("teardown");
     deleteIntegrationInstances(false, client, label, log);
     sh.close();
     log.info(logOutput.toString());
   }
 
-  static InstanceConfiguration instanceConfiguration(String startupScript, String numExecutors, String jenkinsLabels, Map<String, String> label,
-      boolean createSnapshot, boolean oneShot, String template) {
+  static InstanceConfiguration instanceConfiguration(
+      String startupScript,
+      String numExecutors,
+      String jenkinsLabels,
+      Map<String, String> label,
+      boolean createSnapshot,
+      boolean oneShot,
+      String template) {
     InstanceConfiguration ic =
         new InstanceConfiguration.Builder()
             .namePrefix(NAME_PREFIX)
@@ -194,14 +213,17 @@ class ITUtil {
     return ImmutableMap.of(testClass.getSimpleName().toLowerCase(), "delete");
   }
 
-  private static void deleteIntegrationInstances(boolean waitForCompletion, ComputeClient client, Map<String, String> label, Logger log) throws IOException {
+  private static void deleteIntegrationInstances(
+      boolean waitForCompletion, ComputeClient client, Map<String, String> label, Logger log)
+      throws IOException {
     List<Instance> instances = client.getInstancesWithLabel(projectId, label);
     for (Instance i : instances) {
       safeDelete(i.getName(), waitForCompletion, client, log);
     }
   }
 
-  private static void safeDelete(String instanceId, boolean waitForCompletion, ComputeClient client, Logger log) {
+  private static void safeDelete(
+      String instanceId, boolean waitForCompletion, ComputeClient client, Logger log) {
     try {
       Operation op = client.terminateInstance(projectId, ZONE, instanceId);
       if (waitForCompletion)
