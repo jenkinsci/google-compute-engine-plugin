@@ -22,7 +22,6 @@ import static com.google.jenkins.plugins.computeengine.InstanceConfiguration.NAT
 import static com.google.jenkins.plugins.computeengine.InstanceConfiguration.NAT_TYPE;
 import static com.google.jenkins.plugins.computeengine.client.ComputeClient.nameFromSelfLink;
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
@@ -44,7 +43,6 @@ import com.google.api.services.compute.model.NetworkInterface;
 import com.google.api.services.compute.model.Operation;
 import com.google.api.services.compute.model.Snapshot;
 import com.google.api.services.compute.model.Tags;
-import com.google.common.collect.ImmutableMap;
 import com.google.jenkins.plugins.computeengine.client.ClientFactory;
 import com.google.jenkins.plugins.computeengine.client.ComputeClient;
 import com.google.jenkins.plugins.credentials.oauth.GoogleRobotPrivateKeyCredentials;
@@ -227,44 +225,6 @@ public class ComputeEngineCloudIT {
     ComputeEngineCloud cloud = (ComputeEngineCloud) r.jenkins.clouds.get(0);
     Image i = cloud.client.getImage("debian-cloud", "debian-9-stretch-v20180820");
     assertNotNull(i);
-  }
-
-  @Test(timeout = 300000)
-  public void testTemplate() throws Exception {
-    ComputeEngineCloud cloud = (ComputeEngineCloud) r.jenkins.clouds.get(0);
-    cloud.addConfiguration(validInstanceConfigurationWithTemplate(TEMPLATE));
-    try {
-      InstanceTemplate instanceTemplate =
-          createTemplate(ImmutableMap.of("test-label", "label-value"));
-      client.insertTemplate(cloud.projectId, instanceTemplate);
-
-      // Add a new node
-      Collection<NodeProvisioner.PlannedNode> planned = cloud.provision(new LabelAtom(LABEL), 1);
-
-      // There should be a planned node
-      assertEquals(logs(), 1, planned.size());
-
-      String name = planned.iterator().next().displayName;
-
-      // Wait for the node creation to finish
-      planned.iterator().next().future.get();
-
-      // There should be no warning logs
-      assertFalse(logs(), logs().contains("WARNING"));
-
-      Instance instance = client.getInstance(projectId, ZONE, name);
-      assertTrue(logs(), instance.getLabels().containsKey("test-label"));
-      assertEquals(
-          logs(),
-          cloud.getInstanceId(),
-          instance.getLabels().get(ComputeEngineCloud.CLOUD_ID_LABEL_KEY));
-    } finally {
-      try {
-        client.deleteTemplate(cloud.projectId, nameFromSelfLink(TEMPLATE));
-      } catch (Exception e) {
-        // noop
-      }
-    }
   }
 
   @Test(timeout = 300000)

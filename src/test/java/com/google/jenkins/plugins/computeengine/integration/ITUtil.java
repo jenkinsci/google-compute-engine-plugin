@@ -16,6 +16,11 @@
 
 package com.google.jenkins.plugins.computeengine.integration;
 
+import static com.google.common.collect.ImmutableList.of;
+import static com.google.jenkins.plugins.computeengine.InstanceConfiguration.METADATA_LINUX_STARTUP_SCRIPT_KEY;
+import static com.google.jenkins.plugins.computeengine.InstanceConfiguration.NAT_NAME;
+import static com.google.jenkins.plugins.computeengine.InstanceConfiguration.NAT_TYPE;
+import static com.google.jenkins.plugins.computeengine.client.ComputeClient.nameFromSelfLink;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 
@@ -23,8 +28,16 @@ import com.cloudbees.plugins.credentials.Credentials;
 import com.cloudbees.plugins.credentials.CredentialsStore;
 import com.cloudbees.plugins.credentials.SystemCredentialsProvider;
 import com.cloudbees.plugins.credentials.domains.Domain;
+import com.google.api.services.compute.model.AccessConfig;
+import com.google.api.services.compute.model.AttachedDisk;
+import com.google.api.services.compute.model.AttachedDiskInitializeParams;
 import com.google.api.services.compute.model.Instance;
+import com.google.api.services.compute.model.InstanceProperties;
+import com.google.api.services.compute.model.InstanceTemplate;
+import com.google.api.services.compute.model.Metadata;
+import com.google.api.services.compute.model.NetworkInterface;
 import com.google.api.services.compute.model.Operation;
+import com.google.api.services.compute.model.Tags;
 import com.google.common.collect.ImmutableMap;
 import com.google.jenkins.plugins.computeengine.AcceleratorConfiguration;
 import com.google.jenkins.plugins.computeengine.AutofilledNetworkConfiguration;
@@ -92,7 +105,7 @@ class ITUtil {
   private static final String RETENTION_TIME_MINUTES_STR = "";
   private static final String LAUNCH_TIMEOUT_SECONDS_STR = "";
 
-  private static String format(String s) {
+  static String format(String s) {
     assertNotNull("GOOGLE_PROJECT_ID env var must be set", PROJECT_ID);
     return String.format(s, PROJECT_ID);
   }
@@ -159,6 +172,38 @@ class ITUtil {
     deleteIntegrationInstances(false, client, label, log);
     sh.close();
     log.info(logOutput.toString());
+  }
+
+  static InstanceTemplate createTemplate(Map<String, String> googleLabels, String template) {
+    InstanceTemplate instanceTemplate = new InstanceTemplate();
+    instanceTemplate.setName(nameFromSelfLink(template));
+    InstanceProperties instanceProperties = new InstanceProperties();
+    instanceProperties.setMachineType(nameFromSelfLink(MACHINE_TYPE));
+    instanceProperties.setLabels(googleLabels);
+    AttachedDisk boot = new AttachedDisk();
+    boot.setBoot(true);
+    boot.setAutoDelete(BOOT_DISK_AUTODELETE);
+    boot.setInitializeParams(
+        new AttachedDiskInitializeParams()
+            .setDiskSizeGb(Long.parseLong(BOOT_DISK_SIZE_GB_STR))
+            .setDiskType(nameFromSelfLink(BOOT_DISK_TYPE))
+            .setSourceImage(BOOT_DISK_IMAGE_NAME));
+    instanceProperties.setDisks(of(boot));
+    instanceProperties.setTags(new Tags().setItems(of(NETWORK_TAGS)));
+    instanceProperties.setMetadata(
+        new Metadata()
+            .setItems(
+                of(
+                    new Metadata.Items()
+                        .setKey(METADATA_LINUX_STARTUP_SCRIPT_KEY)
+                        .setValue(DEB_JAVA_STARTUP_SCRIPT))));
+    instanceProperties.setNetworkInterfaces(
+        of(
+            new NetworkInterface()
+                .setName(NETWORK_NAME)
+                .setAccessConfigs(of(new AccessConfig().setType(NAT_TYPE).setName(NAT_NAME)))));
+    instanceTemplate.setProperties(instanceProperties);
+    return instanceTemplate;
   }
 
   static InstanceConfiguration instanceConfiguration(
