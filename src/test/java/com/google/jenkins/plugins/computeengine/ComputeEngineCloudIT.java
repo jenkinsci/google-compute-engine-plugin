@@ -16,11 +16,6 @@
 
 package com.google.jenkins.plugins.computeengine;
 
-import static com.google.common.collect.ImmutableList.of;
-import static com.google.jenkins.plugins.computeengine.InstanceConfiguration.METADATA_LINUX_STARTUP_SCRIPT_KEY;
-import static com.google.jenkins.plugins.computeengine.InstanceConfiguration.NAT_NAME;
-import static com.google.jenkins.plugins.computeengine.InstanceConfiguration.NAT_TYPE;
-import static com.google.jenkins.plugins.computeengine.client.ComputeClient.nameFromSelfLink;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
@@ -31,18 +26,10 @@ import com.cloudbees.plugins.credentials.CredentialsStore;
 import com.cloudbees.plugins.credentials.SystemCredentialsProvider;
 import com.cloudbees.plugins.credentials.domains.Domain;
 import com.cloudbees.plugins.credentials.domains.DomainRequirement;
-import com.google.api.services.compute.model.AccessConfig;
-import com.google.api.services.compute.model.AttachedDisk;
-import com.google.api.services.compute.model.AttachedDiskInitializeParams;
 import com.google.api.services.compute.model.Image;
 import com.google.api.services.compute.model.Instance;
-import com.google.api.services.compute.model.InstanceProperties;
-import com.google.api.services.compute.model.InstanceTemplate;
-import com.google.api.services.compute.model.Metadata;
-import com.google.api.services.compute.model.NetworkInterface;
 import com.google.api.services.compute.model.Operation;
 import com.google.api.services.compute.model.Snapshot;
-import com.google.api.services.compute.model.Tags;
 import com.google.jenkins.plugins.computeengine.client.ClientFactory;
 import com.google.jenkins.plugins.computeengine.client.ComputeClient;
 import com.google.jenkins.plugins.credentials.oauth.GoogleRobotPrivateKeyCredentials;
@@ -52,13 +39,11 @@ import hudson.model.FreeStyleProject;
 import hudson.model.Node;
 import hudson.model.Result;
 import hudson.model.labels.LabelAtom;
-import hudson.slaves.NodeProvisioner;
 import hudson.tasks.Builder;
 import hudson.tasks.Shell;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -227,27 +212,6 @@ public class ComputeEngineCloudIT {
     assertNotNull(i);
   }
 
-  @Test(timeout = 300000)
-  public void testTemplateNoGoogleLabels() throws Exception {
-    ComputeEngineCloud cloud = (ComputeEngineCloud) r.jenkins.clouds.get(0);
-    cloud.addConfiguration(validInstanceConfigurationWithTemplate(TEMPLATE));
-    try {
-      InstanceTemplate instanceTemplate = createTemplate(null);
-      client.insertTemplate(cloud.projectId, instanceTemplate);
-
-      // Add a new node
-      Collection<NodeProvisioner.PlannedNode> planned = cloud.provision(new LabelAtom(LABEL), 1);
-
-      // There should be a successful planned node even without google labels
-      assertEquals(logs(), 1, planned.size());
-    } finally {
-      try {
-        client.deleteTemplate(cloud.projectId, nameFromSelfLink(TEMPLATE));
-      } catch (Exception e) {
-      }
-    }
-  }
-
   // Tests that no snapshot is created when we only have successful builds for given node
   @Test(timeout = 300000)
   public void testNoSnapshotCreated() throws Exception {
@@ -307,48 +271,11 @@ public class ComputeEngineCloudIT {
     }
   }
 
-  private static InstanceTemplate createTemplate(Map<String, String> googleLabels) {
-    InstanceTemplate instanceTemplate = new InstanceTemplate();
-    instanceTemplate.setName(nameFromSelfLink(TEMPLATE));
-    InstanceProperties instanceProperties = new InstanceProperties();
-    instanceProperties.setMachineType(nameFromSelfLink(MACHINE_TYPE));
-    instanceProperties.setLabels(googleLabels);
-    AttachedDisk boot = new AttachedDisk();
-    boot.setBoot(true);
-    boot.setAutoDelete(BOOT_DISK_AUTODELETE);
-    boot.setInitializeParams(
-        new AttachedDiskInitializeParams()
-            .setDiskSizeGb(Long.parseLong(BOOT_DISK_SIZE_GB_STR))
-            .setDiskType(nameFromSelfLink(BOOT_DISK_TYPE))
-            .setSourceImage(BOOT_DISK_IMAGE_NAME));
-    instanceProperties.setDisks(of(boot));
-    instanceProperties.setTags(new Tags().setItems(of(NETWORK_TAGS)));
-    instanceProperties.setMetadata(
-        new Metadata()
-            .setItems(
-                of(
-                    new Metadata.Items()
-                        .setKey(METADATA_LINUX_STARTUP_SCRIPT_KEY)
-                        .setValue(DEB_JAVA_STARTUP_SCRIPT))));
-    instanceProperties.setNetworkInterfaces(
-        of(
-            new NetworkInterface()
-                .setName(NETWORK_NAME)
-                .setAccessConfigs(of(new AccessConfig().setType(NAT_TYPE).setName(NAT_NAME)))));
-    instanceTemplate.setProperties(instanceProperties);
-    return instanceTemplate;
-  }
-
   private static InstanceConfiguration snapshotInstanceConfiguration() {
     // Snapshot label needed since the freestyle project could use a previously provisioned node
     // instead of this configuration's.
     return instanceConfiguration(
         DEB_JAVA_STARTUP_SCRIPT, NUM_EXECUTORS, SNAPSHOT_LABEL, true, true, NULL_TEMPLATE);
-  }
-
-  private static InstanceConfiguration validInstanceConfigurationWithTemplate(String template) {
-    return instanceConfiguration(
-        DEB_JAVA_STARTUP_SCRIPT, NUM_EXECUTORS, LABEL, false, false, template);
   }
 
   private static InstanceConfiguration instanceConfiguration(
