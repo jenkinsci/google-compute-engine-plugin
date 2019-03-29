@@ -26,12 +26,14 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.Collection;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
 import java.util.logging.StreamHandler;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Test;
+import org.junit.rules.Timeout;
 import org.jvnet.hudson.test.JenkinsRule;
 
 public class ComputeEngineCloud1WorkerCreatedFor2ExecutorsIT {
@@ -40,6 +42,7 @@ public class ComputeEngineCloud1WorkerCreatedFor2ExecutorsIT {
 
   private static final String MULTIPLE_NUM_EXECUTORS = "2";
 
+  @ClassRule public static Timeout timeout = new Timeout(5, TimeUnit.MINUTES);
   @ClassRule public static JenkinsRule r = new JenkinsRule();
 
   private static ByteArrayOutputStream logOutput = new ByteArrayOutputStream();
@@ -63,7 +66,7 @@ public class ComputeEngineCloud1WorkerCreatedFor2ExecutorsIT {
     ITUtil.teardown(sh, logOutput, client, label, log);
   }
 
-  @Test(timeout = 300000)
+  @Test
   public void test1WorkerCreatedFor2Executors() {
     cloud.addConfiguration(
         ITUtil.instanceConfiguration(
