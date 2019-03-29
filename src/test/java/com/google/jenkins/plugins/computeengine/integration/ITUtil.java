@@ -134,21 +134,17 @@ class ITUtil {
   // Capture log output to make sense of most failures
   static StreamHandler initLogging(ByteArrayOutputStream logOutput) {
     StreamHandler sh = new StreamHandler(logOutput, new SimpleFormatter());
-    Logger cloudLogger =
-        LogManager.getLogManager()
-            .getLogger("com.google.jenkins.plugins.computeengine.ComputeEngineCloud");
-    if (cloudLogger != null) {
-      cloudLogger.addHandler(sh);
-    }
-
-    Logger clientLogger =
-        LogManager.getLogManager()
-            .getLogger("com.google.jenkins.plugins.computeengine.ComputeClient");
-    if (clientLogger != null) {
-      clientLogger.addHandler(sh);
-    }
-
+    handleClassLogs(sh, ComputeEngineCloud.class.getName());
+    handleClassLogs(sh, ComputeClient.class.getName());
     return sh;
+  }
+
+  static void handleClassLogs(StreamHandler sh, String className) {
+    Logger logger = LogManager.getLogManager().getLogger(className);
+    assertNotNull(
+        String.format("Tried handling logs for %s which hasn't been instantiated yet.", className),
+        logger);
+    logger.addHandler(sh);
   }
 
   // Get a compute client for out-of-band calls to GCE
@@ -170,8 +166,8 @@ class ITUtil {
       throws IOException {
     log.info("teardown");
     deleteIntegrationInstances(false, client, label, log);
+    log.info(logs(sh, logOutput));
     sh.close();
-    log.info(logOutput.toString());
   }
 
   static InstanceTemplate createTemplate(Map<String, String> googleLabels, String template) {

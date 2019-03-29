@@ -18,8 +18,6 @@ package com.google.jenkins.plugins.computeengine;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
 
 import com.cloudbees.plugins.credentials.Credentials;
 import com.cloudbees.plugins.credentials.CredentialsStore;
@@ -78,7 +76,6 @@ public class ComputeEngineCloudIT {
   private static final String REGION = format("projects/%s/regions/us-west1");
   private static final String ZONE = "us-west1-a";
   private static final String ZONE_BASE = format("projects/%s/zones/" + ZONE);
-  private static final String LABEL = "integration";
   private static final String SNAPSHOT_LABEL = "snapshot";
   private static final String MACHINE_TYPE = ZONE_BASE + "/machineTypes/n1-standard-1";
   private static final String NUM_EXECUTORS = "1";
@@ -97,8 +94,6 @@ public class ComputeEngineCloudIT {
   private static final String ACCELERATOR_COUNT = "";
   private static final String RUN_AS_USER = "jenkins";
   private static final String NULL_TEMPLATE = null;
-  private static final String TEMPLATE =
-      format("projects/%s/global/instanceTemplates/test-template");
 
   private static Map<String, String> INTEGRATION_LABEL;
 
@@ -210,31 +205,6 @@ public class ComputeEngineCloudIT {
     ComputeEngineCloud cloud = (ComputeEngineCloud) r.jenkins.clouds.get(0);
     Image i = cloud.client.getImage("debian-cloud", "debian-9-stretch-v20180820");
     assertNotNull(i);
-  }
-
-  // Tests that no snapshot is created when we only have successful builds for given node
-  @Test(timeout = 300000)
-  public void testNoSnapshotCreated() throws Exception {
-    logOutput.reset();
-
-    ComputeEngineCloud cloud = (ComputeEngineCloud) r.jenkins.clouds.get(0);
-    assertTrue(cloud.configurations.size() == 0);
-    cloud.addConfiguration(snapshotInstanceConfiguration());
-
-    FreeStyleProject project = r.createFreeStyleProject();
-    Builder step = new Shell("echo works");
-    project.getBuildersList().add(step);
-    project.setAssignedLabel(new LabelAtom(SNAPSHOT_LABEL));
-
-    FreeStyleBuild build = r.buildAndAssertSuccess(project);
-    Node worker = build.getBuiltOn();
-
-    // Need time for one-shot instance to terminate and create the snapshot
-    Awaitility.await()
-        .timeout(SNAPSHOT_TEST_TIMEOUT, TimeUnit.SECONDS)
-        .until(() -> r.jenkins.getNode(worker.getNodeName()) == null);
-
-    assertNull(logs(), client.getSnapshot(projectId, worker.getNodeName()));
   }
 
   // Tests snapshot is created when we have failure builds for given node

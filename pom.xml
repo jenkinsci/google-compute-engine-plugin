@@ -209,8 +209,6 @@
             <exclude>**/ITUtil.java</exclude>
           </excludes>
           <argLine>-Djenkins.test.timeout=${jenkinsRuleTimeout}</argLine>
-          <parallel>methods</parallel>
-          <useUnlimitedThreads>true</useUnlimitedThreads>
         </configuration>
       </plugin>
       <plugin>
