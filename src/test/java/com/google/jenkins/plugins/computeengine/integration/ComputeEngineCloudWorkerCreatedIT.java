@@ -62,7 +62,8 @@ public class ComputeEngineCloudWorkerCreatedIT {
     sh = ITUtil.initLogging(logOutput);
     client = ITUtil.initClient(r, label, log);
 
-    ic = ITUtil.instanceConfiguration(
+    ic =
+        ITUtil.instanceConfiguration(
             ITUtil.DEB_JAVA_STARTUP_SCRIPT,
             ITUtil.NUM_EXECUTORS,
             ITUtil.LABEL,
@@ -97,7 +98,7 @@ public class ComputeEngineCloudWorkerCreatedIT {
   }
 
   @Test
-  public void testWorkerCreatedNumberOfLabels(){
+  public void testWorkerCreatedNumberOfLabels() {
     // The created instance should have 3 labels
     assertEquals(ITUtil.logs(sh, logOutput), 3, i.getLabels().size());
   }

@@ -110,7 +110,8 @@ class ITUtil {
 
   // Add Cloud plugin
   static ComputeEngineCloud initCloud(JenkinsRule r) {
-    ComputeEngineCloud gcp = new ComputeEngineCloud(null, CLOUD_NAME, PROJECT_ID, PROJECT_ID, "10", null);
+    ComputeEngineCloud gcp =
+        new ComputeEngineCloud(null, CLOUD_NAME, PROJECT_ID, PROJECT_ID, "10", null);
     assertEquals(0, r.jenkins.clouds.size());
     r.jenkins.clouds.add(gcp);
     assertEquals(1, r.jenkins.clouds.size());
@@ -138,7 +139,8 @@ class ITUtil {
   }
 
   // Get a compute client for out-of-band calls to GCE
-  static ComputeClient initClient(JenkinsRule r, Map<String, String> label, Logger log) throws IOException {
+  static ComputeClient initClient(JenkinsRule r, Map<String, String> label, Logger log)
+      throws IOException {
     ClientFactory clientFactory = new ClientFactory(r.jenkins, new ArrayList<>(), PROJECT_ID);
     ComputeClient client = clientFactory.compute();
     assertNotNull("ComputeClient can not be null", client);
