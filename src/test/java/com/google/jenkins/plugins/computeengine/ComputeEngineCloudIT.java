@@ -65,7 +65,6 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.LogManager;
 import java.util.logging.Logger;
@@ -229,24 +228,6 @@ public class ComputeEngineCloudIT {
     ComputeEngineCloud cloud = (ComputeEngineCloud) r.jenkins.clouds.get(0);
     Image i = cloud.client.getImage("debian-cloud", "debian-9-stretch-v20180820");
     assertNotNull(i);
-  }
-
-  @Test(timeout = 300000, expected = ExecutionException.class)
-  public void testWorkerFailed() throws Exception {
-    // TODO: each test method should probably have its own handler.
-    logOutput.reset();
-
-    ComputeEngineCloud cloud = (ComputeEngineCloud) r.jenkins.clouds.get(0);
-    cloud.addConfiguration(invalidInstanceConfiguration());
-
-    // Add a new node
-    Collection<NodeProvisioner.PlannedNode> planned = cloud.provision(new LabelAtom(LABEL), 1);
-
-    // There should be a planned node
-    assertEquals(logs(), 1, planned.size());
-
-    // Wait for the node creation to fail
-    planned.iterator().next().future.get();
   }
 
   @Test(timeout = 500000)
@@ -439,15 +420,6 @@ public class ComputeEngineCloudIT {
   private static InstanceConfiguration validInstanceConfigurationWithOneShot() {
     return instanceConfiguration(
         DEB_JAVA_STARTUP_SCRIPT, NUM_EXECUTORS, LABEL, false, true, NULL_TEMPLATE);
-  }
-
-  /**
-   * This configuration creates an instance with no Java installed.
-   *
-   * @return
-   */
-  private static InstanceConfiguration invalidInstanceConfiguration() {
-    return instanceConfiguration("", NUM_EXECUTORS, LABEL, false, false, NULL_TEMPLATE);
   }
 
   private static InstanceConfiguration instanceConfiguration(
