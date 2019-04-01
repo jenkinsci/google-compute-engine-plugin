@@ -63,7 +63,7 @@
     <maven.compiler.source>1.8</maven.compiler.source>
     <maven.compiler.target>1.8</maven.compiler.target>
     <skip.surefire.tests>${skipTests}</skip.surefire.tests>
-    <configuration-as-code.version>1.9-SNAPSHOT</configuration-as-code.version>
+    <configuration-as-code.version>1.8</configuration-as-code.version>
   </properties>
 
   <dependencies>
@@ -131,13 +131,13 @@
       <version>${configuration-as-code.version}</version>
       <scope>test</scope>
     </dependency>
-    <dependency>
-      <groupId>io.jenkins</groupId>
-      <artifactId>configuration-as-code</artifactId>
-      <version>${configuration-as-code.version}</version>
-      <classifier>tests</classifier>
-      <scope>test</scope>
-    </dependency>
+    <!--<dependency>-->
+      <!--<groupId>io.jenkins</groupId>-->
+      <!--<artifactId>configuration-as-code</artifactId>-->
+      <!--<version>${configuration-as-code.version}</version>-->
+      <!--<classifier>tests</classifier>-->
+      <!--<scope>test</scope>-->
+    <!--</dependency>-->
   </dependencies>
 
   <repositories>

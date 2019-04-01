@@ -20,12 +20,13 @@ import static org.junit.Assert.assertNotNull;
 public class ConfigAsCodeTest {
 
     @Rule
-    public JenkinsRule r = new JenkinsConfiguredWithCodeRule();
+//    public JenkinsRule r = new JenkinsConfiguredWithCodeRule();
+    public JenkinsRule r = new JenkinsRule();
 
     @Test
-    @ConfiguredWithCode("configuration-as-code.yml")
+//    @ConfiguredWithCode("configuration-as-code.yml")
     public void shouldCreateCloudInstanceFromCode() throws Exception {
-//        ConfigurationAsCode.get().configure(this.getClass().getResource("configuration-as-code.yml").toString());
+        ConfigurationAsCode.get().configure(this.getClass().getResource("configuration-as-code.yml").toString());
 
         assertEquals("Zero clouds found", r.jenkins.clouds.size(), 1);
         ComputeEngineCloud cloud = (ComputeEngineCloud) r.jenkins.clouds.getByName("gce-jenkins-build");
@@ -33,9 +34,9 @@ public class ConfigAsCodeTest {
     }
 
     @Test
-    @ConfiguredWithCode("configuration-as-code.yml")
+//    @ConfiguredWithCode("configuration-as-code.yml")
     public void shouldCreateGCEClientFromCode() throws Exception {
-//        ConfigurationAsCode.get().configure(this.getClass().getResource("configuration-as-code.yml").toString());
+        ConfigurationAsCode.get().configure(this.getClass().getResource("configuration-as-code.yml").toString());
 
         String testKey = IOUtils.toString(this.getClass().getResourceAsStream("gce-test-key.json"));
         ServiceAccountConfig sac = new StringJsonServiceAccountConfig(testKey);
