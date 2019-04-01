@@ -118,6 +118,7 @@ class ITUtil {
     CredentialsStore store = new SystemCredentialsProvider.ProviderImpl().getStore(r.jenkins);
     assertNotNull("Credentials store can not be null", store);
     store.addCredentials(Domain.global(), c);
+    assertEquals(1, store.getCredentials(Domain.global()).size());
     return c;
   }
 
