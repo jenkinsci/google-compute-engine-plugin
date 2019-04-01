@@ -36,7 +36,8 @@ public class ConfigAsCodeTest {
     public void shouldCreateGCEClientFromCode() throws Exception {
         ConfigurationAsCode.get().configure(this.getClass().getResource("configuration-as-code.yml").toString());
 
-        String testKey = IOUtils.toString(this.getClass().getResourceAsStream("gce-test-key.json"));
+        String testKey = IOUtils.toString(this.getClass().getClassLoader().getResourceAsStream("gce-test-key.json"));
+        System.out.println("Key: " + testKey);
         ServiceAccountConfig sac = new StringJsonServiceAccountConfig(testKey);
         Credentials credentials = new GoogleRobotPrivateKeyCredentials("gce-jenkins", sac, null);
 
