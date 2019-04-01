@@ -154,6 +154,12 @@ public class ComputeEngineCloud extends AbstractCloudImpl {
     }
 
 
+    /**
+     * Sets unique ID of that cloud instance.
+     * <p>
+     * This ID allows us to find machines from our cloud in GCP.
+     * <b>This value should not change between config reload, or nodes may be lost in GCP side</b>
+     */
     @DataBoundSetter
     public void setInstanceId(String instanceId) {
         this.instanceId = instanceId;
@@ -163,7 +169,6 @@ public class ComputeEngineCloud extends AbstractCloudImpl {
      * Returns unique ID of that cloud instance.
      * <p>
      * This ID allows us to find machines from our cloud in GCP.
-     * Current implementation is bit naive and generate ID based on name hashCode.
      *
      * @return instance unique ID
      */
@@ -177,7 +182,7 @@ public class ComputeEngineCloud extends AbstractCloudImpl {
                     credentialsId);
             return clientFactory.compute();
         } catch (IOException e) {
-            LOGGER.log(Level.WARNING, "Exception why creating GCE client", e);
+            LOGGER.log(Level.SEVERE, "Exception why creating GCE client", e);
             return null;
         }
     }
@@ -207,13 +212,12 @@ public class ComputeEngineCloud extends AbstractCloudImpl {
         return projectId;
     }
 
-    public List<InstanceConfiguration> getConfigurations() {
-        return configurations;
-    }
-
+    /**
+     * Set configurations for this cloud.
+     * @param configurations configurations to be used
+     */
     @DataBoundSetter
     public void setConfigurations(List<InstanceConfiguration> configurations) {
-        System.out.println("Data boud setter called");
         if (this.configurations == null) {
             this.configurations = new ArrayList<>();
         }
@@ -221,6 +225,19 @@ public class ComputeEngineCloud extends AbstractCloudImpl {
         readResolve();
     }
 
+    /**
+     * Returns configurations for this cloud.
+     * @return configurations
+     */
+    public List<InstanceConfiguration> getConfigurations() {
+        return configurations;
+    }
+
+    /**
+     * Adds one configuration.
+     * @param configuration configuration to add
+     */
+    @Deprecated
     public void addConfiguration(InstanceConfiguration configuration) {
         if (configurations == null) {
             this.configurations = new ArrayList<>();
@@ -231,7 +248,7 @@ public class ComputeEngineCloud extends AbstractCloudImpl {
 
     @Override
     public Collection<PlannedNode> provision(Label label, int excessWorkload) {
-        List<PlannedNode> r = new ArrayList<PlannedNode>();
+        List<PlannedNode> r = new ArrayList<>();
         try {
             //TODO: retrieve and iterate a list of InstanceConfiguration that match label
             final InstanceConfiguration config = getInstanceConfig(label);
