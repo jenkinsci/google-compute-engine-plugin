@@ -7,8 +7,6 @@ import com.cloudbees.plugins.credentials.domains.Domain;
 import com.google.jenkins.plugins.credentials.oauth.GoogleRobotPrivateKeyCredentials;
 import com.google.jenkins.plugins.credentials.oauth.ServiceAccountConfig;
 import io.jenkins.plugins.casc.ConfigurationAsCode;
-import io.jenkins.plugins.casc.misc.ConfiguredWithCode;
-import io.jenkins.plugins.casc.misc.JenkinsConfiguredWithCodeRule;
 import org.apache.commons.io.IOUtils;
 import org.junit.Rule;
 import org.junit.Test;
