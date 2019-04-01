@@ -19,6 +19,8 @@ package com.google.jenkins.plugins.computeengine.integration;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.DEB_JAVA_STARTUP_SCRIPT;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.LABEL;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.NULL_TEMPLATE;
+import static com.google.jenkins.plugins.computeengine.integration.ITUtil.PROJECT_ID;
+import static com.google.jenkins.plugins.computeengine.integration.ITUtil.ZONE;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.getLabel;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.initClient;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.initCloud;
@@ -27,7 +29,9 @@ import static com.google.jenkins.plugins.computeengine.integration.ITUtil.initLo
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.instanceConfiguration;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.logs;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
+import com.google.api.services.compute.model.Instance;
 import com.google.jenkins.plugins.computeengine.ComputeEngineCloud;
 import com.google.jenkins.plugins.computeengine.client.ComputeClient;
 import hudson.model.labels.LabelAtom;
@@ -51,33 +55,26 @@ public class ComputeEngineCloud1WorkerCreatedFor2ExecutorsIT {
       Logger.getLogger(ComputeEngineCloud1WorkerCreatedFor2ExecutorsIT.class.getName());
 
   private static final String MULTIPLE_NUM_EXECUTORS = "2";
+  private static final String EXPECTED_LOG_MESSAGE = "for excess workload of 2 units of label";
 
   @ClassRule public static Timeout timeout = new Timeout(5, TimeUnit.MINUTES);
   @ClassRule public static JenkinsRule r = new JenkinsRule();
 
   private static ByteArrayOutputStream logOutput = new ByteArrayOutputStream();
   private static StreamHandler sh;
-  private static ComputeEngineCloud cloud;
   private static ComputeClient client;
   private static Map<String, String> label =
       getLabel(ComputeEngineCloud1WorkerCreatedFor2ExecutorsIT.class);
+  private static Instance i;
 
   @BeforeClass
   public static void init() throws Exception {
     log.info("init");
     initCredentials(r);
-    cloud = initCloud(r);
+    ComputeEngineCloud cloud = initCloud(r);
     sh = initLogging(logOutput);
     client = initClient(r, label, log);
-  }
 
-  @AfterClass
-  public static void teardown() throws IOException {
-    ITUtil.teardown(sh, logOutput, client, label, log);
-  }
-
-  @Test
-  public void test1WorkerCreatedFor2Executors() {
     cloud.addConfiguration(
         instanceConfiguration(
             DEB_JAVA_STARTUP_SCRIPT,
@@ -92,5 +89,27 @@ public class ComputeEngineCloud1WorkerCreatedFor2ExecutorsIT {
 
     // There should be a planned node
     assertEquals(logs(sh, logOutput), 1, planned.size());
+
+    String name = planned.iterator().next().displayName;
+
+    // Wait for node creation to finish
+    planned.iterator().next().future.get();
+
+    i = client.getInstance(PROJECT_ID, ZONE, name);
+  }
+
+  @AfterClass
+  public static void teardown() throws IOException {
+    ITUtil.teardown(sh, logOutput, client, label, log);
+  }
+
+  @Test
+  public void test1WorkerCreatedFor2ExecutorsStatusRunning() {
+    assertEquals(logs(sh, logOutput), "RUNNING", i.getStatus());
+  }
+
+  @Test
+  public void test1WorkerCreatedFor2ExecutorsExpectedLogs() {
+    assertTrue(logs(sh, logOutput), logs(sh, logOutput).contains(EXPECTED_LOG_MESSAGE));
   }
 }
