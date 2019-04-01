@@ -7,6 +7,8 @@ import com.cloudbees.plugins.credentials.domains.Domain;
 import com.google.jenkins.plugins.credentials.oauth.GoogleRobotPrivateKeyCredentials;
 import com.google.jenkins.plugins.credentials.oauth.ServiceAccountConfig;
 import io.jenkins.plugins.casc.ConfigurationAsCode;
+import io.jenkins.plugins.casc.misc.ConfiguredWithCode;
+import io.jenkins.plugins.casc.misc.JenkinsConfiguredWithCodeRule;
 import org.apache.commons.io.IOUtils;
 import org.junit.Rule;
 import org.junit.Test;
@@ -18,12 +20,12 @@ import static org.junit.Assert.assertNotNull;
 public class ConfigAsCodeTest {
 
     @Rule
-    public JenkinsRule r = new JenkinsRule();
+    public JenkinsRule r = new JenkinsConfiguredWithCodeRule();
 
     @Test
-//    @ConfiguredWithCode("configuration-as-code.yml")
+    @ConfiguredWithCode("configuration-as-code.yml")
     public void shouldCreateCloudInstanceFromCode() throws Exception {
-        ConfigurationAsCode.get().configure(this.getClass().getResource("configuration-as-code.yml").toString());
+//        ConfigurationAsCode.get().configure(this.getClass().getResource("configuration-as-code.yml").toString());
 
         assertEquals("Zero clouds found", r.jenkins.clouds.size(), 1);
         ComputeEngineCloud cloud = (ComputeEngineCloud) r.jenkins.clouds.getByName("gce-jenkins-build");
@@ -31,9 +33,9 @@ public class ConfigAsCodeTest {
     }
 
     @Test
-//    @ConfiguredWithCode("configuration-as-code.yml")
+    @ConfiguredWithCode("configuration-as-code.yml")
     public void shouldCreateGCEClientFromCode() throws Exception {
-        ConfigurationAsCode.get().configure(this.getClass().getResource("configuration-as-code.yml").toString());
+//        ConfigurationAsCode.get().configure(this.getClass().getResource("configuration-as-code.yml").toString());
 
         String testKey = IOUtils.toString(this.getClass().getResourceAsStream("gce-test-key.json"));
         ServiceAccountConfig sac = new StringJsonServiceAccountConfig(testKey);

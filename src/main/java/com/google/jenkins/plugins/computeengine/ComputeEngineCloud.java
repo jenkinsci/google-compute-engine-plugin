@@ -57,9 +57,9 @@ import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
-import java.util.concurrent.atomic.AtomicReference;
 import java.util.logging.Level;
 import java.util.logging.LogRecord;
 import java.util.logging.Logger;
@@ -78,6 +78,7 @@ public class ComputeEngineCloud extends AbstractCloudImpl {
     public final String projectId;
     public final String credentialsId;
 
+    private String instanceId;
     private List<InstanceConfiguration> configurations;
 
     private transient volatile ComputeClient client;
@@ -89,8 +90,8 @@ public class ComputeEngineCloud extends AbstractCloudImpl {
             String credentialsId,
             String instanceCapStr) {
         super(createCloudId(cloudName), instanceCapStr);
-        System.out.println("Data boud constructolr called");
 
+        instanceId = UUID.randomUUID().toString();
         this.credentialsId = credentialsId;
         this.projectId = projectId;
         setConfigurations(null);
@@ -137,14 +138,13 @@ public class ComputeEngineCloud extends AbstractCloudImpl {
     }
 
     protected Object readResolve() {
-        System.out.println("Read resolved");
         if (configurations != null) {
             for (InstanceConfiguration configuration : configurations) {
                 configuration.cloud = this;
                 configuration.readResolve();
                 // Apply a label that associates an instance configuration with
                 // this cloud provider
-                configuration.appendLabel(CLOUD_ID_LABEL_KEY, getInstanceUniqueId());
+                configuration.appendLabel(CLOUD_ID_LABEL_KEY, getInstanceId());
 
                 // Apply a label that identifies the name of this instance configuration
                 configuration.appendLabel(CONFIG_LABEL_KEY, configuration.namePrefix);
@@ -154,6 +154,11 @@ public class ComputeEngineCloud extends AbstractCloudImpl {
     }
 
 
+    @DataBoundSetter
+    public void setInstanceId(String instanceId) {
+        this.instanceId = instanceId;
+    }
+
     /**
      * Returns unique ID of that cloud instance.
      * <p>
@@ -162,9 +167,8 @@ public class ComputeEngineCloud extends AbstractCloudImpl {
      *
      * @return instance unique ID
      */
-    public String getInstanceUniqueId() {
-        // Semi unique ID
-        return String.valueOf(name.hashCode());
+    public String getInstanceId() {
+        return instanceId;
     }
 
     private ComputeClient createClient() {
@@ -220,7 +224,7 @@ public class ComputeEngineCloud extends AbstractCloudImpl {
     public void addConfiguration(InstanceConfiguration configuration) {
         if (configurations == null) {
             this.configurations = new ArrayList<>();
-        }        
+        }
         configurations.add(configuration);
         readResolve();
     }
@@ -277,7 +281,7 @@ public class ComputeEngineCloud extends AbstractCloudImpl {
         try {
             // We only care about instances that have a label indicating they
             // belong to this cloud
-            Map<String, String> filterLabel = ImmutableMap.of(CLOUD_ID_LABEL_KEY, getInstanceUniqueId());
+            Map<String, String> filterLabel = ImmutableMap.of(CLOUD_ID_LABEL_KEY, getInstanceId());
             List<Instance> instances = getClient().getInstancesWithLabel(projectId, filterLabel);
 
             // Don't count instances that are not running (or starting up)

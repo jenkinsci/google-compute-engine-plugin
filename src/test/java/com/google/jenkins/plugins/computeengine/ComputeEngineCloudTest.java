@@ -39,10 +39,13 @@ import java.util.List;
 
 import static com.google.jenkins.plugins.computeengine.client.ClientFactoryTest.ACCOUNT_ID;
 import static com.google.jenkins.plugins.computeengine.client.ClientFactoryTest.PRIVATE_KEY;
+import static org.hamcrest.Matchers.isEmptyOrNullString;
+import static org.hamcrest.Matchers.not;
 
 @RunWith(MockitoJUnitRunner.class)
 public class ComputeEngineCloudTest {
 
+    private static final String INSTANCE_ID = "213123";
     private static final String CLOUD_NAME = "test-cloud";
     private static final String PROJECT_ID = ACCOUNT_ID;
     private static final String INSTANCE_CAP_STR = "1";
@@ -70,9 +73,12 @@ public class ComputeEngineCloudTest {
         List<InstanceConfiguration> ics = new ArrayList<>();
         ics.add(InstanceConfigurationTest.instanceConfiguration());
         ics.add(InstanceConfigurationTest.instanceConfiguration());
-        ComputeEngineCloud cloud = new ComputeEngineCloud(CLOUD_NAME, PROJECT_ID, PROJECT_ID, INSTANCE_CAP_STR, ics);
+        ComputeEngineCloud cloud = new ComputeEngineCloud(CLOUD_NAME, PROJECT_ID, PROJECT_ID, INSTANCE_CAP_STR);
+        cloud.setInstanceId(INSTANCE_ID);
+        cloud.setConfigurations(ics);
 
         // Ensure names are set
+        Assert.assertEquals(INSTANCE_ID, cloud.getInstanceId());
         Assert.assertEquals(ComputeEngineCloud.CLOUD_PREFIX + CLOUD_NAME, cloud.name);
         Assert.assertEquals(CLOUD_NAME, cloud.getCloudName());
         Assert.assertEquals(CLOUD_NAME, cloud.getDisplayName());
@@ -92,6 +98,12 @@ public class ComputeEngineCloudTest {
             Assert.assertEquals("Cloud reference was not set on child InstanceConfiguration", ic.cloud, cloud);
         }
     }
+    
+    @Test
+    public void instanceIdWasGenerated() throws Exception {
+        ComputeEngineCloud cloud = new ComputeEngineCloud(CLOUD_NAME, PROJECT_ID, PROJECT_ID, INSTANCE_CAP_STR);
+        Assert.assertThat("Instance ID was not generated in constructor", cloud.getInstanceId(), not(isEmptyOrNullString()));
+    }
 
     @Test
     public void labels() throws Exception {
@@ -103,7 +115,8 @@ public class ComputeEngineCloudTest {
         // Add a few InstanceConfigurations
         List<InstanceConfiguration> ics = new ArrayList<>();
         ics.add(InstanceConfigurationTest.instanceConfiguration());
-        ComputeEngineCloud cloud = new ComputeEngineCloud(CLOUD_NAME, PROJECT_ID, PROJECT_ID, INSTANCE_CAP_STR, ics);
+        ComputeEngineCloud cloud = new ComputeEngineCloud(CLOUD_NAME, PROJECT_ID, PROJECT_ID, INSTANCE_CAP_STR);
+        cloud.setConfigurations(ics);
 
         // Should be able to provision a label
         Label l = new LabelAtom(InstanceConfigurationTest.A_LABEL);
