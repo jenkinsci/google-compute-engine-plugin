@@ -25,7 +25,6 @@ import static com.google.jenkins.plugins.computeengine.integration.ITUtil.handle
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.initClient;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.initCloud;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.initCredentials;
-import static com.google.jenkins.plugins.computeengine.integration.ITUtil.initLogging;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.instanceConfiguration;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.logs;
 import static org.junit.Assert.assertEquals;
@@ -49,6 +48,7 @@ import java.io.IOException;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
+import java.util.logging.SimpleFormatter;
 import java.util.logging.StreamHandler;
 import org.awaitility.Awaitility;
 import org.junit.AfterClass;
@@ -68,7 +68,7 @@ public class ComputeEngineCloudSnapshotCreatedIT {
   @ClassRule public static JenkinsRule jenkinsRule = new JenkinsRule();
 
   private static ByteArrayOutputStream logOutput = new ByteArrayOutputStream();
-  private static StreamHandler streamHandler;
+  private static StreamHandler streamHandler = new StreamHandler(logOutput, new SimpleFormatter());
   private static ComputeClient client;
   private static Map<String, String> label = getLabel(ComputeEngineCloudSnapshotCreatedIT.class);
   private static Snapshot createdSnapshot = null;
@@ -78,8 +78,9 @@ public class ComputeEngineCloudSnapshotCreatedIT {
     log.info("init");
     initCredentials(jenkinsRule);
     ComputeEngineCloud cloud = initCloud(jenkinsRule);
+    handleClassLogs(streamHandler, ComputeEngineCloud.class.getName());
     client = initClient(jenkinsRule, label, log);
-    streamHandler = initLogging(logOutput);
+    handleClassLogs(streamHandler, ComputeClient.class.getName());
 
     assertTrue(cloud.configurations.isEmpty());
     InstanceConfiguration instanceConfiguration =

@@ -21,10 +21,10 @@ import static com.google.jenkins.plugins.computeengine.integration.ITUtil.LABEL;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.NULL_TEMPLATE;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.NUM_EXECUTORS;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.getLabel;
+import static com.google.jenkins.plugins.computeengine.integration.ITUtil.handleClassLogs;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.initClient;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.initCloud;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.initCredentials;
-import static com.google.jenkins.plugins.computeengine.integration.ITUtil.initLogging;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.instanceConfiguration;
 import static org.junit.Assert.assertTrue;
 
@@ -41,6 +41,7 @@ import java.util.Collections;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
+import java.util.logging.SimpleFormatter;
 import java.util.logging.StreamHandler;
 import org.awaitility.Awaitility;
 import org.junit.AfterClass;
@@ -57,7 +58,7 @@ public class ComputeEngineCloudOneShotInstanceIT {
   @ClassRule public static JenkinsRule jenkinsRule = new JenkinsRule();
 
   private static ByteArrayOutputStream logOutput = new ByteArrayOutputStream();
-  private static StreamHandler streamHandler;
+  private static StreamHandler streamHandler = new StreamHandler(logOutput, new SimpleFormatter());
   private static ComputeClient client;
   private static Map<String, String> label = getLabel(ComputeEngineCloudOneShotInstanceIT.class);
   private static FreeStyleBuild build;
@@ -67,8 +68,10 @@ public class ComputeEngineCloudOneShotInstanceIT {
     log.info("init");
     initCredentials(jenkinsRule);
     ComputeEngineCloud cloud = initCloud(jenkinsRule);
-    streamHandler = initLogging(logOutput);
+    handleClassLogs(streamHandler, ComputeEngineCloud.class.getName());
     client = initClient(jenkinsRule, label, log);
+    handleClassLogs(streamHandler, ComputeClient.class.getName());
+
     cloud.addConfiguration(
         instanceConfiguration(
             DEB_JAVA_STARTUP_SCRIPT, NUM_EXECUTORS, LABEL, label, false, true, NULL_TEMPLATE));

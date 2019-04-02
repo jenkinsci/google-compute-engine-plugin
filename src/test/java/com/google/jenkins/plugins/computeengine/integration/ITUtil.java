@@ -56,7 +56,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.logging.LogManager;
 import java.util.logging.Logger;
-import java.util.logging.SimpleFormatter;
 import java.util.logging.StreamHandler;
 import org.jvnet.hudson.test.JenkinsRule;
 
@@ -130,14 +129,6 @@ class ITUtil {
     jenkinsRule.jenkins.clouds.add(gcp);
     assertEquals(1, jenkinsRule.jenkins.clouds.size());
     return gcp;
-  }
-
-  // Capture log output to make sense of most failures
-  static StreamHandler initLogging(ByteArrayOutputStream logOutput) {
-    StreamHandler streamHandler = new StreamHandler(logOutput, new SimpleFormatter());
-    handleClassLogs(streamHandler, ComputeEngineCloud.class.getName());
-    handleClassLogs(streamHandler, ComputeClient.class.getName());
-    return streamHandler;
   }
 
   static void handleClassLogs(StreamHandler streamHandler, String className) {
