@@ -16,13 +16,14 @@
 
 package com.google.jenkins.plugins.computeengine;
 
+import static com.google.common.collect.ImmutableMap.of;
+import static com.google.jenkins.plugins.computeengine.ComputeEngineCloud.CLOUD_ID_LABEL_KEY;
+import static java.util.Collections.emptyList;
+
 import com.google.api.services.compute.model.Instance;
 import hudson.Extension;
 import hudson.model.PeriodicWork;
 import hudson.model.Slave;
-import jenkins.model.Jenkins;
-import org.jenkinsci.Symbol;
-
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
@@ -30,99 +31,84 @@ import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
+import jenkins.model.Jenkins;
+import org.jenkinsci.Symbol;
 
-import static com.google.common.collect.ImmutableMap.of;
-import static com.google.jenkins.plugins.computeengine.ComputeEngineCloud.CLOUD_ID_LABEL_KEY;
-import static java.util.Collections.emptyList;
-
-/**
- * Periodically checks if there are no lost nodes in GCP.
- * If it finds any they are deleted.
- */
+/** Periodically checks if there are no lost nodes in GCP. If it finds any they are deleted. */
 @Extension
 @Symbol("cleanLostNodesWork")
 public class CleanLostNodesWork extends PeriodicWork {
-    protected final Logger logger = Logger.getLogger(getClass().getName());
+  protected final Logger logger = Logger.getLogger(getClass().getName());
 
-    /**
-     * {@inheritDoc}
-     */
-    @SuppressWarnings("unchecked")
-    @Override
-    public long getRecurrencePeriod() {
-        return HOUR;
-    }
+  /** {@inheritDoc} */
+  @SuppressWarnings("unchecked")
+  @Override
+  public long getRecurrencePeriod() {
+    return HOUR;
+  }
 
-    /**
-     * {@inheritDoc}
-     */
-    @SuppressWarnings("unchecked")
-    @Override
-    protected void doRun() {
-        logger.log(Level.FINEST, "Starting clean lost nodes worker");
-        getClouds().forEach(this::cleanCloud);
-    }
+  /** {@inheritDoc} */
+  @SuppressWarnings("unchecked")
+  @Override
+  protected void doRun() {
+    logger.log(Level.FINEST, "Starting clean lost nodes worker");
+    getClouds().forEach(this::cleanCloud);
+  }
 
-    private void cleanCloud(ComputeEngineCloud cloud) {
-        logger.log(Level.FINEST, "Cleaning cloud " + cloud.getCloudName());
-        List<Instance> remoteInstances = findRemoteInstances(cloud);
-        Set<String> localInstances = findLocalInstances(cloud);
-        remoteInstances
-                .stream()
-                .filter(remote -> isOrphaned(remote, localInstances))
-                .forEach(remote -> terminateInstance(remote, cloud));
-    }
+  private void cleanCloud(ComputeEngineCloud cloud) {
+    logger.log(Level.FINEST, "Cleaning cloud " + cloud.getCloudName());
+    List<Instance> remoteInstances = findRemoteInstances(cloud);
+    Set<String> localInstances = findLocalInstances(cloud);
+    remoteInstances.stream()
+        .filter(remote -> isOrphaned(remote, localInstances))
+        .forEach(remote -> terminateInstance(remote, cloud));
+  }
 
-    private boolean isOrphaned(Instance remote, Set<String> localInstances) {
-        String instanceName = remote.getName();
-        logger.log(Level.FINEST, "Checking instance " + instanceName);
-        return !localInstances.contains(instanceName);
-    }
+  private boolean isOrphaned(Instance remote, Set<String> localInstances) {
+    String instanceName = remote.getName();
+    logger.log(Level.FINEST, "Checking instance " + instanceName);
+    return !localInstances.contains(instanceName);
+  }
 
-    private void terminateInstance(Instance remote, ComputeEngineCloud cloud) {
-        String instanceName = remote.getName();
-        logger.log(Level.INFO, "Remote instance " + instanceName + " not found locally, removing it");
-        try {
-            cloud.getClient().terminateInstance(cloud.getProjectId(), remote.getZone(), instanceName);
-        } catch (IOException ex) {
-            logger.log(Level.WARNING, "Error terminating remote instance " + instanceName, ex);
-        }
+  private void terminateInstance(Instance remote, ComputeEngineCloud cloud) {
+    String instanceName = remote.getName();
+    logger.log(Level.INFO, "Remote instance " + instanceName + " not found locally, removing it");
+    try {
+      cloud.getClient().terminateInstance(cloud.getProjectId(), remote.getZone(), instanceName);
+    } catch (IOException ex) {
+      logger.log(Level.WARNING, "Error terminating remote instance " + instanceName, ex);
     }
+  }
 
-    private List<ComputeEngineCloud> getClouds() {
-        return Jenkins.get().clouds
-                .stream()
-                .filter(cloud -> cloud instanceof ComputeEngineCloud)
-                .map(cloud -> (ComputeEngineCloud) cloud)
-                .collect(Collectors.toList());
-    }
+  private List<ComputeEngineCloud> getClouds() {
+    return Jenkins.get().clouds.stream()
+        .filter(cloud -> cloud instanceof ComputeEngineCloud)
+        .map(cloud -> (ComputeEngineCloud) cloud)
+        .collect(Collectors.toList());
+  }
 
-    private Set<String> findLocalInstances(ComputeEngineCloud cloud) {
-        return Jenkins.get()
-                .getNodes()
-                .stream()
-                .filter(node -> node instanceof ComputeEngineInstance)
-                .map(node -> (ComputeEngineInstance) node)
-                .filter(node -> node.getCloud().equals(cloud))
-                .map(Slave::getNodeName)
-                .collect(Collectors.toSet());
-    }
+  private Set<String> findLocalInstances(ComputeEngineCloud cloud) {
+    return Jenkins.get().getNodes().stream()
+        .filter(node -> node instanceof ComputeEngineInstance)
+        .map(node -> (ComputeEngineInstance) node)
+        .filter(node -> node.getCloud().equals(cloud))
+        .map(Slave::getNodeName)
+        .collect(Collectors.toSet());
+  }
 
-    private List<Instance> findRemoteInstances(ComputeEngineCloud cloud) {
-        Map<String, String> filterLabel = of(CLOUD_ID_LABEL_KEY, cloud.getInstanceId());
-        try {
-            return cloud.getClient()
-                    .getInstancesWithLabel(cloud.getProjectId(), filterLabel)
-                    .stream()
-                    .filter(instance -> shouldTerminateStatus(instance.getStatus()))
-                    .collect(Collectors.toList());
-        } catch (IOException ex) {
-            logger.log(Level.WARNING, "Error finding remote instances", ex);
-            return emptyList();
-        }
+  private List<Instance> findRemoteInstances(ComputeEngineCloud cloud) {
+    Map<String, String> filterLabel = of(CLOUD_ID_LABEL_KEY, cloud.getInstanceId());
+    try {
+      return cloud.getClient().getInstancesWithLabel(cloud.getProjectId(), filterLabel).stream()
+          .filter(instance -> shouldTerminateStatus(instance.getStatus()))
+          .collect(Collectors.toList());
+    } catch (IOException ex) {
+      logger.log(Level.WARNING, "Error finding remote instances", ex);
+      return emptyList();
     }
+  }
 
-    private boolean shouldTerminateStatus(String status) {
-        return !status.equals("STOPPING");
-    }
+  private boolean shouldTerminateStatus(String status) {
+    return !status.equals("STOPPING");
+  }
 }
