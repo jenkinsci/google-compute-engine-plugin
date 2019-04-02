@@ -51,10 +51,10 @@ public class ComputeEngineCloudWorkerFailedIT {
   private static Logger log = Logger.getLogger(ComputeEngineCloudWorkerFailedIT.class.getName());
 
   @ClassRule public static Timeout timeout = new Timeout(5, TimeUnit.MINUTES);
-  @ClassRule public static JenkinsRule r = new JenkinsRule();
+  @ClassRule public static JenkinsRule jenkinsRule = new JenkinsRule();
 
   private static ByteArrayOutputStream logOutput = new ByteArrayOutputStream();
-  private static StreamHandler sh;
+  private static StreamHandler streamHandler;
   private static ComputeClient client;
   private static Map<String, String> label = getLabel(ComputeEngineCloudWorkerFailedIT.class);
   private static Collection<PlannedNode> planned;
@@ -62,10 +62,10 @@ public class ComputeEngineCloudWorkerFailedIT {
   @BeforeClass
   public static void init() throws Exception {
     log.info("init");
-    initCredentials(r);
-    ComputeEngineCloud cloud = initCloud(r);
-    sh = initLogging(logOutput);
-    client = initClient(r, label, log);
+    initCredentials(jenkinsRule);
+    ComputeEngineCloud cloud = initCloud(jenkinsRule);
+    streamHandler = initLogging(logOutput);
+    client = initClient(jenkinsRule, label, log);
 
     // This configuration creates an instance with no Java installed.
     cloud.addConfiguration(
@@ -77,13 +77,13 @@ public class ComputeEngineCloudWorkerFailedIT {
 
   @AfterClass
   public static void teardown() throws IOException {
-    ITUtil.teardown(sh, logOutput, client, label, log);
+    ITUtil.teardown(streamHandler, logOutput, client, label, log);
   }
 
   @Test
   public void testWorkerFailedNodePlanned() {
     // There should be a planned node
-    assertEquals(logs(sh, logOutput), 1, planned.size());
+    assertEquals(logs(streamHandler, logOutput), 1, planned.size());
   }
 
   @Test(expected = ExecutionException.class)

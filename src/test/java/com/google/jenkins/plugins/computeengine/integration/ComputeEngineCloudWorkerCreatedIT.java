@@ -56,57 +56,57 @@ public class ComputeEngineCloudWorkerCreatedIT {
   private static Logger log = Logger.getLogger(ComputeEngineCloudWorkerCreatedIT.class.getName());
 
   @ClassRule public static Timeout timeout = new Timeout(5, TimeUnit.MINUTES);
-  @ClassRule public static JenkinsRule r = new JenkinsRule();
+  @ClassRule public static JenkinsRule jenkinsRule = new JenkinsRule();
 
   private static ByteArrayOutputStream logOutput = new ByteArrayOutputStream();
-  private static StreamHandler sh;
+  private static StreamHandler streamHandler;
   private static ComputeClient client;
   private static ComputeEngineCloud cloud;
   private static Map<String, String> label = getLabel(ComputeEngineCloudWorkerCreatedIT.class);
-  private static InstanceConfiguration ic;
-  private static Instance i;
+  private static InstanceConfiguration instanceConfiguration;
+  private static Instance instance;
 
   @BeforeClass
   public static void init() throws Exception {
     log.info("init");
-    initCredentials(r);
-    cloud = initCloud(r);
-    sh = initLogging(logOutput);
-    client = initClient(r, label, log);
+    initCredentials(jenkinsRule);
+    cloud = initCloud(jenkinsRule);
+    streamHandler = initLogging(logOutput);
+    client = initClient(jenkinsRule, label, log);
 
-    ic =
+    instanceConfiguration =
         instanceConfiguration(
             DEB_JAVA_STARTUP_SCRIPT, NUM_EXECUTORS, LABEL, label, false, false, NULL_TEMPLATE);
-    cloud.addConfiguration(ic);
+    cloud.addConfiguration(instanceConfiguration);
     // Add a new node
     Collection<PlannedNode> planned = cloud.provision(new LabelAtom(LABEL), 1);
 
     // There should be a planned node
-    assertEquals(logs(sh, logOutput), 1, planned.size());
+    assertEquals(logs(streamHandler, logOutput), 1, planned.size());
 
     String name = planned.iterator().next().displayName;
 
     // Wait for the node creation to finish
     planned.iterator().next().future.get();
 
-    i = cloud.getClient().getInstance(PROJECT_ID, ZONE, name);
+    instance = cloud.getClient().getInstance(PROJECT_ID, ZONE, name);
   }
 
   @AfterClass
   public static void teardown() throws IOException {
-    ITUtil.teardown(sh, logOutput, client, label, log);
+    ITUtil.teardown(streamHandler, logOutput, client, label, log);
   }
 
   @Test
   public void testWorkerCreatedNoWarningLogs() {
     // There should be no warning logs
-    assertFalse(logs(sh, logOutput), logs(sh, logOutput).contains("WARNING"));
+    assertFalse(logs(streamHandler, logOutput), logs(streamHandler, logOutput).contains("WARNING"));
   }
 
   @Test
   public void testWorkerCreatedNumberOfLabels() {
     // The created instance should have 3 labels
-    assertEquals(logs(sh, logOutput), 3, i.getLabels().size());
+    assertEquals(logs(streamHandler, logOutput), 3, instance.getLabels().size());
   }
 
   @Test
@@ -114,17 +114,17 @@ public class ComputeEngineCloudWorkerCreatedIT {
     // Instance should have a label with key CONFIG_LABEL_KEY and value equal to the config's name
     // prefix
     assertEquals(
-        logs(sh, logOutput),
-        ic.getNamePrefix(),
-        i.getLabels().get(ComputeEngineCloud.CONFIG_LABEL_KEY));
+        logs(streamHandler, logOutput),
+        instanceConfiguration.getNamePrefix(),
+        instance.getLabels().get(ComputeEngineCloud.CONFIG_LABEL_KEY));
   }
 
   @Test
   public void testWorkerCreatedCloudIdKeyAndValue() {
     // Instance should have a label with key CLOUD_ID_LABEL_KEY and value equal to the instance ID
     assertEquals(
-        logs(sh, logOutput),
+        logs(streamHandler, logOutput),
         cloud.getInstanceId(),
-        i.getLabels().get(ComputeEngineCloud.CLOUD_ID_LABEL_KEY));
+        instance.getLabels().get(ComputeEngineCloud.CLOUD_ID_LABEL_KEY));
   }
 }

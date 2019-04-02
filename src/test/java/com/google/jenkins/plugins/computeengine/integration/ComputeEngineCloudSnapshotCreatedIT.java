@@ -65,10 +65,10 @@ public class ComputeEngineCloudSnapshotCreatedIT {
   private static final int SNAPSHOT_TEST_TIMEOUT = 120;
 
   @ClassRule public static Timeout timeout = new Timeout(5, TimeUnit.MINUTES);
-  @ClassRule public static JenkinsRule r = new JenkinsRule();
+  @ClassRule public static JenkinsRule jenkinsRule = new JenkinsRule();
 
   private static ByteArrayOutputStream logOutput = new ByteArrayOutputStream();
-  private static StreamHandler sh;
+  private static StreamHandler streamHandler;
   private static ComputeClient client;
   private static Map<String, String> label = getLabel(ComputeEngineCloudSnapshotCreatedIT.class);
   private static Snapshot createdSnapshot = null;
@@ -76,13 +76,13 @@ public class ComputeEngineCloudSnapshotCreatedIT {
   @BeforeClass
   public static void init() throws Exception {
     log.info("init");
-    initCredentials(r);
-    ComputeEngineCloud cloud = initCloud(r);
-    client = initClient(r, label, log);
-    sh = initLogging(logOutput);
+    initCredentials(jenkinsRule);
+    ComputeEngineCloud cloud = initCloud(jenkinsRule);
+    client = initClient(jenkinsRule, label, log);
+    streamHandler = initLogging(logOutput);
 
     assertTrue(cloud.configurations.isEmpty());
-    InstanceConfiguration ic =
+    InstanceConfiguration instanceConfiguration =
         instanceConfiguration(
             DEB_JAVA_STARTUP_SCRIPT,
             NUM_EXECUTORS,
@@ -91,28 +91,30 @@ public class ComputeEngineCloudSnapshotCreatedIT {
             true,
             true,
             NULL_TEMPLATE);
-    cloud.addConfiguration(ic);
+
+    cloud.addConfiguration(instanceConfiguration);
     assertTrue(
-        logs(sh, logOutput), cloud.getInstanceConfig(ic.getDescription()).isCreateSnapshot());
+        logs(streamHandler, logOutput),
+        cloud.getInstanceConfig(instanceConfiguration.getDescription()).isCreateSnapshot());
 
     // Assert that there is 0 nodes
-    assertTrue(r.jenkins.getNodes().isEmpty());
+    assertTrue(jenkinsRule.jenkins.getNodes().isEmpty());
 
-    FreeStyleProject project = r.createFreeStyleProject();
+    FreeStyleProject project = jenkinsRule.createFreeStyleProject();
     Builder step = new Shell("exit 1");
     project.getBuildersList().add(step);
     project.setAssignedLabel(new LabelAtom(SNAPSHOT_LABEL));
 
-    FreeStyleBuild build = r.assertBuildStatus(Result.FAILURE, project.scheduleBuild2(0));
+    FreeStyleBuild build = jenkinsRule.assertBuildStatus(Result.FAILURE, project.scheduleBuild2(0));
     Node worker = build.getBuiltOn();
-    assertNotNull(logs(sh, logOutput), worker);
+    assertNotNull(logs(streamHandler, logOutput), worker);
     // Cannot handle class logs for ComputeEngineInstance until an instance exists.
-    handleClassLogs(sh, ComputeEngineInstance.class.getName());
+    handleClassLogs(streamHandler, ComputeEngineInstance.class.getName());
 
     // Need time for one-shot instance to terminate and create the snapshot
     Awaitility.await()
         .timeout(SNAPSHOT_TEST_TIMEOUT, TimeUnit.SECONDS)
-        .until(() -> r.jenkins.getNode(worker.getNodeName()) == null);
+        .until(() -> jenkinsRule.jenkins.getNode(worker.getNodeName()) == null);
 
     createdSnapshot = client.getSnapshot(PROJECT_ID, worker.getNodeName());
   }
@@ -122,24 +124,24 @@ public class ComputeEngineCloudSnapshotCreatedIT {
     if (createdSnapshot != null) {
       client.deleteSnapshot(PROJECT_ID, createdSnapshot.getName());
     }
-    ITUtil.teardown(sh, logOutput, client, label, log);
+    ITUtil.teardown(streamHandler, logOutput, client, label, log);
   }
 
   // Tests snapshot is created when we have failure builds for given node
   @Test
   public void testSnapshotCreatedNotNull() {
-    assertNotNull(logs(sh, logOutput), createdSnapshot);
+    assertNotNull(logs(streamHandler, logOutput), createdSnapshot);
   }
 
   @Test
   public void testSnapshotCreatedStatusReady() {
-    assertEquals(logs(sh, logOutput), "READY", createdSnapshot.getStatus());
+    assertEquals(logs(streamHandler, logOutput), "READY", createdSnapshot.getStatus());
   }
 
   @Test
   public void testSnapshotCreatedExpectedLogs() {
     assertTrue(
-        logs(sh, logOutput),
-        logs(sh, logOutput).contains(ComputeEngineInstance.CREATING_SNAPSHOT_FOR_NODE));
+        logs(streamHandler, logOutput),
+        logs(streamHandler, logOutput).contains(ComputeEngineInstance.CREATING_SNAPSHOT_FOR_NODE));
   }
 }

@@ -113,45 +113,46 @@ class ITUtil {
   static Credentials initCredentials(JenkinsRule r) throws Exception {
     assertNotNull("GOOGLE_CREDENTIALS env var must be set", CREDENTIALS);
     ServiceAccountConfig sac = new StringJsonServiceAccountConfig(CREDENTIALS);
-    Credentials c = new GoogleRobotPrivateKeyCredentials(PROJECT_ID, sac, null);
+    Credentials credentials = new GoogleRobotPrivateKeyCredentials(PROJECT_ID, sac, null);
 
     CredentialsStore store = new SystemCredentialsProvider.ProviderImpl().getStore(r.jenkins);
     assertNotNull("Credentials store can not be null", store);
-    store.addCredentials(Domain.global(), c);
+    store.addCredentials(Domain.global(), credentials);
     assertEquals(1, store.getCredentials(Domain.global()).size());
-    return c;
+    return credentials;
   }
 
   // Add Cloud plugin
-  static ComputeEngineCloud initCloud(JenkinsRule r) {
+  static ComputeEngineCloud initCloud(JenkinsRule jenkinsRule) {
     ComputeEngineCloud gcp =
         new ComputeEngineCloud(null, CLOUD_NAME, PROJECT_ID, PROJECT_ID, "10", null);
-    assertEquals(0, r.jenkins.clouds.size());
-    r.jenkins.clouds.add(gcp);
-    assertEquals(1, r.jenkins.clouds.size());
+    assertEquals(0, jenkinsRule.jenkins.clouds.size());
+    jenkinsRule.jenkins.clouds.add(gcp);
+    assertEquals(1, jenkinsRule.jenkins.clouds.size());
     return gcp;
   }
 
   // Capture log output to make sense of most failures
   static StreamHandler initLogging(ByteArrayOutputStream logOutput) {
-    StreamHandler sh = new StreamHandler(logOutput, new SimpleFormatter());
-    handleClassLogs(sh, ComputeEngineCloud.class.getName());
-    handleClassLogs(sh, ComputeClient.class.getName());
-    return sh;
+    StreamHandler streamHandler = new StreamHandler(logOutput, new SimpleFormatter());
+    handleClassLogs(streamHandler, ComputeEngineCloud.class.getName());
+    handleClassLogs(streamHandler, ComputeClient.class.getName());
+    return streamHandler;
   }
 
-  static void handleClassLogs(StreamHandler sh, String className) {
+  static void handleClassLogs(StreamHandler streamHandler, String className) {
     Logger logger = LogManager.getLogManager().getLogger(className);
     assertNotNull(
         String.format("Tried handling logs for %s which hasn't been instantiated yet.", className),
         logger);
-    logger.addHandler(sh);
+    logger.addHandler(streamHandler);
   }
 
   // Get a compute client for out-of-band calls to GCE
-  static ComputeClient initClient(JenkinsRule r, Map<String, String> label, Logger log)
+  static ComputeClient initClient(JenkinsRule jenkinsRule, Map<String, String> label, Logger log)
       throws IOException {
-    ClientFactory clientFactory = new ClientFactory(r.jenkins, new ArrayList<>(), PROJECT_ID);
+    ClientFactory clientFactory =
+        new ClientFactory(jenkinsRule.jenkins, new ArrayList<>(), PROJECT_ID);
     ComputeClient client = clientFactory.compute();
     assertNotNull("ComputeClient can not be null", client);
     deleteIntegrationInstances(true, client, label, log);
@@ -159,7 +160,7 @@ class ITUtil {
   }
 
   static void teardown(
-      StreamHandler sh,
+      StreamHandler streamHandler,
       ByteArrayOutputStream logOutput,
       ComputeClient client,
       Map<String, String> label,
@@ -167,8 +168,8 @@ class ITUtil {
       throws IOException {
     log.info("teardown");
     deleteIntegrationInstances(false, client, label, log);
-    log.info(logs(sh, logOutput));
-    sh.close();
+    log.info(logs(streamHandler, logOutput));
+    streamHandler.close();
   }
 
   static InstanceTemplate createTemplate(Map<String, String> googleLabels, String template) {
@@ -211,7 +212,7 @@ class ITUtil {
       boolean createSnapshot,
       boolean oneShot,
       String template) {
-    InstanceConfiguration ic =
+    InstanceConfiguration instanceConfiguration =
         new InstanceConfiguration.Builder()
             .namePrefix(NAME_PREFIX)
             .region(REGION)
@@ -247,8 +248,8 @@ class ITUtil {
             .oneShot(oneShot)
             .template(template)
             .build();
-    ic.appendLabels(label);
-    return ic;
+    instanceConfiguration.appendLabels(label);
+    return instanceConfiguration;
   }
 
   static Map<String, String> getLabel(Class testClass) {
@@ -269,16 +270,18 @@ class ITUtil {
   private static void safeDelete(
       String instanceId, boolean waitForCompletion, ComputeClient client, Logger log) {
     try {
-      Operation op = client.terminateInstance(PROJECT_ID, ZONE, instanceId);
-      if (waitForCompletion)
-        client.waitForOperationCompletion(PROJECT_ID, op.getName(), op.getZone(), 3 * 60 * 1000);
+      Operation operation = client.terminateInstance(PROJECT_ID, ZONE, instanceId);
+      if (waitForCompletion) {
+        client.waitForOperationCompletion(
+            PROJECT_ID, operation.getName(), operation.getZone(), 3 * 60 * 1000);
+      }
     } catch (Exception e) {
       log.warning(String.format("Error deleting instance %s: %s", instanceId, e.getMessage()));
     }
   }
 
-  static String logs(StreamHandler sh, ByteArrayOutputStream logOutput) {
-    sh.flush();
+  static String logs(StreamHandler streamHandler, ByteArrayOutputStream logOutput) {
+    streamHandler.flush();
     return logOutput.toString();
   }
 }

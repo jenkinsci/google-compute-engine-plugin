@@ -54,10 +54,10 @@ public class ComputeEngineCloudOneShotInstanceIT {
   private static Logger log = Logger.getLogger(ComputeEngineCloudOneShotInstanceIT.class.getName());
 
   @ClassRule public static Timeout timeout = new Timeout(5, TimeUnit.MINUTES);
-  @ClassRule public static JenkinsRule r = new JenkinsRule();
+  @ClassRule public static JenkinsRule jenkinsRule = new JenkinsRule();
 
   private static ByteArrayOutputStream logOutput = new ByteArrayOutputStream();
-  private static StreamHandler sh;
+  private static StreamHandler streamHandler;
   private static ComputeClient client;
   private static Map<String, String> label = getLabel(ComputeEngineCloudOneShotInstanceIT.class);
   private static FreeStyleBuild build;
@@ -65,42 +65,44 @@ public class ComputeEngineCloudOneShotInstanceIT {
   @BeforeClass
   public static void init() throws Exception {
     log.info("init");
-    initCredentials(r);
-    ComputeEngineCloud cloud = initCloud(r);
-    sh = initLogging(logOutput);
-    client = initClient(r, label, log);
+    initCredentials(jenkinsRule);
+    ComputeEngineCloud cloud = initCloud(jenkinsRule);
+    streamHandler = initLogging(logOutput);
+    client = initClient(jenkinsRule, label, log);
     cloud.addConfiguration(
         instanceConfiguration(
             DEB_JAVA_STARTUP_SCRIPT, NUM_EXECUTORS, LABEL, label, false, true, NULL_TEMPLATE));
 
-    r.jenkins.getNodesObject().setNodes(Collections.emptyList());
+    jenkinsRule.jenkins.getNodesObject().setNodes(Collections.emptyList());
 
     // Assert that there is 0 nodes
-    assertTrue(r.jenkins.getNodes().isEmpty());
+    assertTrue(jenkinsRule.jenkins.getNodes().isEmpty());
 
-    FreeStyleProject project = r.createFreeStyleProject();
+    FreeStyleProject project = jenkinsRule.createFreeStyleProject();
     Builder step = new Shell("echo works");
     project.getBuildersList().add(step);
     project.setAssignedLabel(new LabelAtom(LABEL));
 
     // Enqueue a build of the project, wait for it to complete, and assert success
-    build = r.buildAndAssertSuccess(project);
+    build = jenkinsRule.buildAndAssertSuccess(project);
   }
 
   @AfterClass
   public static void teardown() throws IOException {
-    ITUtil.teardown(sh, logOutput, client, label, log);
+    ITUtil.teardown(streamHandler, logOutput, client, label, log);
   }
 
   @Test
   public void testOneShotInstancesLogContainsExpectedOutput() throws Exception {
     // Assert that the console log contains the output we expect
-    r.assertLogContains("works", build);
+    jenkinsRule.assertLogContains("works", build);
   }
 
   @Test
   public void testOneShotInstanceNodeDeleted() {
     // Assert that there is 0 nodes after job finished
-    Awaitility.await().timeout(10, TimeUnit.SECONDS).until(() -> r.jenkins.getNodes().isEmpty());
+    Awaitility.await()
+        .timeout(10, TimeUnit.SECONDS)
+        .until(() -> jenkinsRule.jenkins.getNodes().isEmpty());
   }
 }

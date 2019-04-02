@@ -64,10 +64,10 @@ public class ComputeEngineCloudTemplateIT {
   private static final String GOOGLE_LABEL_VALUE = "test-value";
 
   @ClassRule public static Timeout timeout = new Timeout(5, TimeUnit.MINUTES);
-  @ClassRule public static JenkinsRule r = new JenkinsRule();
+  @ClassRule public static JenkinsRule jenkinsRule = new JenkinsRule();
 
   private static ByteArrayOutputStream logOutput = new ByteArrayOutputStream();
-  private static StreamHandler sh;
+  private static StreamHandler streamHandler;
   private static ComputeClient client;
   private static Map<String, String> label = getLabel(ComputeEngineCloudTemplateIT.class);
   private static ComputeEngineCloud cloud;
@@ -76,10 +76,10 @@ public class ComputeEngineCloudTemplateIT {
   @BeforeClass
   public static void init() throws Exception {
     log.info("init");
-    initCredentials(r);
-    cloud = initCloud(r);
-    sh = initLogging(logOutput);
-    client = initClient(r, label, log);
+    initCredentials(jenkinsRule);
+    cloud = initCloud(jenkinsRule);
+    streamHandler = initLogging(logOutput);
+    client = initClient(jenkinsRule, label, log);
 
     cloud.addConfiguration(
         instanceConfiguration(
@@ -90,7 +90,7 @@ public class ComputeEngineCloudTemplateIT {
     // Add a new node
     Collection<PlannedNode> planned = cloud.provision(new LabelAtom(LABEL), 1);
     // There should be a planned node
-    assertEquals(logs(sh, logOutput), 1, planned.size());
+    assertEquals(logs(streamHandler, logOutput), 1, planned.size());
 
     String name = planned.iterator().next().displayName;
 
@@ -107,25 +107,27 @@ public class ComputeEngineCloudTemplateIT {
       // noop
     }
 
-    ITUtil.teardown(sh, logOutput, client, label, log);
+    ITUtil.teardown(streamHandler, logOutput, client, label, log);
   }
 
   @Test
   public void testTemplateNoWarningLogs() {
     // There should be no warning logs
-    assertFalse(logs(sh, logOutput), logs(sh, logOutput).contains("WARNING"));
+    assertFalse(logs(streamHandler, logOutput), logs(streamHandler, logOutput).contains("WARNING"));
   }
 
   @Test
   public void testTemplateGoogleLabelKeyAndValue() {
     assertEquals(
-        logs(sh, logOutput), GOOGLE_LABEL_VALUE, instance.getLabels().get(GOOGLE_LABEL_KEY));
+        logs(streamHandler, logOutput),
+        GOOGLE_LABEL_VALUE,
+        instance.getLabels().get(GOOGLE_LABEL_KEY));
   }
 
   @Test
   public void testTemplateCloudIdLabelKeyAndValue() {
     assertEquals(
-        logs(sh, logOutput),
+        logs(streamHandler, logOutput),
         cloud.getInstanceId(),
         instance.getLabels().get(ComputeEngineCloud.CLOUD_ID_LABEL_KEY));
   }

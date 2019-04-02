@@ -58,22 +58,22 @@ public class ComputeEngineCloud1WorkerCreatedFor2ExecutorsIT {
   private static final String EXPECTED_LOG_MESSAGE = "for excess workload of 2 units of label";
 
   @ClassRule public static Timeout timeout = new Timeout(5, TimeUnit.MINUTES);
-  @ClassRule public static JenkinsRule r = new JenkinsRule();
+  @ClassRule public static JenkinsRule jenkinsRule = new JenkinsRule();
 
   private static ByteArrayOutputStream logOutput = new ByteArrayOutputStream();
-  private static StreamHandler sh;
+  private static StreamHandler streamHandler;
   private static ComputeClient client;
   private static Map<String, String> label =
       getLabel(ComputeEngineCloud1WorkerCreatedFor2ExecutorsIT.class);
-  private static Instance i;
+  private static Instance instance;
 
   @BeforeClass
   public static void init() throws Exception {
     log.info("init");
-    initCredentials(r);
-    ComputeEngineCloud cloud = initCloud(r);
-    sh = initLogging(logOutput);
-    client = initClient(r, label, log);
+    initCredentials(jenkinsRule);
+    ComputeEngineCloud cloud = initCloud(jenkinsRule);
+    streamHandler = initLogging(logOutput);
+    client = initClient(jenkinsRule, label, log);
 
     cloud.addConfiguration(
         instanceConfiguration(
@@ -88,28 +88,30 @@ public class ComputeEngineCloud1WorkerCreatedFor2ExecutorsIT {
     Collection<PlannedNode> planned = cloud.provision(new LabelAtom(LABEL), 2);
 
     // There should be a planned node
-    assertEquals(logs(sh, logOutput), 1, planned.size());
+    assertEquals(logs(streamHandler, logOutput), 1, planned.size());
 
     String name = planned.iterator().next().displayName;
 
     // Wait for node creation to finish
     planned.iterator().next().future.get();
 
-    i = client.getInstance(PROJECT_ID, ZONE, name);
+    instance = client.getInstance(PROJECT_ID, ZONE, name);
   }
 
   @AfterClass
   public static void teardown() throws IOException {
-    ITUtil.teardown(sh, logOutput, client, label, log);
+    ITUtil.teardown(streamHandler, logOutput, client, label, log);
   }
 
   @Test
   public void test1WorkerCreatedFor2ExecutorsStatusRunning() {
-    assertEquals(logs(sh, logOutput), "RUNNING", i.getStatus());
+    assertEquals(logs(streamHandler, logOutput), "RUNNING", instance.getStatus());
   }
 
   @Test
   public void test1WorkerCreatedFor2ExecutorsExpectedLogs() {
-    assertTrue(logs(sh, logOutput), logs(sh, logOutput).contains(EXPECTED_LOG_MESSAGE));
+    assertTrue(
+        logs(streamHandler, logOutput),
+        logs(streamHandler, logOutput).contains(EXPECTED_LOG_MESSAGE));
   }
 }
