@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.google.jenkins.plugins.computeengine;
+package com.google.jenkins.plugins.computeengine.integration;
 
 import static org.junit.Assert.assertNotNull;
 
@@ -23,6 +23,7 @@ import com.cloudbees.plugins.credentials.CredentialsStore;
 import com.cloudbees.plugins.credentials.SystemCredentialsProvider;
 import com.cloudbees.plugins.credentials.domains.Domain;
 import com.google.api.services.compute.model.Image;
+import com.google.jenkins.plugins.computeengine.StringJsonServiceAccountConfig;
 import com.google.jenkins.plugins.computeengine.client.ClientFactory;
 import com.google.jenkins.plugins.computeengine.client.ComputeClient;
 import com.google.jenkins.plugins.credentials.oauth.GoogleRobotPrivateKeyCredentials;
