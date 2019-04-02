@@ -16,21 +16,17 @@
 
 package com.google.jenkins.plugins.computeengine.integration;
 
+import static com.google.jenkins.plugins.computeengine.integration.ITUtil.getLabel;
+import static com.google.jenkins.plugins.computeengine.integration.ITUtil.handleClassLogs;
+import static com.google.jenkins.plugins.computeengine.integration.ITUtil.initClient;
+import static com.google.jenkins.plugins.computeengine.integration.ITUtil.initCredentials;
 import static org.junit.Assert.assertNotNull;
 
-import com.cloudbees.plugins.credentials.Credentials;
-import com.cloudbees.plugins.credentials.CredentialsStore;
-import com.cloudbees.plugins.credentials.SystemCredentialsProvider;
-import com.cloudbees.plugins.credentials.domains.Domain;
 import com.google.api.services.compute.model.Image;
-import com.google.jenkins.plugins.computeengine.StringJsonServiceAccountConfig;
-import com.google.jenkins.plugins.computeengine.client.ClientFactory;
 import com.google.jenkins.plugins.computeengine.client.ComputeClient;
-import com.google.jenkins.plugins.credentials.oauth.GoogleRobotPrivateKeyCredentials;
-import com.google.jenkins.plugins.credentials.oauth.ServiceAccountConfig;
 import java.io.ByteArrayOutputStream;
-import java.util.ArrayList;
-import java.util.logging.LogManager;
+import java.io.IOException;
+import java.util.Map;
 import java.util.logging.Logger;
 import java.util.logging.SimpleFormatter;
 import java.util.logging.StreamHandler;
@@ -43,56 +39,34 @@ import org.jvnet.hudson.test.JenkinsRule;
 public class ComputeClientIT {
   private static Logger log = Logger.getLogger(ComputeClientIT.class.getName());
 
-  private static StreamHandler sh;
-  private static ByteArrayOutputStream logOutput;
+  private static ByteArrayOutputStream logOutput = new ByteArrayOutputStream();
+  private static StreamHandler streamHandler = new StreamHandler(logOutput, new SimpleFormatter());
+  private static Map<String, String> label = getLabel(ComputeClientIT.class);
   private static ComputeClient client;
 
-  @ClassRule public static JenkinsRule r = new JenkinsRule();
+  @ClassRule public static JenkinsRule jenkinsRule = new JenkinsRule();
 
   @BeforeClass
   public static void init() throws Exception {
     log.info("init");
-    logOutput = new ByteArrayOutputStream();
-    sh = new StreamHandler(logOutput, new SimpleFormatter());
-
-    // Add a service account credential
-    String projectId = System.getenv("GOOGLE_PROJECT_ID");
-    assertNotNull("GOOGLE_PROJECT_ID env var must be set", projectId);
-
-    String serviceAccountKeyJson = System.getenv("GOOGLE_CREDENTIALS");
-    assertNotNull("GOOGLE_CREDENTIALS env var must be set", serviceAccountKeyJson);
-
-    ServiceAccountConfig sac = new StringJsonServiceAccountConfig(serviceAccountKeyJson);
-    Credentials c = new GoogleRobotPrivateKeyCredentials(projectId, sac, null);
-
-    CredentialsStore store = new SystemCredentialsProvider.ProviderImpl().getStore(r.jenkins);
-    assertNotNull("Credentials store can not be null", store);
-    store.addCredentials(Domain.global(), c);
+    initCredentials(jenkinsRule);
 
     // Get a compute client for calls to GCE
-    ClientFactory clientFactory = new ClientFactory(r.jenkins, new ArrayList<>(), projectId);
-    client = clientFactory.compute();
-    assertNotNull("ComputeClient can not be null", client);
+    client = initClient(jenkinsRule, label, log);
 
     // Logging
-    Logger clientLogger =
-        LogManager.getLogManager()
-            .getLogger("com.google.jenkins.plugins.computeengine.ComputeClient");
-    if (clientLogger != null) clientLogger.addHandler(sh);
+    handleClassLogs(streamHandler, ComputeClient.class.getName());
   }
 
   @AfterClass
-  public static void teardown() {
-    log.info("teardown");
-    sh.flush();
-    sh.close();
-    log.info(logOutput.toString());
+  public static void teardown() throws IOException {
+    ITUtil.teardown(streamHandler, logOutput, client, label, log);
   }
 
   @Test
   public void testGetImage() throws Exception {
-    Image i = client.getImage("debian-cloud", "debian-9-stretch-v20180820");
-    sh.flush();
-    assertNotNull(logOutput.toString(), i);
+    Image image = client.getImage("debian-cloud", "debian-9-stretch-v20180820");
+    streamHandler.flush();
+    assertNotNull(logOutput.toString(), image);
   }
 }
