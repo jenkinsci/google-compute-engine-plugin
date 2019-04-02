@@ -106,7 +106,7 @@ public class ComputeEngineCloudNoSnapshotCreatedIT {
     FreeStyleBuild build = r.buildAndAssertSuccess(project);
     Node worker = build.getBuiltOn();
     assertNotNull(logs(sh, logOutput), worker);
-    // Can not handle class logs for ComputeEngineInstance until an instance exists.
+    // Cannot handle class logs for ComputeEngineInstance until an instance exists.
     handleClassLogs(sh, ComputeEngineInstance.class.getName());
 
     name = worker.getNodeName();

@@ -28,10 +28,11 @@ import static com.google.jenkins.plugins.computeengine.integration.ITUtil.initLo
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.instanceConfiguration;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.logs;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
 
 import com.google.jenkins.plugins.computeengine.ComputeEngineCloud;
-import com.google.jenkins.plugins.computeengine.InstanceConfiguration;
 import com.google.jenkins.plugins.computeengine.client.ComputeClient;
+import hudson.model.Node;
 import hudson.model.labels.LabelAtom;
 import hudson.slaves.NodeProvisioner.PlannedNode;
 import java.io.ByteArrayOutputStream;
@@ -70,7 +71,7 @@ public class ComputeEngineCloudMultipleLabelsIT {
     sh = initLogging(logOutput);
     client = initClient(r, label, log);
 
-    InstanceConfiguration ic =
+    cloud.addConfiguration(
         instanceConfiguration(
             DEB_JAVA_STARTUP_SCRIPT,
             NUM_EXECUTORS,
@@ -78,8 +79,7 @@ public class ComputeEngineCloudMultipleLabelsIT {
             label,
             false,
             false,
-            NULL_TEMPLATE);
-    cloud.addConfiguration(ic);
+            NULL_TEMPLATE));
     // Add a new node
     planned = cloud.provision(new LabelAtom(LABEL), 1);
     planned.iterator().next().future.get();
@@ -105,7 +105,9 @@ public class ComputeEngineCloudMultipleLabelsIT {
     // configuration's labels
 
     String name = planned.iterator().next().displayName;
-    String provisionedLabels = r.jenkins.getNode(name).getLabelString();
+    Node node = r.jenkins.getNode(name);
+    assertNotNull(node);
+    String provisionedLabels = node.getLabelString();
     // There should be the proper labels provisioned
     assertEquals(logs(sh, logOutput), MULTIPLE_LABEL, provisionedLabels);
   }

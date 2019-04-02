@@ -65,6 +65,7 @@ public class ComputeClientIT {
     Credentials c = new GoogleRobotPrivateKeyCredentials(projectId, sac, null);
 
     CredentialsStore store = new SystemCredentialsProvider.ProviderImpl().getStore(r.jenkins);
+    assertNotNull("Credentials store can not be null", store);
     store.addCredentials(Domain.global(), c);
 
     // Get a compute client for calls to GCE
