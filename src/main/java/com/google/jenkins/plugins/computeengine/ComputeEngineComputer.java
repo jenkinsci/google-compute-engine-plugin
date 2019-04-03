@@ -18,117 +18,113 @@ package com.google.jenkins.plugins.computeengine;
 
 import com.google.api.services.compute.model.Instance;
 import hudson.slaves.AbstractCloudComputer;
+import java.io.IOException;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import org.kohsuke.stapler.DataBoundSetter;
 import org.kohsuke.stapler.HttpRedirect;
 import org.kohsuke.stapler.HttpResponse;
 
-import java.io.IOException;
-import java.util.logging.Level;
-import java.util.logging.Logger;
-
 public class ComputeEngineComputer extends AbstractCloudComputer<ComputeEngineInstance> {
 
-    private volatile Instance instance;
+  private volatile Instance instance;
 
-    private static final Logger LOGGER = Logger.getLogger(ComputeEngineCloud.class.getName());
+  private static final Logger LOGGER = Logger.getLogger(ComputeEngineCloud.class.getName());
 
-    public ComputeEngineComputer(ComputeEngineInstance slave) {
-        super(slave);
+  public ComputeEngineComputer(ComputeEngineInstance slave) {
+    super(slave);
+  }
+
+  @Override
+  public ComputeEngineInstance getNode() {
+    return (ComputeEngineInstance) super.getNode();
+  }
+
+  public void onConnected() {
+    ComputeEngineInstance node = getNode();
+    if (node != null) {
+      node.onConnected();
     }
+  }
 
-    @Override
-    public ComputeEngineInstance getNode() {
-        return (ComputeEngineInstance) super.getNode();
+  public String getNumExecutorsStr() {
+    return String.valueOf(super.getNumExecutors());
+  }
+
+  @DataBoundSetter
+  public void setNumExecutorsStr(String value) {
+    Integer v =
+        InstanceConfiguration.intOrDefault(value, InstanceConfiguration.DEFAULT_NUM_EXECUTORS);
+    ComputeEngineInstance node = getNode();
+    if (node != null) {
+      node.setNumExecutors(v);
     }
+  }
 
-    public void onConnected() {
-        ComputeEngineInstance node = getNode();
-        if (node != null) {
-            node.onConnected();
-        }
+  /**
+   * Returns a cached representation of the Instance
+   *
+   * @return
+   * @throws IOException
+   */
+  public Instance getInstance() throws IOException {
+    if (instance == null) instance = _getInstance();
+    return instance;
+  }
+
+  public Instance refreshInstance() throws IOException {
+    instance = _getInstance();
+    return instance;
+  }
+
+  /**
+   * Returns the most current status of the Instance as reported by the GCE API
+   *
+   * @return
+   * @throws IOException
+   */
+  public String getInstanceStatus() throws IOException {
+    instance = _getInstance();
+    return instance.getStatus();
+  }
+
+  private Instance _getInstance() throws IOException {
+    try {
+      ComputeEngineInstance node = getNode();
+      ComputeEngineCloud cloud = getCloud();
+
+      if (node != null) {
+        return cloud.getClient().getInstance(cloud.projectId, node.zone, node.getNodeName());
+      } else {
+        return null;
+      }
+    } catch (CloudNotFoundException cnfe) {
+      return null;
     }
+  }
 
-    public String getNumExecutorsStr() {
-        return String.valueOf(super.getNumExecutors());
+  protected ComputeEngineCloud getCloud() {
+    ComputeEngineInstance node = getNode();
+    if (node == null) throw new CloudNotFoundException("Could not retrieve cloud from empty node");
+
+    return node.getCloud();
+  }
+
+  /** When the slave is deleted, terminate the instance. */
+  @Override
+  public HttpResponse doDoDelete() throws IOException {
+    checkPermission(DELETE);
+    ComputeEngineInstance node = getNode();
+    if (node != null) {
+      try {
+        ComputeEngineCloud cloud = getCloud();
+
+        node.terminate();
+      } catch (InterruptedException ie) {
+        // Termination Exception
+        LOGGER.log(Level.WARNING, "Node Termination Error", ie);
+      }
     }
-
-    @DataBoundSetter
-    public void setNumExecutorsStr(String value) {
-        Integer v = InstanceConfiguration.intOrDefault(value, InstanceConfiguration.DEFAULT_NUM_EXECUTORS);
-        ComputeEngineInstance node = getNode();
-        if (node != null) {
-            node.setNumExecutors(v);
-        }
-    }
-
-    /**
-     * Returns a cached representation of the Instance
-     *
-     * @return
-     * @throws IOException
-     */
-    public Instance getInstance() throws IOException {
-        if (instance == null)
-            instance = _getInstance();
-        return instance;
-    }
-
-    public Instance refreshInstance() throws IOException {
-        instance = _getInstance();
-        return instance;
-    }
-
-    /**
-     * Returns the most current status of the Instance as reported by the GCE API
-     *
-     * @return
-     * @throws IOException
-     */
-    public String getInstanceStatus() throws IOException {
-        instance = _getInstance();
-        return instance.getStatus();
-    }
-
-    private Instance _getInstance() throws IOException {
-        try {
-            ComputeEngineInstance node = getNode();
-            ComputeEngineCloud cloud = getCloud();
-
-            if (node != null) {
-                return cloud.getClient().getInstance(cloud.projectId, node.zone, node.getNodeName());
-            } else {
-                return null;
-            }
-        } catch (CloudNotFoundException cnfe) {
-            return null;
-        }
-    }
-
-    protected ComputeEngineCloud getCloud() {
-        ComputeEngineInstance node = getNode();
-        if (node == null)
-            throw new CloudNotFoundException("Could not retrieve cloud from empty node");
-
-        return node.getCloud();
-    }
-
-    /**
-     * When the slave is deleted, terminate the instance.
-     */
-    @Override
-    public HttpResponse doDoDelete() throws IOException {
-        checkPermission(DELETE);
-        ComputeEngineInstance node = getNode();
-        if (node != null) {
-            try {
-                ComputeEngineCloud cloud = getCloud();
-
-                node.terminate();
-            } catch (InterruptedException ie) {
-                // Termination Exception
-                LOGGER.log(Level.WARNING, "Node Termination Error", ie);
-            }
-        }
-        return new HttpRedirect("..");
-    }
+    return new HttpRedirect("..");
+  }
 }
