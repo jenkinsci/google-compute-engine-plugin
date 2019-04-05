@@ -178,6 +178,7 @@ public class ComputeEngineCloud extends AbstractCloudImpl {
       return clientFactory.compute();
     } catch (IOException e) {
       LOGGER.log(Level.SEVERE, "Exception why creating GCE client", e);
+      // TODO: https://github.com/jenkinsci/google-compute-engine-plugin/issues/62
       return null;
     }
   }
@@ -214,9 +215,6 @@ public class ComputeEngineCloud extends AbstractCloudImpl {
    */
   @DataBoundSetter
   public void setConfigurations(List<InstanceConfiguration> configurations) {
-    if (this.configurations == null) {
-      this.configurations = new ArrayList<>();
-    }
     this.configurations = configurations;
     readResolve();
   }

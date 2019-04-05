@@ -1,22 +1,19 @@
 package com.google.jenkins.plugins.computeengine;
 
-import static hudson.Functions.isWindows;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
-import static org.junit.Assume.assumeFalse;
 
-import com.cloudbees.plugins.credentials.Credentials;
 import com.cloudbees.plugins.credentials.CredentialsStore;
 import com.cloudbees.plugins.credentials.SystemCredentialsProvider;
 import com.cloudbees.plugins.credentials.domains.Domain;
 import com.google.jenkins.plugins.credentials.oauth.GoogleRobotPrivateKeyCredentials;
-import com.google.jenkins.plugins.credentials.oauth.ServiceAccountConfig;
+import hudson.model.Node;
 import io.jenkins.plugins.casc.misc.ConfiguredWithCode;
 import io.jenkins.plugins.casc.misc.JenkinsConfiguredWithCodeRule;
-import org.apache.commons.io.IOUtils;
 import org.junit.Rule;
 import org.junit.Test;
 import org.jvnet.hudson.test.JenkinsRule;
+import org.mockito.Mockito;
 
 public class ConfigAsCodeTest {
 
@@ -28,20 +25,30 @@ public class ConfigAsCodeTest {
     assertEquals("Zero clouds found", r.jenkins.clouds.size(), 1);
     ComputeEngineCloud cloud = (ComputeEngineCloud) r.jenkins.clouds.getByName("gce-jenkins-build");
     assertNotNull("Cloud by name not found", cloud);
+    assertEquals("Project id is wrong", "gce-jenkins", cloud.getProjectId());
+    assertEquals("Wrong instance cap str", "53", cloud.getInstanceCapStr());
+    assertEquals("Wrong instance cap", 53, cloud.getInstanceCap());
+    assertEquals("Wrong credentials", "gce-jenkins", cloud.credentialsId);
+    
+    assertEquals("Configurations number wrong", 1, cloud.getConfigurations().size());
+    InstanceConfiguration configuration = cloud.getConfigurations().get(0);
+    assertEquals("Wrong configurations prefix", "jenkins-agent-image", configuration.namePrefix);
+    assertEquals("Wrong configurations description", "Jenkins agent", configuration.description);
+    assertEquals("Wrong configurations launchTimeoutSecondsStr", "6", configuration.launchTimeoutSecondsStr);
+    assertEquals("Wrong configurations getLaunchTimeoutMillis", 6000, configuration.getLaunchTimeoutMillis());
+    assertEquals("Wrong configurations mode", Node.Mode.EXCLUSIVE, configuration.getMode());
+    assertEquals("Wrong configurations labelString", "jenkins-agent", configuration.getLabelString());
+    assertEquals("Wrong configurations numExecutors", "1", configuration.numExecutorsStr);
+    assertEquals("Wrong configurations runAsUser", "jenkins", configuration.runAsUser);
+    assertEquals("Wrong configurations remoteFs", "agent", configuration.remoteFs);
   }
 
   @Test
   @ConfiguredWithCode("configuration-as-code.yml")
   public void shouldCreateGCEClientFromCode() throws Exception {
-    // FIXME: https://github.com/jenkinsci/google-oauth-plugin/pull/19
-    // Tests on windows fails because of this bug in oauth-plugin
-    // Lets assume they are ok
-    assumeFalse(isWindows());
-
-    String testKey = IOUtils.toString(this.getClass().getResourceAsStream("gce-test-key.json"));
-    System.err.println("Key: " + testKey);
-    ServiceAccountConfig sac = new StringJsonServiceAccountConfig(testKey);
-    Credentials credentials = new GoogleRobotPrivateKeyCredentials("gce-jenkins", sac, null);
+    GoogleRobotPrivateKeyCredentials credentials =
+        Mockito.mock(GoogleRobotPrivateKeyCredentials.class);
+    Mockito.when(credentials.getId()).thenReturn("gce-jenkins");
 
     CredentialsStore store = new SystemCredentialsProvider.ProviderImpl().getStore(r.jenkins);
     store.addCredentials(Domain.global(), credentials);

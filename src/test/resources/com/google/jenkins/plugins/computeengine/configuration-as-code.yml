@@ -3,7 +3,7 @@ jenkins:
     - computeEngine:
         cloudName: jenkins-build
         projectId: gce-jenkins
-        instanceCapStr: 1
+        instanceCapStr: 53
         credentialsId: gce-jenkins
         configurations:
           - namePrefix:         jenkins-agent-image
@@ -14,7 +14,7 @@ jenkins:
             labelString:        jenkins-agent
             numExecutorsStr:    1
             runAsUser:          jenkins
-            remoteFs:           '' # tried not setting this, field added when 'save' clicked in UI
+            remoteFs:           agent
             windows:            false
             windowsPasswordCredentialsId: ''    # tried not setting, added when saved in UI
             windowsPrivateKeyCredentialsId: ''  # tried not setting, added when saved in UI
