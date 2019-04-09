@@ -29,15 +29,20 @@ public class ConfigAsCodeTest {
     assertEquals("Wrong instance cap str", "53", cloud.getInstanceCapStr());
     assertEquals("Wrong instance cap", 53, cloud.getInstanceCap());
     assertEquals("Wrong credentials", "gce-jenkins", cloud.credentialsId);
-    
+
     assertEquals("Configurations number wrong", 1, cloud.getConfigurations().size());
     InstanceConfiguration configuration = cloud.getConfigurations().get(0);
     assertEquals("Wrong configurations prefix", "jenkins-agent-image", configuration.namePrefix);
     assertEquals("Wrong configurations description", "Jenkins agent", configuration.description);
-    assertEquals("Wrong configurations launchTimeoutSecondsStr", "6", configuration.launchTimeoutSecondsStr);
-    assertEquals("Wrong configurations getLaunchTimeoutMillis", 6000, configuration.getLaunchTimeoutMillis());
+    assertEquals(
+        "Wrong configurations launchTimeoutSecondsStr", "6", configuration.launchTimeoutSecondsStr);
+    assertEquals(
+        "Wrong configurations getLaunchTimeoutMillis",
+        6000,
+        configuration.getLaunchTimeoutMillis());
     assertEquals("Wrong configurations mode", Node.Mode.EXCLUSIVE, configuration.getMode());
-    assertEquals("Wrong configurations labelString", "jenkins-agent", configuration.getLabelString());
+    assertEquals(
+        "Wrong configurations labelString", "jenkins-agent", configuration.getLabelString());
     assertEquals("Wrong configurations numExecutors", "1", configuration.numExecutorsStr);
     assertEquals("Wrong configurations runAsUser", "jenkins", configuration.runAsUser);
     assertEquals("Wrong configurations remoteFs", "agent", configuration.remoteFs);

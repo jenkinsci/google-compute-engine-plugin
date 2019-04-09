@@ -95,9 +95,9 @@ public class ComputeEngineCloudIT {
   private static final String CLOUD_NAME = "integration";
   private static final String NAME_PREFIX = "integration";
   private static final String REGION = format("projects/%s/regions/us-west1");
-  private static final String ZONE = "us-west1-a";
+  public static final String ZONE = "us-west1-a";
   private static final String ZONE_BASE = format("projects/%s/zones/" + ZONE);
-  private static final String LABEL = "integration";
+  public static final String LABEL = "integration";
   private static final String MULTIPLE_LABEL = "integration test";
   private static final String SNAPSHOT_LABEL = "snapshot";
   private static final String MACHINE_TYPE = ZONE_BASE + "/machineTypes/n1-standard-1";
@@ -143,7 +143,7 @@ public class ComputeEngineCloudIT {
   private static ByteArrayOutputStream logOutput;
 
   private static ComputeClient client;
-  private static String projectId;
+  public static String projectId;
 
   private static String format(String s) {
     String projectId = System.getenv("GOOGLE_PROJECT_ID");
@@ -613,7 +613,7 @@ public class ComputeEngineCloudIT {
     }
   }
 
-  private static String logs() {
+  public static String logs() {
     sh.flush();
     return logOutput.toString();
   }

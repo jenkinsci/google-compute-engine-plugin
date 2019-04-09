@@ -1,0 +1,42 @@
+jenkins:
+  clouds:
+    - computeEngine:
+        cloudName: integration
+        projectId: ${env.GOOGLE_PROJECT_ID}
+        instanceCapStr: 10
+        credentialsId: ${env.GOOGLE_PROJECT_ID}
+        configurations:
+          - namePrefix:         integration
+            description:        integration
+            launchTimeoutSecondsStr: ''
+            retentionTimeMinutesStr: ''
+            mode:               EXCLUSIVE
+            labelString:        integration
+            numExecutorsStr:    1
+            runAsUser:          jenkins
+            remoteFs:           agent
+            windows:            false
+            windowsPasswordCredentialsId: ''    # tried not setting, added when saved in UI
+            windowsPrivateKeyCredentialsId: ''  # tried not setting, added when saved in UI
+            oneShot:            true
+            createSnapshot:     false
+            region:             "https://www.googleapis.com/compute/v1/projects/${env.GOOGLE_PROJECT_ID}/regions/us-west1"
+            zone:               "https://www.googleapis.com/compute/v1/projects/${env.GOOGLE_PROJECT_ID}/zones/us-west1"
+            template:           '' # tried not setting, added when 'saved' in UI
+            machineType:        "https://www.googleapis.com/compute/v1/projects/${env.GOOGLE_PROJECT_ID}/zones/us-west1/machineTypes/n1-standard-1"
+            preemptible:        false
+            minCpuPlatform:     '' # tried not setting, added when 'saved' in UI
+            startupScript:      '' # tried not setting, added when 'saved' in UI
+            networkConfiguration:
+              autofilled:
+                network:        default 
+                subnetwork:     default
+            networkTags:        jenkins-agent ssh
+            externalAddress:    true
+            useInternalAddress: false
+            bootDiskSourceImageProject: debian-cloud
+            bootDiskSourceImageName: "projects/debian-cloud/global/images/family/debian-9"
+            bootDiskType:       "https://www.googleapis.com/compute/v1/projects/${env.GOOGLE_PROJECT_ID}/zones/us-west1/diskTypes/pd-ssd"
+            bootDiskSizeGbStr:  10
+            bootDiskAutoDelete: true
+            serviceAccountEmail: ''
