@@ -27,6 +27,7 @@ import static com.google.jenkins.plugins.computeengine.integration.ITUtil.initCl
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.initCredentials;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.instanceConfiguration;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.logs;
+import static com.google.jenkins.plugins.computeengine.integration.ITUtil.teardownResources;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
@@ -121,7 +122,7 @@ public class ComputeEngineCloudNoSnapshotCreatedIT {
 
   @AfterClass
   public static void teardown() throws IOException {
-    ITUtil.teardown(streamHandler, logOutput, client, label, log);
+    teardownResources(streamHandler, logOutput, client, label, log);
   }
 
   // Tests that no snapshot is created when we only have successful builds for given node

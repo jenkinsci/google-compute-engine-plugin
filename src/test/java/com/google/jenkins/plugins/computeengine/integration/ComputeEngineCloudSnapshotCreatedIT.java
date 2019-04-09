@@ -27,6 +27,7 @@ import static com.google.jenkins.plugins.computeengine.integration.ITUtil.initCl
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.initCredentials;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.instanceConfiguration;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.logs;
+import static com.google.jenkins.plugins.computeengine.integration.ITUtil.teardownResources;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
@@ -125,7 +126,7 @@ public class ComputeEngineCloudSnapshotCreatedIT {
     if (createdSnapshot != null) {
       client.deleteSnapshot(PROJECT_ID, createdSnapshot.getName());
     }
-    ITUtil.teardown(streamHandler, logOutput, client, label, log);
+    teardownResources(streamHandler, logOutput, client, label, log);
   }
 
   // Tests snapshot is created when we have failure builds for given node

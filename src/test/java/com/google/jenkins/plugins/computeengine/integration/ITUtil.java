@@ -150,7 +150,7 @@ class ITUtil {
     return client;
   }
 
-  static void teardown(
+  static void teardownResources(
       StreamHandler streamHandler,
       ByteArrayOutputStream logOutput,
       ComputeClient client,

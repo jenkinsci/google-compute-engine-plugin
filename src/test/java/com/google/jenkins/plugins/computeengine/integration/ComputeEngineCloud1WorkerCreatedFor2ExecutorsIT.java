@@ -28,6 +28,7 @@ import static com.google.jenkins.plugins.computeengine.integration.ITUtil.initCl
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.initCredentials;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.instanceConfiguration;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.logs;
+import static com.google.jenkins.plugins.computeengine.integration.ITUtil.teardownResources;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
@@ -102,7 +103,7 @@ public class ComputeEngineCloud1WorkerCreatedFor2ExecutorsIT {
 
   @AfterClass
   public static void teardown() throws IOException {
-    ITUtil.teardown(streamHandler, logOutput, client, label, log);
+    teardownResources(streamHandler, logOutput, client, label, log);
   }
 
   @Test

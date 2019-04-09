@@ -20,6 +20,7 @@ import static com.google.jenkins.plugins.computeengine.integration.ITUtil.getLab
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.handleClassLogs;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.initClient;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.initCredentials;
+import static com.google.jenkins.plugins.computeengine.integration.ITUtil.teardownResources;
 import static org.junit.Assert.assertNotNull;
 
 import com.google.api.services.compute.model.Image;
@@ -60,7 +61,7 @@ public class ComputeClientIT {
 
   @AfterClass
   public static void teardown() throws IOException {
-    ITUtil.teardown(streamHandler, logOutput, client, label, log);
+    teardownResources(streamHandler, logOutput, client, label, log);
   }
 
   @Test
