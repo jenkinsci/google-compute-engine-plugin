@@ -141,6 +141,13 @@ public class ComputeEngineCloudSnapshotCreatedIT {
   }
 
   @Test
+  public void testSnapshotCreatedOneShotInstanceDeleted() {
+    Awaitility.await()
+        .timeout(SNAPSHOT_TEST_TIMEOUT, TimeUnit.SECONDS)
+        .until(() -> client.getInstancesWithLabel(PROJECT_ID, label).isEmpty());
+  }
+
+  @Test
   public void testSnapshotCreatedExpectedLogs() {
     assertTrue(
         logs(streamHandler, logOutput),
