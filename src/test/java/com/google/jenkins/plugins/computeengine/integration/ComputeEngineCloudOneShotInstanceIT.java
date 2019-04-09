@@ -20,6 +20,7 @@ import static com.google.jenkins.plugins.computeengine.integration.ITUtil.DEB_JA
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.LABEL;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.NULL_TEMPLATE;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.NUM_EXECUTORS;
+import static com.google.jenkins.plugins.computeengine.integration.ITUtil.PROJECT_ID;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.getLabel;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.handleClassLogs;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.initClient;
@@ -100,14 +101,21 @@ public class ComputeEngineCloudOneShotInstanceIT {
   }
 
   @Test
-  public void testOneShotInstancesLogContainsExpectedOutput() throws Exception {
+  public void testOneShotInstanceLogContainsExpectedOutput() throws Exception {
     jenkinsRule.assertLogContains("works", build);
   }
 
   @Test
-  public void testOneShotInstanceNodeDeleted() {
+  public void testOneShotInstanceNodeDeletedFromJenkins() {
     Awaitility.await()
         .timeout(10, TimeUnit.SECONDS)
         .until(() -> jenkinsRule.jenkins.getNodes().isEmpty());
+  }
+
+  @Test
+  public void testOneShotInstanceDeletedFromGCP() {
+    Awaitility.await()
+        .timeout(1, TimeUnit.MINUTES)
+        .until(() -> client.getInstancesWithLabel(PROJECT_ID, label).isEmpty());
   }
 }
