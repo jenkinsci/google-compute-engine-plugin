@@ -16,8 +16,8 @@
 
 package com.google.jenkins.plugins.computeengine.integration;
 
+import static com.google.jenkins.plugins.computeengine.integration.ITUtil.addClassLogHandler;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.getLabel;
-import static com.google.jenkins.plugins.computeengine.integration.ITUtil.handleClassLogs;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.initClient;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.initCredentials;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.teardownResources;
@@ -52,7 +52,7 @@ public class ComputeClientIT {
     log.info("init");
     initCredentials(jenkinsRule);
     client = initClient(jenkinsRule, label, log);
-    handleClassLogs(streamHandler, ComputeClient.class.getName());
+    addClassLogHandler(streamHandler, ComputeClient.class.getName());
   }
 
   @AfterClass

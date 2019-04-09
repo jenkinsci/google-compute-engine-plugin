@@ -19,8 +19,8 @@ package com.google.jenkins.plugins.computeengine.integration;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.LABEL;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.NULL_TEMPLATE;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.NUM_EXECUTORS;
+import static com.google.jenkins.plugins.computeengine.integration.ITUtil.addClassLogHandler;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.getLabel;
-import static com.google.jenkins.plugins.computeengine.integration.ITUtil.handleClassLogs;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.initClient;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.initCloud;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.initCredentials;
@@ -67,9 +67,9 @@ public class ComputeEngineCloudWorkerFailedIT {
     log.info("init");
     initCredentials(jenkinsRule);
     ComputeEngineCloud cloud = initCloud(jenkinsRule);
-    handleClassLogs(streamHandler, ComputeEngineCloud.class.getName());
+    addClassLogHandler(streamHandler, ComputeEngineCloud.class.getName());
     client = initClient(jenkinsRule, label, log);
-    handleClassLogs(streamHandler, ComputeClient.class.getName());
+    addClassLogHandler(streamHandler, ComputeClient.class.getName());
 
     // This configuration creates an instance with no Java installed.
     cloud.addConfiguration(

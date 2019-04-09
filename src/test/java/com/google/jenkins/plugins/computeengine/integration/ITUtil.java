@@ -132,7 +132,7 @@ class ITUtil {
     return gcp;
   }
 
-  static void handleClassLogs(StreamHandler streamHandler, String className) {
+  static void addClassLogHandler(StreamHandler streamHandler, String className) {
     Logger logger = LogManager.getLogManager().getLogger(className);
     assertNotNull(
         String.format("Tried handling logs for %s which hasn't been instantiated yet.", className),

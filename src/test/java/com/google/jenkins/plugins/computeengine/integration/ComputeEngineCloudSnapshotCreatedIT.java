@@ -21,8 +21,8 @@ import static com.google.jenkins.plugins.computeengine.integration.ITUtil.NULL_T
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.NUM_EXECUTORS;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.PROJECT_ID;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.SNAPSHOT_LABEL;
+import static com.google.jenkins.plugins.computeengine.integration.ITUtil.addClassLogHandler;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.getLabel;
-import static com.google.jenkins.plugins.computeengine.integration.ITUtil.handleClassLogs;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.initClient;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.initCloud;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.initCredentials;
@@ -79,9 +79,9 @@ public class ComputeEngineCloudSnapshotCreatedIT {
     log.info("init");
     initCredentials(jenkinsRule);
     ComputeEngineCloud cloud = initCloud(jenkinsRule);
-    handleClassLogs(streamHandler, ComputeEngineCloud.class.getName());
+    addClassLogHandler(streamHandler, ComputeEngineCloud.class.getName());
     client = initClient(jenkinsRule, label, log);
-    handleClassLogs(streamHandler, ComputeClient.class.getName());
+    addClassLogHandler(streamHandler, ComputeClient.class.getName());
 
     assertTrue(cloud.configurations.isEmpty());
     InstanceConfiguration instanceConfiguration =
@@ -111,7 +111,7 @@ public class ComputeEngineCloudSnapshotCreatedIT {
     Node worker = build.getBuiltOn();
     assertNotNull(logs(streamHandler, logOutput), worker);
     // Cannot handle class logs for ComputeEngineInstance until an instance exists.
-    handleClassLogs(streamHandler, ComputeEngineInstance.class.getName());
+    addClassLogHandler(streamHandler, ComputeEngineInstance.class.getName());
 
     // Need time for one-shot instance to terminate and create the snapshot
     Awaitility.await()
