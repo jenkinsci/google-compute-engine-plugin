@@ -20,6 +20,7 @@ import static com.google.jenkins.plugins.computeengine.integration.ITUtil.DEB_JA
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.NULL_TEMPLATE;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.NUM_EXECUTORS;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.PROJECT_ID;
+import static com.google.jenkins.plugins.computeengine.integration.ITUtil.SNAPSHOT_LABEL;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.getLabel;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.handleClassLogs;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.initClient;
@@ -62,7 +63,6 @@ import org.jvnet.hudson.test.JenkinsRule;
 public class ComputeEngineCloudSnapshotCreatedIT {
   private static Logger log = Logger.getLogger(ComputeEngineCloudSnapshotCreatedIT.class.getName());
 
-  private static final String SNAPSHOT_LABEL = "snapshot";
   private static final int SNAPSHOT_TEST_TIMEOUT = 120;
 
   @ClassRule public static Timeout timeout = new Timeout(5, TimeUnit.MINUTES);
@@ -86,20 +86,20 @@ public class ComputeEngineCloudSnapshotCreatedIT {
     assertTrue(cloud.configurations.isEmpty());
     InstanceConfiguration instanceConfiguration =
         instanceConfiguration(
-            DEB_JAVA_STARTUP_SCRIPT,
-            NUM_EXECUTORS,
-            SNAPSHOT_LABEL,
-            label,
-            true,
-            true,
-            NULL_TEMPLATE);
+            new InstanceConfiguration.Builder()
+                .startupScript(DEB_JAVA_STARTUP_SCRIPT)
+                .numExecutorsStr(NUM_EXECUTORS)
+                .labels(SNAPSHOT_LABEL)
+                .oneShot(true)
+                .createSnapshot(true)
+                .template(NULL_TEMPLATE),
+            label);
 
     cloud.addConfiguration(instanceConfiguration);
     assertTrue(
         logs(streamHandler, logOutput),
         cloud.getInstanceConfig(instanceConfiguration.getDescription()).isCreateSnapshot());
 
-    // Assert that there is 0 nodes
     assertTrue(jenkinsRule.jenkins.getNodes().isEmpty());
 
     FreeStyleProject project = jenkinsRule.createFreeStyleProject();

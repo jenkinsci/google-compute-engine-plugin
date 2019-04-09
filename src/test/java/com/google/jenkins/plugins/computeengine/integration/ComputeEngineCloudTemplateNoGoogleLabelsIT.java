@@ -38,6 +38,7 @@ import static org.junit.Assert.assertFalse;
 import com.google.api.services.compute.model.Instance;
 import com.google.api.services.compute.model.InstanceTemplate;
 import com.google.jenkins.plugins.computeengine.ComputeEngineCloud;
+import com.google.jenkins.plugins.computeengine.InstanceConfiguration;
 import com.google.jenkins.plugins.computeengine.client.ComputeClient;
 import hudson.model.labels.LabelAtom;
 import hudson.slaves.NodeProvisioner.PlannedNode;
@@ -85,16 +86,21 @@ public class ComputeEngineCloudTemplateNoGoogleLabelsIT {
 
     cloud.addConfiguration(
         instanceConfiguration(
-            DEB_JAVA_STARTUP_SCRIPT, NUM_EXECUTORS, LABEL, label, false, false, TEMPLATE));
+            new InstanceConfiguration.Builder()
+                .startupScript(DEB_JAVA_STARTUP_SCRIPT)
+                .numExecutorsStr(NUM_EXECUTORS)
+                .labels(LABEL)
+                .oneShot(false)
+                .createSnapshot(false)
+                .template(TEMPLATE),
+            label));
+
     InstanceTemplate instanceTemplate = createTemplate(null, TEMPLATE);
     client.insertTemplate(cloud.projectId, instanceTemplate);
-    // Add a new node
     Collection<PlannedNode> planned = cloud.provision(new LabelAtom(LABEL), 1);
-    // There should be a successful planned node even without google labels
     assertEquals(logs(streamHandler, logOutput), 1, planned.size());
 
     String name = planned.iterator().next().displayName;
-    // Wait for the node creation to finish
     planned.iterator().next().future.get();
     instance = client.getInstance(PROJECT_ID, ZONE, name);
   }
@@ -112,7 +118,6 @@ public class ComputeEngineCloudTemplateNoGoogleLabelsIT {
 
   @Test
   public void testTemplateNoGoogleLabelsNoWarningLogs() {
-    // There should be no warning logs even without Google labels
     assertFalse(logs(streamHandler, logOutput), logs(streamHandler, logOutput).contains("WARNING"));
   }
 

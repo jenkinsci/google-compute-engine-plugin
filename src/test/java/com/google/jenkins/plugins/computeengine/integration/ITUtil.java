@@ -79,6 +79,7 @@ class ITUtil {
   static final String ZONE = "us-west1-a";
   private static final String ZONE_BASE = format("projects/%s/zones/" + ZONE);
   static final String LABEL = "integration";
+  static final String SNAPSHOT_LABEL = "snapshot";
   private static final String MACHINE_TYPE = ZONE_BASE + "/machineTypes/n1-standard-1";
   static final String NUM_EXECUTORS = "1";
   private static final boolean PREEMPTIBLE = false;
@@ -196,24 +197,15 @@ class ITUtil {
   }
 
   static InstanceConfiguration instanceConfiguration(
-      String startupScript,
-      String numExecutors,
-      String jenkinsLabels,
-      Map<String, String> label,
-      boolean createSnapshot,
-      boolean oneShot,
-      String template) {
+      InstanceConfiguration.Builder builder, Map<String, String> label) {
     InstanceConfiguration instanceConfiguration =
-        new InstanceConfiguration.Builder()
+        builder
             .namePrefix(NAME_PREFIX)
             .region(REGION)
             .zone(ZONE)
             .machineType(MACHINE_TYPE)
-            .numExecutorsStr(numExecutors)
-            .startupScript(startupScript)
             .preemptible(PREEMPTIBLE)
             .minCpuPlatform(MIN_CPU_PLATFORM)
-            .labels(jenkinsLabels)
             .description(CONFIG_DESC)
             .bootDiskType(BOOT_DISK_TYPE)
             .bootDiskAutoDelete(BOOT_DISK_AUTODELETE)
@@ -223,7 +215,6 @@ class ITUtil {
             .windows(false)
             .windowsPasswordCredentialsId("")
             .windowsPrivateKeyCredentialsId("")
-            .createSnapshot(createSnapshot)
             .remoteFs(null)
             .networkConfiguration(new AutofilledNetworkConfiguration(NETWORK_NAME, SUBNETWORK_NAME))
             .externalAddress(EXTERNAL_ADDR)
@@ -236,16 +227,16 @@ class ITUtil {
             .acceleratorConfiguration(
                 new AcceleratorConfiguration(ACCELERATOR_NAME, ACCELERATOR_COUNT))
             .runAsUser(RUN_AS_USER)
-            .oneShot(oneShot)
-            .template(template)
             .build();
     instanceConfiguration.appendLabels(label);
     return instanceConfiguration;
   }
 
+  /*
+   * GCE labels can only be lower case letters, numbers, or dashes.
+   * Used to label the nodes created in a given testClass for deletion
+   */
   static Map<String, String> getLabel(Class testClass) {
-    // GCE labels can only be lower case letters, numbers, or dashes
-    // Used to label the nodes created in a given testClass for deletion
     return ImmutableMap.of(testClass.getSimpleName().toLowerCase(), "delete");
   }
 

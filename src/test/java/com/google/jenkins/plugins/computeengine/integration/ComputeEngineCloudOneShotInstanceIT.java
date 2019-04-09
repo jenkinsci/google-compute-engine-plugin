@@ -30,6 +30,7 @@ import static com.google.jenkins.plugins.computeengine.integration.ITUtil.teardo
 import static org.junit.Assert.assertTrue;
 
 import com.google.jenkins.plugins.computeengine.ComputeEngineCloud;
+import com.google.jenkins.plugins.computeengine.InstanceConfiguration;
 import com.google.jenkins.plugins.computeengine.client.ComputeClient;
 import hudson.model.FreeStyleBuild;
 import hudson.model.FreeStyleProject;
@@ -75,19 +76,21 @@ public class ComputeEngineCloudOneShotInstanceIT {
 
     cloud.addConfiguration(
         instanceConfiguration(
-            DEB_JAVA_STARTUP_SCRIPT, NUM_EXECUTORS, LABEL, label, false, true, NULL_TEMPLATE));
-
+            new InstanceConfiguration.Builder()
+                .startupScript(DEB_JAVA_STARTUP_SCRIPT)
+                .numExecutorsStr(NUM_EXECUTORS)
+                .labels(LABEL)
+                .oneShot(true)
+                .createSnapshot(false)
+                .template(NULL_TEMPLATE),
+            label));
     jenkinsRule.jenkins.getNodesObject().setNodes(Collections.emptyList());
-
-    // Assert that there is 0 nodes
     assertTrue(jenkinsRule.jenkins.getNodes().isEmpty());
 
     FreeStyleProject project = jenkinsRule.createFreeStyleProject();
     Builder step = new Shell("echo works");
     project.getBuildersList().add(step);
     project.setAssignedLabel(new LabelAtom(LABEL));
-
-    // Enqueue a build of the project, wait for it to complete, and assert success
     build = jenkinsRule.buildAndAssertSuccess(project);
   }
 
@@ -98,13 +101,11 @@ public class ComputeEngineCloudOneShotInstanceIT {
 
   @Test
   public void testOneShotInstancesLogContainsExpectedOutput() throws Exception {
-    // Assert that the console log contains the output we expect
     jenkinsRule.assertLogContains("works", build);
   }
 
   @Test
   public void testOneShotInstanceNodeDeleted() {
-    // Assert that there is 0 nodes after job finished
     Awaitility.await()
         .timeout(10, TimeUnit.SECONDS)
         .until(() -> jenkinsRule.jenkins.getNodes().isEmpty());

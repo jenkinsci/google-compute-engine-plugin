@@ -30,6 +30,7 @@ import static com.google.jenkins.plugins.computeengine.integration.ITUtil.teardo
 import static org.junit.Assert.assertEquals;
 
 import com.google.jenkins.plugins.computeengine.ComputeEngineCloud;
+import com.google.jenkins.plugins.computeengine.InstanceConfiguration;
 import com.google.jenkins.plugins.computeengine.client.ComputeClient;
 import hudson.model.labels.LabelAtom;
 import hudson.slaves.NodeProvisioner.PlannedNode;
@@ -72,9 +73,16 @@ public class ComputeEngineCloudWorkerFailedIT {
 
     // This configuration creates an instance with no Java installed.
     cloud.addConfiguration(
-        instanceConfiguration("", NUM_EXECUTORS, LABEL, label, false, false, NULL_TEMPLATE));
+        instanceConfiguration(
+            new InstanceConfiguration.Builder()
+                .startupScript("")
+                .numExecutorsStr(NUM_EXECUTORS)
+                .labels(LABEL)
+                .oneShot(false)
+                .createSnapshot(false)
+                .template(NULL_TEMPLATE),
+            label));
 
-    // Add a new node
     planned = cloud.provision(new LabelAtom(LABEL), 1);
   }
 
@@ -85,13 +93,11 @@ public class ComputeEngineCloudWorkerFailedIT {
 
   @Test
   public void testWorkerFailedNodePlanned() {
-    // There should be a planned node
     assertEquals(logs(streamHandler, logOutput), 1, planned.size());
   }
 
   @Test(expected = ExecutionException.class)
   public void testWorkerFailedCreationFails() throws Exception {
-    // Wait for the node creation to fail
     planned.iterator().next().future.get();
   }
 }

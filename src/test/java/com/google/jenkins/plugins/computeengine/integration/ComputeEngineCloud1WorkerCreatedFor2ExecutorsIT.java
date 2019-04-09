@@ -34,6 +34,7 @@ import static org.junit.Assert.assertTrue;
 
 import com.google.api.services.compute.model.Instance;
 import com.google.jenkins.plugins.computeengine.ComputeEngineCloud;
+import com.google.jenkins.plugins.computeengine.InstanceConfiguration;
 import com.google.jenkins.plugins.computeengine.client.ComputeClient;
 import hudson.model.labels.LabelAtom;
 import hudson.slaves.NodeProvisioner.PlannedNode;
@@ -57,7 +58,6 @@ public class ComputeEngineCloud1WorkerCreatedFor2ExecutorsIT {
       Logger.getLogger(ComputeEngineCloud1WorkerCreatedFor2ExecutorsIT.class.getName());
 
   private static final String MULTIPLE_NUM_EXECUTORS = "2";
-  private static final String EXPECTED_LOG_MESSAGE = "for excess workload of 2 units of label";
 
   @ClassRule public static Timeout timeout = new Timeout(5, TimeUnit.MINUTES);
   @ClassRule public static JenkinsRule jenkinsRule = new JenkinsRule();
@@ -80,25 +80,20 @@ public class ComputeEngineCloud1WorkerCreatedFor2ExecutorsIT {
 
     cloud.addConfiguration(
         instanceConfiguration(
-            DEB_JAVA_STARTUP_SCRIPT,
-            MULTIPLE_NUM_EXECUTORS,
-            LABEL,
-            label,
-            false,
-            false,
-            NULL_TEMPLATE));
-    // Add a new node
+            new InstanceConfiguration.Builder()
+                .startupScript(DEB_JAVA_STARTUP_SCRIPT)
+                .numExecutorsStr(MULTIPLE_NUM_EXECUTORS)
+                .labels(LABEL)
+                .oneShot(false)
+                .createSnapshot(false)
+                .template(NULL_TEMPLATE),
+            label));
+
     Collection<PlannedNode> planned = cloud.provision(new LabelAtom(LABEL), 2);
-
-    // There should be a planned node
     assertEquals(logs(streamHandler, logOutput), 1, planned.size());
-
-    String name = planned.iterator().next().displayName;
-
-    // Wait for node creation to finish
     planned.iterator().next().future.get();
 
-    instance = client.getInstance(PROJECT_ID, ZONE, name);
+    instance = client.getInstance(PROJECT_ID, ZONE, planned.iterator().next().displayName);
   }
 
   @AfterClass
@@ -115,6 +110,6 @@ public class ComputeEngineCloud1WorkerCreatedFor2ExecutorsIT {
   public void test1WorkerCreatedFor2ExecutorsExpectedLogs() {
     assertTrue(
         logs(streamHandler, logOutput),
-        logs(streamHandler, logOutput).contains(EXPECTED_LOG_MESSAGE));
+        logs(streamHandler, logOutput).contains("for excess workload of 2 units of label"));
   }
 }

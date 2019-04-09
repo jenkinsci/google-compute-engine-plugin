@@ -79,20 +79,23 @@ public class ComputeEngineCloudWorkerCreatedIT {
 
     instanceConfiguration =
         instanceConfiguration(
-            DEB_JAVA_STARTUP_SCRIPT, NUM_EXECUTORS, LABEL, label, false, false, NULL_TEMPLATE);
-    cloud.addConfiguration(instanceConfiguration);
-    // Add a new node
-    Collection<PlannedNode> planned = cloud.provision(new LabelAtom(LABEL), 1);
+            new InstanceConfiguration.Builder()
+                .startupScript(DEB_JAVA_STARTUP_SCRIPT)
+                .numExecutorsStr(NUM_EXECUTORS)
+                .labels(LABEL)
+                .oneShot(false)
+                .createSnapshot(false)
+                .template(NULL_TEMPLATE),
+            label);
 
-    // There should be a planned node
+    cloud.addConfiguration(instanceConfiguration);
+    Collection<PlannedNode> planned = cloud.provision(new LabelAtom(LABEL), 1);
     assertEquals(logs(streamHandler, logOutput), 1, planned.size());
 
-    String name = planned.iterator().next().displayName;
-
-    // Wait for the node creation to finish
     planned.iterator().next().future.get();
 
-    instance = cloud.getClient().getInstance(PROJECT_ID, ZONE, name);
+    instance =
+        cloud.getClient().getInstance(PROJECT_ID, ZONE, planned.iterator().next().displayName);
   }
 
   @AfterClass
@@ -102,20 +105,16 @@ public class ComputeEngineCloudWorkerCreatedIT {
 
   @Test
   public void testWorkerCreatedNoWarningLogs() {
-    // There should be no warning logs
     assertFalse(logs(streamHandler, logOutput), logs(streamHandler, logOutput).contains("WARNING"));
   }
 
   @Test
   public void testWorkerCreatedNumberOfLabels() {
-    // The created instance should have 3 labels
     assertEquals(logs(streamHandler, logOutput), 3, instance.getLabels().size());
   }
 
   @Test
   public void testWorkerCreatedConfigLabelKeyAndValue() {
-    // Instance should have a label with key CONFIG_LABEL_KEY and value equal to the config's name
-    // prefix
     assertEquals(
         logs(streamHandler, logOutput),
         instanceConfiguration.getNamePrefix(),
@@ -124,7 +123,6 @@ public class ComputeEngineCloudWorkerCreatedIT {
 
   @Test
   public void testWorkerCreatedCloudIdKeyAndValue() {
-    // Instance should have a label with key CLOUD_ID_LABEL_KEY and value equal to the instance ID
     assertEquals(
         logs(streamHandler, logOutput),
         cloud.getInstanceId(),

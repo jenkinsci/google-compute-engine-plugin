@@ -51,11 +51,7 @@ public class ComputeClientIT {
   public static void init() throws Exception {
     log.info("init");
     initCredentials(jenkinsRule);
-
-    // Get a compute client for calls to GCE
     client = initClient(jenkinsRule, label, log);
-
-    // Logging
     handleClassLogs(streamHandler, ComputeClient.class.getName());
   }
 

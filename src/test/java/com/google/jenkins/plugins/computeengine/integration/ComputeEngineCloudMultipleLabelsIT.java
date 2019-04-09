@@ -32,6 +32,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 
 import com.google.jenkins.plugins.computeengine.ComputeEngineCloud;
+import com.google.jenkins.plugins.computeengine.InstanceConfiguration;
 import com.google.jenkins.plugins.computeengine.client.ComputeClient;
 import hudson.model.Node;
 import hudson.model.labels.LabelAtom;
@@ -76,14 +77,15 @@ public class ComputeEngineCloudMultipleLabelsIT {
 
     cloud.addConfiguration(
         instanceConfiguration(
-            DEB_JAVA_STARTUP_SCRIPT,
-            NUM_EXECUTORS,
-            MULTIPLE_LABEL,
-            label,
-            false,
-            false,
-            NULL_TEMPLATE));
-    // Add a new node
+            new InstanceConfiguration.Builder()
+                .startupScript(DEB_JAVA_STARTUP_SCRIPT)
+                .numExecutorsStr(NUM_EXECUTORS)
+                .labels(MULTIPLE_LABEL)
+                .oneShot(false)
+                .createSnapshot(false)
+                .template(NULL_TEMPLATE),
+            label));
+
     planned = cloud.provision(new LabelAtom(LABEL), 1);
     planned.iterator().next().future.get();
   }
