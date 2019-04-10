@@ -44,14 +44,10 @@ View Google Compute Engine on the plugin site for more information.
    ```
 4. In Jenkins, click the Credentials button on the left side of the screen. Then click 
    System.
-
 5. Click Global credentials then **Add credentials** on the left.
-
 6. In the Kind dropdown, select Google Service Account from private key.
-
 7. Enter your project name then select your JSON key that was created in the preceding
    steps.
-
 8. Click OK.
 
 ### Google Compute Engine configuration
