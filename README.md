@@ -27,6 +27,13 @@ Please see the [Google Compute Engine Plugin](docs/Home.md) docs for complete do
 ## Feature requests and bug reports
 Please file feature requests and bug reports under [issues](https://github.com/jenkinsci/google-compute-engine-plugin/issues).
 
+## Community
+
+The GCP Jenkins community uses the **#gcp-jenkins** slack channel on
+[https://googlecloud-community.slack.com](https://googlecloud-community.slack.com)
+to ask questions and share feedback. Invitation link available
+[here](https://join.slack.com/t/googlecloud-community/shared_invite/enQtNDI2NjAyODQ4NzA5LThlOGVhMzUyNDUyNmVmNTQ5YzMxYmYxNDk1YjdmZjU4ZjBiYmU1OGEzYWE2MWY1NWY4NTQ1NjAwOWRlN2ZlN2I).
+
 ## Contributing
 See [CONTRIBUTING.md](CONTRIBUTING.md)
 
