@@ -40,7 +40,7 @@ View Google Compute Engine on the plugin site for more information.
    ```
 4. In Jenkins, click the Credentials button on the left side of the screen. Then click System.
 
-5. Click Global credentials then **Add credentials **on the left.
+5. Click Global credentials then **Add credentials** on the left.
 
 6. In the Kind dropdown, select Google Service Account from private key.
 
@@ -80,8 +80,5 @@ Instance configurations have many options that were not listed above. A few of t
 * Startup Script - defines a set of commands that should be run before making the instance available for running your jobs. For more info, review the startup script docs.
 * GPUs - attach 1 or more GPUs to the instance. For more info, visit the GCE GPU docs.
 * Service Account E-mail - sets the service account that the instance will be able to access from metadata. For more info, review the service account documentation.
-
-### Feature requests and bug reports
-Please file feature requests and bug reports under [issues](https://github.com/jenkinsci/google-compute-engine-plugin/issues).
 
 
