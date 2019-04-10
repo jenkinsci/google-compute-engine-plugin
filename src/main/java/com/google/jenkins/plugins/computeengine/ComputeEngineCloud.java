@@ -177,7 +177,7 @@ public class ComputeEngineCloud extends AbstractCloudImpl {
           new ClientFactory(Jenkins.get(), new ArrayList<>(), credentialsId);
       return clientFactory.compute();
     } catch (IOException e) {
-      LOGGER.log(Level.SEVERE, "Exception why creating GCE client", e);
+      LOGGER.log(Level.SEVERE, "Exception when creating GCE client", e);
       // TODO: https://github.com/jenkinsci/google-compute-engine-plugin/issues/62
       return null;
     }
