@@ -152,7 +152,7 @@ public class ComputeEngineCloud extends AbstractCloudImpl {
       c.appendLabel(CLOUD_ID_LABEL_KEY, getInstanceId());
 
       // Apply a label that identifies the name of this instance configuration
-      c.appendLabel(CONFIG_LABEL_KEY, c.namePrefix);
+      c.appendLabel(CONFIG_LABEL_KEY, c.getNamePrefix());
     }
     return this;
   }
@@ -344,7 +344,7 @@ public class ComputeEngineCloud extends AbstractCloudImpl {
   /** Gets {@link InstanceConfiguration} that has the matching Description. */
   public InstanceConfiguration getInstanceConfig(String description) {
     for (InstanceConfiguration c : configurations) {
-      if (c.description.equals(description)) {
+      if (c.getDescription().equals(description)) {
         return c;
       }
     }

@@ -108,39 +108,39 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
               add("windows-sql-cloud");
             }
           });
-  public final String description;
-  public final String namePrefix;
-  public final String region;
-  public final String zone;
-  public final String machineType;
-  public final String numExecutorsStr;
-  public final String startupScript;
-  public final boolean preemptible;
-  public final String minCpuPlatform;
-  public final String labels;
-  public final String runAsUser;
-  public final String bootDiskType;
-  public final boolean bootDiskAutoDelete;
-  public final String bootDiskSourceImageName;
-  public final String bootDiskSourceImageProject;
-  public final NetworkConfiguration networkConfiguration;
-  public final boolean externalAddress;
-  public final boolean useInternalAddress;
-  public final String networkTags;
-  public final String serviceAccountEmail;
-  public final Node.Mode mode;
-  public final AcceleratorConfiguration acceleratorConfiguration;
-  public final String retentionTimeMinutesStr;
-  public final String launchTimeoutSecondsStr;
-  public final String bootDiskSizeGbStr;
-  public final boolean oneShot;
-  public final String template;
-  public final boolean windows;
-  public final String windowsPasswordCredentialsId;
-  public final String windowsPrivateKeyCredentialsId;
-  public final Optional<WindowsConfiguration> windowsConfig;
-  public final boolean createSnapshot;
-  public final String remoteFs;
+  private String description;
+  private String namePrefix;
+  private String region;
+  private String zone;
+  private String machineType;
+  private String numExecutorsStr;
+  private String startupScript;
+  private boolean preemptible;
+  private String minCpuPlatform;
+  private String labels;
+  private String runAsUser;
+  private String bootDiskType;
+  private boolean bootDiskAutoDelete;
+  private String bootDiskSourceImageName;
+  private String bootDiskSourceImageProject;
+  private NetworkConfiguration networkConfiguration;
+  private boolean externalAddress;
+  private boolean useInternalAddress;
+  private String networkTags;
+  private String serviceAccountEmail;
+  private Node.Mode mode;
+  private AcceleratorConfiguration acceleratorConfiguration;
+  private String retentionTimeMinutesStr;
+  private String launchTimeoutSecondsStr;
+  private String bootDiskSizeGbStr;
+  private boolean oneShot;
+  private String template;
+  private boolean windows;
+  private String windowsPasswordCredentialsId;
+  private String windowsPrivateKeyCredentialsId;
+  private Optional<WindowsConfiguration> windowsConfig;
+  private boolean createSnapshot;
+  private String remoteFs;
   public Map<String, String> googleLabels;
   public Integer numExecutors;
   public Integer retentionTimeMinutes;
@@ -281,6 +281,134 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
       return s.substring(s.indexOf("/projects/") + 1, s.length());
     }
     return s;
+  }
+
+  public String getDescription() {
+    return description;
+  }
+
+  public String getNamePrefix() {
+    return namePrefix;
+  }
+
+  public String getRegion() {
+    return region;
+  }
+
+  public String getZone() {
+    return zone;
+  }
+
+  public String getMachineType() {
+    return machineType;
+  }
+
+  public String getNumExecutorsStr() {
+    return numExecutorsStr;
+  }
+
+  public String getStartupScript() {
+    return startupScript;
+  }
+
+  public boolean isPreemptible() {
+    return preemptible;
+  }
+
+  public String getMinCpuPlatform() {
+    return minCpuPlatform;
+  }
+
+  public String getLabels() {
+    return labels;
+  }
+
+  public String getRunAsUser() {
+    return runAsUser;
+  }
+
+  public String getBootDiskType() {
+    return bootDiskType;
+  }
+
+  public boolean isBootDiskAutoDelete() {
+    return bootDiskAutoDelete;
+  }
+
+  public String getBootDiskSourceImageName() {
+    return bootDiskSourceImageName;
+  }
+
+  public String getBootDiskSourceImageProject() {
+    return bootDiskSourceImageProject;
+  }
+
+  public NetworkConfiguration getNetworkConfiguration() {
+    return networkConfiguration;
+  }
+
+  public boolean isExternalAddress() {
+    return externalAddress;
+  }
+
+  public boolean isUseInternalAddress() {
+    return useInternalAddress;
+  }
+
+  public String getNetworkTags() {
+    return networkTags;
+  }
+
+  public String getServiceAccountEmail() {
+    return serviceAccountEmail;
+  }
+
+  public AcceleratorConfiguration getAcceleratorConfiguration() {
+    return acceleratorConfiguration;
+  }
+
+  public String getRetentionTimeMinutesStr() {
+    return retentionTimeMinutesStr;
+  }
+
+  public String getLaunchTimeoutSecondsStr() {
+    return launchTimeoutSecondsStr;
+  }
+
+  public String getBootDiskSizeGbStr() {
+    return bootDiskSizeGbStr;
+  }
+
+  public boolean isOneShot() {
+    return oneShot;
+  }
+
+  public String getTemplate() {
+    return template;
+  }
+
+  public boolean isWindows() {
+    return windows;
+  }
+
+  public String getWindowsPasswordCredentialsId() {
+    return windowsPasswordCredentialsId;
+  }
+
+  public String getWindowsPrivateKeyCredentialsId() {
+    return windowsPrivateKeyCredentialsId;
+  }
+
+  public Optional<WindowsConfiguration> getWindowsConfig() {
+    return windowsConfig;
+  }
+
+  public boolean isCreateSnapshot() {
+    return createSnapshot;
+  }
+
+  public String getRemoteFs() {
+    return remoteFs;
   }
 
   public Descriptor<InstanceConfiguration> getDescriptor() {

@@ -243,7 +243,7 @@ public class InstanceConfigurationTest {
         .equals(BOOT_DISK_IMAGE_NAME));
 
     InstanceConfiguration instanceConfiguration = instanceConfiguration();
-    assert (instanceConfiguration.useInternalAddress == false);
+    assert (!instanceConfiguration.isUseInternalAddress());
     assert (instanceConfiguration.instance().getMinCpuPlatform() == null);
   }
 

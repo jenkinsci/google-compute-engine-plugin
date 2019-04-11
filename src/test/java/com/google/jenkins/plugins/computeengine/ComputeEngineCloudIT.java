@@ -262,7 +262,8 @@ public class ComputeEngineCloudIT {
 
     // Instance should have a label with key CONFIG_LABEL_KEY and value equal to the config's name
     // prefix
-    assertEquals(logs(), ic.namePrefix, i.getLabels().get(ComputeEngineCloud.CONFIG_LABEL_KEY));
+    assertEquals(
+        logs(), ic.getNamePrefix(), i.getLabels().get(ComputeEngineCloud.CONFIG_LABEL_KEY));
     assertEquals(
         logs(), cloud.getInstanceId(), i.getLabels().get(ComputeEngineCloud.CLOUD_ID_LABEL_KEY));
   }
