@@ -1060,4 +1060,205 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
       return FormValidation.ok();
     }
   }
+
+  // For use in Builder only
+  private InstanceConfiguration() {}
+
+  public static class Builder {
+
+    private InstanceConfiguration instanceConfiguration;
+
+    public Builder() {
+      instanceConfiguration = new InstanceConfiguration();
+    }
+
+    public Builder description(String description) {
+      instanceConfiguration.description = description;
+      return this;
+    }
+
+    public Builder namePrefix(String namePrefix) {
+      instanceConfiguration.namePrefix = namePrefix;
+      return this;
+    }
+
+    public Builder region(String region) {
+      instanceConfiguration.region = region;
+      return this;
+    }
+
+    public Builder zone(String zone) {
+      instanceConfiguration.zone = zone;
+      return this;
+    }
+
+    public Builder machineType(String machineType) {
+      instanceConfiguration.machineType = machineType;
+      return this;
+    }
+
+    public Builder numExecutorsStr(String numExecutorsStr) {
+      instanceConfiguration.numExecutors = intOrDefault(numExecutorsStr, DEFAULT_NUM_EXECUTORS);
+      instanceConfiguration.numExecutorsStr = instanceConfiguration.numExecutors.toString();
+      return this;
+    }
+
+    public Builder startupScript(String startupScript) {
+      instanceConfiguration.startupScript = startupScript;
+      return this;
+    }
+
+    public Builder preemptible(boolean preemptible) {
+      instanceConfiguration.preemptible = preemptible;
+      return this;
+    }
+
+    public Builder minCpuPlatform(String minCpuPlatform) {
+      instanceConfiguration.minCpuPlatform = minCpuPlatform;
+      return this;
+    }
+
+    public Builder labels(String labels) {
+      instanceConfiguration.labels = Util.fixNull(labels);
+      return this;
+    }
+
+    public Builder runAsUser(String runAsUser) {
+      instanceConfiguration.runAsUser = runAsUser;
+      return this;
+    }
+
+    public Builder bootDiskType(String bootDiskType) {
+      instanceConfiguration.bootDiskType = bootDiskType;
+      return this;
+    }
+
+    public Builder bootDiskAutoDelete(boolean bootDiskAutoDelete) {
+      instanceConfiguration.bootDiskAutoDelete = bootDiskAutoDelete;
+      return this;
+    }
+
+    public Builder bootDiskSourceImageName(String bootDiskSourceImageName) {
+      instanceConfiguration.bootDiskSourceImageName = bootDiskSourceImageName;
+      return this;
+    }
+
+    public Builder bootDiskSourceImageProject(String bootDiskSourceImageProject) {
+      instanceConfiguration.bootDiskSourceImageProject = bootDiskSourceImageProject;
+      return this;
+    }
+
+    public Builder networkConfiguration(NetworkConfiguration networkConfiguration) {
+      instanceConfiguration.networkConfiguration = networkConfiguration;
+      return this;
+    }
+
+    public Builder externalAddress(boolean externalAddress) {
+      instanceConfiguration.externalAddress = externalAddress;
+      return this;
+    }
+
+    public Builder useInternalAddress(boolean useInternalAddress) {
+      instanceConfiguration.useInternalAddress = useInternalAddress;
+      return this;
+    }
+
+    public Builder networkTags(String networkTags) {
+      instanceConfiguration.networkTags = Util.fixNull(networkTags).trim();
+      return this;
+    }
+
+    public Builder serviceAccountEmail(String serviceAccountEmail) {
+      instanceConfiguration.serviceAccountEmail = serviceAccountEmail;
+      return this;
+    }
+
+    public Builder mode(Node.Mode mode) {
+      instanceConfiguration.mode = mode;
+      return this;
+    }
+
+    public Builder acceleratorConfiguration(AcceleratorConfiguration acceleratorConfiguration) {
+      instanceConfiguration.acceleratorConfiguration = acceleratorConfiguration;
+      return this;
+    }
+
+    public Builder retentionTimeMinutesStr(String retentionTimeMinutesStr) {
+      instanceConfiguration.retentionTimeMinutes =
+          intOrDefault(retentionTimeMinutesStr, DEFAULT_RETENTION_TIME_MINUTES);
+      instanceConfiguration.retentionTimeMinutesStr =
+          instanceConfiguration.retentionTimeMinutes.toString();
+      return this;
+    }
+
+    public Builder launchTimeoutSecondsStr(String launchTimeoutSecondsStr) {
+      instanceConfiguration.launchTimeoutSeconds =
+          intOrDefault(launchTimeoutSecondsStr, DEFAULT_LAUNCH_TIMEOUT_SECONDS);
+      instanceConfiguration.launchTimeoutSecondsStr =
+          instanceConfiguration.launchTimeoutSeconds.toString();
+      return this;
+    }
+
+    public Builder bootDiskSizeGbStr(String bootDiskSizeGbStr) {
+      instanceConfiguration.bootDiskSizeGb =
+          longOrDefault(bootDiskSizeGbStr, DEFAULT_BOOT_DISK_SIZE_GB);
+      instanceConfiguration.bootDiskSizeGbStr = instanceConfiguration.bootDiskSizeGb.toString();
+      return this;
+    }
+
+    public Builder oneShot(boolean oneShot) {
+      instanceConfiguration.oneShot = oneShot;
+      return this;
+    }
+
+    public Builder template(String template) {
+      instanceConfiguration.template = template;
+      return this;
+    }
+
+    public Builder windows(boolean windows) {
+      instanceConfiguration.windows = windows;
+      return this;
+    }
+
+    public Builder windowsPasswordCredentialsId(String windowsPasswordCredentialsId) {
+      instanceConfiguration.windowsPasswordCredentialsId = windowsPasswordCredentialsId;
+      return this;
+    }
+
+    public Builder windowsPrivateKeyCredentialsId(String windowsPrivateKeyCredentialsId) {
+      instanceConfiguration.windowsPrivateKeyCredentialsId = windowsPrivateKeyCredentialsId;
+      return this;
+    }
+
+    public Builder createSnapshot(boolean createSnapshot) {
+      instanceConfiguration.createSnapshot = createSnapshot;
+      return this;
+    }
+
+    public Builder remoteFs(String remoteFs) {
+      instanceConfiguration.remoteFs = remoteFs;
+      return this;
+    }
+
+    public InstanceConfiguration build() {
+      if (instanceConfiguration.windows) {
+        instanceConfiguration.windowsConfig =
+            Optional.of(
+                new WindowsConfiguration(
+                    instanceConfiguration.runAsUser,
+                    instanceConfiguration.windowsPasswordCredentialsId,
+                    instanceConfiguration.windowsPrivateKeyCredentialsId));
+      } else {
+        instanceConfiguration.windowsConfig = Optional.empty();
+      }
+
+      if (!instanceConfiguration.oneShot) {
+        instanceConfiguration.createSnapshot = false;
+      }
+
+      instanceConfiguration.readResolve();
+      return instanceConfiguration;
+    }
+  }
 }

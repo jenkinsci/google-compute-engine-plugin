@@ -252,39 +252,40 @@ public class InstanceConfigurationTest {
   }
 
   public static InstanceConfiguration instanceConfiguration(String minCpuPlatform) {
-    return new InstanceConfiguration(
-        NAME_PREFIX,
-        REGION,
-        ZONE,
-        MACHINE_TYPE,
-        NUM_EXECUTORS,
-        STARTUP_SCRIPT,
-        PREEMPTIBLE,
-        minCpuPlatform,
-        LABEL,
-        CONFIG_DESC,
-        BOOT_DISK_TYPE,
-        BOOT_DISK_AUTODELETE,
-        BOOT_DISK_IMAGE_NAME,
-        BOOT_DISK_PROJECT_ID,
-        BOOT_DISK_SIZE_GB_STR,
-        WINDOWS,
-        "",
-        "",
-        false,
-        null,
-        new AutofilledNetworkConfiguration(NETWORK_NAME, SUBNETWORK_NAME),
-        EXTERNAL_ADDR,
-        false,
-        NETWORK_TAGS,
-        SERVICE_ACCOUNT_EMAIL,
-        RETENTION_TIME_MINUTES_STR,
-        LAUNCH_TIMEOUT_SECONDS_STR,
-        NODE_MODE,
-        new AcceleratorConfiguration(ACCELERATOR_NAME, ACCELERATOR_COUNT),
-        RUN_AS_USER,
-        false,
-        null);
+    return new InstanceConfiguration.Builder()
+        .namePrefix(NAME_PREFIX)
+        .region(REGION)
+        .zone(ZONE)
+        .machineType(MACHINE_TYPE)
+        .numExecutorsStr(NUM_EXECUTORS)
+        .startupScript(STARTUP_SCRIPT)
+        .preemptible(PREEMPTIBLE)
+        .minCpuPlatform(minCpuPlatform)
+        .labels(LABEL)
+        .description(CONFIG_DESC)
+        .bootDiskType(BOOT_DISK_TYPE)
+        .bootDiskAutoDelete(BOOT_DISK_AUTODELETE)
+        .bootDiskSourceImageName(BOOT_DISK_IMAGE_NAME)
+        .bootDiskSourceImageProject(BOOT_DISK_PROJECT_ID)
+        .bootDiskSizeGbStr(BOOT_DISK_SIZE_GB_STR)
+        .windows(WINDOWS)
+        .windowsPasswordCredentialsId("")
+        .windowsPrivateKeyCredentialsId("")
+        .createSnapshot(false)
+        .remoteFs(null)
+        .networkConfiguration(new AutofilledNetworkConfiguration(NETWORK_NAME, SUBNETWORK_NAME))
+        .externalAddress(EXTERNAL_ADDR)
+        .useInternalAddress(false)
+        .networkTags(NETWORK_TAGS)
+        .serviceAccountEmail(SERVICE_ACCOUNT_EMAIL)
+        .retentionTimeMinutesStr(RETENTION_TIME_MINUTES_STR)
+        .launchTimeoutSecondsStr(LAUNCH_TIMEOUT_SECONDS_STR)
+        .mode(NODE_MODE)
+        .acceleratorConfiguration(new AcceleratorConfiguration(ACCELERATOR_NAME, ACCELERATOR_COUNT))
+        .runAsUser(RUN_AS_USER)
+        .oneShot(false)
+        .template(null)
+        .build();
   }
 
   @Test
