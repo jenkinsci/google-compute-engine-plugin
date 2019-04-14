@@ -72,8 +72,8 @@ import java.util.logging.Logger;
 import java.util.logging.SimpleFormatter;
 import java.util.logging.StreamHandler;
 import org.awaitility.Awaitility;
-import org.junit.After;
 import org.junit.AfterClass;
+import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Test;
@@ -210,10 +210,10 @@ public class ComputeEngineCloudIT {
     log.info(logOutput.toString());
   }
 
-  @After
-  public void after() {
+  @Before
+  public void before() {
     ComputeEngineCloud cloud = (ComputeEngineCloud) r.jenkins.clouds.get(0);
-    cloud.setConfigurations(null);
+    cloud.setConfigurations(new ArrayList<>());
   }
 
   @Test
