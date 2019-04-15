@@ -160,7 +160,6 @@ class ITUtil {
       throws IOException {
     log.info("teardown");
     deleteIntegrationInstances(false, client, label, log);
-    log.info(logs(streamHandler, logOutput));
     streamHandler.close();
   }
 
