@@ -21,11 +21,13 @@ import static com.google.jenkins.plugins.computeengine.integration.ITUtil.NULL_T
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.NUM_EXECUTORS;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.PROJECT_ID;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.SNAPSHOT_LABEL;
+import static com.google.jenkins.plugins.computeengine.integration.ITUtil.ZONE;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.getLabel;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.initClient;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.initCloud;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.initCredentials;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.teardownResources;
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
@@ -54,8 +56,6 @@ import org.jvnet.hudson.test.JenkinsRule;
 public class ComputeEngineCloudNoSnapshotCreatedIT {
   private static Logger log =
       Logger.getLogger(ComputeEngineCloudNoSnapshotCreatedIT.class.getName());
-
-  private static final int SNAPSHOT_TEST_TIMEOUT = 120;
 
   @ClassRule public static Timeout timeout = new Timeout(5, TimeUnit.MINUTES);
   @ClassRule public static JenkinsRule jenkinsRule = new JenkinsRule();
@@ -98,11 +98,6 @@ public class ComputeEngineCloudNoSnapshotCreatedIT {
     assertNotNull(worker);
 
     name = worker.getNodeName();
-
-    // Need time for one-shot instance to terminate and create the snapshot
-    Awaitility.await()
-        .timeout(SNAPSHOT_TEST_TIMEOUT, TimeUnit.SECONDS)
-        .until(() -> jenkinsRule.jenkins.getNode(worker.getNodeName()) == null);
   }
 
   @AfterClass
@@ -110,9 +105,22 @@ public class ComputeEngineCloudNoSnapshotCreatedIT {
     teardownResources(client, label, log);
   }
 
+  // Makes sure that the instance is being stopped after completing the job
+  @Test
+  public void testNoSnapshotCreatedInstanceStopping() throws IOException {
+    assertEquals("RUNNING", client.getInstance(PROJECT_ID, ZONE, name).getStatus());
+    Awaitility.await()
+        .timeout(1, TimeUnit.MINUTES)
+        .until(() -> "STOPPING".equals(client.getInstance(PROJECT_ID, ZONE, name).getStatus()));
+  }
+
   // Tests that no snapshot is created when we only have successful builds for given node
   @Test
   public void testNoSnapshotCreatedSnapshotNull() throws Exception {
+    // Wait for one-shot instance to terminate and create the snapshot
+    Awaitility.await()
+        .timeout(2, TimeUnit.MINUTES)
+        .until(() -> jenkinsRule.jenkins.getNode(name) == null);
     assertNull(client.getSnapshot(PROJECT_ID, name));
   }
 }
