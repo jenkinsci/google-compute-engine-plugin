@@ -111,4 +111,9 @@ public class ComputeEngineCloudTemplateNoGoogleLabelsIT {
     assertEquals(
         cloud.getInstanceId(), instance.getLabels().get(ComputeEngineCloud.CLOUD_ID_LABEL_KEY));
   }
+
+  @Test
+  public void testTemplateNoGoogleLabelsStatusRunning() {
+    assertEquals("RUNNING", instance.getStatus());
+  }
 }

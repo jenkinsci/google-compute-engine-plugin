@@ -110,4 +110,9 @@ public class ComputeEngineCloudWorkerCreatedIT {
     assertEquals(
         cloud.getInstanceId(), instance.getLabels().get(ComputeEngineCloud.CLOUD_ID_LABEL_KEY));
   }
+
+  @Test
+  public void testWorkerCreatedStatusRunning() {
+    assertEquals("RUNNING", instance.getStatus());
+  }
 }

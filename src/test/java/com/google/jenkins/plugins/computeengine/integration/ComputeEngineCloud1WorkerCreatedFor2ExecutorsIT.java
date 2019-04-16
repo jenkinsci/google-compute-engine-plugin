@@ -59,6 +59,7 @@ public class ComputeEngineCloud1WorkerCreatedFor2ExecutorsIT {
   private static ComputeClient client;
   private static Map<String, String> label =
       getLabel(ComputeEngineCloud1WorkerCreatedFor2ExecutorsIT.class);
+  private static Collection<PlannedNode> planned;
   private static Instance instance;
 
   @BeforeClass
@@ -79,8 +80,7 @@ public class ComputeEngineCloud1WorkerCreatedFor2ExecutorsIT {
                 .template(NULL_TEMPLATE),
             label));
 
-    Collection<PlannedNode> planned = cloud.provision(new LabelAtom(LABEL), 2);
-    assertEquals(1, planned.size());
+    planned = cloud.provision(new LabelAtom(LABEL), 2);
     planned.iterator().next().future.get();
 
     instance = client.getInstance(PROJECT_ID, ZONE, planned.iterator().next().displayName);
@@ -94,5 +94,10 @@ public class ComputeEngineCloud1WorkerCreatedFor2ExecutorsIT {
   @Test
   public void test1WorkerCreatedFor2ExecutorsStatusRunning() {
     assertEquals("RUNNING", instance.getStatus());
+  }
+
+  @Test
+  public void test1WorkerCreatedFor2ExecutorsOnly1Planned() {
+    assertEquals(1, planned.size());
   }
 }
