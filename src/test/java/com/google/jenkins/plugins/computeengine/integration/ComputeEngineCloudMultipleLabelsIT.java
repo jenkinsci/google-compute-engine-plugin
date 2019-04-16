@@ -20,6 +20,8 @@ import static com.google.jenkins.plugins.computeengine.integration.ITUtil.DEB_JA
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.LABEL;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.NULL_TEMPLATE;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.NUM_EXECUTORS;
+import static com.google.jenkins.plugins.computeengine.integration.ITUtil.PROJECT_ID;
+import static com.google.jenkins.plugins.computeengine.integration.ITUtil.ZONE;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.getLabel;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.initClient;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.initCloud;
@@ -58,6 +60,7 @@ public class ComputeEngineCloudMultipleLabelsIT {
   private static ComputeClient client;
   private static Map<String, String> label = getLabel(ComputeEngineCloudMultipleLabelsIT.class);
   private static Collection<PlannedNode> planned;
+  private static String name;
 
   @BeforeClass
   public static void init() throws Exception {
@@ -78,6 +81,7 @@ public class ComputeEngineCloudMultipleLabelsIT {
             label));
 
     planned = cloud.provision(new LabelAtom(LABEL), 1);
+    name = planned.iterator().next().displayName;
     planned.iterator().next().future.get();
   }
 
@@ -87,24 +91,20 @@ public class ComputeEngineCloudMultipleLabelsIT {
   }
 
   @Test
-  public void testMultipleLabelsForJob() {
-    // For a configuration with multiple labels, test if job label matches one of the
-    // configuration's labels
-
-    // There should be a planned node
+  public void testMultipleLabelsPlannedNode() {
     assertEquals(1, planned.size());
   }
 
   @Test
-  public void testMultipleLabelsInConfig() throws Exception {
-    // For a configuration with multiple labels, test if job label matches one of the
-    // configuration's labels
-
-    String name = planned.iterator().next().displayName;
+  public void testMultipleLabelsProvisionedWithLabels() {
     Node node = jenkinsRule.jenkins.getNode(name);
     assertNotNull(node);
     String provisionedLabels = node.getLabelString();
-    // There should be the proper labels provisioned
     assertEquals(MULTIPLE_LABEL, provisionedLabels);
+  }
+
+  @Test
+  public void testMultipleLabelsWorkerStatusRunning() throws Exception {
+    assertEquals("RUNNING", client.getInstance(PROJECT_ID, ZONE, name).getStatus());
   }
 }
