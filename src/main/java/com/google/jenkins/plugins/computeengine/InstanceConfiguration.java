@@ -54,6 +54,7 @@ import hudson.model.Descriptor;
 import hudson.model.Item;
 import hudson.model.Label;
 import hudson.model.Node;
+import hudson.model.Node.Mode;
 import hudson.model.TaskListener;
 import hudson.model.labels.LabelAtom;
 import hudson.security.ACL;
@@ -77,6 +78,7 @@ import org.apache.commons.text.RandomStringGenerator;
 import org.jenkinsci.plugins.durabletask.executors.OnceRetentionStrategy;
 import org.kohsuke.stapler.AncestorInPath;
 import org.kohsuke.stapler.DataBoundConstructor;
+import org.kohsuke.stapler.DataBoundSetter;
 import org.kohsuke.stapler.QueryParameter;
 
 public class InstanceConfiguration implements Describable<InstanceConfiguration> {
@@ -108,39 +110,39 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
               add("windows-sql-cloud");
             }
           });
-  public final String description;
-  public final String namePrefix;
-  public final String region;
-  public final String zone;
-  public final String machineType;
-  public final String numExecutorsStr;
-  public final String startupScript;
-  public final boolean preemptible;
-  public final String minCpuPlatform;
-  public final String labels;
-  public final String runAsUser;
-  public final String bootDiskType;
-  public final boolean bootDiskAutoDelete;
-  public final String bootDiskSourceImageName;
-  public final String bootDiskSourceImageProject;
-  public final NetworkConfiguration networkConfiguration;
-  public final boolean externalAddress;
-  public final boolean useInternalAddress;
-  public final String networkTags;
-  public final String serviceAccountEmail;
-  public final Node.Mode mode;
-  public final AcceleratorConfiguration acceleratorConfiguration;
-  public final String retentionTimeMinutesStr;
-  public final String launchTimeoutSecondsStr;
-  public final String bootDiskSizeGbStr;
-  public final boolean oneShot;
-  public final String template;
-  public final boolean windows;
-  public final String windowsPasswordCredentialsId;
-  public final String windowsPrivateKeyCredentialsId;
-  public final Optional<WindowsConfiguration> windowsConfig;
-  public final boolean createSnapshot;
-  public final String remoteFs;
+  private String description;
+  private String namePrefix;
+  private String region;
+  private String zone;
+  private String machineType;
+  private String numExecutorsStr;
+  private String startupScript;
+  private boolean preemptible;
+  private String minCpuPlatform;
+  private String labels;
+  private String runAsUser;
+  private String bootDiskType;
+  private boolean bootDiskAutoDelete;
+  private String bootDiskSourceImageName;
+  private String bootDiskSourceImageProject;
+  private NetworkConfiguration networkConfiguration;
+  private boolean externalAddress;
+  private boolean useInternalAddress;
+  private String networkTags;
+  private String serviceAccountEmail;
+  private Node.Mode mode;
+  private AcceleratorConfiguration acceleratorConfiguration;
+  private String retentionTimeMinutesStr;
+  private String launchTimeoutSecondsStr;
+  private String bootDiskSizeGbStr;
+  private boolean oneShot;
+  private String template;
+  private boolean windows;
+  private String windowsPasswordCredentialsId;
+  private String windowsPrivateKeyCredentialsId;
+  private Optional<WindowsConfiguration> windowsConfig;
+  private boolean createSnapshot;
+  private String remoteFs;
   public Map<String, String> googleLabels;
   public Integer numExecutors;
   public Integer retentionTimeMinutes;
@@ -151,105 +153,192 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
 
   @DataBoundConstructor
   public InstanceConfiguration(
-      String namePrefix,
-      String region,
-      String zone,
-      String machineType,
-      String numExecutorsStr,
-      String startupScript,
-      boolean preemptible,
-      String minCpuPlatform,
       String labelString,
-      String description,
-      String bootDiskType,
-      boolean bootDiskAutoDelete,
-      String bootDiskSourceImageName,
-      String bootDiskSourceImageProject,
-      String bootDiskSizeGbStr,
       boolean windows,
-      String windowsPasswordCredentialsId,
-      String windowsPrivateKeyCredentialsId,
-      boolean createSnapshot,
-      String remoteFs,
-      NetworkConfiguration networkConfiguration,
-      boolean externalAddress,
-      boolean useInternalAddress,
-      String networkTags,
-      String serviceAccountEmail,
-      String retentionTimeMinutesStr,
-      String launchTimeoutSecondsStr,
-      Node.Mode mode,
-      AcceleratorConfiguration acceleratorConfiguration,
       String runAsUser,
-      boolean oneShot,
-      String template) {
-    this.namePrefix = namePrefix;
-    this.region = region;
-    this.zone = zone;
-    this.machineType = machineType;
+      String windowsPasswordCredentialsId,
+      String windowsPrivateKeyCredentialsId) {
+    this.setLabels(labelString);
+    this.setWindows(windows);
+    this.setRunAsUser(runAsUser);
+    this.setWindowsPasswordCredentialsId(windowsPasswordCredentialsId);
+    this.setWindowsPrivateKeyCredentialsId(windowsPrivateKeyCredentialsId);
+    this.setWindowsConfig(
+        makeWindowsConfiguration(
+            windows, runAsUser, windowsPasswordCredentialsId, windowsPrivateKeyCredentialsId));
+    readResolve();
+  }
+
+  @DataBoundSetter
+  public void setDescription(String description) {
     this.description = description;
-    this.startupScript = startupScript;
-    this.preemptible = preemptible;
+  }
 
-    this.windows = windows;
-    if (windows) {
-      this.windowsConfig =
-          Optional.of(
-              new WindowsConfiguration(
-                  runAsUser, windowsPasswordCredentialsId, windowsPrivateKeyCredentialsId));
-    } else {
-      this.windowsConfig = Optional.empty();
-    }
+  @DataBoundSetter
+  public void setNamePrefix(String namePrefix) {
+    this.namePrefix = namePrefix;
+  }
 
-    // these are needed for the credentials to persist in the UI
-    this.windowsPasswordCredentialsId = windowsPasswordCredentialsId;
-    this.windowsPrivateKeyCredentialsId = windowsPrivateKeyCredentialsId;
+  @DataBoundSetter
+  public void setRegion(String region) {
+    this.region = region;
+  }
 
-    // We only create snapshots for one-shot instances
-    if (oneShot) {
-      this.createSnapshot = createSnapshot;
-    } else {
-      this.createSnapshot = false;
-    }
-    this.minCpuPlatform = minCpuPlatform;
+  @DataBoundSetter
+  public void setZone(String zone) {
+    this.zone = zone;
+  }
+
+  @DataBoundSetter
+  public void setMachineType(String machineType) {
+    this.machineType = machineType;
+  }
+
+  @DataBoundSetter
+  public void setNumExecutorsStr(String numExecutorsStr) {
     this.numExecutors = intOrDefault(numExecutorsStr, DEFAULT_NUM_EXECUTORS);
-    this.oneShot = oneShot;
-    this.template = template;
     this.numExecutorsStr = numExecutors.toString();
+  }
+
+  @DataBoundSetter
+  public void setStartupScript(String startupScript) {
+    this.startupScript = startupScript;
+  }
+
+  @DataBoundSetter
+  public void setPreemptible(boolean preemptible) {
+    this.preemptible = preemptible;
+  }
+
+  @DataBoundSetter
+  public void setMinCpuPlatform(String minCpuPlatform) {
+    this.minCpuPlatform = minCpuPlatform;
+  }
+
+  // Provided through constructor
+  private void setLabels(String labels) {
+    this.labels = Util.fixNull(labels);
+  }
+
+  // Provided through constructor
+  public void setRunAsUser(String runAsUser) {
+    this.runAsUser = runAsUser;
+  }
+
+  @DataBoundSetter
+  public void setBootDiskType(String bootDiskType) {
+    this.bootDiskType = bootDiskType;
+  }
+
+  @DataBoundSetter
+  public void setBootDiskAutoDelete(boolean bootDiskAutoDelete) {
+    this.bootDiskAutoDelete = bootDiskAutoDelete;
+  }
+
+  @DataBoundSetter
+  public void setBootDiskSourceImageName(String bootDiskSourceImageName) {
+    this.bootDiskSourceImageName = bootDiskSourceImageName;
+  }
+
+  @DataBoundSetter
+  public void setBootDiskSourceImageProject(String bootDiskSourceImageProject) {
+    this.bootDiskSourceImageProject = bootDiskSourceImageProject;
+  }
+
+  @DataBoundSetter
+  public void setNetworkConfiguration(NetworkConfiguration networkConfiguration) {
+    this.networkConfiguration = networkConfiguration;
+  }
+
+  @DataBoundSetter
+  public void setExternalAddress(boolean externalAddress) {
+    this.externalAddress = externalAddress;
+  }
+
+  @DataBoundSetter
+  public void setUseInternalAddress(boolean useInternalAddress) {
+    this.useInternalAddress = useInternalAddress;
+  }
+
+  @DataBoundSetter
+  public void setNetworkTags(String networkTags) {
+    this.networkTags = Util.fixNull(networkTags).trim();
+  }
+
+  @DataBoundSetter
+  public void setServiceAccountEmail(String serviceAccountEmail) {
+    this.serviceAccountEmail = serviceAccountEmail;
+  }
+
+  @DataBoundSetter
+  public void setMode(Mode mode) {
+    this.mode = mode;
+  }
+
+  @DataBoundSetter
+  public void setAcceleratorConfiguration(AcceleratorConfiguration acceleratorConfiguration) {
+    this.acceleratorConfiguration = acceleratorConfiguration;
+  }
+
+  @DataBoundSetter
+  public void setRetentionTimeMinutesStr(String retentionTimeMinutesStr) {
     this.retentionTimeMinutes =
         intOrDefault(retentionTimeMinutesStr, DEFAULT_RETENTION_TIME_MINUTES);
-    this.retentionTimeMinutesStr = retentionTimeMinutes.toString();
+    this.retentionTimeMinutesStr = this.retentionTimeMinutes.toString();
+  }
+
+  @DataBoundSetter
+  public void setLaunchTimeoutSecondsStr(String launchTimeoutSecondsStr) {
     this.launchTimeoutSeconds =
         intOrDefault(launchTimeoutSecondsStr, DEFAULT_LAUNCH_TIMEOUT_SECONDS);
-    this.launchTimeoutSecondsStr = launchTimeoutSeconds.toString();
+    this.launchTimeoutSecondsStr = this.launchTimeoutSeconds.toString();
+  }
 
-    // Boot disk
-    this.bootDiskType = bootDiskType;
-    this.bootDiskAutoDelete = bootDiskAutoDelete;
-    this.bootDiskSourceImageName = bootDiskSourceImageName;
-    this.bootDiskSourceImageProject = bootDiskSourceImageProject;
+  @DataBoundSetter
+  public void setBootDiskSizeGbStr(String bootDiskSizeGbStr) {
     this.bootDiskSizeGb = longOrDefault(bootDiskSizeGbStr, DEFAULT_BOOT_DISK_SIZE_GB);
-    this.bootDiskSizeGbStr = bootDiskSizeGb.toString();
+    this.bootDiskSizeGbStr = this.bootDiskSizeGb.toString();
+  }
 
-    // Remote filesystem location.
+  @DataBoundSetter
+  public void setOneShot(boolean oneShot) {
+    this.oneShot = oneShot;
+    this.createSnapshot &= oneShot;
+  }
+
+  @DataBoundSetter
+  public void setTemplate(String template) {
+    this.template = template;
+  }
+
+  // Provided through constructor
+  public void setWindows(boolean windows) {
+    this.windows = windows;
+  }
+
+  // Provided through constructor
+  public void setWindowsPasswordCredentialsId(String windowsPasswordCredentialsId) {
+    this.windowsPasswordCredentialsId = windowsPasswordCredentialsId;
+  }
+
+  // Provided through constructor
+  public void setWindowsPrivateKeyCredentialsId(String windowsPrivateKeyCredentialsId) {
+    this.windowsPrivateKeyCredentialsId = windowsPrivateKeyCredentialsId;
+  }
+
+  // Generated in constructor
+  public void setWindowsConfig(Optional<WindowsConfiguration> windowsConfig) {
+    this.windowsConfig = windowsConfig;
+  }
+
+  @DataBoundSetter
+  public void setCreateSnapshot(boolean createSnapshot) {
+    this.createSnapshot = createSnapshot && this.oneShot;
+  }
+
+  @DataBoundSetter
+  public void setRemoteFs(String remoteFs) {
     this.remoteFs = remoteFs;
-
-    // Network
-    this.networkConfiguration = networkConfiguration;
-    this.externalAddress = externalAddress;
-    this.useInternalAddress = useInternalAddress;
-    this.networkTags = Util.fixNull(networkTags).trim();
-
-    // IAM
-    this.serviceAccountEmail = serviceAccountEmail;
-
-    // Other
-    this.acceleratorConfiguration = acceleratorConfiguration;
-    this.mode = mode;
-    this.labels = Util.fixNull(labelString);
-    this.runAsUser = runAsUser;
-
-    readResolve();
   }
 
   public static Integer intOrDefault(String toParse, Integer defaultTo) {
@@ -281,6 +370,130 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
       return s.substring(s.indexOf("/projects/") + 1, s.length());
     }
     return s;
+  }
+
+  public String getDescription() {
+    return description;
+  }
+
+  public String getNamePrefix() {
+    return namePrefix;
+  }
+
+  public String getRegion() {
+    return region;
+  }
+
+  public String getZone() {
+    return zone;
+  }
+
+  public String getMachineType() {
+    return machineType;
+  }
+
+  public String getNumExecutorsStr() {
+    return numExecutorsStr;
+  }
+
+  public String getStartupScript() {
+    return startupScript;
+  }
+
+  public boolean isPreemptible() {
+    return preemptible;
+  }
+
+  public String getMinCpuPlatform() {
+    return minCpuPlatform;
+  }
+
+  public String getRunAsUser() {
+    return runAsUser;
+  }
+
+  public String getBootDiskType() {
+    return bootDiskType;
+  }
+
+  public boolean isBootDiskAutoDelete() {
+    return bootDiskAutoDelete;
+  }
+
+  public String getBootDiskSourceImageName() {
+    return bootDiskSourceImageName;
+  }
+
+  public String getBootDiskSourceImageProject() {
+    return bootDiskSourceImageProject;
+  }
+
+  public NetworkConfiguration getNetworkConfiguration() {
+    return networkConfiguration;
+  }
+
+  public boolean isExternalAddress() {
+    return externalAddress;
+  }
+
+  public boolean isUseInternalAddress() {
+    return useInternalAddress;
+  }
+
+  public String getNetworkTags() {
+    return networkTags;
+  }
+
+  public String getServiceAccountEmail() {
+    return serviceAccountEmail;
+  }
+
+  public AcceleratorConfiguration getAcceleratorConfiguration() {
+    return acceleratorConfiguration;
+  }
+
+  public String getRetentionTimeMinutesStr() {
+    return retentionTimeMinutesStr;
+  }
+
+  public String getLaunchTimeoutSecondsStr() {
+    return launchTimeoutSecondsStr;
+  }
+
+  public String getBootDiskSizeGbStr() {
+    return bootDiskSizeGbStr;
+  }
+
+  public boolean isOneShot() {
+    return oneShot;
+  }
+
+  public String getTemplate() {
+    return template;
+  }
+
+  public boolean isWindows() {
+    return windows;
+  }
+
+  public String getWindowsPasswordCredentialsId() {
+    return windowsPasswordCredentialsId;
+  }
+
+  public String getWindowsPrivateKeyCredentialsId() {
+    return windowsPrivateKeyCredentialsId;
+  }
+
+  public Optional<WindowsConfiguration> getWindowsConfig() {
+    return windowsConfig;
+  }
+
+  public boolean isCreateSnapshot() {
+    return createSnapshot;
+  }
+
+  public String getRemoteFs() {
+    return remoteFs;
   }
 
   public Descriptor<InstanceConfiguration> getDescriptor() {
@@ -930,6 +1143,203 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
         return FormValidation.error(Messages.InstanceConfiguration_SnapshotConfigError());
       }
       return FormValidation.ok();
+    }
+  }
+
+  private static Optional<WindowsConfiguration> makeWindowsConfiguration(
+      boolean windows,
+      String runAsUser,
+      String windowsPasswordCredentialsId,
+      String windowsPrivateKeyCredentialsId) {
+    if (windows) {
+      return Optional.of(
+          new WindowsConfiguration(
+              runAsUser, windowsPasswordCredentialsId, windowsPrivateKeyCredentialsId));
+    } else {
+      return Optional.empty();
+    }
+  }
+
+  // For use in Builder only
+  private InstanceConfiguration() {}
+
+  public static class Builder {
+
+    private InstanceConfiguration instanceConfiguration;
+
+    public Builder() {
+      instanceConfiguration = new InstanceConfiguration();
+    }
+
+    public Builder description(String description) {
+      instanceConfiguration.setDescription(description);
+      return this;
+    }
+
+    public Builder namePrefix(String namePrefix) {
+      instanceConfiguration.setNamePrefix(namePrefix);
+      return this;
+    }
+
+    public Builder region(String region) {
+      instanceConfiguration.setRegion(region);
+      return this;
+    }
+
+    public Builder zone(String zone) {
+      instanceConfiguration.setZone(zone);
+      return this;
+    }
+
+    public Builder machineType(String machineType) {
+      instanceConfiguration.setMachineType(machineType);
+      return this;
+    }
+
+    public Builder numExecutorsStr(String numExecutorsStr) {
+      instanceConfiguration.setNumExecutorsStr(numExecutorsStr);
+      return this;
+    }
+
+    public Builder startupScript(String startupScript) {
+      instanceConfiguration.setStartupScript(startupScript);
+      return this;
+    }
+
+    public Builder preemptible(boolean preemptible) {
+      instanceConfiguration.setPreemptible(preemptible);
+      return this;
+    }
+
+    public Builder minCpuPlatform(String minCpuPlatform) {
+      instanceConfiguration.setMinCpuPlatform(minCpuPlatform);
+      return this;
+    }
+
+    public Builder labels(String labels) {
+      instanceConfiguration.setLabels(labels);
+      return this;
+    }
+
+    public Builder runAsUser(String runAsUser) {
+      instanceConfiguration.setRunAsUser(runAsUser);
+      return this;
+    }
+
+    public Builder bootDiskType(String bootDiskType) {
+      instanceConfiguration.setBootDiskType(bootDiskType);
+      return this;
+    }
+
+    public Builder bootDiskAutoDelete(boolean bootDiskAutoDelete) {
+      instanceConfiguration.setBootDiskAutoDelete(bootDiskAutoDelete);
+      return this;
+    }
+
+    public Builder bootDiskSourceImageName(String bootDiskSourceImageName) {
+      instanceConfiguration.setBootDiskSourceImageName(bootDiskSourceImageName);
+      return this;
+    }
+
+    public Builder bootDiskSourceImageProject(String bootDiskSourceImageProject) {
+      instanceConfiguration.setBootDiskSourceImageProject(bootDiskSourceImageProject);
+      return this;
+    }
+
+    public Builder networkConfiguration(NetworkConfiguration networkConfiguration) {
+      instanceConfiguration.setNetworkConfiguration(networkConfiguration);
+      return this;
+    }
+
+    public Builder externalAddress(boolean externalAddress) {
+      instanceConfiguration.setExternalAddress(externalAddress);
+      return this;
+    }
+
+    public Builder useInternalAddress(boolean useInternalAddress) {
+      instanceConfiguration.setUseInternalAddress(useInternalAddress);
+      return this;
+    }
+
+    public Builder networkTags(String networkTags) {
+      instanceConfiguration.setNetworkTags(networkTags);
+      return this;
+    }
+
+    public Builder serviceAccountEmail(String serviceAccountEmail) {
+      instanceConfiguration.setServiceAccountEmail(serviceAccountEmail);
+      return this;
+    }
+
+    public Builder mode(Node.Mode mode) {
+      instanceConfiguration.setMode(mode);
+      return this;
+    }
+
+    public Builder acceleratorConfiguration(AcceleratorConfiguration acceleratorConfiguration) {
+      instanceConfiguration.setAcceleratorConfiguration(acceleratorConfiguration);
+      return this;
+    }
+
+    public Builder retentionTimeMinutesStr(String retentionTimeMinutesStr) {
+      instanceConfiguration.setRetentionTimeMinutesStr(retentionTimeMinutesStr);
+      return this;
+    }
+
+    public Builder launchTimeoutSecondsStr(String launchTimeoutSecondsStr) {
+      instanceConfiguration.setLaunchTimeoutSecondsStr(launchTimeoutSecondsStr);
+      return this;
+    }
+
+    public Builder bootDiskSizeGbStr(String bootDiskSizeGbStr) {
+      this.instanceConfiguration.setBootDiskSizeGbStr(bootDiskSizeGbStr);
+      return this;
+    }
+
+    public Builder oneShot(boolean oneShot) {
+      instanceConfiguration.setOneShot(oneShot);
+      return this;
+    }
+
+    public Builder template(String template) {
+      instanceConfiguration.setTemplate(template);
+      return this;
+    }
+
+    public Builder windows(boolean windows) {
+      instanceConfiguration.setWindows(windows);
+      return this;
+    }
+
+    public Builder windowsPasswordCredentialsId(String windowsPasswordCredentialsId) {
+      instanceConfiguration.setWindowsPasswordCredentialsId(windowsPasswordCredentialsId);
+      return this;
+    }
+
+    public Builder windowsPrivateKeyCredentialsId(String windowsPrivateKeyCredentialsId) {
+      instanceConfiguration.setWindowsPrivateKeyCredentialsId(windowsPrivateKeyCredentialsId);
+      return this;
+    }
+
+    public Builder createSnapshot(boolean createSnapshot) {
+      instanceConfiguration.setCreateSnapshot(createSnapshot);
+      return this;
+    }
+
+    public Builder remoteFs(String remoteFs) {
+      instanceConfiguration.setRemoteFs(remoteFs);
+      return this;
+    }
+
+    public InstanceConfiguration build() {
+      instanceConfiguration.setWindowsConfig(
+          makeWindowsConfiguration(
+              instanceConfiguration.windows,
+              instanceConfiguration.runAsUser,
+              instanceConfiguration.windowsPasswordCredentialsId,
+              instanceConfiguration.windowsPrivateKeyCredentialsId));
+      instanceConfiguration.readResolve();
+      return instanceConfiguration;
     }
   }
 }
