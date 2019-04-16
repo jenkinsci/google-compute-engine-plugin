@@ -51,6 +51,12 @@ import org.junit.Test;
 import org.junit.rules.Timeout;
 import org.jvnet.hudson.test.JenkinsRule;
 
+/**
+ * Integration test suite for {@link ComputeEngineCloud}.
+ * Verifies that an instance can be created from a template without any labels
+ * configured for it, and that the ComputeEngineCloud label is still present on
+ * the created instance.
+ */
 public class ComputeEngineCloudTemplateNoGoogleLabelsIT {
   private static Logger log =
       Logger.getLogger(ComputeEngineCloudTemplateNoGoogleLabelsIT.class.getName());

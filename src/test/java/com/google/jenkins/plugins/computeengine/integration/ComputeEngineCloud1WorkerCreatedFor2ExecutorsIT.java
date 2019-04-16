@@ -47,6 +47,11 @@ import org.junit.Test;
 import org.junit.rules.Timeout;
 import org.jvnet.hudson.test.JenkinsRule;
 
+/**
+ * Integration test suite for {@link ComputeEngineCloud}.
+ * Verifies that only 1 worker is created when configured to support multiple executors
+ * if the second executor is not required.
+ */
 public class ComputeEngineCloud1WorkerCreatedFor2ExecutorsIT {
   private static Logger log =
       Logger.getLogger(ComputeEngineCloud1WorkerCreatedFor2ExecutorsIT.class.getName());

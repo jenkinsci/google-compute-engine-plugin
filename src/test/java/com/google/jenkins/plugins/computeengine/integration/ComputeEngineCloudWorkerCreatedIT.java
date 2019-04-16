@@ -48,6 +48,12 @@ import org.junit.Test;
 import org.junit.rules.Timeout;
 import org.jvnet.hudson.test.JenkinsRule;
 
+/**
+ * Integration test suite for {@link ComputeEngineCloud}.
+ * This verifies the default case for an instance provisioned with the
+ * {@link ComputeEngineCloud}, and that all expected default labels are
+ * provisioned properly.
+ */
 public class ComputeEngineCloudWorkerCreatedIT {
   private static Logger log = Logger.getLogger(ComputeEngineCloudWorkerCreatedIT.class.getName());
 

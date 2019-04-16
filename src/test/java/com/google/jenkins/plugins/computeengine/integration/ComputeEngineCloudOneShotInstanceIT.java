@@ -50,6 +50,11 @@ import org.junit.Test;
 import org.junit.rules.Timeout;
 import org.jvnet.hudson.test.JenkinsRule;
 
+/**
+ * Integration test suite for {@link ComputeEngineCloud}.
+ * Verifies that one shot instances are terminated after finishing a build
+ * and removed from both GCP and the set of Jenkins nodes.
+ */
 public class ComputeEngineCloudOneShotInstanceIT {
   private static Logger log = Logger.getLogger(ComputeEngineCloudOneShotInstanceIT.class.getName());
 

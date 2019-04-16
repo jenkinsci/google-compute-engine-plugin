@@ -45,6 +45,11 @@ import org.junit.Test;
 import org.junit.rules.Timeout;
 import org.jvnet.hudson.test.JenkinsRule;
 
+/**
+ * Integration test suite for {@link ComputeEngineCloud}.
+ * Verifies that attempting to provision a worker fails upon creation when Java
+ * is not installed.
+ */
 public class ComputeEngineCloudWorkerFailedIT {
   private static Logger log = Logger.getLogger(ComputeEngineCloudWorkerFailedIT.class.getName());
 

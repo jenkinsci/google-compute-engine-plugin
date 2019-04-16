@@ -53,6 +53,12 @@ import org.junit.Test;
 import org.junit.rules.Timeout;
 import org.jvnet.hudson.test.JenkinsRule;
 
+/**
+ * Integration test suite for {@link ComputeEngineCloud}.
+ * Verifies that when the cloud is configured to use one shot instances and
+ * create snapshots, upon successful build completion the one shot instance is
+ * terminated but no snapshot is created.
+ */
 public class ComputeEngineCloudNoSnapshotCreatedIT {
   private static Logger log =
       Logger.getLogger(ComputeEngineCloudNoSnapshotCreatedIT.class.getName());

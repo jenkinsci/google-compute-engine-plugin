@@ -52,6 +52,11 @@ import org.junit.Test;
 import org.junit.rules.Timeout;
 import org.jvnet.hudson.test.JenkinsRule;
 
+/**
+ * Integration test suite for {@link ComputeEngineCloud}.
+ * Verifies that instances can be created using an instance template, and
+ * are provisioned with the labels configured on that template.
+ */
 public class ComputeEngineCloudTemplateIT {
   private static Logger log = Logger.getLogger(ComputeEngineCloudTemplateIT.class.getName());
 

@@ -34,6 +34,9 @@ import org.junit.ClassRule;
 import org.junit.Test;
 import org.jvnet.hudson.test.JenkinsRule;
 
+/**
+ * Integration test suite for {@link ComputeClient}.
+ */
 public class ComputeClientIT {
   private static Logger log = Logger.getLogger(ComputeClientIT.class.getName());
 
