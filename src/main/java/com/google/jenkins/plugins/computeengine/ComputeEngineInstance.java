@@ -35,7 +35,6 @@ import jenkins.model.Jenkins;
 public class ComputeEngineInstance extends AbstractCloudSlave {
   private static final long serialVersionUID = 1;
   private static final Logger LOGGER = Logger.getLogger(ComputeEngineInstance.class.getName());
-  public static final String CREATING_SNAPSHOT_FOR_NODE = "Creating snapshot for node ... ";
 
   // TODO: https://issues.jenkins-ci.org/browse/JENKINS-55518
   public final String zone;
@@ -98,7 +97,7 @@ public class ComputeEngineInstance extends AbstractCloudSlave {
           && this.createSnapshot
           && computer != null
           && !computer.getBuilds().failureOnly().isEmpty()) {
-        LOGGER.log(Level.INFO, CREATING_SNAPSHOT_FOR_NODE + this.getNodeName());
+        LOGGER.log(Level.INFO, "Creating snapshot for node ... " + this.getNodeName());
         cloud.getClient().createSnapshot(cloud.projectId, this.zone, this.getNodeName());
       }
 
