@@ -16,7 +16,6 @@
 
 package com.google.jenkins.plugins.computeengine.integration;
 
-import static com.google.jenkins.plugins.computeengine.integration.ITUtil.addClassLogHandler;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.getLabel;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.initClient;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.initCredentials;
@@ -26,12 +25,9 @@ import static org.junit.Assert.assertNotNull;
 
 import com.google.api.services.compute.model.Image;
 import com.google.jenkins.plugins.computeengine.client.ComputeClient;
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.Map;
 import java.util.logging.Logger;
-import java.util.logging.SimpleFormatter;
-import java.util.logging.StreamHandler;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
@@ -41,8 +37,6 @@ import org.jvnet.hudson.test.JenkinsRule;
 public class ComputeClientIT {
   private static Logger log = Logger.getLogger(ComputeClientIT.class.getName());
 
-  private static ByteArrayOutputStream logOutput = new ByteArrayOutputStream();
-  private static StreamHandler streamHandler = new StreamHandler(logOutput, new SimpleFormatter());
   private static Map<String, String> label = getLabel(ComputeClientIT.class);
   private static ComputeClient client;
 
@@ -53,12 +47,11 @@ public class ComputeClientIT {
     log.info("init");
     initCredentials(jenkinsRule);
     client = initClient(jenkinsRule, label, log);
-    addClassLogHandler(streamHandler, ComputeClient.class.getName());
   }
 
   @AfterClass
   public static void teardown() throws IOException {
-    teardownResources(streamHandler, logOutput, client, label, log);
+    teardownResources(client, label, log);
   }
 
   @Test

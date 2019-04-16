@@ -20,7 +20,6 @@ import static com.google.jenkins.plugins.computeengine.integration.ITUtil.DEB_JA
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.LABEL;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.NULL_TEMPLATE;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.NUM_EXECUTORS;
-import static com.google.jenkins.plugins.computeengine.integration.ITUtil.addClassLogHandler;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.getLabel;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.initClient;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.initCloud;
@@ -36,14 +35,11 @@ import com.google.jenkins.plugins.computeengine.client.ComputeClient;
 import hudson.model.Node;
 import hudson.model.labels.LabelAtom;
 import hudson.slaves.NodeProvisioner.PlannedNode;
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.Collection;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
-import java.util.logging.SimpleFormatter;
-import java.util.logging.StreamHandler;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
@@ -59,8 +55,6 @@ public class ComputeEngineCloudMultipleLabelsIT {
   @ClassRule public static Timeout timeout = new Timeout(5, TimeUnit.MINUTES);
   @ClassRule public static JenkinsRule jenkinsRule = new JenkinsRule();
 
-  private static ByteArrayOutputStream logOutput = new ByteArrayOutputStream();
-  private static StreamHandler streamHandler = new StreamHandler(logOutput, new SimpleFormatter());
   private static ComputeClient client;
   private static Map<String, String> label = getLabel(ComputeEngineCloudMultipleLabelsIT.class);
   private static Collection<PlannedNode> planned;
@@ -70,9 +64,7 @@ public class ComputeEngineCloudMultipleLabelsIT {
     log.info("init");
     initCredentials(jenkinsRule);
     ComputeEngineCloud cloud = initCloud(jenkinsRule);
-    addClassLogHandler(streamHandler, ComputeEngineCloud.class.getName());
     client = initClient(jenkinsRule, label, log);
-    addClassLogHandler(streamHandler, ComputeClient.class.getName());
 
     cloud.addConfiguration(
         instanceConfiguration(
@@ -91,7 +83,7 @@ public class ComputeEngineCloudMultipleLabelsIT {
 
   @AfterClass
   public static void teardown() throws IOException {
-    teardownResources(streamHandler, logOutput, client, label, log);
+    teardownResources(client, label, log);
   }
 
   @Test

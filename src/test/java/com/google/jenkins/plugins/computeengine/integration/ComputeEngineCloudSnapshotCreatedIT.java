@@ -21,13 +21,11 @@ import static com.google.jenkins.plugins.computeengine.integration.ITUtil.NULL_T
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.NUM_EXECUTORS;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.PROJECT_ID;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.SNAPSHOT_LABEL;
-import static com.google.jenkins.plugins.computeengine.integration.ITUtil.addClassLogHandler;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.getLabel;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.initClient;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.initCloud;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.initCredentials;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.instanceConfiguration;
-import static com.google.jenkins.plugins.computeengine.integration.ITUtil.logs;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.teardownResources;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
@@ -35,7 +33,6 @@ import static org.junit.Assert.assertTrue;
 
 import com.google.api.services.compute.model.Snapshot;
 import com.google.jenkins.plugins.computeengine.ComputeEngineCloud;
-import com.google.jenkins.plugins.computeengine.ComputeEngineInstance;
 import com.google.jenkins.plugins.computeengine.InstanceConfiguration;
 import com.google.jenkins.plugins.computeengine.client.ComputeClient;
 import hudson.model.FreeStyleBuild;
@@ -45,13 +42,10 @@ import hudson.model.Result;
 import hudson.model.labels.LabelAtom;
 import hudson.tasks.Builder;
 import hudson.tasks.Shell;
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
-import java.util.logging.SimpleFormatter;
-import java.util.logging.StreamHandler;
 import org.awaitility.Awaitility;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -68,8 +62,6 @@ public class ComputeEngineCloudSnapshotCreatedIT {
   @ClassRule public static Timeout timeout = new Timeout(5, TimeUnit.MINUTES);
   @ClassRule public static JenkinsRule jenkinsRule = new JenkinsRule();
 
-  private static ByteArrayOutputStream logOutput = new ByteArrayOutputStream();
-  private static StreamHandler streamHandler = new StreamHandler(logOutput, new SimpleFormatter());
   private static ComputeClient client;
   private static Map<String, String> label = getLabel(ComputeEngineCloudSnapshotCreatedIT.class);
   private static Snapshot createdSnapshot = null;
@@ -79,9 +71,7 @@ public class ComputeEngineCloudSnapshotCreatedIT {
     log.info("init");
     initCredentials(jenkinsRule);
     ComputeEngineCloud cloud = initCloud(jenkinsRule);
-    addClassLogHandler(streamHandler, ComputeEngineCloud.class.getName());
     client = initClient(jenkinsRule, label, log);
-    addClassLogHandler(streamHandler, ComputeClient.class.getName());
 
     assertTrue(cloud.configurations.isEmpty());
     InstanceConfiguration instanceConfiguration =
@@ -108,8 +98,6 @@ public class ComputeEngineCloudSnapshotCreatedIT {
     FreeStyleBuild build = jenkinsRule.assertBuildStatus(Result.FAILURE, project.scheduleBuild2(0));
     Node worker = build.getBuiltOn();
     assertNotNull(worker);
-    // Cannot handle class logs for ComputeEngineInstance until an instance exists.
-    addClassLogHandler(streamHandler, ComputeEngineInstance.class.getName());
 
     // Need time for one-shot instance to terminate and create the snapshot
     Awaitility.await()
@@ -124,7 +112,7 @@ public class ComputeEngineCloudSnapshotCreatedIT {
     if (createdSnapshot != null) {
       client.deleteSnapshot(PROJECT_ID, createdSnapshot.getName());
     }
-    teardownResources(streamHandler, logOutput, client, label, log);
+    teardownResources(client, label, log);
   }
 
   // Tests snapshot is created when we have failure builds for given node
@@ -143,11 +131,5 @@ public class ComputeEngineCloudSnapshotCreatedIT {
     Awaitility.await()
         .timeout(SNAPSHOT_TEST_TIMEOUT, TimeUnit.SECONDS)
         .until(() -> client.getInstancesWithLabel(PROJECT_ID, label).isEmpty());
-  }
-
-  @Test
-  public void testSnapshotCreatedExpectedLogs() {
-    assertTrue(
-        logs(streamHandler, logOutput).contains(ComputeEngineInstance.CREATING_SNAPSHOT_FOR_NODE));
   }
 }

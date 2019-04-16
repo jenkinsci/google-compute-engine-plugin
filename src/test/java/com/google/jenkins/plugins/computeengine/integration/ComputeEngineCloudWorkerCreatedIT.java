@@ -22,16 +22,13 @@ import static com.google.jenkins.plugins.computeengine.integration.ITUtil.NULL_T
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.NUM_EXECUTORS;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.PROJECT_ID;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.ZONE;
-import static com.google.jenkins.plugins.computeengine.integration.ITUtil.addClassLogHandler;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.getLabel;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.initClient;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.initCloud;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.initCredentials;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.instanceConfiguration;
-import static com.google.jenkins.plugins.computeengine.integration.ITUtil.logs;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.teardownResources;
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
 
 import com.google.api.services.compute.model.Instance;
 import com.google.jenkins.plugins.computeengine.ComputeEngineCloud;
@@ -39,14 +36,11 @@ import com.google.jenkins.plugins.computeengine.InstanceConfiguration;
 import com.google.jenkins.plugins.computeengine.client.ComputeClient;
 import hudson.model.labels.LabelAtom;
 import hudson.slaves.NodeProvisioner.PlannedNode;
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.Collection;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
-import java.util.logging.SimpleFormatter;
-import java.util.logging.StreamHandler;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
@@ -60,8 +54,6 @@ public class ComputeEngineCloudWorkerCreatedIT {
   @ClassRule public static Timeout timeout = new Timeout(5, TimeUnit.MINUTES);
   @ClassRule public static JenkinsRule jenkinsRule = new JenkinsRule();
 
-  private static ByteArrayOutputStream logOutput = new ByteArrayOutputStream();
-  private static StreamHandler streamHandler = new StreamHandler(logOutput, new SimpleFormatter());
   private static ComputeClient client;
   private static ComputeEngineCloud cloud;
   private static Map<String, String> label = getLabel(ComputeEngineCloudWorkerCreatedIT.class);
@@ -73,9 +65,7 @@ public class ComputeEngineCloudWorkerCreatedIT {
     log.info("init");
     initCredentials(jenkinsRule);
     cloud = initCloud(jenkinsRule);
-    addClassLogHandler(streamHandler, ComputeEngineCloud.class.getName());
     client = initClient(jenkinsRule, label, log);
-    addClassLogHandler(streamHandler, ComputeClient.class.getName());
 
     instanceConfiguration =
         instanceConfiguration(
@@ -100,12 +90,7 @@ public class ComputeEngineCloudWorkerCreatedIT {
 
   @AfterClass
   public static void teardown() throws IOException {
-    teardownResources(streamHandler, logOutput, client, label, log);
-  }
-
-  @Test
-  public void testWorkerCreatedNoWarningLogs() {
-    assertFalse(logs(streamHandler, logOutput).contains("WARNING"));
+    teardownResources(client, label, log);
   }
 
   @Test

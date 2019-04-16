@@ -21,16 +21,13 @@ import static com.google.jenkins.plugins.computeengine.integration.ITUtil.LABEL;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.NULL_TEMPLATE;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.PROJECT_ID;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.ZONE;
-import static com.google.jenkins.plugins.computeengine.integration.ITUtil.addClassLogHandler;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.getLabel;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.initClient;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.initCloud;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.initCredentials;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.instanceConfiguration;
-import static com.google.jenkins.plugins.computeengine.integration.ITUtil.logs;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.teardownResources;
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
 
 import com.google.api.services.compute.model.Instance;
 import com.google.jenkins.plugins.computeengine.ComputeEngineCloud;
@@ -38,14 +35,11 @@ import com.google.jenkins.plugins.computeengine.InstanceConfiguration;
 import com.google.jenkins.plugins.computeengine.client.ComputeClient;
 import hudson.model.labels.LabelAtom;
 import hudson.slaves.NodeProvisioner.PlannedNode;
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.Collection;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
-import java.util.logging.SimpleFormatter;
-import java.util.logging.StreamHandler;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
@@ -62,8 +56,6 @@ public class ComputeEngineCloud1WorkerCreatedFor2ExecutorsIT {
   @ClassRule public static Timeout timeout = new Timeout(5, TimeUnit.MINUTES);
   @ClassRule public static JenkinsRule jenkinsRule = new JenkinsRule();
 
-  private static ByteArrayOutputStream logOutput = new ByteArrayOutputStream();
-  private static StreamHandler streamHandler = new StreamHandler(logOutput, new SimpleFormatter());
   private static ComputeClient client;
   private static Map<String, String> label =
       getLabel(ComputeEngineCloud1WorkerCreatedFor2ExecutorsIT.class);
@@ -74,9 +66,7 @@ public class ComputeEngineCloud1WorkerCreatedFor2ExecutorsIT {
     log.info("init");
     initCredentials(jenkinsRule);
     ComputeEngineCloud cloud = initCloud(jenkinsRule);
-    addClassLogHandler(streamHandler, ComputeEngineCloud.class.getName());
     client = initClient(jenkinsRule, label, log);
-    addClassLogHandler(streamHandler, ComputeClient.class.getName());
 
     cloud.addConfiguration(
         instanceConfiguration(
@@ -98,16 +88,11 @@ public class ComputeEngineCloud1WorkerCreatedFor2ExecutorsIT {
 
   @AfterClass
   public static void teardown() throws IOException {
-    teardownResources(streamHandler, logOutput, client, label, log);
+    teardownResources(client, label, log);
   }
 
   @Test
   public void test1WorkerCreatedFor2ExecutorsStatusRunning() {
     assertEquals("RUNNING", instance.getStatus());
-  }
-
-  @Test
-  public void test1WorkerCreatedFor2ExecutorsExpectedLogs() {
-    assertTrue(logs(streamHandler, logOutput).contains("for excess workload of 2 units of label"));
   }
 }

@@ -49,14 +49,11 @@ import com.google.jenkins.plugins.computeengine.client.ComputeClient;
 import com.google.jenkins.plugins.credentials.oauth.GoogleRobotPrivateKeyCredentials;
 import com.google.jenkins.plugins.credentials.oauth.ServiceAccountConfig;
 import hudson.model.Node;
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.logging.LogManager;
 import java.util.logging.Logger;
-import java.util.logging.StreamHandler;
 import org.jvnet.hudson.test.JenkinsRule;
 
 class ITUtil {
@@ -132,14 +129,6 @@ class ITUtil {
     return gcp;
   }
 
-  static void addClassLogHandler(StreamHandler streamHandler, String className) {
-    Logger logger = LogManager.getLogManager().getLogger(className);
-    assertNotNull(
-        String.format("Tried handling logs for %s which hasn't been instantiated yet.", className),
-        logger);
-    logger.addHandler(streamHandler);
-  }
-
   // Get a compute client for out-of-band calls to GCE
   static ComputeClient initClient(JenkinsRule jenkinsRule, Map<String, String> label, Logger log)
       throws IOException {
@@ -151,16 +140,10 @@ class ITUtil {
     return client;
   }
 
-  static void teardownResources(
-      StreamHandler streamHandler,
-      ByteArrayOutputStream logOutput,
-      ComputeClient client,
-      Map<String, String> label,
-      Logger log)
+  static void teardownResources(ComputeClient client, Map<String, String> label, Logger log)
       throws IOException {
     log.info("teardown");
     deleteIntegrationInstances(false, client, label, log);
-    streamHandler.close();
   }
 
   static InstanceTemplate createTemplate(Map<String, String> googleLabels, String template) {
@@ -259,10 +242,5 @@ class ITUtil {
     } catch (Exception e) {
       log.warning(String.format("Error deleting instance %s: %s", instanceId, e.getMessage()));
     }
-  }
-
-  static String logs(StreamHandler streamHandler, ByteArrayOutputStream logOutput) {
-    streamHandler.flush();
-    return logOutput.toString();
   }
 }

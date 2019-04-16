@@ -21,20 +21,16 @@ import static com.google.jenkins.plugins.computeengine.integration.ITUtil.NULL_T
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.NUM_EXECUTORS;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.PROJECT_ID;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.SNAPSHOT_LABEL;
-import static com.google.jenkins.plugins.computeengine.integration.ITUtil.addClassLogHandler;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.getLabel;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.initClient;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.initCloud;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.initCredentials;
-import static com.google.jenkins.plugins.computeengine.integration.ITUtil.logs;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.teardownResources;
-import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
 import com.google.jenkins.plugins.computeengine.ComputeEngineCloud;
-import com.google.jenkins.plugins.computeengine.ComputeEngineInstance;
 import com.google.jenkins.plugins.computeengine.InstanceConfiguration;
 import com.google.jenkins.plugins.computeengine.client.ComputeClient;
 import hudson.model.FreeStyleBuild;
@@ -43,13 +39,10 @@ import hudson.model.Node;
 import hudson.model.labels.LabelAtom;
 import hudson.tasks.Builder;
 import hudson.tasks.Shell;
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
-import java.util.logging.SimpleFormatter;
-import java.util.logging.StreamHandler;
 import org.awaitility.Awaitility;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -67,8 +60,6 @@ public class ComputeEngineCloudNoSnapshotCreatedIT {
   @ClassRule public static Timeout timeout = new Timeout(5, TimeUnit.MINUTES);
   @ClassRule public static JenkinsRule jenkinsRule = new JenkinsRule();
 
-  private static ByteArrayOutputStream logOutput = new ByteArrayOutputStream();
-  private static StreamHandler streamHandler = new StreamHandler(logOutput, new SimpleFormatter());
   private static ComputeClient client;
   private static Map<String, String> label = getLabel(ComputeEngineCloudNoSnapshotCreatedIT.class);
   private static String name;
@@ -78,9 +69,7 @@ public class ComputeEngineCloudNoSnapshotCreatedIT {
     log.info("init");
     initCredentials(jenkinsRule);
     ComputeEngineCloud cloud = initCloud(jenkinsRule);
-    addClassLogHandler(streamHandler, ComputeEngineCloud.class.getName());
     client = initClient(jenkinsRule, label, log);
-    addClassLogHandler(streamHandler, ComputeClient.class.getName());
 
     assertTrue(cloud.configurations.isEmpty());
     InstanceConfiguration instanceConfiguration =
@@ -107,8 +96,6 @@ public class ComputeEngineCloudNoSnapshotCreatedIT {
     FreeStyleBuild build = jenkinsRule.buildAndAssertSuccess(project);
     Node worker = build.getBuiltOn();
     assertNotNull(worker);
-    // Cannot handle class logs for ComputeEngineInstance until an instance exists.
-    addClassLogHandler(streamHandler, ComputeEngineInstance.class.getName());
 
     name = worker.getNodeName();
 
@@ -120,18 +107,12 @@ public class ComputeEngineCloudNoSnapshotCreatedIT {
 
   @AfterClass
   public static void teardown() throws IOException {
-    teardownResources(streamHandler, logOutput, client, label, log);
+    teardownResources(client, label, log);
   }
 
   // Tests that no snapshot is created when we only have successful builds for given node
   @Test
   public void testNoSnapshotCreatedSnapshotNull() throws Exception {
     assertNull(client.getSnapshot(PROJECT_ID, name));
-  }
-
-  @Test
-  public void testNoSnapshotCreatedExpectedLogs() {
-    assertFalse(
-        logs(streamHandler, logOutput).contains(ComputeEngineInstance.CREATING_SNAPSHOT_FOR_NODE));
   }
 }

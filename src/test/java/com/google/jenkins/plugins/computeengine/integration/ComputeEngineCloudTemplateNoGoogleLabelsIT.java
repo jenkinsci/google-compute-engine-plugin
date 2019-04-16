@@ -22,7 +22,6 @@ import static com.google.jenkins.plugins.computeengine.integration.ITUtil.LABEL;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.NUM_EXECUTORS;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.PROJECT_ID;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.ZONE;
-import static com.google.jenkins.plugins.computeengine.integration.ITUtil.addClassLogHandler;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.createTemplate;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.format;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.getLabel;
@@ -30,10 +29,8 @@ import static com.google.jenkins.plugins.computeengine.integration.ITUtil.initCl
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.initCloud;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.initCredentials;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.instanceConfiguration;
-import static com.google.jenkins.plugins.computeengine.integration.ITUtil.logs;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.teardownResources;
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
 
 import com.google.api.services.compute.model.Instance;
 import com.google.api.services.compute.model.InstanceTemplate;
@@ -42,14 +39,11 @@ import com.google.jenkins.plugins.computeengine.InstanceConfiguration;
 import com.google.jenkins.plugins.computeengine.client.ComputeClient;
 import hudson.model.labels.LabelAtom;
 import hudson.slaves.NodeProvisioner.PlannedNode;
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.Collection;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
-import java.util.logging.SimpleFormatter;
-import java.util.logging.StreamHandler;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
@@ -67,8 +61,6 @@ public class ComputeEngineCloudTemplateNoGoogleLabelsIT {
   @ClassRule public static Timeout timeout = new Timeout(5, TimeUnit.MINUTES);
   @ClassRule public static JenkinsRule jenkinsRule = new JenkinsRule();
 
-  private static ByteArrayOutputStream logOutput = new ByteArrayOutputStream();
-  private static StreamHandler streamHandler = new StreamHandler(logOutput, new SimpleFormatter());
   private static ComputeClient client;
   private static Map<String, String> label =
       getLabel(ComputeEngineCloudTemplateNoGoogleLabelsIT.class);
@@ -80,9 +72,7 @@ public class ComputeEngineCloudTemplateNoGoogleLabelsIT {
     log.info("init");
     initCredentials(jenkinsRule);
     cloud = initCloud(jenkinsRule);
-    addClassLogHandler(streamHandler, ComputeEngineCloud.class.getName());
     client = initClient(jenkinsRule, label, log);
-    addClassLogHandler(streamHandler, ComputeClient.class.getName());
 
     cloud.addConfiguration(
         instanceConfiguration(
@@ -113,12 +103,7 @@ public class ComputeEngineCloudTemplateNoGoogleLabelsIT {
       // noop
     }
 
-    teardownResources(streamHandler, logOutput, client, label, log);
-  }
-
-  @Test
-  public void testTemplateNoGoogleLabelsNoWarningLogs() {
-    assertFalse(logs(streamHandler, logOutput).contains("WARNING"));
+    teardownResources(client, label, log);
   }
 
   @Test
