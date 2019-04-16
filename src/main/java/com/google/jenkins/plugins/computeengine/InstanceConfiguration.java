@@ -163,9 +163,9 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
     this.setRunAsUser(runAsUser);
     this.setWindowsPasswordCredentialsId(windowsPasswordCredentialsId);
     this.setWindowsPrivateKeyCredentialsId(windowsPrivateKeyCredentialsId);
-    this.windowsConfig =
+    this.setWindowsConfig(
         makeWindowsConfiguration(
-            windows, runAsUser, windowsPasswordCredentialsId, windowsPrivateKeyCredentialsId);
+            windows, runAsUser, windowsPasswordCredentialsId, windowsPrivateKeyCredentialsId));
     readResolve();
   }
 
@@ -324,6 +324,11 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
   // Provided through constructor
   public void setWindowsPrivateKeyCredentialsId(String windowsPrivateKeyCredentialsId) {
     this.windowsPrivateKeyCredentialsId = windowsPrivateKeyCredentialsId;
+  }
+
+  // Generated in constructor
+  public void setWindowsConfig(Optional<WindowsConfiguration> windowsConfig) {
+    this.windowsConfig = windowsConfig;
   }
 
   @DataBoundSetter
@@ -1327,12 +1332,12 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
     }
 
     public InstanceConfiguration build() {
-      instanceConfiguration.windowsConfig =
+      instanceConfiguration.setWindowsConfig(
           makeWindowsConfiguration(
               instanceConfiguration.windows,
               instanceConfiguration.runAsUser,
               instanceConfiguration.windowsPasswordCredentialsId,
-              instanceConfiguration.windowsPrivateKeyCredentialsId);
+              instanceConfiguration.windowsPrivateKeyCredentialsId));
       instanceConfiguration.readResolve();
       return instanceConfiguration;
     }
