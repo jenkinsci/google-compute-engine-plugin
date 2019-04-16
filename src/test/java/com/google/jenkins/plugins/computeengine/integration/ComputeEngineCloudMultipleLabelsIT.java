@@ -16,6 +16,17 @@
 
 package com.google.jenkins.plugins.computeengine.integration;
 
+import static com.google.jenkins.plugins.computeengine.integration.ITUtil.DEB_JAVA_STARTUP_SCRIPT;
+import static com.google.jenkins.plugins.computeengine.integration.ITUtil.LABEL;
+import static com.google.jenkins.plugins.computeengine.integration.ITUtil.NULL_TEMPLATE;
+import static com.google.jenkins.plugins.computeengine.integration.ITUtil.NUM_EXECUTORS;
+import static com.google.jenkins.plugins.computeengine.integration.ITUtil.getLabel;
+import static com.google.jenkins.plugins.computeengine.integration.ITUtil.initClient;
+import static com.google.jenkins.plugins.computeengine.integration.ITUtil.initCloud;
+import static com.google.jenkins.plugins.computeengine.integration.ITUtil.initCredentials;
+import static com.google.jenkins.plugins.computeengine.integration.ITUtil.initLogging;
+import static com.google.jenkins.plugins.computeengine.integration.ITUtil.instanceConfiguration;
+import static com.google.jenkins.plugins.computeengine.integration.ITUtil.logs;
 import static org.junit.Assert.assertEquals;
 
 import com.google.jenkins.plugins.computeengine.ComputeEngineCloud;
@@ -48,30 +59,29 @@ public class ComputeEngineCloudMultipleLabelsIT {
   private static ByteArrayOutputStream logOutput = new ByteArrayOutputStream();
   private static StreamHandler sh;
   private static ComputeClient client;
-  private static Map<String, String> label =
-      ITUtil.getLabel(ComputeEngineCloudMultipleLabelsIT.class);
+  private static Map<String, String> label = getLabel(ComputeEngineCloudMultipleLabelsIT.class);
   private static Collection<PlannedNode> planned;
 
   @BeforeClass
   public static void init() throws Exception {
     log.info("init");
-    ITUtil.initCredentials(r);
-    ComputeEngineCloud cloud = ITUtil.initCloud(r);
-    sh = ITUtil.initLogging(logOutput);
-    client = ITUtil.initClient(r, label, log);
+    initCredentials(r);
+    ComputeEngineCloud cloud = initCloud(r);
+    sh = initLogging(logOutput);
+    client = initClient(r, label, log);
 
     InstanceConfiguration ic =
-        ITUtil.instanceConfiguration(
-            ITUtil.DEB_JAVA_STARTUP_SCRIPT,
-            ITUtil.NUM_EXECUTORS,
+        instanceConfiguration(
+            DEB_JAVA_STARTUP_SCRIPT,
+            NUM_EXECUTORS,
             MULTIPLE_LABEL,
             label,
             false,
             false,
-            ITUtil.NULL_TEMPLATE);
+            NULL_TEMPLATE);
     cloud.addConfiguration(ic);
     // Add a new node
-    planned = cloud.provision(new LabelAtom(ITUtil.LABEL), 1);
+    planned = cloud.provision(new LabelAtom(LABEL), 1);
     planned.iterator().next().future.get();
   }
 
@@ -86,7 +96,7 @@ public class ComputeEngineCloudMultipleLabelsIT {
     // configuration's labels
 
     // There should be a planned node
-    assertEquals(ITUtil.logs(sh, logOutput), 1, planned.size());
+    assertEquals(logs(sh, logOutput), 1, planned.size());
   }
 
   @Test
@@ -97,6 +107,6 @@ public class ComputeEngineCloudMultipleLabelsIT {
     String name = planned.iterator().next().displayName;
     String provisionedLabels = r.jenkins.getNode(name).getLabelString();
     // There should be the proper labels provisioned
-    assertEquals(ITUtil.logs(sh, logOutput), MULTIPLE_LABEL, provisionedLabels);
+    assertEquals(logs(sh, logOutput), MULTIPLE_LABEL, provisionedLabels);
   }
 }

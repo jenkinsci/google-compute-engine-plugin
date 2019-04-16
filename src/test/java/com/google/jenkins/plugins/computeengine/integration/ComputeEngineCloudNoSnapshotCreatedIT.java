@@ -1,5 +1,17 @@
 package com.google.jenkins.plugins.computeengine.integration;
 
+import static com.google.jenkins.plugins.computeengine.integration.ITUtil.DEB_JAVA_STARTUP_SCRIPT;
+import static com.google.jenkins.plugins.computeengine.integration.ITUtil.NULL_TEMPLATE;
+import static com.google.jenkins.plugins.computeengine.integration.ITUtil.NUM_EXECUTORS;
+import static com.google.jenkins.plugins.computeengine.integration.ITUtil.PROJECT_ID;
+import static com.google.jenkins.plugins.computeengine.integration.ITUtil.getLabel;
+import static com.google.jenkins.plugins.computeengine.integration.ITUtil.handleClassLogs;
+import static com.google.jenkins.plugins.computeengine.integration.ITUtil.initClient;
+import static com.google.jenkins.plugins.computeengine.integration.ITUtil.initCloud;
+import static com.google.jenkins.plugins.computeengine.integration.ITUtil.initCredentials;
+import static com.google.jenkins.plugins.computeengine.integration.ITUtil.initLogging;
+import static com.google.jenkins.plugins.computeengine.integration.ITUtil.instanceConfiguration;
+import static com.google.jenkins.plugins.computeengine.integration.ITUtil.logs;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
@@ -42,32 +54,30 @@ public class ComputeEngineCloudNoSnapshotCreatedIT {
   private static ByteArrayOutputStream logOutput = new ByteArrayOutputStream();
   private static StreamHandler sh;
   private static ComputeClient client;
-  private static Map<String, String> label =
-      ITUtil.getLabel(ComputeEngineCloudNoSnapshotCreatedIT.class);
+  private static Map<String, String> label = getLabel(ComputeEngineCloudNoSnapshotCreatedIT.class);
   private static String name;
 
   @BeforeClass
   public static void init() throws Exception {
     log.info("init");
-    ITUtil.initCredentials(r);
-    ComputeEngineCloud cloud = ITUtil.initCloud(r);
-    sh = ITUtil.initLogging(logOutput);
-    client = ITUtil.initClient(r, label, log);
+    initCredentials(r);
+    ComputeEngineCloud cloud = initCloud(r);
+    sh = initLogging(logOutput);
+    client = initClient(r, label, log);
 
     assertTrue(cloud.configurations.isEmpty());
     InstanceConfiguration ic =
-        ITUtil.instanceConfiguration(
-            ITUtil.DEB_JAVA_STARTUP_SCRIPT,
-            ITUtil.NUM_EXECUTORS,
+        instanceConfiguration(
+            DEB_JAVA_STARTUP_SCRIPT,
+            NUM_EXECUTORS,
             SNAPSHOT_LABEL,
             label,
             true,
             true,
-            ITUtil.NULL_TEMPLATE);
+            NULL_TEMPLATE);
     cloud.addConfiguration(ic);
     assertTrue(
-        ITUtil.logs(sh, logOutput),
-        cloud.getInstanceConfig(ic.getDescription()).isCreateSnapshot());
+        logs(sh, logOutput), cloud.getInstanceConfig(ic.getDescription()).isCreateSnapshot());
 
     // Assert that there is 0 nodes
     assertTrue(r.jenkins.getNodes().isEmpty());
@@ -79,9 +89,9 @@ public class ComputeEngineCloudNoSnapshotCreatedIT {
 
     FreeStyleBuild build = r.buildAndAssertSuccess(project);
     Node worker = build.getBuiltOn();
-    assertNotNull(ITUtil.logs(sh, logOutput), worker);
+    assertNotNull(logs(sh, logOutput), worker);
     // Can not handle class logs for ComputeEngineInstance until an instance exists.
-    ITUtil.handleClassLogs(sh, ComputeEngineInstance.class.getName());
+    handleClassLogs(sh, ComputeEngineInstance.class.getName());
 
     name = worker.getNodeName();
 
@@ -99,13 +109,13 @@ public class ComputeEngineCloudNoSnapshotCreatedIT {
   // Tests that no snapshot is created when we only have successful builds for given node
   @Test
   public void testNoSnapshotCreatedSnapshotNull() throws Exception {
-    assertNull(ITUtil.logs(sh, logOutput), client.getSnapshot(ITUtil.PROJECT_ID, name));
+    assertNull(logs(sh, logOutput), client.getSnapshot(PROJECT_ID, name));
   }
 
   @Test
   public void testNoSnapshotCreatedExpectedLogs() {
     assertFalse(
-        ITUtil.logs(sh, logOutput),
-        ITUtil.logs(sh, logOutput).contains(ComputeEngineInstance.CREATING_SNAPSHOT_FOR_NODE));
+        logs(sh, logOutput),
+        logs(sh, logOutput).contains(ComputeEngineInstance.CREATING_SNAPSHOT_FOR_NODE));
   }
 }

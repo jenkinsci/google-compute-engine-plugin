@@ -1,6 +1,20 @@
 package com.google.jenkins.plugins.computeengine.integration;
 
 import static com.google.jenkins.plugins.computeengine.client.ComputeClient.nameFromSelfLink;
+import static com.google.jenkins.plugins.computeengine.integration.ITUtil.DEB_JAVA_STARTUP_SCRIPT;
+import static com.google.jenkins.plugins.computeengine.integration.ITUtil.LABEL;
+import static com.google.jenkins.plugins.computeengine.integration.ITUtil.NUM_EXECUTORS;
+import static com.google.jenkins.plugins.computeengine.integration.ITUtil.PROJECT_ID;
+import static com.google.jenkins.plugins.computeengine.integration.ITUtil.ZONE;
+import static com.google.jenkins.plugins.computeengine.integration.ITUtil.createTemplate;
+import static com.google.jenkins.plugins.computeengine.integration.ITUtil.format;
+import static com.google.jenkins.plugins.computeengine.integration.ITUtil.getLabel;
+import static com.google.jenkins.plugins.computeengine.integration.ITUtil.initClient;
+import static com.google.jenkins.plugins.computeengine.integration.ITUtil.initCloud;
+import static com.google.jenkins.plugins.computeengine.integration.ITUtil.initCredentials;
+import static com.google.jenkins.plugins.computeengine.integration.ITUtil.initLogging;
+import static com.google.jenkins.plugins.computeengine.integration.ITUtil.instanceConfiguration;
+import static com.google.jenkins.plugins.computeengine.integration.ITUtil.logs;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 
@@ -29,7 +43,7 @@ public class ComputeEngineCloudTemplateNoGoogleLabelsIT {
       Logger.getLogger(ComputeEngineCloudTemplateNoGoogleLabelsIT.class.getName());
 
   private static final String TEMPLATE =
-      ITUtil.format("projects/%s/global/instanceTemplates/test-template-no-labels");
+      format("projects/%s/global/instanceTemplates/test-template-no-labels");
 
   @ClassRule public static Timeout timeout = new Timeout(5, TimeUnit.MINUTES);
   @ClassRule public static JenkinsRule r = new JenkinsRule();
@@ -38,38 +52,32 @@ public class ComputeEngineCloudTemplateNoGoogleLabelsIT {
   private static StreamHandler sh;
   private static ComputeClient client;
   private static Map<String, String> label =
-      ITUtil.getLabel(ComputeEngineCloudTemplateNoGoogleLabelsIT.class);
+      getLabel(ComputeEngineCloudTemplateNoGoogleLabelsIT.class);
   private static ComputeEngineCloud cloud;
   private static Instance instance;
 
   @BeforeClass
   public static void init() throws Exception {
     log.info("init");
-    ITUtil.initCredentials(r);
-    cloud = ITUtil.initCloud(r);
-    sh = ITUtil.initLogging(logOutput);
-    client = ITUtil.initClient(r, label, log);
+    initCredentials(r);
+    cloud = initCloud(r);
+    sh = initLogging(logOutput);
+    client = initClient(r, label, log);
 
     cloud.addConfiguration(
-        ITUtil.instanceConfiguration(
-            ITUtil.DEB_JAVA_STARTUP_SCRIPT,
-            ITUtil.NUM_EXECUTORS,
-            ITUtil.LABEL,
-            label,
-            false,
-            false,
-            TEMPLATE));
-    InstanceTemplate instanceTemplate = ITUtil.createTemplate(null, TEMPLATE);
+        instanceConfiguration(
+            DEB_JAVA_STARTUP_SCRIPT, NUM_EXECUTORS, LABEL, label, false, false, TEMPLATE));
+    InstanceTemplate instanceTemplate = createTemplate(null, TEMPLATE);
     client.insertTemplate(cloud.projectId, instanceTemplate);
     // Add a new node
-    Collection<PlannedNode> planned = cloud.provision(new LabelAtom(ITUtil.LABEL), 1);
+    Collection<PlannedNode> planned = cloud.provision(new LabelAtom(LABEL), 1);
     // There should be a successful planned node even without google labels
-    assertEquals(ITUtil.logs(sh, logOutput), 1, planned.size());
+    assertEquals(logs(sh, logOutput), 1, planned.size());
 
     String name = planned.iterator().next().displayName;
     // Wait for the node creation to finish
     planned.iterator().next().future.get();
-    instance = client.getInstance(ITUtil.PROJECT_ID, ITUtil.ZONE, name);
+    instance = client.getInstance(PROJECT_ID, ZONE, name);
   }
 
   @AfterClass
@@ -86,13 +94,13 @@ public class ComputeEngineCloudTemplateNoGoogleLabelsIT {
   @Test
   public void testTemplateNoGoogleLabelsNoWarningLogs() {
     // There should be no warning logs even without Google labels
-    assertFalse(ITUtil.logs(sh, logOutput), ITUtil.logs(sh, logOutput).contains("WARNING"));
+    assertFalse(logs(sh, logOutput), logs(sh, logOutput).contains("WARNING"));
   }
 
   @Test
   public void testTemplateNoGoogleLabelsCloudIdLabelKeyAndValue() {
     assertEquals(
-        ITUtil.logs(sh, logOutput),
+        logs(sh, logOutput),
         cloud.getInstanceId(),
         instance.getLabels().get(ComputeEngineCloud.CLOUD_ID_LABEL_KEY));
   }

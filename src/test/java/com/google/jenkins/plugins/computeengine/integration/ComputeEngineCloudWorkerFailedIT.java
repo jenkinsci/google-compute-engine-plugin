@@ -1,5 +1,15 @@
 package com.google.jenkins.plugins.computeengine.integration;
 
+import static com.google.jenkins.plugins.computeengine.integration.ITUtil.LABEL;
+import static com.google.jenkins.plugins.computeengine.integration.ITUtil.NULL_TEMPLATE;
+import static com.google.jenkins.plugins.computeengine.integration.ITUtil.NUM_EXECUTORS;
+import static com.google.jenkins.plugins.computeengine.integration.ITUtil.getLabel;
+import static com.google.jenkins.plugins.computeengine.integration.ITUtil.initClient;
+import static com.google.jenkins.plugins.computeengine.integration.ITUtil.initCloud;
+import static com.google.jenkins.plugins.computeengine.integration.ITUtil.initCredentials;
+import static com.google.jenkins.plugins.computeengine.integration.ITUtil.initLogging;
+import static com.google.jenkins.plugins.computeengine.integration.ITUtil.instanceConfiguration;
+import static com.google.jenkins.plugins.computeengine.integration.ITUtil.logs;
 import static org.junit.Assert.assertEquals;
 
 import com.google.jenkins.plugins.computeengine.ComputeEngineCloud;
@@ -30,25 +40,23 @@ public class ComputeEngineCloudWorkerFailedIT {
   private static ByteArrayOutputStream logOutput = new ByteArrayOutputStream();
   private static StreamHandler sh;
   private static ComputeClient client;
-  private static Map<String, String> label =
-      ITUtil.getLabel(ComputeEngineCloudWorkerFailedIT.class);
+  private static Map<String, String> label = getLabel(ComputeEngineCloudWorkerFailedIT.class);
   private static Collection<PlannedNode> planned;
 
   @BeforeClass
   public static void init() throws Exception {
     log.info("init");
-    ITUtil.initCredentials(r);
-    ComputeEngineCloud cloud = ITUtil.initCloud(r);
-    sh = ITUtil.initLogging(logOutput);
-    client = ITUtil.initClient(r, label, log);
+    initCredentials(r);
+    ComputeEngineCloud cloud = initCloud(r);
+    sh = initLogging(logOutput);
+    client = initClient(r, label, log);
 
     // This configuration creates an instance with no Java installed.
     cloud.addConfiguration(
-        ITUtil.instanceConfiguration(
-            "", ITUtil.NUM_EXECUTORS, ITUtil.LABEL, label, false, false, ITUtil.NULL_TEMPLATE));
+        instanceConfiguration("", NUM_EXECUTORS, LABEL, label, false, false, NULL_TEMPLATE));
 
     // Add a new node
-    planned = cloud.provision(new LabelAtom(ITUtil.LABEL), 1);
+    planned = cloud.provision(new LabelAtom(LABEL), 1);
   }
 
   @AfterClass
@@ -59,7 +67,7 @@ public class ComputeEngineCloudWorkerFailedIT {
   @Test
   public void testWorkerFailedNodePlanned() {
     // There should be a planned node
-    assertEquals(ITUtil.logs(sh, logOutput), 1, planned.size());
+    assertEquals(logs(sh, logOutput), 1, planned.size());
   }
 
   @Test(expected = ExecutionException.class)

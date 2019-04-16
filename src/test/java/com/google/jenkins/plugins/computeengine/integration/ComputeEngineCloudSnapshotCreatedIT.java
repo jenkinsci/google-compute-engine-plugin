@@ -1,5 +1,17 @@
 package com.google.jenkins.plugins.computeengine.integration;
 
+import static com.google.jenkins.plugins.computeengine.integration.ITUtil.DEB_JAVA_STARTUP_SCRIPT;
+import static com.google.jenkins.plugins.computeengine.integration.ITUtil.NULL_TEMPLATE;
+import static com.google.jenkins.plugins.computeengine.integration.ITUtil.NUM_EXECUTORS;
+import static com.google.jenkins.plugins.computeengine.integration.ITUtil.PROJECT_ID;
+import static com.google.jenkins.plugins.computeengine.integration.ITUtil.getLabel;
+import static com.google.jenkins.plugins.computeengine.integration.ITUtil.handleClassLogs;
+import static com.google.jenkins.plugins.computeengine.integration.ITUtil.initClient;
+import static com.google.jenkins.plugins.computeengine.integration.ITUtil.initCloud;
+import static com.google.jenkins.plugins.computeengine.integration.ITUtil.initCredentials;
+import static com.google.jenkins.plugins.computeengine.integration.ITUtil.initLogging;
+import static com.google.jenkins.plugins.computeengine.integration.ITUtil.instanceConfiguration;
+import static com.google.jenkins.plugins.computeengine.integration.ITUtil.logs;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
@@ -42,32 +54,30 @@ public class ComputeEngineCloudSnapshotCreatedIT {
   private static ByteArrayOutputStream logOutput = new ByteArrayOutputStream();
   private static StreamHandler sh;
   private static ComputeClient client;
-  private static Map<String, String> label =
-      ITUtil.getLabel(ComputeEngineCloudSnapshotCreatedIT.class);
+  private static Map<String, String> label = getLabel(ComputeEngineCloudSnapshotCreatedIT.class);
   private static Snapshot createdSnapshot = null;
 
   @BeforeClass
   public static void init() throws Exception {
     log.info("init");
-    ITUtil.initCredentials(r);
-    ComputeEngineCloud cloud = ITUtil.initCloud(r);
-    client = ITUtil.initClient(r, label, log);
-    sh = ITUtil.initLogging(logOutput);
+    initCredentials(r);
+    ComputeEngineCloud cloud = initCloud(r);
+    client = initClient(r, label, log);
+    sh = initLogging(logOutput);
 
     assertTrue(cloud.configurations.isEmpty());
     InstanceConfiguration ic =
-        ITUtil.instanceConfiguration(
-            ITUtil.DEB_JAVA_STARTUP_SCRIPT,
-            ITUtil.NUM_EXECUTORS,
+        instanceConfiguration(
+            DEB_JAVA_STARTUP_SCRIPT,
+            NUM_EXECUTORS,
             SNAPSHOT_LABEL,
             label,
             true,
             true,
-            ITUtil.NULL_TEMPLATE);
+            NULL_TEMPLATE);
     cloud.addConfiguration(ic);
     assertTrue(
-        ITUtil.logs(sh, logOutput),
-        cloud.getInstanceConfig(ic.getDescription()).isCreateSnapshot());
+        logs(sh, logOutput), cloud.getInstanceConfig(ic.getDescription()).isCreateSnapshot());
 
     // Assert that there is 0 nodes
     assertTrue(r.jenkins.getNodes().isEmpty());
@@ -79,22 +89,22 @@ public class ComputeEngineCloudSnapshotCreatedIT {
 
     FreeStyleBuild build = r.assertBuildStatus(Result.FAILURE, project.scheduleBuild2(0));
     Node worker = build.getBuiltOn();
-    assertNotNull(ITUtil.logs(sh, logOutput), worker);
+    assertNotNull(logs(sh, logOutput), worker);
     // Can not handle class logs for ComputeEngineInstance until an instance exists.
-    ITUtil.handleClassLogs(sh, ComputeEngineInstance.class.getName());
+    handleClassLogs(sh, ComputeEngineInstance.class.getName());
 
     // Need time for one-shot instance to terminate and create the snapshot
     Awaitility.await()
         .timeout(SNAPSHOT_TEST_TIMEOUT, TimeUnit.SECONDS)
         .until(() -> r.jenkins.getNode(worker.getNodeName()) == null);
 
-    createdSnapshot = client.getSnapshot(ITUtil.PROJECT_ID, worker.getNodeName());
+    createdSnapshot = client.getSnapshot(PROJECT_ID, worker.getNodeName());
   }
 
   @AfterClass
   public static void teardown() throws IOException {
     if (createdSnapshot != null) {
-      client.deleteSnapshot(ITUtil.PROJECT_ID, createdSnapshot.getName());
+      client.deleteSnapshot(PROJECT_ID, createdSnapshot.getName());
     }
     ITUtil.teardown(sh, logOutput, client, label, log);
   }
@@ -102,17 +112,18 @@ public class ComputeEngineCloudSnapshotCreatedIT {
   // Tests snapshot is created when we have failure builds for given node
   @Test
   public void testSnapshotCreatedNotNull() {
-    assertNotNull(ITUtil.logs(sh, logOutput), createdSnapshot);
+    assertNotNull(logs(sh, logOutput), createdSnapshot);
   }
 
   @Test
   public void testSnapshotCreatedStatusReady() {
-    assertEquals(ITUtil.logs(sh, logOutput), "READY", createdSnapshot.getStatus());
+    assertEquals(logs(sh, logOutput), "READY", createdSnapshot.getStatus());
   }
 
   @Test
   public void testSnapshotCreatedExpectedLogs() {
-    assertTrue(ITUtil.logs(sh, logOutput), ITUtil.logs(sh, logOutput).contains(
-        ComputeEngineInstance.CREATING_SNAPSHOT_FOR_NODE));
+    assertTrue(
+        logs(sh, logOutput),
+        logs(sh, logOutput).contains(ComputeEngineInstance.CREATING_SNAPSHOT_FOR_NODE));
   }
 }

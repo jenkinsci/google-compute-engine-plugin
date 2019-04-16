@@ -16,6 +16,19 @@
 
 package com.google.jenkins.plugins.computeengine.integration;
 
+import static com.google.jenkins.plugins.computeengine.integration.ITUtil.DEB_JAVA_STARTUP_SCRIPT;
+import static com.google.jenkins.plugins.computeengine.integration.ITUtil.LABEL;
+import static com.google.jenkins.plugins.computeengine.integration.ITUtil.NULL_TEMPLATE;
+import static com.google.jenkins.plugins.computeengine.integration.ITUtil.NUM_EXECUTORS;
+import static com.google.jenkins.plugins.computeengine.integration.ITUtil.PROJECT_ID;
+import static com.google.jenkins.plugins.computeengine.integration.ITUtil.ZONE;
+import static com.google.jenkins.plugins.computeengine.integration.ITUtil.getLabel;
+import static com.google.jenkins.plugins.computeengine.integration.ITUtil.initClient;
+import static com.google.jenkins.plugins.computeengine.integration.ITUtil.initCloud;
+import static com.google.jenkins.plugins.computeengine.integration.ITUtil.initCredentials;
+import static com.google.jenkins.plugins.computeengine.integration.ITUtil.initLogging;
+import static com.google.jenkins.plugins.computeengine.integration.ITUtil.instanceConfiguration;
+import static com.google.jenkins.plugins.computeengine.integration.ITUtil.logs;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 
@@ -49,41 +62,34 @@ public class ComputeEngineCloudWorkerCreatedIT {
   private static StreamHandler sh;
   private static ComputeClient client;
   private static ComputeEngineCloud cloud;
-  private static Map<String, String> label =
-      ITUtil.getLabel(ComputeEngineCloudWorkerCreatedIT.class);
+  private static Map<String, String> label = getLabel(ComputeEngineCloudWorkerCreatedIT.class);
   private static InstanceConfiguration ic;
   private static Instance i;
 
   @BeforeClass
   public static void init() throws Exception {
     log.info("init");
-    ITUtil.initCredentials(r);
-    cloud = ITUtil.initCloud(r);
-    sh = ITUtil.initLogging(logOutput);
-    client = ITUtil.initClient(r, label, log);
+    initCredentials(r);
+    cloud = initCloud(r);
+    sh = initLogging(logOutput);
+    client = initClient(r, label, log);
 
     ic =
-        ITUtil.instanceConfiguration(
-            ITUtil.DEB_JAVA_STARTUP_SCRIPT,
-            ITUtil.NUM_EXECUTORS,
-            ITUtil.LABEL,
-            label,
-            false,
-            false,
-            ITUtil.NULL_TEMPLATE);
+        instanceConfiguration(
+            DEB_JAVA_STARTUP_SCRIPT, NUM_EXECUTORS, LABEL, label, false, false, NULL_TEMPLATE);
     cloud.addConfiguration(ic);
     // Add a new node
-    Collection<PlannedNode> planned = cloud.provision(new LabelAtom(ITUtil.LABEL), 1);
+    Collection<PlannedNode> planned = cloud.provision(new LabelAtom(LABEL), 1);
 
     // There should be a planned node
-    assertEquals(ITUtil.logs(sh, logOutput), 1, planned.size());
+    assertEquals(logs(sh, logOutput), 1, planned.size());
 
     String name = planned.iterator().next().displayName;
 
     // Wait for the node creation to finish
     planned.iterator().next().future.get();
 
-    i = cloud.getClient().getInstance(ITUtil.PROJECT_ID, ITUtil.ZONE, name);
+    i = cloud.getClient().getInstance(PROJECT_ID, ZONE, name);
   }
 
   @AfterClass
@@ -94,13 +100,13 @@ public class ComputeEngineCloudWorkerCreatedIT {
   @Test
   public void testWorkerCreatedNoWarningLogs() {
     // There should be no warning logs
-    assertFalse(ITUtil.logs(sh, logOutput), ITUtil.logs(sh, logOutput).contains("WARNING"));
+    assertFalse(logs(sh, logOutput), logs(sh, logOutput).contains("WARNING"));
   }
 
   @Test
   public void testWorkerCreatedNumberOfLabels() {
     // The created instance should have 3 labels
-    assertEquals(ITUtil.logs(sh, logOutput), 3, i.getLabels().size());
+    assertEquals(logs(sh, logOutput), 3, i.getLabels().size());
   }
 
   @Test
@@ -108,7 +114,7 @@ public class ComputeEngineCloudWorkerCreatedIT {
     // Instance should have a label with key CONFIG_LABEL_KEY and value equal to the config's name
     // prefix
     assertEquals(
-        ITUtil.logs(sh, logOutput),
+        logs(sh, logOutput),
         ic.getNamePrefix(),
         i.getLabels().get(ComputeEngineCloud.CONFIG_LABEL_KEY));
   }
@@ -117,7 +123,7 @@ public class ComputeEngineCloudWorkerCreatedIT {
   public void testWorkerCreatedCloudIdKeyAndValue() {
     // Instance should have a label with key CLOUD_ID_LABEL_KEY and value equal to the instance ID
     assertEquals(
-        ITUtil.logs(sh, logOutput),
+        logs(sh, logOutput),
         cloud.getInstanceId(),
         i.getLabels().get(ComputeEngineCloud.CLOUD_ID_LABEL_KEY));
   }

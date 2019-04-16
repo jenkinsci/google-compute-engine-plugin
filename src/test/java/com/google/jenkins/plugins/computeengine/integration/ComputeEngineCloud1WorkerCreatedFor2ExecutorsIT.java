@@ -16,6 +16,16 @@
 
 package com.google.jenkins.plugins.computeengine.integration;
 
+import static com.google.jenkins.plugins.computeengine.integration.ITUtil.DEB_JAVA_STARTUP_SCRIPT;
+import static com.google.jenkins.plugins.computeengine.integration.ITUtil.LABEL;
+import static com.google.jenkins.plugins.computeengine.integration.ITUtil.NULL_TEMPLATE;
+import static com.google.jenkins.plugins.computeengine.integration.ITUtil.getLabel;
+import static com.google.jenkins.plugins.computeengine.integration.ITUtil.initClient;
+import static com.google.jenkins.plugins.computeengine.integration.ITUtil.initCloud;
+import static com.google.jenkins.plugins.computeengine.integration.ITUtil.initCredentials;
+import static com.google.jenkins.plugins.computeengine.integration.ITUtil.initLogging;
+import static com.google.jenkins.plugins.computeengine.integration.ITUtil.instanceConfiguration;
+import static com.google.jenkins.plugins.computeengine.integration.ITUtil.logs;
 import static org.junit.Assert.assertEquals;
 
 import com.google.jenkins.plugins.computeengine.ComputeEngineCloud;
@@ -50,15 +60,15 @@ public class ComputeEngineCloud1WorkerCreatedFor2ExecutorsIT {
   private static ComputeEngineCloud cloud;
   private static ComputeClient client;
   private static Map<String, String> label =
-      ITUtil.getLabel(ComputeEngineCloud1WorkerCreatedFor2ExecutorsIT.class);
+      getLabel(ComputeEngineCloud1WorkerCreatedFor2ExecutorsIT.class);
 
   @BeforeClass
   public static void init() throws Exception {
     log.info("init");
-    ITUtil.initCredentials(r);
-    cloud = ITUtil.initCloud(r);
-    sh = ITUtil.initLogging(logOutput);
-    client = ITUtil.initClient(r, label, log);
+    initCredentials(r);
+    cloud = initCloud(r);
+    sh = initLogging(logOutput);
+    client = initClient(r, label, log);
   }
 
   @AfterClass
@@ -69,18 +79,18 @@ public class ComputeEngineCloud1WorkerCreatedFor2ExecutorsIT {
   @Test
   public void test1WorkerCreatedFor2Executors() {
     cloud.addConfiguration(
-        ITUtil.instanceConfiguration(
-            ITUtil.DEB_JAVA_STARTUP_SCRIPT,
+        instanceConfiguration(
+            DEB_JAVA_STARTUP_SCRIPT,
             MULTIPLE_NUM_EXECUTORS,
-            ITUtil.LABEL,
+            LABEL,
             label,
             false,
             false,
-            ITUtil.NULL_TEMPLATE));
+            NULL_TEMPLATE));
     // Add a new node
-    Collection<PlannedNode> planned = cloud.provision(new LabelAtom(ITUtil.LABEL), 2);
+    Collection<PlannedNode> planned = cloud.provision(new LabelAtom(LABEL), 2);
 
     // There should be a planned node
-    assertEquals(ITUtil.logs(sh, logOutput), 1, planned.size());
+    assertEquals(logs(sh, logOutput), 1, planned.size());
   }
 }

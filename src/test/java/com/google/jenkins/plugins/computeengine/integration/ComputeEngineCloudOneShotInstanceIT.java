@@ -1,5 +1,15 @@
 package com.google.jenkins.plugins.computeengine.integration;
 
+import static com.google.jenkins.plugins.computeengine.integration.ITUtil.DEB_JAVA_STARTUP_SCRIPT;
+import static com.google.jenkins.plugins.computeengine.integration.ITUtil.LABEL;
+import static com.google.jenkins.plugins.computeengine.integration.ITUtil.NULL_TEMPLATE;
+import static com.google.jenkins.plugins.computeengine.integration.ITUtil.NUM_EXECUTORS;
+import static com.google.jenkins.plugins.computeengine.integration.ITUtil.getLabel;
+import static com.google.jenkins.plugins.computeengine.integration.ITUtil.initClient;
+import static com.google.jenkins.plugins.computeengine.integration.ITUtil.initCloud;
+import static com.google.jenkins.plugins.computeengine.integration.ITUtil.initCredentials;
+import static com.google.jenkins.plugins.computeengine.integration.ITUtil.initLogging;
+import static com.google.jenkins.plugins.computeengine.integration.ITUtil.instanceConfiguration;
 import static org.junit.Assert.assertTrue;
 
 import com.google.jenkins.plugins.computeengine.ComputeEngineCloud;
@@ -33,26 +43,19 @@ public class ComputeEngineCloudOneShotInstanceIT {
   private static ByteArrayOutputStream logOutput = new ByteArrayOutputStream();
   private static StreamHandler sh;
   private static ComputeClient client;
-  private static Map<String, String> label =
-      ITUtil.getLabel(ComputeEngineCloudOneShotInstanceIT.class);
+  private static Map<String, String> label = getLabel(ComputeEngineCloudOneShotInstanceIT.class);
   private static FreeStyleBuild build;
 
   @BeforeClass
   public static void init() throws Exception {
     log.info("init");
-    ITUtil.initCredentials(r);
-    ComputeEngineCloud cloud = ITUtil.initCloud(r);
-    sh = ITUtil.initLogging(logOutput);
-    client = ITUtil.initClient(r, label, log);
+    initCredentials(r);
+    ComputeEngineCloud cloud = initCloud(r);
+    sh = initLogging(logOutput);
+    client = initClient(r, label, log);
     cloud.addConfiguration(
-        ITUtil.instanceConfiguration(
-            ITUtil.DEB_JAVA_STARTUP_SCRIPT,
-            ITUtil.NUM_EXECUTORS,
-            ITUtil.LABEL,
-            label,
-            false,
-            true,
-            ITUtil.NULL_TEMPLATE));
+        instanceConfiguration(
+            DEB_JAVA_STARTUP_SCRIPT, NUM_EXECUTORS, LABEL, label, false, true, NULL_TEMPLATE));
 
     r.jenkins.getNodesObject().setNodes(Collections.emptyList());
 
@@ -62,7 +65,7 @@ public class ComputeEngineCloudOneShotInstanceIT {
     FreeStyleProject project = r.createFreeStyleProject();
     Builder step = new Shell("echo works");
     project.getBuildersList().add(step);
-    project.setAssignedLabel(new LabelAtom(ITUtil.LABEL));
+    project.setAssignedLabel(new LabelAtom(LABEL));
 
     // Enqueue a build of the project, wait for it to complete, and assert success
     build = r.buildAndAssertSuccess(project);
