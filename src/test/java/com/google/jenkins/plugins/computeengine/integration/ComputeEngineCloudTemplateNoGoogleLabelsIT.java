@@ -98,7 +98,7 @@ public class ComputeEngineCloudTemplateNoGoogleLabelsIT {
     InstanceTemplate instanceTemplate = createTemplate(null, TEMPLATE);
     client.insertTemplate(cloud.projectId, instanceTemplate);
     Collection<PlannedNode> planned = cloud.provision(new LabelAtom(LABEL), 1);
-    assertEquals(logs(streamHandler, logOutput), 1, planned.size());
+    assertEquals(1, planned.size());
 
     String name = planned.iterator().next().displayName;
     planned.iterator().next().future.get();
@@ -118,14 +118,12 @@ public class ComputeEngineCloudTemplateNoGoogleLabelsIT {
 
   @Test
   public void testTemplateNoGoogleLabelsNoWarningLogs() {
-    assertFalse(logs(streamHandler, logOutput), logs(streamHandler, logOutput).contains("WARNING"));
+    assertFalse(logs(streamHandler, logOutput).contains("WARNING"));
   }
 
   @Test
   public void testTemplateNoGoogleLabelsCloudIdLabelKeyAndValue() {
     assertEquals(
-        logs(streamHandler, logOutput),
-        cloud.getInstanceId(),
-        instance.getLabels().get(ComputeEngineCloud.CLOUD_ID_LABEL_KEY));
+        cloud.getInstanceId(), instance.getLabels().get(ComputeEngineCloud.CLOUD_ID_LABEL_KEY));
   }
 }

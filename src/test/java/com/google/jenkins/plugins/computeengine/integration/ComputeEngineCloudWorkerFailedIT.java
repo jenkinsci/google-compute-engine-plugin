@@ -25,7 +25,6 @@ import static com.google.jenkins.plugins.computeengine.integration.ITUtil.initCl
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.initCloud;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.initCredentials;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.instanceConfiguration;
-import static com.google.jenkins.plugins.computeengine.integration.ITUtil.logs;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.teardownResources;
 import static org.junit.Assert.assertEquals;
 
@@ -93,7 +92,7 @@ public class ComputeEngineCloudWorkerFailedIT {
 
   @Test
   public void testWorkerFailedNodePlanned() {
-    assertEquals(logs(streamHandler, logOutput), 1, planned.size());
+    assertEquals(1, planned.size());
   }
 
   @Test(expected = ExecutionException.class)

@@ -20,7 +20,6 @@ import static com.google.jenkins.plugins.computeengine.integration.ITUtil.addCla
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.getLabel;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.initClient;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.initCredentials;
-import static com.google.jenkins.plugins.computeengine.integration.ITUtil.logs;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.teardownResources;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
@@ -65,7 +64,7 @@ public class ComputeClientIT {
   @Test
   public void testGetImage() throws Exception {
     Image image = client.getImage("debian-cloud", "debian-9-stretch-v20180820");
-    assertNotNull(logs(streamHandler, logOutput), image);
-    assertEquals(logs(streamHandler, logOutput), "READY", image.getStatus());
+    assertNotNull(image);
+    assertEquals("READY", image.getStatus());
   }
 }

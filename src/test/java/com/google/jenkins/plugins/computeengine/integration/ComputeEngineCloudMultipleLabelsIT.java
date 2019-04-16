@@ -26,7 +26,6 @@ import static com.google.jenkins.plugins.computeengine.integration.ITUtil.initCl
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.initCloud;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.initCredentials;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.instanceConfiguration;
-import static com.google.jenkins.plugins.computeengine.integration.ITUtil.logs;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.teardownResources;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
@@ -101,7 +100,7 @@ public class ComputeEngineCloudMultipleLabelsIT {
     // configuration's labels
 
     // There should be a planned node
-    assertEquals(logs(streamHandler, logOutput), 1, planned.size());
+    assertEquals(1, planned.size());
   }
 
   @Test
@@ -114,6 +113,6 @@ public class ComputeEngineCloudMultipleLabelsIT {
     assertNotNull(node);
     String provisionedLabels = node.getLabelString();
     // There should be the proper labels provisioned
-    assertEquals(logs(streamHandler, logOutput), MULTIPLE_LABEL, provisionedLabels);
+    assertEquals(MULTIPLE_LABEL, provisionedLabels);
   }
 }

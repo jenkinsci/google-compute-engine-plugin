@@ -90,7 +90,7 @@ public class ComputeEngineCloudWorkerCreatedIT {
 
     cloud.addConfiguration(instanceConfiguration);
     Collection<PlannedNode> planned = cloud.provision(new LabelAtom(LABEL), 1);
-    assertEquals(logs(streamHandler, logOutput), 1, planned.size());
+    assertEquals(1, planned.size());
 
     planned.iterator().next().future.get();
 
@@ -105,18 +105,17 @@ public class ComputeEngineCloudWorkerCreatedIT {
 
   @Test
   public void testWorkerCreatedNoWarningLogs() {
-    assertFalse(logs(streamHandler, logOutput), logs(streamHandler, logOutput).contains("WARNING"));
+    assertFalse(logs(streamHandler, logOutput).contains("WARNING"));
   }
 
   @Test
   public void testWorkerCreatedNumberOfLabels() {
-    assertEquals(logs(streamHandler, logOutput), 3, instance.getLabels().size());
+    assertEquals(3, instance.getLabels().size());
   }
 
   @Test
   public void testWorkerCreatedConfigLabelKeyAndValue() {
     assertEquals(
-        logs(streamHandler, logOutput),
         instanceConfiguration.getNamePrefix(),
         instance.getLabels().get(ComputeEngineCloud.CONFIG_LABEL_KEY));
   }
@@ -124,8 +123,6 @@ public class ComputeEngineCloudWorkerCreatedIT {
   @Test
   public void testWorkerCreatedCloudIdKeyAndValue() {
     assertEquals(
-        logs(streamHandler, logOutput),
-        cloud.getInstanceId(),
-        instance.getLabels().get(ComputeEngineCloud.CLOUD_ID_LABEL_KEY));
+        cloud.getInstanceId(), instance.getLabels().get(ComputeEngineCloud.CLOUD_ID_LABEL_KEY));
   }
 }

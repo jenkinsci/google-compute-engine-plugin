@@ -95,9 +95,7 @@ public class ComputeEngineCloudNoSnapshotCreatedIT {
             label);
 
     cloud.addConfiguration(instanceConfiguration);
-    assertTrue(
-        logs(streamHandler, logOutput),
-        cloud.getInstanceConfig(instanceConfiguration.getDescription()).isCreateSnapshot());
+    assertTrue(cloud.getInstanceConfig(instanceConfiguration.getDescription()).isCreateSnapshot());
 
     assertTrue(jenkinsRule.jenkins.getNodes().isEmpty());
 
@@ -108,7 +106,7 @@ public class ComputeEngineCloudNoSnapshotCreatedIT {
 
     FreeStyleBuild build = jenkinsRule.buildAndAssertSuccess(project);
     Node worker = build.getBuiltOn();
-    assertNotNull(logs(streamHandler, logOutput), worker);
+    assertNotNull(worker);
     // Cannot handle class logs for ComputeEngineInstance until an instance exists.
     addClassLogHandler(streamHandler, ComputeEngineInstance.class.getName());
 
@@ -128,13 +126,12 @@ public class ComputeEngineCloudNoSnapshotCreatedIT {
   // Tests that no snapshot is created when we only have successful builds for given node
   @Test
   public void testNoSnapshotCreatedSnapshotNull() throws Exception {
-    assertNull(logs(streamHandler, logOutput), client.getSnapshot(PROJECT_ID, name));
+    assertNull(client.getSnapshot(PROJECT_ID, name));
   }
 
   @Test
   public void testNoSnapshotCreatedExpectedLogs() {
     assertFalse(
-        logs(streamHandler, logOutput),
         logs(streamHandler, logOutput).contains(ComputeEngineInstance.CREATING_SNAPSHOT_FOR_NODE));
   }
 }

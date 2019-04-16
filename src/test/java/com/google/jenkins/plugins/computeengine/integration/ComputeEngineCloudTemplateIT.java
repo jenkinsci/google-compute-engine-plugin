@@ -100,7 +100,7 @@ public class ComputeEngineCloudTemplateIT {
         createTemplate(ImmutableMap.of(GOOGLE_LABEL_KEY, GOOGLE_LABEL_VALUE), TEMPLATE);
     client.insertTemplate(cloud.projectId, instanceTemplate);
     Collection<PlannedNode> planned = cloud.provision(new LabelAtom(LABEL), 1);
-    assertEquals(logs(streamHandler, logOutput), 1, planned.size());
+    assertEquals(1, planned.size());
     String name = planned.iterator().next().displayName;
 
     planned.iterator().next().future.get();
@@ -120,22 +120,17 @@ public class ComputeEngineCloudTemplateIT {
 
   @Test
   public void testTemplateNoWarningLogs() {
-    assertFalse(logs(streamHandler, logOutput), logs(streamHandler, logOutput).contains("WARNING"));
+    assertFalse(logs(streamHandler, logOutput).contains("WARNING"));
   }
 
   @Test
   public void testTemplateGoogleLabelKeyAndValue() {
-    assertEquals(
-        logs(streamHandler, logOutput),
-        GOOGLE_LABEL_VALUE,
-        instance.getLabels().get(GOOGLE_LABEL_KEY));
+    assertEquals(GOOGLE_LABEL_VALUE, instance.getLabels().get(GOOGLE_LABEL_KEY));
   }
 
   @Test
   public void testTemplateCloudIdLabelKeyAndValue() {
     assertEquals(
-        logs(streamHandler, logOutput),
-        cloud.getInstanceId(),
-        instance.getLabels().get(ComputeEngineCloud.CLOUD_ID_LABEL_KEY));
+        cloud.getInstanceId(), instance.getLabels().get(ComputeEngineCloud.CLOUD_ID_LABEL_KEY));
   }
 }

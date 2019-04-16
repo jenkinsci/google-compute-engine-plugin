@@ -96,9 +96,7 @@ public class ComputeEngineCloudSnapshotCreatedIT {
             label);
 
     cloud.addConfiguration(instanceConfiguration);
-    assertTrue(
-        logs(streamHandler, logOutput),
-        cloud.getInstanceConfig(instanceConfiguration.getDescription()).isCreateSnapshot());
+    assertTrue(cloud.getInstanceConfig(instanceConfiguration.getDescription()).isCreateSnapshot());
 
     assertTrue(jenkinsRule.jenkins.getNodes().isEmpty());
 
@@ -109,7 +107,7 @@ public class ComputeEngineCloudSnapshotCreatedIT {
 
     FreeStyleBuild build = jenkinsRule.assertBuildStatus(Result.FAILURE, project.scheduleBuild2(0));
     Node worker = build.getBuiltOn();
-    assertNotNull(logs(streamHandler, logOutput), worker);
+    assertNotNull(worker);
     // Cannot handle class logs for ComputeEngineInstance until an instance exists.
     addClassLogHandler(streamHandler, ComputeEngineInstance.class.getName());
 
@@ -132,12 +130,12 @@ public class ComputeEngineCloudSnapshotCreatedIT {
   // Tests snapshot is created when we have failure builds for given node
   @Test
   public void testSnapshotCreatedNotNull() {
-    assertNotNull(logs(streamHandler, logOutput), createdSnapshot);
+    assertNotNull(createdSnapshot);
   }
 
   @Test
   public void testSnapshotCreatedStatusReady() {
-    assertEquals(logs(streamHandler, logOutput), "READY", createdSnapshot.getStatus());
+    assertEquals("READY", createdSnapshot.getStatus());
   }
 
   @Test
@@ -150,7 +148,6 @@ public class ComputeEngineCloudSnapshotCreatedIT {
   @Test
   public void testSnapshotCreatedExpectedLogs() {
     assertTrue(
-        logs(streamHandler, logOutput),
         logs(streamHandler, logOutput).contains(ComputeEngineInstance.CREATING_SNAPSHOT_FOR_NODE));
   }
 }

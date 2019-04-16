@@ -90,7 +90,7 @@ public class ComputeEngineCloud1WorkerCreatedFor2ExecutorsIT {
             label));
 
     Collection<PlannedNode> planned = cloud.provision(new LabelAtom(LABEL), 2);
-    assertEquals(logs(streamHandler, logOutput), 1, planned.size());
+    assertEquals(1, planned.size());
     planned.iterator().next().future.get();
 
     instance = client.getInstance(PROJECT_ID, ZONE, planned.iterator().next().displayName);
@@ -103,13 +103,11 @@ public class ComputeEngineCloud1WorkerCreatedFor2ExecutorsIT {
 
   @Test
   public void test1WorkerCreatedFor2ExecutorsStatusRunning() {
-    assertEquals(logs(streamHandler, logOutput), "RUNNING", instance.getStatus());
+    assertEquals("RUNNING", instance.getStatus());
   }
 
   @Test
   public void test1WorkerCreatedFor2ExecutorsExpectedLogs() {
-    assertTrue(
-        logs(streamHandler, logOutput),
-        logs(streamHandler, logOutput).contains("for excess workload of 2 units of label"));
+    assertTrue(logs(streamHandler, logOutput).contains("for excess workload of 2 units of label"));
   }
 }
