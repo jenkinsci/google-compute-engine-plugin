@@ -58,7 +58,6 @@ import org.jvnet.hudson.test.JenkinsRule;
 
 /** Common logic and constants used throughout the integration tests. */
 class ITUtil {
-
   static final String DEB_JAVA_STARTUP_SCRIPT =
       "#!/bin/bash\n"
           + "/etc/init.d/ssh stop\n"

@@ -107,7 +107,7 @@ public class ComputeEngineCloudNoSnapshotCreatedIT {
     teardownResources(client, label, log);
   }
 
-  // Makes sure that the instance is being stopped after completing the job
+  /** Makes sure that the instance is being stopped after completing the job. */
   @Test
   public void testNoSnapshotCreatedInstanceStopping() throws IOException {
     assertEquals("RUNNING", client.getInstance(PROJECT_ID, ZONE, name).getStatus());
@@ -116,7 +116,7 @@ public class ComputeEngineCloudNoSnapshotCreatedIT {
         .until(() -> "STOPPING".equals(client.getInstance(PROJECT_ID, ZONE, name).getStatus()));
   }
 
-  // Tests that no snapshot is created when we only have successful builds for given node
+  /** Tests that no snapshot is created when we only have successful builds for given node. */
   @Test
   public void testNoSnapshotCreatedSnapshotNull() throws Exception {
     // Wait for one-shot instance to terminate and create the snapshot

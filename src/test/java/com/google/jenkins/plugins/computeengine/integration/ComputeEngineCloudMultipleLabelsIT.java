@@ -63,7 +63,6 @@ public class ComputeEngineCloudMultipleLabelsIT {
 
   private static ComputeClient client;
   private static Map<String, String> label = getLabel(ComputeEngineCloudMultipleLabelsIT.class);
-  private static Collection<PlannedNode> planned;
   private static String name;
 
   @BeforeClass
@@ -84,7 +83,7 @@ public class ComputeEngineCloudMultipleLabelsIT {
                 .template(NULL_TEMPLATE),
             label));
 
-    planned = cloud.provision(new LabelAtom(LABEL), 1);
+    Collection<PlannedNode> planned = cloud.provision(new LabelAtom(LABEL), 1);
     name = planned.iterator().next().displayName;
     planned.iterator().next().future.get();
   }

@@ -118,7 +118,7 @@ public class ComputeEngineCloudSnapshotCreatedIT {
     teardownResources(client, label, log);
   }
 
-  // Tests snapshot is created when we have failure builds for given node
+  /** Tests snapshot is created when we have failure builds for given node */
   @Test
   public void testSnapshotCreatedNotNull() {
     assertNotNull(createdSnapshot);
