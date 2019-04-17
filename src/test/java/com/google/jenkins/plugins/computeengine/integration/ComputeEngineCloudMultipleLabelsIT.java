@@ -50,9 +50,8 @@ import org.junit.rules.Timeout;
 import org.jvnet.hudson.test.JenkinsRule;
 
 /**
- * Integration test suite for {@link ComputeEngineCloud}.
- * Verifies that instances can be created with multiple Jenkins labels and that
- * these labels are properly provisioned.
+ * Integration test suite for {@link ComputeEngineCloud}. Verifies that instances can be created
+ * with multiple Jenkins labels and that these labels are properly provisioned.
  */
 public class ComputeEngineCloudMultipleLabelsIT {
   private static Logger log = Logger.getLogger(ComputeEngineCloudMultipleLabelsIT.class.getName());
