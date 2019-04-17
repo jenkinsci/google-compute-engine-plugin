@@ -63,6 +63,7 @@ public class ComputeEngineCloudWorkerCreatedIT {
   private static ComputeEngineCloud cloud;
   private static Map<String, String> label = getLabel(ComputeEngineCloudWorkerCreatedIT.class);
   private static InstanceConfiguration instanceConfiguration;
+  private static Collection<PlannedNode> planned;
   private static Instance instance;
 
   @BeforeClass
@@ -84,8 +85,7 @@ public class ComputeEngineCloudWorkerCreatedIT {
             label);
 
     cloud.addConfiguration(instanceConfiguration);
-    Collection<PlannedNode> planned = cloud.provision(new LabelAtom(LABEL), 1);
-    assertEquals(1, planned.size());
+    planned = cloud.provision(new LabelAtom(LABEL), 1);
 
     planned.iterator().next().future.get();
 
@@ -96,6 +96,11 @@ public class ComputeEngineCloudWorkerCreatedIT {
   @AfterClass
   public static void teardown() throws IOException {
     teardownResources(client, label, log);
+  }
+
+  @Test
+  public void testWorkerCreatedOnePlannedNode() {
+    assertEquals(1, planned.size());
   }
 
   @Test

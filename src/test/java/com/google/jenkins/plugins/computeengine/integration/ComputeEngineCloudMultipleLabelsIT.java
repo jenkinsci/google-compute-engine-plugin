@@ -95,11 +95,6 @@ public class ComputeEngineCloudMultipleLabelsIT {
   }
 
   @Test
-  public void testMultipleLabelsPlannedNode() {
-    assertEquals(1, planned.size());
-  }
-
-  @Test
   public void testMultipleLabelsProvisionedWithLabels() {
     Node node = jenkinsRule.jenkins.getNode(name);
     assertNotNull(node);

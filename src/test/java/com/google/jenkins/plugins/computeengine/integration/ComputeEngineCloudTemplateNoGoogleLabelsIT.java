@@ -93,7 +93,6 @@ public class ComputeEngineCloudTemplateNoGoogleLabelsIT {
     InstanceTemplate instanceTemplate = createTemplate(null, TEMPLATE);
     client.insertTemplate(cloud.projectId, instanceTemplate);
     Collection<PlannedNode> planned = cloud.provision(new LabelAtom(LABEL), 1);
-    assertEquals(1, planned.size());
 
     String name = planned.iterator().next().displayName;
     planned.iterator().next().future.get();

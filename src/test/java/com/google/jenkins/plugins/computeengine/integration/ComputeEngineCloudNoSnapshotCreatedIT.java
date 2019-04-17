@@ -76,7 +76,6 @@ public class ComputeEngineCloudNoSnapshotCreatedIT {
     ComputeEngineCloud cloud = initCloud(jenkinsRule);
     client = initClient(jenkinsRule, label, log);
 
-    assertTrue(cloud.configurations.isEmpty());
     InstanceConfiguration instanceConfiguration =
         ITUtil.instanceConfiguration(
             new InstanceConfiguration.Builder()
@@ -90,8 +89,6 @@ public class ComputeEngineCloudNoSnapshotCreatedIT {
 
     cloud.addConfiguration(instanceConfiguration);
     assertTrue(cloud.getInstanceConfig(instanceConfiguration.getDescription()).isCreateSnapshot());
-
-    assertTrue(jenkinsRule.jenkins.getNodes().isEmpty());
 
     FreeStyleProject project = jenkinsRule.createFreeStyleProject();
     Builder step = new Shell("echo works");

@@ -27,7 +27,6 @@ import static com.google.jenkins.plugins.computeengine.integration.ITUtil.initCl
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.initCredentials;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.instanceConfiguration;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.teardownResources;
-import static org.junit.Assert.assertTrue;
 
 import com.google.jenkins.plugins.computeengine.ComputeEngineCloud;
 import com.google.jenkins.plugins.computeengine.InstanceConfiguration;
@@ -82,7 +81,6 @@ public class ComputeEngineCloudOneShotInstanceIT {
                 .template(NULL_TEMPLATE),
             label));
     jenkinsRule.jenkins.getNodesObject().setNodes(Collections.emptyList());
-    assertTrue(jenkinsRule.jenkins.getNodes().isEmpty());
 
     FreeStyleProject project = jenkinsRule.createFreeStyleProject();
     Builder step = new Shell("echo works");

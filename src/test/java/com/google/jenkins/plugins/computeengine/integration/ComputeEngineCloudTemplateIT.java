@@ -94,7 +94,6 @@ public class ComputeEngineCloudTemplateIT {
         createTemplate(ImmutableMap.of(GOOGLE_LABEL_KEY, GOOGLE_LABEL_VALUE), TEMPLATE);
     client.insertTemplate(cloud.projectId, instanceTemplate);
     Collection<PlannedNode> planned = cloud.provision(new LabelAtom(LABEL), 1);
-    assertEquals(1, planned.size());
     String name = planned.iterator().next().displayName;
 
     planned.iterator().next().future.get();

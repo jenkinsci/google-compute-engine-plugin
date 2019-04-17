@@ -25,7 +25,6 @@ import static com.google.jenkins.plugins.computeengine.integration.ITUtil.initCl
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.initCredentials;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.instanceConfiguration;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.teardownResources;
-import static org.junit.Assert.assertEquals;
 
 import com.google.jenkins.plugins.computeengine.ComputeEngineCloud;
 import com.google.jenkins.plugins.computeengine.InstanceConfiguration;
@@ -84,11 +83,6 @@ public class ComputeEngineCloudWorkerFailedIT {
   @AfterClass
   public static void teardown() throws IOException {
     teardownResources(client, label, log);
-  }
-
-  @Test
-  public void testWorkerFailedNodePlanned() {
-    assertEquals(1, planned.size());
   }
 
   @Test(expected = ExecutionException.class)
