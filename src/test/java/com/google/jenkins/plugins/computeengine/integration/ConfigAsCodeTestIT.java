@@ -5,8 +5,7 @@ import com.google.jenkins.plugins.computeengine.ComputeEngineCloud;
 import com.google.jenkins.plugins.computeengine.client.ComputeClient;
 import hudson.model.labels.LabelAtom;
 import hudson.slaves.NodeProvisioner;
-import io.jenkins.plugins.casc.misc.ConfiguredWithCode;
-import io.jenkins.plugins.casc.misc.JenkinsConfiguredWithCodeRule;
+import io.jenkins.plugins.casc.ConfigurationAsCode;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
@@ -30,13 +29,14 @@ import static org.junit.Assert.assertNotNull;
 public class ConfigAsCodeTestIT {
     private static Logger log = Logger.getLogger(ConfigAsCodeTestIT.class.getName());
     @ClassRule
-    public static JenkinsRule jenkinsRule = new JenkinsConfiguredWithCodeRule();
+    public static JenkinsRule jenkinsRule = new JenkinsRule();
     private static ComputeClient client;
     private static Map<String, String> label = getLabel(ComputeEngineCloudMultipleLabelsIT.class);
 
     @BeforeClass
     public static void init() throws Exception {
         log.info("init");
+        initCredentials(jenkinsRule);
         client = initClient(jenkinsRule, label, log);
     }
 
@@ -46,13 +46,17 @@ public class ConfigAsCodeTestIT {
     }
 
     @Test(timeout = 300000)
-    @ConfiguredWithCode("configuration-as-code-it.yml")
     public void testWorkerCreated() throws Exception {
-        initCredentials(jenkinsRule);
-
+        ConfigurationAsCode.get().configure(this.getClass().getResource("configuration-as-code-it.yml").toString());
         ComputeEngineCloud cloud = (ComputeEngineCloud) jenkinsRule.jenkins.clouds.getByName("gce-integration");
+
+        // Should be 1 configuration
+        assertEquals(1, cloud.getConfigurations().size());
+        
+        cloud.getConfigurations().get(0).googleLabels = label;
+        
         // Add a new node
-        Collection<NodeProvisioner.PlannedNode> planned = cloud.provision(new LabelAtom("jenkins-agent"), 1);
+        Collection<NodeProvisioner.PlannedNode> planned = cloud.provision(new LabelAtom("integration"), 1);
 
         // There should be a planned node
         assertEquals(1, planned.size());
