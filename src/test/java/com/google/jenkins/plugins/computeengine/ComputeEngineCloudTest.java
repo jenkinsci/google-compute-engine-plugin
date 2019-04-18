@@ -135,7 +135,7 @@ public class ComputeEngineCloudTest {
     Assert.assertEquals(ics.get(0), cloud.getInstanceConfig(l));
 
     // Configuration for description should match
-    Assert.assertEquals(ics.get(0), cloud.getInstanceConfig(ics.get(0).description));
+    Assert.assertEquals(ics.get(0), cloud.getInstanceConfig(ics.get(0).getDescription()));
   }
 
   @Test

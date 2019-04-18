@@ -15,7 +15,7 @@
 The Google Compute Engine (GCE) Plugin allows you to use GCE virtual machines (VMs) with Jenkins to execute build tasks. GCE VMs provision quickly, are destroyed by Jenkins when idle, and offer Preemptible VMs that run at a much lower price than regular VMs.
 
 ## Documentation
-Please see the [Google Compute Engine Plugin](https://wiki.jenkins.io/display/JENKINS/Google+Compute+Engine+Plugin) wiki for complete documentation.
+Please see the [Google Compute Engine Plugin](docs/Home.md) docs for complete documentation.
 
 ## Installation
 1. Download the plugin from [here](https://storage.googleapis.com/jenkins-graphite/google-compute-plugin-latest.hpi).
@@ -26,6 +26,13 @@ Please see the [Google Compute Engine Plugin](https://wiki.jenkins.io/display/JE
 
 ## Feature requests and bug reports
 Please file feature requests and bug reports under [issues](https://github.com/jenkinsci/google-compute-engine-plugin/issues).
+
+## Community
+
+The GCP Jenkins community uses the **#gcp-jenkins** slack channel on
+[https://googlecloud-community.slack.com](https://googlecloud-community.slack.com)
+to ask questions and share feedback. Invitation link available
+[here](https://join.slack.com/t/googlecloud-community/shared_invite/enQtNDI2NjAyODQ4NzA5LThlOGVhMzUyNDUyNmVmNTQ5YzMxYmYxNDk1YjdmZjU4ZjBiYmU1OGEzYWE2MWY1NWY4NTQ1NjAwOWRlN2ZlN2I).
 
 ## Contributing
 See [CONTRIBUTING.md](CONTRIBUTING.md)

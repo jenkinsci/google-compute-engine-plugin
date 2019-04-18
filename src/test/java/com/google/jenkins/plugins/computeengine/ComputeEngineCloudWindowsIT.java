@@ -255,7 +255,8 @@ public class ComputeEngineCloudWindowsIT {
 
     // Instance should have a label with key CONFIG_LABEL_KEY and value equal to the config's name
     // prefix
-    assertEquals(logs(), ic.namePrefix, i.getLabels().get(ComputeEngineCloud.CONFIG_LABEL_KEY));
+    assertEquals(
+        logs(), ic.getNamePrefix(), i.getLabels().get(ComputeEngineCloud.CONFIG_LABEL_KEY));
     // proper id label to properly count instances
     assertEquals(
         logs(), cloud.getInstanceId(), i.getLabels().get(ComputeEngineCloud.CLOUD_ID_LABEL_KEY));
@@ -337,39 +338,42 @@ public class ComputeEngineCloudWindowsIT {
             + "Restart-Service sshd";
 
     InstanceConfiguration ic =
-        new InstanceConfiguration(
-            NAME_PREFIX,
-            REGION,
-            ZONE,
-            MACHINE_TYPE,
-            NUM_EXECUTORS,
-            startupScript,
-            PREEMPTIBLE,
-            MIN_CPU_PLATFORM,
-            labels,
-            CONFIG_DESC,
-            BOOT_DISK_TYPE,
-            BOOT_DISK_AUTODELETE,
-            "projects/" + bootDiskProjectId + "/global/images/" + bootDiskImageName,
-            bootDiskProjectId,
-            BOOT_DISK_SIZE_GB_STR,
-            true,
-            "",
-            windowsPrivateKeyCredentialId,
-            createSnapshot,
-            null,
-            new AutofilledNetworkConfiguration(NETWORK_NAME, SUBNETWORK_NAME),
-            EXTERNAL_ADDR,
-            false,
-            NETWORK_TAGS,
-            SERVICE_ACCOUNT_EMAIL,
-            RETENTION_TIME_MINUTES_STR,
-            LAUNCH_TIMEOUT_SECONDS_STR,
-            NODE_MODE,
-            new AcceleratorConfiguration(ACCELERATOR_NAME, ACCELERATOR_COUNT),
-            RUN_AS_USER,
-            oneShot,
-            null);
+        new InstanceConfiguration.Builder()
+            .namePrefix(NAME_PREFIX)
+            .region(REGION)
+            .zone(ZONE)
+            .machineType(MACHINE_TYPE)
+            .numExecutorsStr(NUM_EXECUTORS)
+            .startupScript(startupScript)
+            .preemptible(PREEMPTIBLE)
+            .minCpuPlatform(MIN_CPU_PLATFORM)
+            .labels(labels)
+            .description(CONFIG_DESC)
+            .bootDiskType(BOOT_DISK_TYPE)
+            .bootDiskAutoDelete(BOOT_DISK_AUTODELETE)
+            .bootDiskSourceImageName(
+                "projects/" + bootDiskProjectId + "/global/images/" + bootDiskImageName)
+            .bootDiskSourceImageProject(bootDiskProjectId)
+            .bootDiskSizeGbStr(BOOT_DISK_SIZE_GB_STR)
+            .windows(true)
+            .windowsPasswordCredentialsId("")
+            .windowsPrivateKeyCredentialsId(windowsPrivateKeyCredentialId)
+            .createSnapshot(createSnapshot)
+            .remoteFs(null)
+            .networkConfiguration(new AutofilledNetworkConfiguration(NETWORK_NAME, SUBNETWORK_NAME))
+            .externalAddress(EXTERNAL_ADDR)
+            .useInternalAddress(false)
+            .networkTags(NETWORK_TAGS)
+            .serviceAccountEmail(SERVICE_ACCOUNT_EMAIL)
+            .retentionTimeMinutesStr(RETENTION_TIME_MINUTES_STR)
+            .launchTimeoutSecondsStr(LAUNCH_TIMEOUT_SECONDS_STR)
+            .mode(NODE_MODE)
+            .acceleratorConfiguration(
+                new AcceleratorConfiguration(ACCELERATOR_NAME, ACCELERATOR_COUNT))
+            .runAsUser(RUN_AS_USER)
+            .oneShot(oneShot)
+            .template(null)
+            .build();
     ic.appendLabels(INTEGRATION_LABEL);
     return ic;
   }
