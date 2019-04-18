@@ -332,7 +332,7 @@ public class ComputeEngineCloudWindowsIT {
             + "# We are in the second phase of startup where we need to set up authorized_keys for the specified user.\n"
             + "# Create the .ssh folder and authorized_keys file.\n"
             + "Set-Content -Path $env:PROGRAMDATA\\ssh\\administrators_authorized_keys -Value $ConfiguredPublicKey\n"
-            + "icacls $env:PROGRAMDATA\\ssh\\administrators_authorized_keys /inheritance:r\n"
+            + "icacls $env:PROGRAMDATA\\ssh\\administrators_authorized_keys /inheritance:jenkinsRule\n"
             + "icacls $env:PROGRAMDATA\\ssh\\administrators_authorized_keys /grant SYSTEM:`(F`)\n"
             + "icacls $env:PROGRAMDATA\\ssh\\administrators_authorized_keys /grant BUILTIN\\Administrators:`(F`)\n"
             + "Restart-Service sshd";

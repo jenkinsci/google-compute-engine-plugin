@@ -78,7 +78,7 @@ public class ComputeEngineCloudSnapshotCreatedIT {
     ComputeEngineCloud cloud = initCloud(jenkinsRule);
     client = initClient(jenkinsRule, label, log);
 
-    assertTrue(cloud.configurations.isEmpty());
+    assertTrue(cloud.getConfigurations().isEmpty());
     InstanceConfiguration instanceConfiguration =
         instanceConfiguration(
             new InstanceConfiguration.Builder()
