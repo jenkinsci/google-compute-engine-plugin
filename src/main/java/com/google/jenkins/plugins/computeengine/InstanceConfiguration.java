@@ -93,7 +93,7 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
       "No subnetworks exist in the given network and region.";
   public static final String METADATA_LINUX_STARTUP_SCRIPT_KEY = "startup-script";
   public static final String METADATA_WINDOWS_STARTUP_SCRIPT_KEY = "windows-startup-script-ps1";
-  public static final String METADATA_INSTANCE_CONFIGURATION_ID = "instance-config-label";
+  public static final String METADATA_INSTANCE_CONFIGURATION_ID = "instance-config-id";
   public static final String NAT_TYPE = "ONE_TO_ONE_NAT";
   public static final String NAT_NAME = "External NAT";
   public static final List<String> KNOWN_IMAGE_PROJECTS =
