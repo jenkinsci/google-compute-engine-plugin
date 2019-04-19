@@ -17,6 +17,7 @@
 package com.google.jenkins.plugins.computeengine;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.anyString;
 
 import com.google.api.services.compute.model.AcceleratorType;
@@ -145,13 +146,13 @@ public class InstanceConfigurationTest {
   @Test
   public void testClient() throws Exception {
     List<Region> regions = computeClient.getRegions(anyString());
-    assert (regions.size() == 2);
-    assert (regions.get(1).getName().equals(REGION));
+    assertTrue(regions.size() == 2);
+    assertTrue(regions.get(1).getName().equals(REGION));
 
     List<Zone> zones = computeClient.getZones(PROJECT_ID, REGION);
-    assert (zones.size() == 2);
-    assert (zones.get(1).getName().equals(ZONE));
-    assert (zones.get(1).getSelfLink().equals(ZONE));
+    assertTrue(zones.size() == 2);
+    assertTrue(zones.get(1).getName().equals(ZONE));
+    assertTrue(zones.get(1).getSelfLink().equals(ZONE));
   }
 
   @Test
@@ -181,70 +182,89 @@ public class InstanceConfigurationTest {
 
   @Test
   public void testInstanceModel() throws Exception {
-    Instance i = instanceConfiguration(MIN_CPU_PLATFORM).instance();
+    InstanceConfiguration instanceConfig = instanceConfiguration(MIN_CPU_PLATFORM);
+    Instance instance = instanceConfig.instance();
     // General
-    assert (i.getName().startsWith(NAME_PREFIX));
-    assert (i.getDescription().equals(CONFIG_DESC));
-    assert (i.getZone().equals(ZONE));
-    assert (i.getMachineType().equals(MACHINE_TYPE));
-    assert (i.getMinCpuPlatform().equals(MIN_CPU_PLATFORM));
+    assertTrue(instance.getName().startsWith(NAME_PREFIX));
+    assertTrue(instance.getDescription().equals(CONFIG_DESC));
+    assertTrue(instance.getZone().equals(ZONE));
+    assertTrue(instance.getMachineType().equals(MACHINE_TYPE));
+    assertTrue(instance.getMinCpuPlatform().equals(MIN_CPU_PLATFORM));
 
     // Accelerators
-    assert (i.getGuestAccelerators().get(0).getAcceleratorType().equals(ACCELERATOR_NAME));
-    assert (i.getGuestAccelerators()
-        .get(0)
-        .getAcceleratorCount()
-        .equals(Integer.parseInt(ACCELERATOR_COUNT)));
+    assertTrue(
+        instance.getGuestAccelerators().get(0).getAcceleratorType().equals(ACCELERATOR_NAME));
+    assertTrue(
+        instance
+            .getGuestAccelerators()
+            .get(0)
+            .getAcceleratorCount()
+            .equals(Integer.parseInt(ACCELERATOR_COUNT)));
 
     // Metadata
-    assert (i.getMetadata()
-        .getItems()
-        .get(0)
-        .getKey()
-        .equals(InstanceConfiguration.METADATA_LINUX_STARTUP_SCRIPT_KEY));
-    assert (i.getMetadata().getItems().get(0).getValue().equals(STARTUP_SCRIPT));
+    assertTrue(
+        instance.getMetadata().getItems().stream()
+            .anyMatch(
+                i ->
+                    i.getKey().equals(InstanceConfiguration.METADATA_LINUX_STARTUP_SCRIPT_KEY)
+                        && i.getValue().equals(STARTUP_SCRIPT)));
+    assertTrue(
+        instance.getMetadata().getItems().stream()
+            .anyMatch(
+                i ->
+                    i.getKey().equals(InstanceConfiguration.METADATA_INSTANCE_CONFIGURATION_ID)
+                        && i.getValue().equals(instanceConfig.getId())));
 
     // Network
-    assert (i.getNetworkInterfaces().get(0).getSubnetwork().equals(SUBNETWORK_NAME));
-    assert (i.getNetworkInterfaces()
-        .get(0)
-        .getAccessConfigs()
-        .get(0)
-        .getType()
-        .equals("ONE_TO_ONE_NAT"));
-    assert (i.getNetworkInterfaces()
-        .get(0)
-        .getAccessConfigs()
-        .get(0)
-        .getName()
-        .equals("External NAT"));
+    assertTrue(instance.getNetworkInterfaces().get(0).getSubnetwork().equals(SUBNETWORK_NAME));
+    assertTrue(
+        instance
+            .getNetworkInterfaces()
+            .get(0)
+            .getAccessConfigs()
+            .get(0)
+            .getType()
+            .equals("ONE_TO_ONE_NAT"));
+    assertTrue(
+        instance
+            .getNetworkInterfaces()
+            .get(0)
+            .getAccessConfigs()
+            .get(0)
+            .getName()
+            .equals("External NAT"));
 
     // Tags
-    assert (i.getTags().getItems().size() == NETWORK_TAGS.split(" ").length);
-    assert (i.getTags().getItems().get(0).equals(NETWORK_TAGS.split(" ")[0]));
-    assert (i.getTags().getItems().get(1).equals(NETWORK_TAGS.split(" ")[1]));
+    assertTrue(instance.getTags().getItems().size() == NETWORK_TAGS.split(" ").length);
+    assertTrue(instance.getTags().getItems().get(0).equals(NETWORK_TAGS.split(" ")[0]));
+    assertTrue(instance.getTags().getItems().get(1).equals(NETWORK_TAGS.split(" ")[1]));
 
     // IAM
-    assert (i.getServiceAccounts().get(0).getEmail().equals(SERVICE_ACCOUNT_EMAIL));
+    assertTrue(instance.getServiceAccounts().get(0).getEmail().equals(SERVICE_ACCOUNT_EMAIL));
 
     // Disks
-    assert (i.getDisks().get(0).getAutoDelete().equals(BOOT_DISK_AUTODELETE));
-    assert (i.getDisks().get(0).getBoot().equals(true));
-    assert (i.getDisks().get(0).getInitializeParams().getDiskType().equals(BOOT_DISK_TYPE));
-    assert (i.getDisks()
-        .get(0)
-        .getInitializeParams()
-        .getDiskSizeGb()
-        .equals(Long.parseLong(BOOT_DISK_SIZE_GB_STR)));
-    assert (i.getDisks()
-        .get(0)
-        .getInitializeParams()
-        .getSourceImage()
-        .equals(BOOT_DISK_IMAGE_NAME));
+    assertTrue(instance.getDisks().get(0).getAutoDelete().equals(BOOT_DISK_AUTODELETE));
+    assertTrue(instance.getDisks().get(0).getBoot().equals(true));
+    assertTrue(
+        instance.getDisks().get(0).getInitializeParams().getDiskType().equals(BOOT_DISK_TYPE));
+    assertTrue(
+        instance
+            .getDisks()
+            .get(0)
+            .getInitializeParams()
+            .getDiskSizeGb()
+            .equals(Long.parseLong(BOOT_DISK_SIZE_GB_STR)));
+    assertTrue(
+        instance
+            .getDisks()
+            .get(0)
+            .getInitializeParams()
+            .getSourceImage()
+            .equals(BOOT_DISK_IMAGE_NAME));
 
     InstanceConfiguration instanceConfiguration = instanceConfiguration();
-    assert (!instanceConfiguration.isUseInternalAddress());
-    assert (instanceConfiguration.instance().getMinCpuPlatform() == null);
+    assertTrue(!instanceConfiguration.isUseInternalAddress());
+    assertTrue(instanceConfiguration.instance().getMinCpuPlatform() == null);
   }
 
   public static InstanceConfiguration instanceConfiguration() {

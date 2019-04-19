@@ -72,6 +72,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.UUID;
 import jenkins.model.Jenkins;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.text.RandomStringGenerator;
@@ -92,6 +93,7 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
       "No subnetworks exist in the given network and region.";
   public static final String METADATA_LINUX_STARTUP_SCRIPT_KEY = "startup-script";
   public static final String METADATA_WINDOWS_STARTUP_SCRIPT_KEY = "windows-startup-script-ps1";
+  public static final String METADATA_INSTANCE_CONFIGURATION_ID = "instance-config-label";
   public static final String NAT_TYPE = "ONE_TO_ONE_NAT";
   public static final String NAT_NAME = "External NAT";
   public static final List<String> KNOWN_IMAGE_PROJECTS =
@@ -148,11 +150,13 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
   public Integer retentionTimeMinutes;
   public Integer launchTimeoutSeconds;
   public Long bootDiskSizeGb;
+  private String id;
   public transient Set<LabelAtom> labelSet;
   protected transient ComputeEngineCloud cloud;
 
   @DataBoundConstructor
   public InstanceConfiguration(
+      String id,
       String labelString,
       boolean windows,
       String runAsUser,
@@ -166,7 +170,22 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
     this.setWindowsConfig(
         makeWindowsConfiguration(
             windows, runAsUser, windowsPasswordCredentialsId, windowsPrivateKeyCredentialsId));
+    this.setId(id);
     readResolve();
+  }
+
+  /**
+   * Sets the ID for this {@link InstanceConfiguration}.
+   *
+   * @param id The ID to be set.
+   */
+  @DataBoundSetter
+  public void setId(String id) {
+    if (Strings.isNullOrEmpty(id)) {
+      this.id = UUID.randomUUID().toString();
+    } else {
+      this.id = id;
+    }
   }
 
   @DataBoundSetter
@@ -372,6 +391,10 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
     return s;
   }
 
+  public String getId() {
+    return id;
+  }
+
   public String getDescription() {
     return description;
   }
@@ -537,6 +560,7 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
   public ComputeEngineInstance provision(TaskListener listener) throws IOException {
     PrintStream logger = listener.getLogger();
     try {
+      logger.printf("Provisioning instance for configuration id: %s", getId());
       Instance instance = instance();
       // TODO: JENKINS-55285
       Operation operation = cloud.client.insertInstance(cloud.projectId, template, instance);
@@ -654,6 +678,7 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
         items.add(
             new Metadata.Items().setKey(METADATA_LINUX_STARTUP_SCRIPT_KEY).setValue(startupScript));
       }
+      items.add(new Metadata.Items().setKey(METADATA_INSTANCE_CONFIGURATION_ID).setValue(getId()));
       metadata.setItems(items);
       return metadata;
     }
@@ -1161,7 +1186,10 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
   }
 
   // For use in Builder only
-  private InstanceConfiguration() {}
+  private InstanceConfiguration() {
+    // set with an empty value forcing a new ID
+    setId(null);
+  }
 
   public static class Builder {
 
