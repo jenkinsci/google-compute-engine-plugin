@@ -23,7 +23,8 @@ public class ConfigAsCodeTest {
   @ConfiguredWithCode("configuration-as-code.yml")
   public void shouldCreateCloudInstanceFromCode() throws Exception {
     assertEquals("Zero clouds found", jenkinsRule.jenkins.clouds.size(), 1);
-    ComputeEngineCloud cloud = (ComputeEngineCloud) jenkinsRule.jenkins.clouds.getByName("gce-jenkins-build");
+    ComputeEngineCloud cloud =
+        (ComputeEngineCloud) jenkinsRule.jenkins.clouds.getByName("gce-jenkins-build");
     assertNotNull("Cloud by name not found", cloud);
     assertEquals("Project id is wrong", "gce-jenkins", cloud.getProjectId());
     assertEquals("Wrong instance cap str", "53", cloud.getInstanceCapStr());
@@ -32,10 +33,14 @@ public class ConfigAsCodeTest {
 
     assertEquals("Configurations number wrong", 1, cloud.getConfigurations().size());
     InstanceConfiguration configuration = cloud.getConfigurations().get(0);
-    assertEquals("Wrong configurations prefix", "jenkins-agent-image", configuration.getNamePrefix());
-    assertEquals("Wrong configurations description", "Jenkins agent", configuration.getDescription());
     assertEquals(
-        "Wrong configurations launchTimeoutSecondsStr", "6", configuration.getLaunchTimeoutSecondsStr());
+        "Wrong configurations prefix", "jenkins-agent-image", configuration.getNamePrefix());
+    assertEquals(
+        "Wrong configurations description", "Jenkins agent", configuration.getDescription());
+    assertEquals(
+        "Wrong configurations launchTimeoutSecondsStr",
+        "6",
+        configuration.getLaunchTimeoutSecondsStr());
     assertEquals(
         "Wrong configurations getLaunchTimeoutMillis",
         6000,
@@ -55,10 +60,12 @@ public class ConfigAsCodeTest {
         Mockito.mock(GoogleRobotPrivateKeyCredentials.class);
     Mockito.when(credentials.getId()).thenReturn("gce-jenkins");
 
-    CredentialsStore store = new SystemCredentialsProvider.ProviderImpl().getStore(jenkinsRule.jenkins);
+    CredentialsStore store =
+        new SystemCredentialsProvider.ProviderImpl().getStore(jenkinsRule.jenkins);
     store.addCredentials(Domain.global(), credentials);
 
-    ComputeEngineCloud cloud = (ComputeEngineCloud) jenkinsRule.jenkins.clouds.getByName("gce-jenkins-build");
+    ComputeEngineCloud cloud =
+        (ComputeEngineCloud) jenkinsRule.jenkins.clouds.getByName("gce-jenkins-build");
     assertNotNull("Cloud by name not found", cloud);
     assertNotNull("GCE client not created", cloud.getClient());
   }
