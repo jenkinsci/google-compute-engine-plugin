@@ -18,18 +18,21 @@ import io.jenkins.plugins.casc.ConfigurationAsCode;
 import java.io.IOException;
 import java.util.Collection;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Test;
+import org.junit.rules.Timeout;
 import org.jvnet.hudson.test.JenkinsRule;
 
 public class ConfigAsCodeTestIT {
   private static Logger log = Logger.getLogger(ConfigAsCodeTestIT.class.getName());
   @ClassRule public static JenkinsRule jenkinsRule = new JenkinsRule();
+  @ClassRule public static Timeout timeout = new Timeout(10, TimeUnit.MINUTES);
   private static ComputeClient client;
-  private static Map<String, String> label = getLabel(ComputeEngineCloudMultipleLabelsIT.class);
+  private static Map<String, String> label = getLabel(ConfigAsCodeTestIT.class);
 
   @BeforeClass
   public static void init() throws Exception {
@@ -43,7 +46,7 @@ public class ConfigAsCodeTestIT {
     teardownResources(client, label, log);
   }
 
-  @Test(timeout = 300000)
+  @Test
   public void testWorkerCreated() throws Exception {
     ConfigurationAsCode.get()
         .configure(this.getClass().getResource("configuration-as-code-it.yml").toString());
