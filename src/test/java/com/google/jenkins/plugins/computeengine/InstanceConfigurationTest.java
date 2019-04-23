@@ -19,6 +19,7 @@ package com.google.jenkins.plugins.computeengine;
 import static org.junit.Assert.assertEquals;
 import static org.mockito.ArgumentMatchers.anyString;
 
+import com.gargoylesoftware.htmlunit.html.HtmlPage;
 import com.google.api.services.compute.model.AcceleratorType;
 import com.google.api.services.compute.model.DiskType;
 import com.google.api.services.compute.model.Image;
@@ -156,21 +157,21 @@ public class InstanceConfigurationTest {
 
   @Test
   public void testConfigRoundtrip() throws Exception {
-
     InstanceConfiguration want = instanceConfiguration();
 
     InstanceConfiguration.DescriptorImpl.setComputeClient(computeClient);
     AcceleratorConfiguration.DescriptorImpl.setComputeClient(computeClient);
     NetworkConfiguration.NetworkConfigurationDescriptor.setComputeClient(computeClient);
 
-    List<InstanceConfiguration> configs = new ArrayList<InstanceConfiguration>();
+    List<InstanceConfiguration> configs = new ArrayList<>();
     configs.add(want);
 
-    ComputeEngineCloud gcp =
-        new ComputeEngineCloud(null, "test", PROJECT_ID, "testCredentialsId", "1", configs);
+    ComputeEngineCloud gcp = new ComputeEngineCloud("test", PROJECT_ID, "testCredentialsId", "1");
+    gcp.setConfigurations(configs);
     r.jenkins.clouds.add(gcp);
 
-    r.submit(r.createWebClient().goTo("configure").getFormByName("config"));
+    final HtmlPage configure = r.createWebClient().goTo("configure");
+    r.submit(configure.getFormByName("config"));
     InstanceConfiguration got =
         ((ComputeEngineCloud) r.jenkins.clouds.iterator().next()).getInstanceConfig(CONFIG_DESC);
     r.assertEqualBeans(

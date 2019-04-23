@@ -72,8 +72,9 @@ public class ComputeEngineCloudTest {
     ics.add(InstanceConfigurationTest.instanceConfiguration());
     ics.add(InstanceConfigurationTest.instanceConfiguration());
     ComputeEngineCloud cloud =
-        new ComputeEngineCloud(
-            INSTANCE_ID, CLOUD_NAME, PROJECT_ID, PROJECT_ID, INSTANCE_CAP_STR, ics);
+        new ComputeEngineCloud(CLOUD_NAME, PROJECT_ID, PROJECT_ID, INSTANCE_CAP_STR);
+    cloud.setInstanceId(INSTANCE_ID);
+    cloud.setConfigurations(ics);
 
     // Ensure names are set
     Assert.assertEquals(INSTANCE_ID, cloud.getInstanceId());
@@ -83,7 +84,7 @@ public class ComputeEngineCloudTest {
     Assert.assertNotEquals(CLOUD_NAME, cloud.name);
 
     // Ensure ComputeClient is created
-    Assert.assertNotNull("ComputeClient was not initialized", cloud.client);
+    Assert.assertNotNull("ComputeClient was not initialized", cloud.getClient());
 
     // Ensure transient properties were initialized
     for (InstanceConfiguration ic : ics) {
@@ -102,8 +103,7 @@ public class ComputeEngineCloudTest {
   @Test
   public void instanceIdWasGenerated() throws Exception {
     ComputeEngineCloud cloud =
-        new ComputeEngineCloud(
-            INSTANCE_ID, CLOUD_NAME, PROJECT_ID, PROJECT_ID, INSTANCE_CAP_STR, null);
+        new ComputeEngineCloud(CLOUD_NAME, PROJECT_ID, PROJECT_ID, INSTANCE_CAP_STR);
     Assert.assertThat(
         "Instance ID was not generated in constructor",
         cloud.getInstanceId(),
@@ -122,7 +122,8 @@ public class ComputeEngineCloudTest {
     List<InstanceConfiguration> ics = new ArrayList<>();
     ics.add(InstanceConfigurationTest.instanceConfiguration());
     ComputeEngineCloud cloud =
-        new ComputeEngineCloud(null, CLOUD_NAME, PROJECT_ID, PROJECT_ID, INSTANCE_CAP_STR, ics);
+        new ComputeEngineCloud(CLOUD_NAME, PROJECT_ID, PROJECT_ID, INSTANCE_CAP_STR);
+    cloud.setConfigurations(ics);
 
     // Should be able to provision a label
     Label l = new LabelAtom(InstanceConfigurationTest.A_LABEL);

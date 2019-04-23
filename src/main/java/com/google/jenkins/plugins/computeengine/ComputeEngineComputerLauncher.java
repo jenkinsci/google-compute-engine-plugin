@@ -87,8 +87,10 @@ public abstract class ComputeEngineComputerLauncher extends ComputerLauncher {
       // This call will a null error when the operation is complete, or a relevant error if it
       // fails.
       opError =
-          cloud.client.waitForOperationCompletion(
-              cloud.projectId, insertOperationId, zone, node.getLaunchTimeoutMillis());
+          cloud
+              .getClient()
+              .waitForOperationCompletion(
+                  cloud.projectId, insertOperationId, zone, node.getLaunchTimeoutMillis());
       if (opError != null) {
         LOGGER.info(
             String.format(

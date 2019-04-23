@@ -121,8 +121,7 @@ class ITUtil {
 
   // Add Cloud plugin
   static ComputeEngineCloud initCloud(JenkinsRule jenkinsRule) {
-    ComputeEngineCloud gcp =
-        new ComputeEngineCloud(null, CLOUD_NAME, PROJECT_ID, PROJECT_ID, "10", null);
+    ComputeEngineCloud gcp = new ComputeEngineCloud(CLOUD_NAME, PROJECT_ID, PROJECT_ID, "10");
     assertEquals(0, jenkinsRule.jenkins.clouds.size());
     jenkinsRule.jenkins.clouds.add(gcp);
     assertEquals(1, jenkinsRule.jenkins.clouds.size());

@@ -176,7 +176,7 @@ public class ComputeEngineLinuxLauncher extends ComputeEngineComputerLauncher {
     }
 
     ComputeEngineCloud cloud = computer.getCloud();
-    ComputeClient client = cloud.client;
+    ComputeClient client = cloud.getClient();
 
     GoogleKeyPair kp = GoogleKeyPair.generate(node.sshUser);
     List<Metadata.Items> items = new ArrayList<>();

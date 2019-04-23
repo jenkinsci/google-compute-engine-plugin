@@ -55,8 +55,8 @@ import java.util.logging.Logger;
 import java.util.logging.SimpleFormatter;
 import java.util.logging.StreamHandler;
 import org.awaitility.Awaitility;
-import org.junit.After;
 import org.junit.AfterClass;
+import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Test;
@@ -167,8 +167,7 @@ public class ComputeEngineCloudWindowsIT {
     windowsPrivateKeyCredentialId = windowsPrivateKeyCredential.getId();
 
     // Add Cloud plugin
-    ComputeEngineCloud gcp =
-        new ComputeEngineCloud(null, CLOUD_NAME, projectId, projectId, "10", null);
+    ComputeEngineCloud gcp = new ComputeEngineCloud(CLOUD_NAME, projectId, projectId, "10");
 
     // Capture log output to make sense of most failures
     cloudLogger =
@@ -203,10 +202,10 @@ public class ComputeEngineCloudWindowsIT {
     log.info(logOutput.toString());
   }
 
-  @After
-  public void after() {
+  @Before
+  public void before() {
     ComputeEngineCloud cloud = (ComputeEngineCloud) r.jenkins.clouds.get(0);
-    cloud.configurations.clear();
+    cloud.setConfigurations(new ArrayList<>());
   }
 
   @Test
@@ -221,7 +220,7 @@ public class ComputeEngineCloudWindowsIT {
   @Test // TODO: Group client tests into their own test class
   public void testGetImage() throws Exception {
     ComputeEngineCloud cloud = (ComputeEngineCloud) r.jenkins.clouds.get(0);
-    Image i = cloud.client.getImage(this.bootDiskProjectId, this.bootDiskImageName);
+    Image i = cloud.getClient().getImage(this.bootDiskProjectId, this.bootDiskImageName);
     assertNotNull(i);
   }
 
@@ -249,7 +248,7 @@ public class ComputeEngineCloudWindowsIT {
     // There should be no warning logs
     assertEquals(logs(), false, logs().contains("WARNING"));
 
-    Instance i = cloud.client.getInstance(projectId, ZONE, name);
+    Instance i = cloud.getClient().getInstance(projectId, ZONE, name);
 
     // The created instance should have 3 labels
     assertEquals(logs(), 3, i.getLabels().size());
@@ -333,7 +332,7 @@ public class ComputeEngineCloudWindowsIT {
             + "# We are in the second phase of startup where we need to set up authorized_keys for the specified user.\n"
             + "# Create the .ssh folder and authorized_keys file.\n"
             + "Set-Content -Path $env:PROGRAMDATA\\ssh\\administrators_authorized_keys -Value $ConfiguredPublicKey\n"
-            + "icacls $env:PROGRAMDATA\\ssh\\administrators_authorized_keys /inheritance:r\n"
+            + "icacls $env:PROGRAMDATA\\ssh\\administrators_authorized_keys /inheritance:jenkinsRule\n"
             + "icacls $env:PROGRAMDATA\\ssh\\administrators_authorized_keys /grant SYSTEM:`(F`)\n"
             + "icacls $env:PROGRAMDATA\\ssh\\administrators_authorized_keys /grant BUILTIN\\Administrators:`(F`)\n"
             + "Restart-Service sshd";

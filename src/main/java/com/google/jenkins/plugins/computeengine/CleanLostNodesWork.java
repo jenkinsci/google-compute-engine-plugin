@@ -41,14 +41,12 @@ public class CleanLostNodesWork extends PeriodicWork {
   protected final Logger logger = Logger.getLogger(getClass().getName());
 
   /** {@inheritDoc} */
-  @SuppressWarnings("unchecked")
   @Override
   public long getRecurrencePeriod() {
     return HOUR;
   }
 
   /** {@inheritDoc} */
-  @SuppressWarnings("unchecked")
   @Override
   protected void doRun() {
     logger.log(Level.FINEST, "Starting clean lost nodes worker");
