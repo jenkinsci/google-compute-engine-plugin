@@ -56,7 +56,7 @@ import org.jvnet.hudson.test.JenkinsRule;
 public class ComputeEngineCloudWorkerCreatedIT {
   private static Logger log = Logger.getLogger(ComputeEngineCloudWorkerCreatedIT.class.getName());
 
-  @ClassRule public static Timeout timeout = new Timeout(5, TimeUnit.MINUTES);
+  @ClassRule public static Timeout timeout = new Timeout(10, TimeUnit.MINUTES);
   @ClassRule public static JenkinsRule jenkinsRule = new JenkinsRule();
 
   private static ComputeClient client;

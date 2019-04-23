@@ -64,7 +64,7 @@ public class ComputeEngineCloudSnapshotCreatedIT {
 
   private static final int SNAPSHOT_TEST_TIMEOUT = 120;
 
-  @ClassRule public static Timeout timeout = new Timeout(5, TimeUnit.MINUTES);
+  @ClassRule public static Timeout timeout = new Timeout(20, TimeUnit.MINUTES);
   @ClassRule public static JenkinsRule jenkinsRule = new JenkinsRule();
 
   private static ComputeClient client;

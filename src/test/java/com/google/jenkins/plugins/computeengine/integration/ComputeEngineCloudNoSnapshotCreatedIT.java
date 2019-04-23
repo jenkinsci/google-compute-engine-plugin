@@ -62,7 +62,7 @@ public class ComputeEngineCloudNoSnapshotCreatedIT {
   private static Logger log =
       Logger.getLogger(ComputeEngineCloudNoSnapshotCreatedIT.class.getName());
 
-  @ClassRule public static Timeout timeout = new Timeout(5, TimeUnit.MINUTES);
+  @ClassRule public static Timeout timeout = new Timeout(15, TimeUnit.MINUTES);
   @ClassRule public static JenkinsRule jenkinsRule = new JenkinsRule();
 
   private static ComputeClient client;

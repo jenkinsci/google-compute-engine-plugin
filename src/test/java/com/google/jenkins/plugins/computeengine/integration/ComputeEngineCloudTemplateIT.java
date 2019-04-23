@@ -64,7 +64,7 @@ public class ComputeEngineCloudTemplateIT {
   private static final String GOOGLE_LABEL_KEY = "test-label";
   private static final String GOOGLE_LABEL_VALUE = "test-value";
 
-  @ClassRule public static Timeout timeout = new Timeout(5, TimeUnit.MINUTES);
+  @ClassRule public static Timeout timeout = new Timeout(10, TimeUnit.MINUTES);
   @ClassRule public static JenkinsRule jenkinsRule = new JenkinsRule();
 
   private static ComputeClient client;

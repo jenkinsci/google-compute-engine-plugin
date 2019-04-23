@@ -63,7 +63,7 @@ public class ComputeEngineCloudTemplateNoGoogleLabelsIT {
   private static final String TEMPLATE =
       format("projects/%s/global/instanceTemplates/test-template-no-labels");
 
-  @ClassRule public static Timeout timeout = new Timeout(5, TimeUnit.MINUTES);
+  @ClassRule public static Timeout timeout = new Timeout(10, TimeUnit.MINUTES);
   @ClassRule public static JenkinsRule jenkinsRule = new JenkinsRule();
 
   private static ComputeClient client;

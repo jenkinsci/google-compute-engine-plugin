@@ -58,7 +58,7 @@ public class ComputeEngineCloudMultipleLabelsIT {
 
   private static final String MULTIPLE_LABEL = "integration test";
 
-  @ClassRule public static Timeout timeout = new Timeout(5, TimeUnit.MINUTES);
+  @ClassRule public static Timeout timeout = new Timeout(10, TimeUnit.MINUTES);
   @ClassRule public static JenkinsRule jenkinsRule = new JenkinsRule();
 
   private static ComputeClient client;
