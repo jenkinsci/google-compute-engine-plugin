@@ -21,13 +21,13 @@ import static com.google.jenkins.plugins.computeengine.integration.ITUtil.NULL_T
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.NUM_EXECUTORS;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.PROJECT_ID;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.SNAPSHOT_LABEL;
+import static com.google.jenkins.plugins.computeengine.integration.ITUtil.TEST_TIMEOUT_MULTIPLIER;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.ZONE;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.getLabel;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.initClient;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.initCloud;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.initCredentials;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.teardownResources;
-import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
@@ -62,7 +62,9 @@ public class ComputeEngineCloudNoSnapshotCreatedIT {
   private static Logger log =
       Logger.getLogger(ComputeEngineCloudNoSnapshotCreatedIT.class.getName());
 
-  @ClassRule public static Timeout timeout = new Timeout(15, TimeUnit.MINUTES);
+  @ClassRule
+  public static Timeout timeout = new Timeout(7 * TEST_TIMEOUT_MULTIPLIER, TimeUnit.MINUTES);
+
   @ClassRule public static JenkinsRule jenkinsRule = new JenkinsRule();
 
   private static ComputeClient client;
@@ -110,7 +112,6 @@ public class ComputeEngineCloudNoSnapshotCreatedIT {
   /** Makes sure that the instance is being stopped after completing the job. */
   @Test
   public void testNoSnapshotCreatedInstanceStopping() throws IOException {
-    assertEquals("RUNNING", client.getInstance(PROJECT_ID, ZONE, name).getStatus());
     Awaitility.await()
         .timeout(1, TimeUnit.MINUTES)
         .until(() -> "STOPPING".equals(client.getInstance(PROJECT_ID, ZONE, name).getStatus()));
@@ -122,6 +123,7 @@ public class ComputeEngineCloudNoSnapshotCreatedIT {
     // Wait for one-shot instance to terminate and create the snapshot
     Awaitility.await()
         .timeout(2, TimeUnit.MINUTES)
+        .pollInterval(10, TimeUnit.SECONDS)
         .until(() -> jenkinsRule.jenkins.getNode(name) == null);
     assertNull(client.getSnapshot(PROJECT_ID, name));
   }

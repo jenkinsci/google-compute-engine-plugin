@@ -1,6 +1,7 @@
 package com.google.jenkins.plugins.computeengine.integration;
 
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.PROJECT_ID;
+import static com.google.jenkins.plugins.computeengine.integration.ITUtil.TEST_TIMEOUT_MULTIPLIER;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.ZONE;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.getLabel;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.initClient;
@@ -30,7 +31,10 @@ import org.jvnet.hudson.test.JenkinsRule;
 public class ConfigAsCodeTestIT {
   private static Logger log = Logger.getLogger(ConfigAsCodeTestIT.class.getName());
   @ClassRule public static JenkinsRule jenkinsRule = new JenkinsRule();
-  @ClassRule public static Timeout timeout = new Timeout(10, TimeUnit.MINUTES);
+
+  @ClassRule
+  public static Timeout timeout = new Timeout(5 * TEST_TIMEOUT_MULTIPLIER, TimeUnit.MINUTES);
+
   private static ComputeClient client;
   private static Map<String, String> label = getLabel(ConfigAsCodeTestIT.class);
 

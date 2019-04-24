@@ -21,6 +21,7 @@ import static com.google.jenkins.plugins.computeengine.integration.ITUtil.NULL_T
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.NUM_EXECUTORS;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.PROJECT_ID;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.SNAPSHOT_LABEL;
+import static com.google.jenkins.plugins.computeengine.integration.ITUtil.TEST_TIMEOUT_MULTIPLIER;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.getLabel;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.initClient;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.initCloud;
@@ -64,7 +65,9 @@ public class ComputeEngineCloudSnapshotCreatedIT {
 
   private static final int SNAPSHOT_TEST_TIMEOUT = 120;
 
-  @ClassRule public static Timeout timeout = new Timeout(20, TimeUnit.MINUTES);
+  @ClassRule
+  public static Timeout timeout = new Timeout(10 * TEST_TIMEOUT_MULTIPLIER, TimeUnit.MINUTES);
+
   @ClassRule public static JenkinsRule jenkinsRule = new JenkinsRule();
 
   private static ComputeClient client;
@@ -104,6 +107,7 @@ public class ComputeEngineCloudSnapshotCreatedIT {
     // Need time for one-shot instance to terminate and create the snapshot
     Awaitility.await()
         .timeout(SNAPSHOT_TEST_TIMEOUT, TimeUnit.SECONDS)
+        .pollInterval(10, TimeUnit.SECONDS)
         .until(() -> jenkinsRule.jenkins.getNode(worker.getNodeName()) == null);
 
     createdSnapshot = client.getSnapshot(PROJECT_ID, worker.getNodeName());

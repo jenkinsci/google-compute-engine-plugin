@@ -59,6 +59,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.logging.Logger;
+import org.apache.commons.lang.SystemUtils;
 import org.jvnet.hudson.test.JenkinsRule;
 
 /** Common logic and constants used throughout the integration tests. */
@@ -106,6 +107,7 @@ class ITUtil {
   private static final String SERVICE_ACCOUNT_EMAIL = "";
   private static final String RETENTION_TIME_MINUTES_STR = "";
   private static final String LAUNCH_TIMEOUT_SECONDS_STR = "";
+  static final int TEST_TIMEOUT_MULTIPLIER = SystemUtils.IS_OS_WINDOWS ? 3 : 1;
 
   static String format(String s) {
     assertNotNull("GOOGLE_PROJECT_ID env var must be set", PROJECT_ID);

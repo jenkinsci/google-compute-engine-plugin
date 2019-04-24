@@ -276,4 +276,18 @@
       </plugin>
     </plugins>
   </build>
+
+  <profiles>
+    <profile>
+      <id>windows</id>
+      <activation>
+        <os>
+          <family>Windows</family>
+        </os>
+      </activation>
+      <properties>
+        <concurrency>4</concurrency>
+      </properties>
+    </profile>
+  </profiles>
 </project>
