@@ -20,11 +20,8 @@ import com.google.api.client.json.jackson.JacksonFactory;
 import com.google.api.client.util.PemReader;
 import com.google.jenkins.plugins.credentials.oauth.JsonKey;
 import com.google.jenkins.plugins.credentials.oauth.ServiceAccountConfig;
-import java.io.ByteArrayInputStream;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.StringReader;
-import java.nio.charset.StandardCharsets;
 import java.security.KeyFactory;
 import java.security.NoSuchAlgorithmException;
 import java.security.PrivateKey;
@@ -33,11 +30,12 @@ import java.security.spec.PKCS8EncodedKeySpec;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import jenkins.model.Jenkins;
+import org.apache.tools.ant.filters.StringInputStream;
 import org.kohsuke.stapler.DataBoundConstructor;
 
 /**
- * A {@link ServiceAccountConfig} depending solely on a secret String. Only used
- * for integration tests.
+ * A {@link ServiceAccountConfig} depending solely on a secret String. Only used for integration
+ * tests.
  *
  * @deprecated To be replaced by {@link
  *     com.google.jenkins.plugins.credentials.oauth.JsonServiceAccountConfig} when upgrading the
@@ -56,9 +54,8 @@ public class StringJsonServiceAccountConfig extends ServiceAccountConfig {
   @DataBoundConstructor
   public StringJsonServiceAccountConfig(String jsonKeyString) {
     if (jsonKeyString != null) {
-      InputStream stream = new ByteArrayInputStream(jsonKeyString.getBytes(StandardCharsets.UTF_8));
       try {
-        jsonKey = JsonKey.load(new JacksonFactory(), stream);
+        jsonKey = JsonKey.load(new JacksonFactory(), new StringInputStream(jsonKeyString));
       } catch (IOException e) {
         LOGGER.log(Level.SEVERE, "Failed to read json key from file", e);
       }

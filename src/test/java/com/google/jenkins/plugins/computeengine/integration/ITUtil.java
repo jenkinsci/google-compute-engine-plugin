@@ -130,7 +130,7 @@ class ITUtil {
     }
     assertFalse(
         "GOOGLE_CREDENTIALS or GOOGLE_CREDENTIALS_FILE env vars must be set",
-        Strings.isNullOrEmpty(CREDENTIALS));
+        Strings.isNullOrEmpty(creds));
     return creds;
   }
 
