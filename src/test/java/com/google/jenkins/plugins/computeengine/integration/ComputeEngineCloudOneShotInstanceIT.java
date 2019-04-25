@@ -56,7 +56,7 @@ import org.jvnet.hudson.test.JenkinsRule;
 public class ComputeEngineCloudOneShotInstanceIT {
   private static Logger log = Logger.getLogger(ComputeEngineCloudOneShotInstanceIT.class.getName());
 
-  @ClassRule public static Timeout timeout = new Timeout(5, TimeUnit.MINUTES);
+  @ClassRule public static Timeout timeout = new Timeout(10, TimeUnit.MINUTES);
   @ClassRule public static JenkinsRule jenkinsRule = new JenkinsRule();
 
   private static ComputeClient client;
@@ -110,6 +110,7 @@ public class ComputeEngineCloudOneShotInstanceIT {
   public void testOneShotInstanceDeletedFromGCP() {
     Awaitility.await()
         .timeout(1, TimeUnit.MINUTES)
+        .pollInterval(10, TimeUnit.SECONDS)
         .until(() -> client.getInstancesWithLabel(PROJECT_ID, label).isEmpty());
   }
 }

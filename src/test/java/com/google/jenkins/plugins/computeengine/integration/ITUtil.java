@@ -22,7 +22,9 @@ import static com.google.jenkins.plugins.computeengine.InstanceConfiguration.NAT
 import static com.google.jenkins.plugins.computeengine.InstanceConfiguration.NAT_TYPE;
 import static com.google.jenkins.plugins.computeengine.client.ComputeClient.nameFromSelfLink;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.fail;
 
 import com.cloudbees.plugins.credentials.Credentials;
 import com.cloudbees.plugins.credentials.CredentialsStore;
@@ -38,6 +40,7 @@ import com.google.api.services.compute.model.Metadata;
 import com.google.api.services.compute.model.NetworkInterface;
 import com.google.api.services.compute.model.Operation;
 import com.google.api.services.compute.model.Tags;
+import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableMap;
 import com.google.jenkins.plugins.computeengine.AcceleratorConfiguration;
 import com.google.jenkins.plugins.computeengine.AutofilledNetworkConfiguration;
@@ -50,10 +53,13 @@ import com.google.jenkins.plugins.credentials.oauth.GoogleRobotPrivateKeyCredent
 import com.google.jenkins.plugins.credentials.oauth.ServiceAccountConfig;
 import hudson.model.Node;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.logging.Logger;
+import org.apache.commons.lang.SystemUtils;
 import org.jvnet.hudson.test.JenkinsRule;
 
 /** Common logic and constants used throughout the integration tests. */
@@ -69,7 +75,7 @@ class ITUtil {
           + "/etc/init.d/ssh start";
 
   static final String PROJECT_ID = System.getenv("GOOGLE_PROJECT_ID");
-  private static final String CREDENTIALS = System.getenv("GOOGLE_CREDENTIALS");
+  private static final String CREDENTIALS = loadCredentialsString();
   private static final String CLOUD_NAME = "integration";
   private static final String NAME_PREFIX = "integration";
   private static final String REGION = format("projects/%s/regions/us-west1");
@@ -101,14 +107,36 @@ class ITUtil {
   private static final String SERVICE_ACCOUNT_EMAIL = "";
   private static final String RETENTION_TIME_MINUTES_STR = "";
   private static final String LAUNCH_TIMEOUT_SECONDS_STR = "";
+  static final int TEST_TIMEOUT_MULTIPLIER = SystemUtils.IS_OS_WINDOWS ? 3 : 1;
 
   static String format(String s) {
     assertNotNull("GOOGLE_PROJECT_ID env var must be set", PROJECT_ID);
     return String.format(s, PROJECT_ID);
   }
 
+  private static String loadCredentialsString() {
+    String creds = System.getenv("GOOGLE_CREDENTIALS");
+    if (!Strings.isNullOrEmpty(creds)) {
+      return creds;
+    }
+    // On windows, credentials must be read from a file
+    String credsPath = System.getenv("GOOGLE_CREDENTIALS_FILE");
+    assertFalse(
+        "Credentials must be provided through environment variable or file path.",
+        Strings.isNullOrEmpty(credsPath));
+    try {
+      creds = String.join("", Files.readAllLines(Paths.get(credsPath)));
+    } catch (IOException ioe) {
+      ioe.printStackTrace();
+      fail("Could not read credentials from file path " + credsPath);
+    }
+    assertFalse(
+        "GOOGLE_CREDENTIALS or GOOGLE_CREDENTIALS_FILE env vars must be set",
+        Strings.isNullOrEmpty(creds));
+    return creds;
+  }
+
   static Credentials initCredentials(JenkinsRule r) throws Exception {
-    assertNotNull("GOOGLE_CREDENTIALS env var must be set", CREDENTIALS);
     ServiceAccountConfig sac = new StringJsonServiceAccountConfig(CREDENTIALS);
     Credentials credentials = new GoogleRobotPrivateKeyCredentials(PROJECT_ID, sac, null);
 
@@ -142,7 +170,10 @@ class ITUtil {
   static void teardownResources(ComputeClient client, Map<String, String> label, Logger log)
       throws IOException {
     log.info("teardown");
-    deleteIntegrationInstances(false, client, label, log);
+    // Client can be null if there is an exception in the initialization before it's set
+    if (client != null) {
+      deleteIntegrationInstances(false, client, label, log);
+    }
   }
 
   static InstanceTemplate createTemplate(Map<String, String> googleLabels, String template) {

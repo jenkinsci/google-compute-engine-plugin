@@ -19,6 +19,7 @@ package com.google.jenkins.plugins.computeengine.integration;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.LABEL;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.NULL_TEMPLATE;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.NUM_EXECUTORS;
+import static com.google.jenkins.plugins.computeengine.integration.ITUtil.TEST_TIMEOUT_MULTIPLIER;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.getLabel;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.initClient;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.initCloud;
@@ -51,7 +52,9 @@ import org.jvnet.hudson.test.JenkinsRule;
 public class ComputeEngineCloudWorkerFailedIT {
   private static Logger log = Logger.getLogger(ComputeEngineCloudWorkerFailedIT.class.getName());
 
-  @ClassRule public static Timeout timeout = new Timeout(5, TimeUnit.MINUTES);
+  @ClassRule
+  public static Timeout timeout = new Timeout(7 * TEST_TIMEOUT_MULTIPLIER, TimeUnit.MINUTES);
+
   @ClassRule public static JenkinsRule jenkinsRule = new JenkinsRule();
 
   private static ComputeClient client;

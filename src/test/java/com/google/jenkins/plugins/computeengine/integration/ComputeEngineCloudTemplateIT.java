@@ -21,6 +21,7 @@ import static com.google.jenkins.plugins.computeengine.integration.ITUtil.DEB_JA
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.LABEL;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.NUM_EXECUTORS;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.PROJECT_ID;
+import static com.google.jenkins.plugins.computeengine.integration.ITUtil.TEST_TIMEOUT_MULTIPLIER;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.ZONE;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.createTemplate;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.format;
@@ -64,7 +65,9 @@ public class ComputeEngineCloudTemplateIT {
   private static final String GOOGLE_LABEL_KEY = "test-label";
   private static final String GOOGLE_LABEL_VALUE = "test-value";
 
-  @ClassRule public static Timeout timeout = new Timeout(5, TimeUnit.MINUTES);
+  @ClassRule
+  public static Timeout timeout = new Timeout(5 * TEST_TIMEOUT_MULTIPLIER, TimeUnit.MINUTES);
+
   @ClassRule public static JenkinsRule jenkinsRule = new JenkinsRule();
 
   private static ComputeClient client;
