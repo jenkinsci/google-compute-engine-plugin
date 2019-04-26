@@ -17,7 +17,8 @@ All notable changes to this project will be documented in this file.
 ## [3.0.1] - 2019-04-26
 ### Added
 - Code formatting tools for pom.xml and java source files
-- Support for use with Configuration as Code plugin
+- Support for use with Configuration as Code plugin, with test dependencies on configuration-as-code
+  version 1.9
 - Secret used during integration test can be provided through GOOGLE_CREDENTIALS_FILE environment
   variable which should be a path to the secret file
 - Documentation transferred from wiki.jenkins.io and stored in source
@@ -27,6 +28,7 @@ All notable changes to this project will be documented in this file.
 - Test classes run in parallel using the concurrency property in pom.xml
 - Constructor for InstanceConfiguration now only takes required fields, use builder instead
 - Readme links updated to point to Github for issues and pull requests
+- Plugin parent pom upgraded to 3.36
 
 ### Fixed
 - Remote location for agent.jar can now be specified
