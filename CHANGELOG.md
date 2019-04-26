@@ -14,6 +14,24 @@
 # Changelog
 All notable changes to this project will be documented in this file.
 
+## [3.0.1] - 2019-04-26
+### Added
+- Code formatting tools for pom.xml and java source files
+- Support for use with Configuration as Code plugin
+- Secret used during integration test can be provided through GOOGLE_CREDENTIALS_FILE environment
+  variable which should be a path to the secret file
+- Documentation transferred from wiki.jenkins.io and stored in source
+
+### Changed
+- Use unique IDs for each instance
+- Test classes run in parallel using the concurrency property in pom.xml
+- Constructor for InstanceConfiguration now only takes required fields, use builder instead
+- Readme links updated to point to Github for issues and pull requests
+
+### Fixed
+- Remote location for agent.jar can now be specified
+- The relevant files now all have properly formatted license headers
+
 ## [3.0.0] - 2019-03-13
 ### Fixed
 - Removed windows username field from instance configuration; use runAsUser instead. Default user changed to jenkins from Build.
