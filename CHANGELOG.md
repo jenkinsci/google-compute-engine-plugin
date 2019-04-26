@@ -24,7 +24,7 @@ All notable changes to this project will be documented in this file.
 - Documentation transferred from wiki.jenkins.io and stored in source
 
 ### Changed
-- Use unique IDs for each instance
+- Use unique instance IDs for each cloud
 - Test classes run in parallel using the concurrency property in pom.xml
 - Constructor for InstanceConfiguration now only takes required fields, use builder instead
 - Readme links updated to point to Github for issues and pull requests
