@@ -14,7 +14,7 @@
 # Changelog
 All notable changes to this project will be documented in this file.
 
-## [3.0.1] - 2019-04-26
+## [3.1.0] - 2019-04-26
 ### Added
 - Code formatting tools for pom.xml and java source files
 - Support for use with Configuration as Code plugin, with test dependencies on configuration-as-code
