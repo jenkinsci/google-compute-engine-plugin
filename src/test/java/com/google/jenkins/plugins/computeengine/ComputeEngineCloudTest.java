@@ -91,14 +91,7 @@ public class ComputeEngineCloudTest {
     // Ensure transient properties were initialized
     for (InstanceConfiguration ic : ics) {
       Assert.assertEquals(
-          "Cloud reference was not set on child InstanceConfiguration", ic.cloud, cloud);
-    }
-
-    // Add another InstanceConfiguration and ensure properties are initialized
-    cloud.addConfiguration(instanceConfiguration());
-    for (InstanceConfiguration ic : ics) {
-      Assert.assertEquals(
-          "Cloud reference was not set on child InstanceConfiguration", ic.cloud, cloud);
+          "Cloud reference was not set on child InstanceConfiguration", ic.getCloud(), cloud);
     }
   }
 

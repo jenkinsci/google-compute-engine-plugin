@@ -31,11 +31,11 @@ public class SharedVpcNetworkConfigurationTest {
     // Empty constructor
     SharedVpcNetworkConfiguration anc =
         new SharedVpcNetworkConfiguration(PROJECT_ID, REGION, SUBNETWORK_NAME);
-    Assert.assertEquals(anc.network, "");
-    Assert.assertEquals(anc.projectId, PROJECT_ID);
-    Assert.assertNotEquals(anc.subnetwork, SUBNETWORK_NAME);
-    Assert.assertEquals(anc.subnetworkShortName, SUBNETWORK_NAME);
-    Assert.assertEquals(anc.region, REGION);
+    Assert.assertEquals(anc.getNetwork(), "");
+    Assert.assertEquals(anc.getProjectId(), PROJECT_ID);
+    Assert.assertNotEquals(anc.getSubnetwork(), SUBNETWORK_NAME);
+    Assert.assertEquals(anc.getSubnetworkShortName(), SUBNETWORK_NAME);
+    Assert.assertEquals(anc.getRegion(), REGION);
   }
 
   @Test

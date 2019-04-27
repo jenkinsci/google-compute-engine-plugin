@@ -25,7 +25,7 @@ import static com.google.jenkins.plugins.computeengine.integration.ITUtil.getLab
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.initClient;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.initCloud;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.initCredentials;
-import static com.google.jenkins.plugins.computeengine.integration.ITUtil.instanceConfiguration;
+import static com.google.jenkins.plugins.computeengine.integration.ITUtil.instanceConfigurationBuilder;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.teardownResources;
 import static org.junit.Assert.assertEquals;
 
@@ -78,25 +78,26 @@ public class ComputeEngineCloudMultipeMatchingConfigurationsIT {
     ComputeEngineCloud cloud = initCloud(jenkinsRule);
     client = initClient(jenkinsRule, label, log);
 
-    InstanceConfiguration.Builder builder1 =
-        new InstanceConfiguration.Builder()
+    InstanceConfiguration configuration1 =
+        instanceConfigurationBuilder()
             .startupScript(DEB_JAVA_STARTUP_SCRIPT)
             .numExecutorsStr(NUM_EXECUTORS)
             .labels(LABEL)
-            .template(NULL_TEMPLATE);
+            .template(NULL_TEMPLATE)
+            .googleLabels(label)
+            .description(DESC_1)
+            .build();
 
-    InstanceConfiguration configuration1 = instanceConfiguration(builder1, label);
-    configuration1.setDescription(DESC_1);
-
-    InstanceConfiguration.Builder builder2 =
-        new InstanceConfiguration.Builder()
+    InstanceConfiguration configuration2 =
+        instanceConfigurationBuilder()
             .startupScript(DEB_JAVA_STARTUP_SCRIPT)
             .numExecutorsStr(NUM_EXECUTORS)
             .labels(LABEL)
-            .template(NULL_TEMPLATE);
+            .template(NULL_TEMPLATE)
+            .googleLabels(label)
+            .description(DESC_2)
+            .build();
 
-    InstanceConfiguration configuration2 = instanceConfiguration(builder2, label);
-    configuration2.setDescription(DESC_2);
     cloud.setConfigurations(Lists.newArrayList(configuration1, configuration2));
 
     planned = cloud.provision(new LabelAtom(LABEL), 2);

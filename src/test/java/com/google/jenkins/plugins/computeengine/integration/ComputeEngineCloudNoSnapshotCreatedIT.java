@@ -32,6 +32,7 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
+import com.google.common.collect.ImmutableList;
 import com.google.jenkins.plugins.computeengine.ComputeEngineCloud;
 import com.google.jenkins.plugins.computeengine.InstanceConfiguration;
 import com.google.jenkins.plugins.computeengine.client.ComputeClient;
@@ -79,17 +80,17 @@ public class ComputeEngineCloudNoSnapshotCreatedIT {
     client = initClient(jenkinsRule, label, log);
 
     InstanceConfiguration instanceConfiguration =
-        ITUtil.instanceConfiguration(
-            new InstanceConfiguration.Builder()
-                .startupScript(DEB_JAVA_STARTUP_SCRIPT)
-                .numExecutorsStr(NUM_EXECUTORS)
-                .labels(SNAPSHOT_LABEL)
-                .oneShot(true)
-                .createSnapshot(true)
-                .template(NULL_TEMPLATE),
-            label);
+        ITUtil.instanceConfigurationBuilder()
+            .startupScript(DEB_JAVA_STARTUP_SCRIPT)
+            .numExecutorsStr(NUM_EXECUTORS)
+            .labels(SNAPSHOT_LABEL)
+            .oneShot(true)
+            .createSnapshot(true)
+            .template(NULL_TEMPLATE)
+            .googleLabels(label)
+            .build();
 
-    cloud.addConfiguration(instanceConfiguration);
+    cloud.setConfigurations(ImmutableList.of(instanceConfiguration));
     assertTrue(
         cloud
             .getInstanceConfigurationByDescription(instanceConfiguration.getDescription())

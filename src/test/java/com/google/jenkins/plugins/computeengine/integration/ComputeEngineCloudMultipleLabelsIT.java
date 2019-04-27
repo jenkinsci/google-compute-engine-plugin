@@ -27,13 +27,13 @@ import static com.google.jenkins.plugins.computeengine.integration.ITUtil.getLab
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.initClient;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.initCloud;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.initCredentials;
-import static com.google.jenkins.plugins.computeengine.integration.ITUtil.instanceConfiguration;
+import static com.google.jenkins.plugins.computeengine.integration.ITUtil.instanceConfigurationBuilder;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.teardownResources;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 
+import com.google.common.collect.ImmutableList;
 import com.google.jenkins.plugins.computeengine.ComputeEngineCloud;
-import com.google.jenkins.plugins.computeengine.InstanceConfiguration;
 import com.google.jenkins.plugins.computeengine.client.ComputeClient;
 import hudson.model.Node;
 import hudson.model.labels.LabelAtom;
@@ -75,16 +75,17 @@ public class ComputeEngineCloudMultipleLabelsIT {
     ComputeEngineCloud cloud = initCloud(jenkinsRule);
     client = initClient(jenkinsRule, label, log);
 
-    cloud.addConfiguration(
-        instanceConfiguration(
-            new InstanceConfiguration.Builder()
+    cloud.setConfigurations(
+        ImmutableList.of(
+            instanceConfigurationBuilder()
                 .startupScript(DEB_JAVA_STARTUP_SCRIPT)
                 .numExecutorsStr(NUM_EXECUTORS)
                 .labels(MULTIPLE_LABEL)
                 .oneShot(false)
                 .createSnapshot(false)
-                .template(NULL_TEMPLATE),
-            label));
+                .template(NULL_TEMPLATE)
+                .googleLabels(label)
+                .build()));
 
     Collection<PlannedNode> planned = cloud.provision(new LabelAtom(LABEL), 1);
     name = planned.iterator().next().displayName;

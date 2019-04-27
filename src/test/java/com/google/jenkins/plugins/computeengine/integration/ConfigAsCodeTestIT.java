@@ -59,7 +59,7 @@ public class ConfigAsCodeTestIT {
 
     // Should be 1 configuration
     assertEquals(1, cloud.getConfigurations().size());
-    cloud.getConfigurations().get(0).googleLabels = label;
+    cloud.getConfigurations().get(0).setGoogleLabels(label);
 
     // Add a new node
     Collection<NodeProvisioner.PlannedNode> planned =
@@ -87,7 +87,7 @@ public class ConfigAsCodeTestIT {
 
     // Should be 1 configuration
     assertEquals(1, cloud.getConfigurations().size());
-    cloud.getConfigurations().get(0).googleLabels = label;
+    cloud.getConfigurations().get(0).setGoogleLabels(label);
 
     // Add a new node
     Collection<NodeProvisioner.PlannedNode> planned =

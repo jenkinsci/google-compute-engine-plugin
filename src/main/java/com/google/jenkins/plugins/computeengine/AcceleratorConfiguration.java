@@ -28,15 +28,18 @@ import hudson.util.ListBoxModel;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Objects;
 import jenkins.model.Jenkins;
+import lombok.EqualsAndHashCode;
+import lombok.Getter;
 import org.kohsuke.stapler.AncestorInPath;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.QueryParameter;
 
+@Getter
+@EqualsAndHashCode
 public class AcceleratorConfiguration implements Describable<AcceleratorConfiguration> {
-  public final String gpuType;
-  public final String gpuCount;
+  private final String gpuType;
+  private final String gpuCount;
 
   @DataBoundConstructor
   public AcceleratorConfiguration(String gpuType, String gpuCount) {
@@ -50,23 +53,6 @@ public class AcceleratorConfiguration implements Describable<AcceleratorConfigur
 
   public Descriptor<AcceleratorConfiguration> getDescriptor() {
     return Jenkins.get().getDescriptor(getClass());
-  }
-
-  @Override
-  public int hashCode() {
-    return Objects.hash(gpuType, gpuCount);
-  }
-
-  @Override
-  public boolean equals(Object obj) {
-    if (obj == null) {
-      return false;
-    }
-    if (!AcceleratorConfiguration.class.isAssignableFrom(obj.getClass())) {
-      return false;
-    }
-    final AcceleratorConfiguration other = (AcceleratorConfiguration) obj;
-    return this.gpuType.equals(other.gpuType) && this.gpuCount.equals(other.gpuCount);
   }
 
   @Override

@@ -208,40 +208,34 @@ class ITUtil {
     return instanceTemplate;
   }
 
-  static InstanceConfiguration instanceConfiguration(
-      InstanceConfiguration.Builder builder, Map<String, String> label) {
-    InstanceConfiguration instanceConfiguration =
-        builder
-            .namePrefix(NAME_PREFIX)
-            .region(REGION)
-            .zone(ZONE)
-            .machineType(MACHINE_TYPE)
-            .preemptible(PREEMPTIBLE)
-            .minCpuPlatform(MIN_CPU_PLATFORM)
-            .description(CONFIG_DESC)
-            .bootDiskType(BOOT_DISK_TYPE)
-            .bootDiskAutoDelete(BOOT_DISK_AUTODELETE)
-            .bootDiskSourceImageName(BOOT_DISK_IMAGE_NAME)
-            .bootDiskSourceImageProject(BOOT_DISK_PROJECT_ID)
-            .bootDiskSizeGbStr(BOOT_DISK_SIZE_GB_STR)
-            .windows(false)
-            .windowsPasswordCredentialsId("")
-            .windowsPrivateKeyCredentialsId("")
-            .remoteFs(null)
-            .networkConfiguration(new AutofilledNetworkConfiguration(NETWORK_NAME, SUBNETWORK_NAME))
-            .externalAddress(EXTERNAL_ADDR)
-            .useInternalAddress(false)
-            .networkTags(NETWORK_TAGS)
-            .serviceAccountEmail(SERVICE_ACCOUNT_EMAIL)
-            .retentionTimeMinutesStr(RETENTION_TIME_MINUTES_STR)
-            .launchTimeoutSecondsStr(LAUNCH_TIMEOUT_SECONDS_STR)
-            .mode(NODE_MODE)
-            .acceleratorConfiguration(
-                new AcceleratorConfiguration(ACCELERATOR_NAME, ACCELERATOR_COUNT))
-            .runAsUser(RUN_AS_USER)
-            .build();
-    instanceConfiguration.appendLabels(label);
-    return instanceConfiguration;
+  static InstanceConfiguration.Builder instanceConfigurationBuilder() {
+    return InstanceConfiguration.builder()
+        .namePrefix(NAME_PREFIX)
+        .region(REGION)
+        .zone(ZONE)
+        .machineType(MACHINE_TYPE)
+        .preemptible(PREEMPTIBLE)
+        .minCpuPlatform(MIN_CPU_PLATFORM)
+        .description(CONFIG_DESC)
+        .bootDiskType(BOOT_DISK_TYPE)
+        .bootDiskAutoDelete(BOOT_DISK_AUTODELETE)
+        .bootDiskSourceImageName(BOOT_DISK_IMAGE_NAME)
+        .bootDiskSourceImageProject(BOOT_DISK_PROJECT_ID)
+        .bootDiskSizeGbStr(BOOT_DISK_SIZE_GB_STR)
+        .windows(false)
+        .windowsPasswordCredentialsId("")
+        .windowsPrivateKeyCredentialsId("")
+        .remoteFs(null)
+        .networkConfiguration(new AutofilledNetworkConfiguration(NETWORK_NAME, SUBNETWORK_NAME))
+        .externalAddress(EXTERNAL_ADDR)
+        .useInternalAddress(false)
+        .networkTags(NETWORK_TAGS)
+        .serviceAccountEmail(SERVICE_ACCOUNT_EMAIL)
+        .retentionTimeMinutesStr(RETENTION_TIME_MINUTES_STR)
+        .launchTimeoutSecondsStr(LAUNCH_TIMEOUT_SECONDS_STR)
+        .mode(NODE_MODE)
+        .acceleratorConfiguration(new AcceleratorConfiguration(ACCELERATOR_NAME, ACCELERATOR_COUNT))
+        .runAsUser(RUN_AS_USER);
   }
 
   /*

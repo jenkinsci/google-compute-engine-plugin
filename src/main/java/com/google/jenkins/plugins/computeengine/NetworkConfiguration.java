@@ -23,45 +23,23 @@ import hudson.model.Describable;
 import hudson.model.Descriptor;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Objects;
 import jenkins.model.Jenkins;
+import lombok.EqualsAndHashCode;
+import lombok.Getter;
 
+@Getter
+@EqualsAndHashCode
 public abstract class NetworkConfiguration implements Describable<NetworkConfiguration> {
-  public final String network;
-  public final String subnetwork;
+  private final String network;
+  private final String subnetwork;
 
   public NetworkConfiguration(String network, String subnetwork) {
     this.network = network;
     this.subnetwork = subnetwork;
   }
 
-  public String getNetwork() {
-    return network;
-  }
-
-  public String getSubnetwork() {
-    return subnetwork;
-  }
-
   public Descriptor<NetworkConfiguration> getDescriptor() {
     return Jenkins.get().getDescriptor(getClass());
-  }
-
-  @Override
-  public int hashCode() {
-    return Objects.hash(network, subnetwork);
-  }
-
-  @Override
-  public boolean equals(Object obj) {
-    if (obj == null) {
-      return false;
-    }
-    if (!NetworkConfiguration.class.isAssignableFrom(obj.getClass())) {
-      return false;
-    }
-    final NetworkConfiguration other = (NetworkConfiguration) obj;
-    return this.network.equals(other.network) && this.subnetwork.equals(other.subnetwork);
   }
 
   @Override

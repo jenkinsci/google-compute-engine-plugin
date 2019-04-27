@@ -94,7 +94,9 @@ public class ComputeEngineComputer extends AbstractCloudComputer<ComputeEngineIn
       ComputeEngineCloud cloud = getCloud();
 
       if (node != null) {
-        return cloud.getClient().getInstance(cloud.projectId, node.zone, node.getNodeName());
+        return cloud
+            .getClient()
+            .getInstance(cloud.getProjectId(), node.getZone(), node.getNodeName());
       } else {
         return null;
       }

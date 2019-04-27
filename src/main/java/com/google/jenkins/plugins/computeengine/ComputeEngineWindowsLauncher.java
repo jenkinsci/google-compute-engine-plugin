@@ -30,6 +30,7 @@ import java.net.Proxy;
 import java.util.Optional;
 import java.util.logging.Logger;
 import jenkins.model.Jenkins;
+import lombok.Getter;
 
 /**
  * Launcher for Windows agents
@@ -39,7 +40,7 @@ import jenkins.model.Jenkins;
 public class ComputeEngineWindowsLauncher extends ComputeEngineComputerLauncher {
   private static final Logger LOGGER =
       Logger.getLogger(ComputeEngineWindowsLauncher.class.getName());
-  public final boolean useInternalAddress;
+  @Getter private final boolean useInternalAddress;
 
   // TODO: make this configurable
   public static final Integer SSH_PORT = 22;
@@ -70,7 +71,7 @@ public class ComputeEngineWindowsLauncher extends ComputeEngineComputerLauncher 
     // connect fresh as ROOT
     logInfo(computer, listener, "connect fresh as root");
     Connection cleanupConn = connectToSsh(computer, listener);
-    if (!authenticateSSH(node.windowsConfig.get(), cleanupConn, listener)) {
+    if (!authenticateSSH(node.getWindowsConfig().get(), cleanupConn, listener)) {
       logWarning(computer, listener, "Authentication failed");
       return Optional.empty(); // failed to connect
     }
@@ -106,7 +107,7 @@ public class ComputeEngineWindowsLauncher extends ComputeEngineComputerLauncher 
     if (node == null) {
       throw new IllegalArgumentException("A ComputeEngineComputer with no node was provided");
     }
-    WindowsConfiguration windowsConfig = node.windowsConfig.get();
+    WindowsConfiguration windowsConfig = node.getWindowsConfig().get();
 
     Connection bootstrapConn = null;
     try {

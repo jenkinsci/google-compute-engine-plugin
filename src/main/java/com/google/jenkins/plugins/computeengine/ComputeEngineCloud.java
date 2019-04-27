@@ -63,12 +63,14 @@ import java.util.stream.Collectors;
 import javax.annotation.Nonnull;
 import javax.servlet.ServletException;
 import jenkins.model.Jenkins;
+import lombok.Getter;
 import org.kohsuke.stapler.AncestorInPath;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.DataBoundSetter;
 import org.kohsuke.stapler.HttpResponse;
 import org.kohsuke.stapler.QueryParameter;
 
+@Getter
 public class ComputeEngineCloud extends AbstractCloudImpl {
   public static final String CLOUD_PREFIX = "gce-";
   public static final String CONFIG_LABEL_KEY = "jenkins_config_name";
@@ -77,10 +79,11 @@ public class ComputeEngineCloud extends AbstractCloudImpl {
   private static final Logger LOGGER = Logger.getLogger(ComputeEngineCloud.class.getName());
   private static final SimpleFormatter sf = new SimpleFormatter();
 
-  public final String projectId;
-  public final String credentialsId;
+  private final String projectId;
+  private final String credentialsId;
 
   private String instanceId;
+
   private List<InstanceConfiguration> configurations;
 
   private transient volatile ComputeClient client;
@@ -139,7 +142,7 @@ public class ComputeEngineCloud extends AbstractCloudImpl {
   protected Object readResolve() {
     if (configurations != null) {
       for (InstanceConfiguration configuration : configurations) {
-        configuration.cloud = this;
+        configuration.setCloud(this);
         configuration.readResolve();
         // Apply a label that associates an instance configuration with
         // this cloud provider
@@ -166,17 +169,6 @@ public class ComputeEngineCloud extends AbstractCloudImpl {
     } else {
       this.instanceId = instanceId;
     }
-  }
-
-  /**
-   * Returns unique ID of that cloud instance.
-   *
-   * <p>This ID allows us to find machines from our cloud in GCP.
-   *
-   * @return instance unique ID
-   */
-  public String getInstanceId() {
-    return instanceId;
   }
 
   private ComputeClient createClient() {
@@ -208,15 +200,6 @@ public class ComputeEngineCloud extends AbstractCloudImpl {
   }
 
   /**
-   * Returns GCP projectId for that cloud.
-   *
-   * @return projectId
-   */
-  public String getProjectId() {
-    return projectId;
-  }
-
-  /**
    * Set configurations for this cloud.
    *
    * @param configurations configurations to be used
@@ -225,15 +208,6 @@ public class ComputeEngineCloud extends AbstractCloudImpl {
   public void setConfigurations(List<InstanceConfiguration> configurations) {
     this.configurations = configurations;
     readResolve();
-  }
-
-  /**
-   * Returns configurations for this cloud.
-   *
-   * @return configurations
-   */
-  public List<InstanceConfiguration> getConfigurations() {
-    return configurations;
   }
 
   /**

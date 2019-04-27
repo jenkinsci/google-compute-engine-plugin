@@ -26,11 +26,12 @@ import static com.google.jenkins.plugins.computeengine.integration.ITUtil.getLab
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.initClient;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.initCloud;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.initCredentials;
-import static com.google.jenkins.plugins.computeengine.integration.ITUtil.instanceConfiguration;
+import static com.google.jenkins.plugins.computeengine.integration.ITUtil.instanceConfigurationBuilder;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.teardownResources;
 import static org.junit.Assert.assertEquals;
 
 import com.google.api.services.compute.model.Instance;
+import com.google.common.collect.ImmutableList;
 import com.google.jenkins.plugins.computeengine.ComputeEngineCloud;
 import com.google.jenkins.plugins.computeengine.InstanceConfiguration;
 import com.google.jenkins.plugins.computeengine.client.ComputeClient;
@@ -88,18 +89,18 @@ public class ComputeEngineCloudNonStandardJavaIT {
     client = initClient(jenkinsRule, label, log);
 
     instanceConfiguration =
-        instanceConfiguration(
-            new InstanceConfiguration.Builder()
-                .startupScript(NON_STANDARD_JAVA_STARTUP_SCRIPT)
-                .numExecutorsStr(NUM_EXECUTORS)
-                .labels(LABEL)
-                .oneShot(false)
-                .createSnapshot(false)
-                .template(NULL_TEMPLATE)
-                .javaExecPath(NON_STANDARD_JAVA_PATH),
-            label);
+        instanceConfigurationBuilder()
+            .startupScript(NON_STANDARD_JAVA_STARTUP_SCRIPT)
+            .numExecutorsStr(NUM_EXECUTORS)
+            .labels(LABEL)
+            .oneShot(false)
+            .createSnapshot(false)
+            .template(NULL_TEMPLATE)
+            .javaExecPath(NON_STANDARD_JAVA_PATH)
+            .googleLabels(label)
+            .build();
 
-    cloud.addConfiguration(instanceConfiguration);
+    cloud.setConfigurations(ImmutableList.of(instanceConfiguration));
     planned = cloud.provision(new LabelAtom(LABEL), 1);
     planned.iterator().next().future.get();
     instance =

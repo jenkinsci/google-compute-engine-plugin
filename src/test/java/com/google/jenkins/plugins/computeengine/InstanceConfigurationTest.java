@@ -256,7 +256,7 @@ public class InstanceConfigurationTest {
   }
 
   public static InstanceConfiguration instanceConfiguration(String minCpuPlatform) {
-    return new InstanceConfiguration.Builder()
+    return InstanceConfiguration.builder()
         .namePrefix(NAME_PREFIX)
         .region(REGION)
         .zone(ZONE)

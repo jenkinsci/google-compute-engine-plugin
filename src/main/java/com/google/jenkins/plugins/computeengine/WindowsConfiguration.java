@@ -27,15 +27,21 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import jenkins.model.Jenkins;
+import lombok.AccessLevel;
+import lombok.Getter;
 
 /**
  * Class to contain information needed to configure and access Windows agents This avoids passing in
  * several parameters between multiple classes and also isolates logic in accessing credentials
  */
+@Getter
 public class WindowsConfiguration {
 
   private String windowsUsername;
+
+  @Getter(AccessLevel.PRIVATE)
   private Optional<String> passwordCredentialsId;
+
   private Optional<String> privateKeyCredentialsId;
 
   /**
@@ -54,25 +60,6 @@ public class WindowsConfiguration {
     this.privateKeyCredentialsId =
         Optional.ofNullable(Strings.emptyToNull(privateKeyCredentialsId));
     this.passwordCredentialsId = Optional.ofNullable(Strings.emptyToNull(passwordCredentialsId));
-  }
-
-  /**
-   * Getter for windowsUsername
-   *
-   * @return windows username string
-   */
-  public String getWindowsUsername() {
-    return this.windowsUsername;
-  }
-
-  /**
-   * Returns the Optional for privateKeyCredentialsId. May be null if user provided password
-   * credentials instead
-   *
-   * @return
-   */
-  public Optional<String> getPrivateKeyCredentialsId() {
-    return privateKeyCredentialsId;
   }
 
   /**

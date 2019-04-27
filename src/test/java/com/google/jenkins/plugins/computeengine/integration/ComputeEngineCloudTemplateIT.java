@@ -17,6 +17,7 @@
 package com.google.jenkins.plugins.computeengine.integration;
 
 import static com.google.jenkins.plugins.computeengine.client.ComputeClient.nameFromSelfLink;
+import static com.google.jenkins.plugins.computeengine.integration.ITUtil.DEB_JAVA_STARTUP_SCRIPT;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.LABEL;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.NUM_EXECUTORS;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.PROJECT_ID;
@@ -28,15 +29,15 @@ import static com.google.jenkins.plugins.computeengine.integration.ITUtil.getLab
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.initClient;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.initCloud;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.initCredentials;
-import static com.google.jenkins.plugins.computeengine.integration.ITUtil.instanceConfiguration;
+import static com.google.jenkins.plugins.computeengine.integration.ITUtil.instanceConfigurationBuilder;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.teardownResources;
 import static org.junit.Assert.assertEquals;
 
 import com.google.api.services.compute.model.Instance;
 import com.google.api.services.compute.model.InstanceTemplate;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.jenkins.plugins.computeengine.ComputeEngineCloud;
-import com.google.jenkins.plugins.computeengine.InstanceConfiguration;
 import com.google.jenkins.plugins.computeengine.client.ComputeClient;
 import hudson.model.labels.LabelAtom;
 import hudson.slaves.NodeProvisioner.PlannedNode;
@@ -81,25 +82,27 @@ public class ComputeEngineCloudTemplateIT {
     cloud = initCloud(jenkinsRule);
     client = initClient(jenkinsRule, label, log);
 
-    cloud.addConfiguration(
-        instanceConfiguration(
-            new InstanceConfiguration.Builder()
+    cloud.setConfigurations(
+        ImmutableList.of(
+            instanceConfigurationBuilder()
+                .startupScript(DEB_JAVA_STARTUP_SCRIPT)
                 .numExecutorsStr(NUM_EXECUTORS)
                 .labels(LABEL)
                 .oneShot(false)
                 .createSnapshot(false)
-                .template(TEMPLATE),
-            label));
+                .template(TEMPLATE)
+                .googleLabels(label)
+                .build()));
 
     InstanceTemplate instanceTemplate =
         createTemplate(ImmutableMap.of(GOOGLE_LABEL_KEY, GOOGLE_LABEL_VALUE), TEMPLATE);
     // ensure an existing template by the same name doesn't already exist
     try {
-      client.deleteTemplate(cloud.projectId, instanceTemplate.getName());
+      client.deleteTemplate(cloud.getProjectId(), instanceTemplate.getName());
     } catch (IOException ioe) {
       // noop
     }
-    client.insertTemplate(cloud.projectId, instanceTemplate);
+    client.insertTemplate(cloud.getProjectId(), instanceTemplate);
     Collection<PlannedNode> planned = cloud.provision(new LabelAtom(LABEL), 1);
     String name = planned.iterator().next().displayName;
 
@@ -110,7 +113,7 @@ public class ComputeEngineCloudTemplateIT {
   @AfterClass
   public static void teardown() throws IOException {
     try {
-      client.deleteTemplate(cloud.projectId, nameFromSelfLink(TEMPLATE));
+      client.deleteTemplate(cloud.getProjectId(), nameFromSelfLink(TEMPLATE));
     } catch (Exception e) {
       // noop
     }
