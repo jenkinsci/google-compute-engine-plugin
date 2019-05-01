@@ -71,8 +71,8 @@ public class ComputeEngineCloudTest {
 
     // Add a few InstanceConfigurations
     List<InstanceConfiguration> ics = new ArrayList<>();
-    ics.add(instanceConfiguration());
-    ics.add(instanceConfiguration());
+    ics.add(instanceConfiguration().build());
+    ics.add(instanceConfiguration().build());
     ComputeEngineCloud cloud =
         new ComputeEngineCloud(CLOUD_NAME, PROJECT_ID, PROJECT_ID, INSTANCE_CAP_STR);
     cloud.setInstanceId(INSTANCE_ID);
@@ -108,7 +108,7 @@ public class ComputeEngineCloudTest {
   @Test
   public void getConfigurationsByLabelSimple() throws Exception {
     // Add a few InstanceConfigurations
-    List<InstanceConfiguration> ics = Lists.newArrayList(instanceConfiguration());
+    List<InstanceConfiguration> ics = Lists.newArrayList(instanceConfiguration().build());
     ComputeEngineCloud cloud =
         new ComputeEngineCloud(CLOUD_NAME, PROJECT_ID, PROJECT_ID, INSTANCE_CAP_STR);
     cloud.setConfigurations(ics);
@@ -131,7 +131,7 @@ public class ComputeEngineCloudTest {
   public void getConfigurationsByLabelMulti() throws Exception {
     // Add a few InstanceConfigurations
     List<InstanceConfiguration> ics =
-        Lists.newArrayList(instanceConfiguration(), instanceConfiguration());
+        Lists.newArrayList(instanceConfiguration().build(), instanceConfiguration().build());
     ComputeEngineCloud cloud =
         new ComputeEngineCloud(CLOUD_NAME, PROJECT_ID, PROJECT_ID, INSTANCE_CAP_STR);
     cloud.setConfigurations(ics);

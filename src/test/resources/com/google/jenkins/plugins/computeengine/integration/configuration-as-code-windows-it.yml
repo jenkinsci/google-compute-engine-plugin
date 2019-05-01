@@ -6,15 +6,18 @@ jenkins:
         instanceCapStr: 10
         credentialsId: ${env.GOOGLE_PROJECT_ID}
         configurations:
-          - namePrefix:         integration
-            description:        integration
-            launchTimeoutSecondsStr: ''
-            retentionTimeMinutesStr: ''
+          - namePrefix:         integration-windows
+            description:        integration-windows
+            launchTimeoutSecondsStr: 3000
+            retentionTimeMinutesStr: 600
             mode:               EXCLUSIVE
-            labelString:        integration
+            labelString:        integration-windows
             numExecutorsStr:    1
             runAsUser:          jenkins
             remoteFs:           ''
+            windowsConfiguration:
+              passwordCredentialsId: ''
+              privateKeyCredentialsId: windowsPrivateKeyId
             oneShot:            true
             createSnapshot:     false
             region:             "https://www.googleapis.com/compute/v1/projects/${env.GOOGLE_PROJECT_ID}/regions/us-west1"
@@ -23,17 +26,17 @@ jenkins:
             machineType:        "https://www.googleapis.com/compute/v1/projects/${env.GOOGLE_PROJECT_ID}/zones/us-west1-a/machineTypes/n1-standard-1"
             preemptible:        false
             minCpuPlatform:     '' # tried not setting, added when 'saved' in UI
-            startupScript:      "#!/bin/bash\n/etc/init.d/ssh stop\necho \"deb http://http.debian.net/debian stretch-backports main\" | \\\n      sudo tee --append /etc/apt/sources.list > /dev/null\napt-get -y update\napt-get -y install -t stretch-backports openjdk-8-jdk\nupdate-java-alternatives -s java-1.8.0-openjdk-amd64\n/etc/init.d/ssh start" 
+            startupScript:      "Stop-Service sshd\n$ConfiguredPublicKey = \"${env.GOOGLE_PUBLIC_KEY}\"\nWrite-Output \"Second phase\"\nSet-Content -Path $env:PROGRAMDATA\\ssh\\administrators_authorized_keys -Value $ConfiguredPublicKey\nicacls $env:PROGRAMDATA\\ssh\\administrators_authorized_keys /inheritance:jenkinsRule\nicacls $env:PROGRAMDATA\\ssh\\administrators_authorized_keys /grant SYSTEM:`(F`)\nicacls $env:PROGRAMDATA\\ssh\\administrators_authorized_keys /grant BUILTIN\\Administrators:`(F`)\nRestart-Service sshd"
             networkConfiguration:
               autofilled:
-                network:        default 
+                network:        default
                 subnetwork:     default
-            networkTags:        "jenkins-agent ssh"
+            networkTags:        ssh
             externalAddress:    true
             useInternalAddress: false
-            bootDiskSourceImageProject: debian-cloud
-            bootDiskSourceImageName: "projects/debian-cloud/global/images/family/debian-9"
+            bootDiskSourceImageProject: ${env.GOOGLE_BOOT_DISK_PROJECT_ID}
+            bootDiskSourceImageName: "projects/${env.GOOGLE_BOOT_DISK_PROJECT_ID}/global/images/family/${env.GOOGLE_BOOT_DISK_IMAGE_NAME}"
             bootDiskType:       "https://www.googleapis.com/compute/v1/projects/${env.GOOGLE_PROJECT_ID}/zones/us-west1-a/diskTypes/pd-ssd"
-            bootDiskSizeGbStr:  10
+            bootDiskSizeGbStr:  50
             bootDiskAutoDelete: true
             serviceAccountEmail: ''

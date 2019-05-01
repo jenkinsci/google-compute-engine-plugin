@@ -18,49 +18,43 @@ import com.cloudbees.jenkins.plugins.sshcredentials.impl.BasicSSHUserPrivateKey;
 import com.cloudbees.plugins.credentials.CredentialsMatchers;
 import com.cloudbees.plugins.credentials.CredentialsProvider;
 import com.cloudbees.plugins.credentials.SystemCredentialsProvider;
+import com.cloudbees.plugins.credentials.common.StandardListBoxModel;
 import com.cloudbees.plugins.credentials.common.StandardUsernameCredentials;
+import com.cloudbees.plugins.credentials.common.StandardUsernameListBoxModel;
 import com.cloudbees.plugins.credentials.common.StandardUsernamePasswordCredentials;
-import com.cloudbees.plugins.credentials.domains.DomainRequirement;
 import com.google.common.base.Strings;
+import hudson.Extension;
+import hudson.model.Describable;
+import hudson.model.Descriptor;
+import hudson.model.Item;
 import hudson.security.ACL;
+import hudson.util.FormValidation;
+import hudson.util.ListBoxModel;
 import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
 import jenkins.model.Jenkins;
-import lombok.AccessLevel;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Getter;
+import lombok.Setter;
+import org.kohsuke.stapler.AncestorInPath;
+import org.kohsuke.stapler.DataBoundConstructor;
+import org.kohsuke.stapler.DataBoundSetter;
+import org.kohsuke.stapler.QueryParameter;
 
 /**
  * Class to contain information needed to configure and access Windows agents This avoids passing in
  * several parameters between multiple classes and also isolates logic in accessing credentials
  */
 @Getter
-public class WindowsConfiguration {
+@Setter(onMethod = @__(@DataBoundSetter))
+@Builder(builderClassName = "Builder")
+@AllArgsConstructor
+public class WindowsConfiguration implements Describable<WindowsConfiguration> {
+  private String passwordCredentialsId;
+  private String privateKeyCredentialsId;
 
-  private String windowsUsername;
-
-  @Getter(AccessLevel.PRIVATE)
-  private Optional<String> passwordCredentialsId;
-
-  private Optional<String> privateKeyCredentialsId;
-
-  /**
-   * Constructor for WindowsConfig
-   *
-   * @param windowsUsername Username of an existing account on the windows agent
-   * @param passwordCredentialsId Credentials Id of credential containing password for the account
-   *     under windowsUsername
-   * @param privateKeyCredentialsId Credentials Id of credential containing private SSH key for
-   *     account under windowsUsername
-   */
-  public WindowsConfiguration(
-      String windowsUsername, String passwordCredentialsId, String privateKeyCredentialsId) {
-    this.windowsUsername = windowsUsername;
-    // TODO (rachelyen) verify both are non-null
-    this.privateKeyCredentialsId =
-        Optional.ofNullable(Strings.emptyToNull(privateKeyCredentialsId));
-    this.passwordCredentialsId = Optional.ofNullable(Strings.emptyToNull(passwordCredentialsId));
-  }
+  @DataBoundConstructor
+  public WindowsConfiguration() {}
 
   /**
    * Gets the password if a username and password credential is provided
@@ -68,17 +62,17 @@ public class WindowsConfiguration {
    * @return password in plain text to use for SSH
    */
   public String getPassword() {
-    List<DomainRequirement> domainRequirements = new ArrayList<DomainRequirement>();
-
+    if (passwordCredentialsId == null) {
+      return null;
+    }
     StandardUsernamePasswordCredentials cred =
         CredentialsMatchers.firstOrNull(
             CredentialsProvider.lookupCredentials(
                 StandardUsernamePasswordCredentials.class,
                 Jenkins.get(),
                 ACL.SYSTEM,
-                domainRequirements),
-            CredentialsMatchers.withId(passwordCredentialsId.get()));
-
+                new ArrayList<>()),
+            CredentialsMatchers.withId(passwordCredentialsId));
     if (cred == null) {
       return null;
     }
@@ -91,11 +85,57 @@ public class WindowsConfiguration {
    * @return SSH private key in plain text to use for SSH
    */
   public StandardUsernameCredentials getPrivateKeyCredentials() {
-    StandardUsernameCredentials cred =
-        CredentialsMatchers.firstOrNull(
-            new SystemCredentialsProvider.ProviderImpl()
-                .getCredentials(BasicSSHUserPrivateKey.class, Jenkins.get(), ACL.SYSTEM),
-            CredentialsMatchers.withId(privateKeyCredentialsId.get()));
-    return cred;
+    if (privateKeyCredentialsId == null) {
+      return null;
+    }
+    return CredentialsMatchers.firstOrNull(
+        new SystemCredentialsProvider.ProviderImpl()
+            .getCredentials(BasicSSHUserPrivateKey.class, Jenkins.get(), ACL.SYSTEM),
+        CredentialsMatchers.withId(privateKeyCredentialsId));
+  }
+
+  @SuppressWarnings("unchecked")
+  @Override
+  public Descriptor<WindowsConfiguration> getDescriptor() {
+    return Jenkins.get().getDescriptor(WindowsConfiguration.class);
+  }
+
+  @Extension
+  public static final class DescriptorImpl extends Descriptor<WindowsConfiguration> {
+    public ListBoxModel doFillPasswordCredentialsIdItems(@AncestorInPath Jenkins context) {
+      if (context == null || !context.hasPermission(Item.CONFIGURE)) {
+        return new StandardListBoxModel();
+      }
+      return new StandardListBoxModel()
+          .withEmptySelection()
+          .withMatching(
+              CredentialsMatchers.instanceOf(StandardUsernamePasswordCredentials.class),
+              CredentialsProvider.lookupCredentials(
+                  StandardUsernamePasswordCredentials.class,
+                  context,
+                  ACL.SYSTEM,
+                  new ArrayList<>()));
+    }
+
+    public ListBoxModel doFillPrivateKeyCredentialsIdItems(@AncestorInPath Jenkins context) {
+      if (context == null || !context.hasPermission(Item.CONFIGURE)) {
+        return new StandardUsernameListBoxModel();
+      }
+      return new StandardUsernameListBoxModel()
+          .withEmptySelection()
+          .withMatching(
+              CredentialsMatchers.instanceOf(BasicSSHUserPrivateKey.class),
+              CredentialsProvider.lookupCredentials(
+                  StandardUsernameCredentials.class, context, ACL.SYSTEM, new ArrayList<>()));
+    }
+
+    public FormValidation doCheckPrivateKeyCredentialsId(
+        @QueryParameter String value,
+        @QueryParameter("passwordCredentialsId") String passwordCredentialsId) {
+      if (Strings.isNullOrEmpty(value) && Strings.isNullOrEmpty(passwordCredentialsId)) {
+        return FormValidation.error("A password or private key credential is required");
+      }
+      return FormValidation.ok();
+    }
   }
 }

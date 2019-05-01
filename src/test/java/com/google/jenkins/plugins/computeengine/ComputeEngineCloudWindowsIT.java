@@ -145,7 +145,7 @@ public class ComputeEngineCloudWindowsIT {
     assertNotNull("GOOGLE_BOOT_DISK_IMAGE_NAME env var must be set", bootDiskImageName);
 
     ServiceAccountConfig sac = new StringJsonServiceAccountConfig(serviceAccountKeyJson);
-    Credentials c = (Credentials) new GoogleRobotPrivateKeyCredentials(projectId, sac, null);
+    Credentials c = new GoogleRobotPrivateKeyCredentials(projectId, sac, null);
 
     CredentialsStore store = new SystemCredentialsProvider.ProviderImpl().getStore(r.jenkins);
     store.addCredentials(Domain.global(), c);
@@ -356,9 +356,11 @@ public class ComputeEngineCloudWindowsIT {
                 "projects/" + bootDiskProjectId + "/global/images/" + bootDiskImageName)
             .bootDiskSourceImageProject(bootDiskProjectId)
             .bootDiskSizeGbStr(BOOT_DISK_SIZE_GB_STR)
-            .windows(true)
-            .windowsPasswordCredentialsId("")
-            .windowsPrivateKeyCredentialsId(windowsPrivateKeyCredentialId)
+            .windowsConfiguration(
+                WindowsConfiguration.builder()
+                    .passwordCredentialsId("")
+                    .privateKeyCredentialsId(windowsPrivateKeyCredentialId)
+                    .build())
             .createSnapshot(createSnapshot)
             .remoteFs(null)
             .networkConfiguration(new AutofilledNetworkConfiguration(NETWORK_NAME, SUBNETWORK_NAME))

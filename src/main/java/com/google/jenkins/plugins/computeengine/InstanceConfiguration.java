@@ -18,13 +18,6 @@ package com.google.jenkins.plugins.computeengine;
 
 import static com.google.jenkins.plugins.computeengine.client.ComputeClient.nameFromSelfLink;
 
-import com.cloudbees.jenkins.plugins.sshcredentials.impl.BasicSSHUserPrivateKey;
-import com.cloudbees.plugins.credentials.CredentialsMatchers;
-import com.cloudbees.plugins.credentials.CredentialsProvider;
-import com.cloudbees.plugins.credentials.common.StandardListBoxModel;
-import com.cloudbees.plugins.credentials.common.StandardUsernameCredentials;
-import com.cloudbees.plugins.credentials.common.StandardUsernameListBoxModel;
-import com.cloudbees.plugins.credentials.common.StandardUsernamePasswordCredentials;
 import com.cloudbees.plugins.credentials.domains.DomainRequirement;
 import com.google.api.services.compute.model.AcceleratorConfig;
 import com.google.api.services.compute.model.AccessConfig;
@@ -47,17 +40,16 @@ import com.google.common.base.Strings;
 import com.google.jenkins.plugins.computeengine.client.ClientFactory;
 import com.google.jenkins.plugins.computeengine.client.ComputeClient;
 import com.google.jenkins.plugins.computeengine.ssh.GoogleKeyPair;
+import edu.umd.cs.findbugs.annotations.Nullable;
 import hudson.Extension;
 import hudson.RelativePath;
 import hudson.Util;
 import hudson.model.Describable;
 import hudson.model.Descriptor;
-import hudson.model.Item;
 import hudson.model.Label;
 import hudson.model.Node;
 import hudson.model.TaskListener;
 import hudson.model.labels.LabelAtom;
-import hudson.security.ACL;
 import hudson.slaves.CloudRetentionStrategy;
 import hudson.util.FormValidation;
 import hudson.util.ListBoxModel;
@@ -150,10 +142,8 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
   private String bootDiskSizeGbStr;
   private boolean oneShot;
   private String template;
-  private boolean windows;
-  private String windowsPasswordCredentialsId;
-  private String windowsPrivateKeyCredentialsId;
-  private Optional<WindowsConfiguration> windowsConfig;
+  // Optional not possible due to serialization requirement
+  @Nullable private WindowsConfiguration windowsConfiguration;
   private boolean createSnapshot;
   private String remoteFs;
   private String javaExecPath;
@@ -170,22 +160,7 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
   protected transient ComputeEngineCloud cloud;
 
   @DataBoundConstructor
-  public InstanceConfiguration(
-      String labelString,
-      boolean windows,
-      String runAsUser,
-      String windowsPasswordCredentialsId,
-      String windowsPrivateKeyCredentialsId) {
-    this.setLabels(labelString);
-    this.setWindows(windows);
-    this.setRunAsUser(runAsUser);
-    this.setWindowsPasswordCredentialsId(windowsPasswordCredentialsId);
-    this.setWindowsPrivateKeyCredentialsId(windowsPrivateKeyCredentialsId);
-    this.setWindowsConfig(
-        makeWindowsConfiguration(
-            windows, runAsUser, windowsPasswordCredentialsId, windowsPrivateKeyCredentialsId));
-    readResolve();
-  }
+  public InstanceConfiguration() {}
 
   @DataBoundSetter
   public void setNumExecutorsStr(String numExecutorsStr) {
@@ -193,14 +168,10 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
     this.numExecutorsStr = numExecutors.toString();
   }
 
-  // Provided through constructor
-  private void setLabels(String labels) {
-    this.labels = Util.fixNull(labels);
-  }
-
-  // Provided through constructor
-  public void setRunAsUser(String runAsUser) {
-    this.runAsUser = runAsUser;
+  @DataBoundSetter
+  public void setLabelString(String labelString) {
+    this.labels = Util.fixNull(labelString);
+    readResolve();
   }
 
   @DataBoundSetter
@@ -232,26 +203,6 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
   public void setOneShot(boolean oneShot) {
     this.oneShot = oneShot;
     this.createSnapshot &= oneShot;
-  }
-
-  // Provided through constructor
-  public void setWindows(boolean windows) {
-    this.windows = windows;
-  }
-
-  // Provided through constructor
-  public void setWindowsPasswordCredentialsId(String windowsPasswordCredentialsId) {
-    this.windowsPasswordCredentialsId = windowsPasswordCredentialsId;
-  }
-
-  // Provided through constructor
-  public void setWindowsPrivateKeyCredentialsId(String windowsPrivateKeyCredentialsId) {
-    this.windowsPrivateKeyCredentialsId = windowsPrivateKeyCredentialsId;
-  }
-
-  // Generated in constructor
-  public void setWindowsConfig(Optional<WindowsConfiguration> windowsConfig) {
-    this.windowsConfig = windowsConfig;
   }
 
   @DataBoundSetter
@@ -334,7 +285,7 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
       logger.println("Sent insert request for instance configuration [" + description + "]");
       String targetRemoteFs = this.remoteFs;
       ComputeEngineComputerLauncher launcher = null;
-      if (this.windows) {
+      if (this.windowsConfiguration != null) {
         launcher =
             new ComputeEngineWindowsLauncher(
                 cloud.getCloudName(), operation, this.useInternalAddress);
@@ -356,7 +307,7 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
           .nodeDescription(instance.getDescription())
           .sshUser(runAsUser)
           .remoteFS(targetRemoteFs)
-          .windowsConfig(windowsConfig)
+          .windowsConfig(Optional.ofNullable(windowsConfiguration))
           .createSnapshot(createSnapshot)
           .oneShot(oneShot)
           .numExecutors(numExecutors)
@@ -392,7 +343,7 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
     instance.setZone(nameFromSelfLink(zone));
     instance.setMetadata(newMetadata());
 
-    if (!windows) {
+    if (windowsConfiguration == null) {
       sshKeyPair = congifureSSHKeyPair(instance, runAsUser);
     }
 
@@ -471,7 +422,7 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
   private void configureStartupScript(Instance instance) {
     if (notNullOrEmpty(startupScript)) {
       List<Metadata.Items> items = instance.getMetadata().getItems();
-      if (windows) {
+      if (windowsConfiguration != null) {
         items.add(
             new Metadata.Items()
                 .setKey(METADATA_WINDOWS_STARTUP_SCRIPT_KEY)
@@ -584,6 +535,13 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
 
     public static String defaultRunAsUser() {
       return DEFAULT_RUN_AS_USER.toString();
+    }
+
+    public static WindowsConfiguration defaultWindowsConfiguration() {
+      return WindowsConfiguration.builder()
+          .passwordCredentialsId("")
+          .privateKeyCredentialsId("")
+          .build();
     }
 
     public static NetworkConfiguration defaultNetworkConfiguration() {
@@ -914,50 +872,6 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
       return FormValidation.ok();
     }
 
-    public ListBoxModel doFillWindowsPasswordCredentialsIdItems(
-        @AncestorInPath Jenkins context, @QueryParameter String value) {
-      if (context == null || !context.hasPermission(Item.CONFIGURE)) {
-        return new StandardListBoxModel();
-      }
-      List<DomainRequirement> domainRequirements = new ArrayList<DomainRequirement>();
-      return new StandardListBoxModel()
-          .withEmptySelection()
-          .withMatching(
-              CredentialsMatchers.instanceOf(StandardUsernamePasswordCredentials.class),
-              CredentialsProvider.lookupCredentials(
-                  StandardUsernamePasswordCredentials.class,
-                  context,
-                  ACL.SYSTEM,
-                  domainRequirements));
-    }
-
-    public ListBoxModel doFillWindowsPrivateKeyCredentialsIdItems(
-        @AncestorInPath Jenkins context, @QueryParameter String value) {
-      if (context == null || !context.hasPermission(Item.CONFIGURE)) {
-        return new StandardUsernameListBoxModel();
-      }
-      List<DomainRequirement> domainRequirements = new ArrayList<DomainRequirement>();
-      return new StandardUsernameListBoxModel()
-          .withEmptySelection()
-          .withMatching(
-              CredentialsMatchers.instanceOf(BasicSSHUserPrivateKey.class),
-              CredentialsProvider.lookupCredentials(
-                  StandardUsernameCredentials.class, context, ACL.SYSTEM, domainRequirements));
-    }
-
-    public FormValidation doCheckWindowsPrivateKeyCredentialsId(
-        @AncestorInPath Jenkins context,
-        @QueryParameter String value,
-        @QueryParameter("windows") boolean windows,
-        @QueryParameter("windowsPasswordCredentialsId") String windowsPasswordCredentialsId) {
-      if (windows
-          && (Strings.isNullOrEmpty(value)
-              && Strings.isNullOrEmpty(windowsPasswordCredentialsId))) {
-        return FormValidation.error("A password or private key credential is required");
-      }
-      return FormValidation.ok();
-    }
-
     public FormValidation doCheckCreateSnapshot(
         @AncestorInPath Jenkins context,
         @QueryParameter boolean value,
@@ -969,29 +883,9 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
     }
   }
 
-  private static Optional<WindowsConfiguration> makeWindowsConfiguration(
-      boolean windows,
-      String runAsUser,
-      String windowsPasswordCredentialsId,
-      String windowsPrivateKeyCredentialsId) {
-    if (windows) {
-      return Optional.of(
-          new WindowsConfiguration(
-              runAsUser, windowsPasswordCredentialsId, windowsPrivateKeyCredentialsId));
-    } else {
-      return Optional.empty();
-    }
-  }
-
   public static class Builder {
     public InstanceConfiguration build() {
-      InstanceConfiguration instanceConfiguration =
-          new InstanceConfiguration(
-              this.labels,
-              this.windows,
-              this.runAsUser,
-              this.windowsPasswordCredentialsId,
-              this.windowsPrivateKeyCredentialsId);
+      InstanceConfiguration instanceConfiguration = new InstanceConfiguration();
       instanceConfiguration.setDescription(this.description);
       instanceConfiguration.setNamePrefix(this.namePrefix);
       instanceConfiguration.setRegion(this.region);
@@ -1001,6 +895,9 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
       instanceConfiguration.setStartupScript(this.startupScript);
       instanceConfiguration.setPreemptible(this.preemptible);
       instanceConfiguration.setMinCpuPlatform(this.minCpuPlatform);
+      instanceConfiguration.setLabelString(this.labels);
+      instanceConfiguration.setRunAsUser(this.runAsUser);
+      instanceConfiguration.setWindowsConfiguration(this.windowsConfiguration);
       instanceConfiguration.setBootDiskType(this.bootDiskType);
       instanceConfiguration.setBootDiskAutoDelete(this.bootDiskAutoDelete);
       instanceConfiguration.setBootDiskSourceImageName(this.bootDiskSourceImageName);

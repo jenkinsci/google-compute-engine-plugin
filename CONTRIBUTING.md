@@ -77,13 +77,17 @@ mvn verify
 <configuration>
     <disableXmlReport>true</disableXmlReport>
     <useFile>false</useFile>
+    ...
     <excludes>
         <exclude>**/ComputeEngineCloudWindowsIT.java</exclude>
+        <exclude>**/ConfigAsCodeWindowsIT.java</exclude>
+        ...
     </excludes>
 </configuration>
 ```
 
-* If you do make a **windows-related change**, remove the exclusion temporarily and run the integration test with mvn verify,
+* If you do make a **windows-related change**, remove the windows exclusions temporarily and run the
+integration test with mvn verify,
   * GOOGLE_BOOT_DISK_PROJECT_ID will be the same as your project id.
   * GOOGLE_BOOT_DISK_IMAGE_NAME will be the name of the image you created using packer in google cloud console.
   * More information on building your baseline windows image can be found [here](WINDOWS.md) and an example file can be found [here](windows-it-install.ps1).

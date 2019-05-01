@@ -231,6 +231,7 @@
           </systemPropertyVariables>
           <excludes>
             <exclude>**/ComputeEngineCloudWindowsIT.java</exclude>
+            <exclude>**/ConfigAsCodeWindowsIT.java</exclude>
             <exclude>**/ITUtil.java</exclude>
           </excludes>
           <argLine>-Djenkins.test.timeout=${jenkinsRuleTimeout}</argLine>

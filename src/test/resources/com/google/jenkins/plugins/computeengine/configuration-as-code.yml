@@ -16,9 +16,6 @@ jenkins:
             runAsUser:          jenkins
             remoteFs:           agent
             javaExecPath:       "java"
-            windows:            false
-            windowsPasswordCredentialsId: ''    # tried not setting, added when saved in UI
-            windowsPrivateKeyCredentialsId: ''  # tried not setting, added when saved in UI
             oneShot:            true
             createSnapshot:     false
             region:             "https://www.googleapis.com/compute/v1/projects/gce-jenkins/regions/europe-west1"
