@@ -24,6 +24,7 @@ import com.cloudbees.plugins.credentials.common.StandardCredentials;
 import com.cloudbees.plugins.credentials.common.StandardListBoxModel;
 import com.cloudbees.plugins.credentials.domains.DomainRequirement;
 import com.google.api.services.compute.model.Instance;
+import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableMap;
 import com.google.jenkins.plugins.computeengine.client.ClientFactory;
 import com.google.jenkins.plugins.computeengine.client.ComputeClient;
@@ -87,9 +88,9 @@ public class ComputeEngineCloud extends AbstractCloudImpl {
       String cloudName, String projectId, String credentialsId, String instanceCapStr) {
     super(createCloudId(cloudName), instanceCapStr);
 
-    instanceId = UUID.randomUUID().toString();
     this.credentialsId = credentialsId;
     this.projectId = projectId;
+    setInstanceId(null);
     setConfigurations(null);
   }
 
@@ -146,6 +147,7 @@ public class ComputeEngineCloud extends AbstractCloudImpl {
         configuration.appendLabel(CONFIG_LABEL_KEY, configuration.getNamePrefix());
       }
     }
+    setInstanceId(instanceId);
     return this;
   }
 
@@ -157,7 +159,11 @@ public class ComputeEngineCloud extends AbstractCloudImpl {
    */
   @DataBoundSetter
   public void setInstanceId(String instanceId) {
-    this.instanceId = instanceId;
+    if (Strings.isNullOrEmpty(instanceId)) {
+      this.instanceId = UUID.randomUUID().toString();
+    } else {
+      this.instanceId = instanceId;
+    }
   }
 
   /**
