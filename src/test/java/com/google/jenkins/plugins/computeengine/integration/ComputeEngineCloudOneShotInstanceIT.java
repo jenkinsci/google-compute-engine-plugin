@@ -109,7 +109,7 @@ public class ComputeEngineCloudOneShotInstanceIT {
   @Test
   public void testOneShotInstanceDeletedFromGCP() {
     Awaitility.await()
-        .timeout(1, TimeUnit.MINUTES)
+        .timeout(3, TimeUnit.MINUTES)
         .pollInterval(10, TimeUnit.SECONDS)
         .until(() -> client.getInstancesWithLabel(PROJECT_ID, label).isEmpty());
   }
