@@ -26,14 +26,18 @@ View Google Compute Engine on the plugin site for more information.
     gcloud iam service-accounts create jenkins-gce
    ```
 
-2. Add the instanceAdmin and serviceAccountUser roles to the service account.
+2. Add the instanceAdmin, networkAdmin and serviceAccountUser roles to the service account.
 
    ```
    export PROJECT=$(gcloud info --format='value(config.project)') 
-   export SA_EMAIL=$(gcloud iam service-accounts list --filter="name:jenkins-gce"
+   export SA_EMAIL=$(gcloud iam service-accounts list --filter="name:jenkins-gce" \
     --format='value(email)') 
-   gcloud projects add-iam-policy-binding --member serviceAccount:$SA_EMAIL --role
-   roles/compute.instanceAdmin --role roles/iam.serviceAccountUser $PROJECT
+   gcloud projects add-iam-policy-binding --member serviceAccount:$SA_EMAIL \
+    --role roles/compute.instanceAdmin $PROJECT
+   gcloud projects add-iam-policy-binding --member serviceAccount:$SA_EMAIL \
+    --role roles/compute.networkAdmin $PROJECT
+   gcloud projects add-iam-policy-binding --member serviceAccount:$SA_EMAIL \
+    --role roles/iam.serviceAccountUser $PROJECT
    ```
 
 3. Download a JSON Service Account key for your newly created service account. Take note
