@@ -51,6 +51,7 @@ public class ConfigAsCodeTest {
     assertEquals("Wrong configurations numExecutors", "1", configuration.getNumExecutorsStr());
     assertEquals("Wrong configurations runAsUser", "jenkins", configuration.getRunAsUser());
     assertEquals("Wrong configurations remoteFs", "agent", configuration.getRemoteFs());
+    assertEquals("Wrong configurations javaExecPath", "java", configuration.getJavaExecPath());
   }
 
   @Test

@@ -126,12 +126,14 @@ public class ComputeEngineWindowsLauncher extends ComputeEngineComputerLauncher 
       scp.put(Jenkins.get().getJnlpJars("agent.jar").readFully(), "agent.jar", jenkinsDir);
 
       // Confirm Java is installed
-      if (!testCommand(computer, conn, "java -fullversion", logger, listener)) {
-        logWarning(computer, listener, "Java is not installed.");
+      String javaExecPath = node.getJavaExecPathOrDefault();
+      if (!testCommand(
+          computer, conn, String.format("%s -fullversion", javaExecPath), logger, listener)) {
+        logWarning(computer, listener, String.format("%s is not installed.", javaExecPath));
         return;
       }
 
-      String launchString = "java -jar " + jenkinsDir + "\\agent.jar";
+      String launchString = String.format("%s -jar ", javaExecPath) + jenkinsDir + "\\agent.jar";
       logInfo(computer, listener, "Launching Jenkins agent via plugin SSH: " + launchString);
       final Session sess = conn.openSession();
       sess.execCommand(launchString);
