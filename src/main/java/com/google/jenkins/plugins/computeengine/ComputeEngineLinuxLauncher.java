@@ -90,6 +90,7 @@ public class ComputeEngineLinuxLauncher extends ComputeEngineComputerLauncher {
   @Override
   protected void launch(ComputeEngineComputer computer, TaskListener listener, Instance inst)
       throws IOException, InterruptedException {
+    // TODO(#96): Conslidate duplicated launch logic
     ComputeEngineInstance node = computer.getNode();
     if (node == null) {
       logWarning(computer, listener, "Could not get node from computer");
