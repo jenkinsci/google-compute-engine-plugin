@@ -49,8 +49,8 @@ import org.junit.rules.Timeout;
 import org.jvnet.hudson.test.JenkinsRule;
 
 /**
- * Integration test suite for {@link ComputeEngineCloud}. Verifies that instances can be created
- * with multiple Jenkins labels and that these labels are properly provisioned.
+ * Integration test suite for {@link ComputeEngineCloudNonStandardJavaIT}. Verifies that instances
+ * can be created using a non-standard Java executable path.
  */
 public class ComputeEngineCloudNonStandardJavaIT {
   private static final String NON_STANDARD_JAVA_STARTUP_SCRIPT =
@@ -61,7 +61,7 @@ public class ComputeEngineCloudNonStandardJavaIT {
           + "apt-get -y update\n"
           + "apt-get -y install -t stretch-backports openjdk-8-jdk\n"
           + "update-java-alternatives -s java-1.8.0-openjdk-amd64\n"
-          + "ln -s /usr/bin/java /usr/bin/non-standard-java\n"
+          + "mv /usr/bin/java /usr/bin/non-standard-java\n"
           + "/etc/init.d/ssh start";
 
   private static final String NON_STANDARD_JAVA_PATH = "/usr/bin/non-standard-java";

@@ -170,12 +170,12 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
     readResolve();
   }
 
-  @DataBoundSetter
   /**
    * Sets the Java executable path for this instance.
    *
    * @param javaExecPath The Java executable path to be set.
    */
+  @DataBoundSetter
   public void setJavaExecPath(String javaExecPath) {
     this.javaExecPath = javaExecPath;
   }
