@@ -131,7 +131,7 @@ public class ComputeEngineLinuxLauncher extends ComputeEngineComputerLauncher {
       String javaExecPath = node.getJavaExecPathOrDefault();
       if (!testCommand(
           computer, conn, String.format("%s -fullversion", javaExecPath), logger, listener)) {
-        logWarning(computer, listener, String.format("%s is not installed.", javaExecPath));
+        logWarning(computer, listener, String.format("Java is not installed at %s", javaExecPath));
       }
 
       // TODO: allow jvmopt configuration
