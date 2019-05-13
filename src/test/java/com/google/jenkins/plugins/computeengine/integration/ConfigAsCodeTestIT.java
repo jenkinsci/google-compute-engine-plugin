@@ -59,7 +59,6 @@ public class ConfigAsCodeTestIT {
 
     // Should be 1 configuration
     assertEquals(1, cloud.getConfigurations().size());
-
     cloud.getConfigurations().get(0).googleLabels = label;
 
     // Add a new node
@@ -68,14 +67,39 @@ public class ConfigAsCodeTestIT {
 
     // There should be a planned node
     assertEquals(1, planned.size());
-
     String name = planned.iterator().next().displayName;
 
     // Wait for the node creation to finish
     planned.iterator().next().future.get();
-
     Instance instance = client.getInstance(PROJECT_ID, ZONE, name);
+    assertNotNull(instance);
+  }
 
+  @Test
+  public void testNonStandardJavaWorkerCreated() throws Exception {
+    ConfigurationAsCode.get()
+        .configure(
+            this.getClass()
+                .getResource("configuration-as-code-non-standard-java-it.yml")
+                .toString());
+    ComputeEngineCloud cloud =
+        (ComputeEngineCloud) jenkinsRule.jenkins.clouds.getByName("gce-integration");
+
+    // Should be 1 configuration
+    assertEquals(1, cloud.getConfigurations().size());
+    cloud.getConfigurations().get(0).googleLabels = label;
+
+    // Add a new node
+    Collection<NodeProvisioner.PlannedNode> planned =
+        cloud.provision(new LabelAtom("integration-non-standard-java"), 1);
+
+    // There should be a planned node
+    assertEquals(1, planned.size());
+    String name = planned.iterator().next().displayName;
+
+    // Wait for the node creation to finish
+    planned.iterator().next().future.get();
+    Instance instance = client.getInstance(PROJECT_ID, ZONE, name);
     assertNotNull(instance);
   }
 }

@@ -15,6 +15,7 @@ jenkins:
             numExecutorsStr:    1
             runAsUser:          jenkins
             remoteFs:           agent
+            javaExecPath:       "java"
             windows:            false
             windowsPasswordCredentialsId: ''    # tried not setting, added when saved in UI
             windowsPrivateKeyCredentialsId: ''  # tried not setting, added when saved in UI

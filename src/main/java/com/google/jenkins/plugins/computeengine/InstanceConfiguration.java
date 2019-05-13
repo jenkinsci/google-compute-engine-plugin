@@ -143,6 +143,7 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
   private Optional<WindowsConfiguration> windowsConfig;
   private boolean createSnapshot;
   private String remoteFs;
+  private String javaExecPath;
   public Map<String, String> googleLabels;
   public Integer numExecutors;
   public Integer retentionTimeMinutes;
@@ -167,6 +168,16 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
         makeWindowsConfiguration(
             windows, runAsUser, windowsPasswordCredentialsId, windowsPrivateKeyCredentialsId));
     readResolve();
+  }
+
+  /**
+   * Sets the Java executable path for this instance.
+   *
+   * @param javaExecPath The Java executable path to be set.
+   */
+  @DataBoundSetter
+  public void setJavaExecPath(String javaExecPath) {
+    this.javaExecPath = javaExecPath;
   }
 
   @DataBoundSetter
@@ -520,6 +531,11 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
     return launchTimeoutSeconds * 1000;
   }
 
+  /** @return The Java executable path for this {@link InstanceConfiguration}. */
+  public String getJavaExecPath() {
+    return javaExecPath;
+  }
+
   public void appendLabels(Map<String, String> labels) {
     if (googleLabels == null) {
       googleLabels = new HashMap<>();
@@ -576,7 +592,8 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
               (oneShot
                   ? new OnceRetentionStrategy(retentionTimeMinutes)
                   : new CloudRetentionStrategy(retentionTimeMinutes)),
-              getLaunchTimeoutMillis());
+              getLaunchTimeoutMillis(),
+              javaExecPath);
       return computeEngineInstance;
     } catch (Descriptor.FormException fe) {
       logger.printf("Error provisioning instance: %s", fe.getMessage());
@@ -1329,6 +1346,11 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
 
     public Builder remoteFs(String remoteFs) {
       instanceConfiguration.setRemoteFs(remoteFs);
+      return this;
+    }
+
+    public Builder javaExecPath(String javaExecPath) {
+      instanceConfiguration.setJavaExecPath(javaExecPath);
       return this;
     }
 

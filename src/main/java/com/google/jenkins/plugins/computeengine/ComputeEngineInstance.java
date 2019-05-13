@@ -16,6 +16,7 @@
 
 package com.google.jenkins.plugins.computeengine;
 
+import com.google.common.base.Strings;
 import hudson.Extension;
 import hudson.model.Computer;
 import hudson.model.Descriptor;
@@ -30,6 +31,7 @@ import java.util.Collections;
 import java.util.Optional;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import javax.annotation.Nullable;
 import jenkins.model.Jenkins;
 
 public class ComputeEngineInstance extends AbstractCloudSlave {
@@ -43,6 +45,7 @@ public class ComputeEngineInstance extends AbstractCloudSlave {
   public final transient Optional<WindowsConfiguration> windowsConfig;
   public final boolean createSnapshot;
   public final boolean oneShot;
+  private final String javaExecPath;
   public Integer launchTimeout; // Seconds
   private Boolean connected;
 
@@ -61,7 +64,9 @@ public class ComputeEngineInstance extends AbstractCloudSlave {
       String labelString,
       ComputerLauncher launcher,
       RetentionStrategy retentionStrategy,
-      Integer launchTimeout)
+      Integer launchTimeout,
+      // NOTE(craigatgoogle): Could not use Optional due to serialization req.
+      @Nullable String javaExecPath)
       throws Descriptor.FormException, IOException {
     super(
         name,
@@ -80,6 +85,7 @@ public class ComputeEngineInstance extends AbstractCloudSlave {
     this.windowsConfig = windowsConfig;
     this.createSnapshot = createSnapshot;
     this.oneShot = oneShot;
+    this.javaExecPath = javaExecPath;
   }
 
   @Override
@@ -134,6 +140,11 @@ public class ComputeEngineInstance extends AbstractCloudSlave {
 
   public long getLaunchTimeoutMillis() {
     return launchTimeout * 1000L;
+  }
+
+  /** @return The configured Java executable path, or else the default Java binary. */
+  public String getJavaExecPathOrDefault() {
+    return !Strings.isNullOrEmpty(javaExecPath) ? javaExecPath : "java";
   }
 
   public ComputeEngineCloud getCloud() throws CloudNotFoundException {
