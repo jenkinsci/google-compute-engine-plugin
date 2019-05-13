@@ -35,7 +35,7 @@ import javax.annotation.Nullable;
 import jenkins.model.Jenkins;
 
 public class ComputeEngineInstance extends AbstractCloudSlave {
-  private static final long serialVersionUID = 2L;
+  private static final long serialVersionUID = 1;
   private static final Logger LOGGER = Logger.getLogger(ComputeEngineInstance.class.getName());
 
   // TODO: https://issues.jenkins-ci.org/browse/JENKINS-55518
