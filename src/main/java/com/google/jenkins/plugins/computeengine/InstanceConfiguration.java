@@ -639,8 +639,6 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
       instance.setLabels(googleLabels);
       instance.setMachineType(stripSelfLinkPrefix(machineType));
       configureStartupScript(instance);
-      System.err.printf(
-          "\n!!!InstanceConfiguratoin.metadata: %s\n", instance.getMetadata().getItems());
       instance.setTags(tags());
       instance.setScheduling(scheduling());
       instance.setDisks(disks());
