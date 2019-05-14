@@ -675,7 +675,7 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
   }
 
   private GoogleKeyPair congifureSSHKeyPair(Instance instance, String sshUser) {
-    sshKeyPair = GoogleKeyPair.generate(sshUser);
+    GoogleKeyPair sshKeyPair = GoogleKeyPair.generate(sshUser);
     instance
         .getMetadata()
         .getItems()
