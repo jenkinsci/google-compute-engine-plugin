@@ -17,6 +17,7 @@
 package com.google.jenkins.plugins.computeengine;
 
 import com.google.common.base.Strings;
+import com.google.jenkins.plugins.computeengine.ssh.GoogleKeyPair;
 import hudson.Extension;
 import hudson.model.Computer;
 import hudson.model.Descriptor;
@@ -46,6 +47,7 @@ public class ComputeEngineInstance extends AbstractCloudSlave {
   public final boolean createSnapshot;
   public final boolean oneShot;
   private final String javaExecPath;
+  private final GoogleKeyPair sshKeyPair;
   public Integer launchTimeout; // Seconds
   private Boolean connected;
 
@@ -66,7 +68,8 @@ public class ComputeEngineInstance extends AbstractCloudSlave {
       RetentionStrategy retentionStrategy,
       Integer launchTimeout,
       // NOTE(craigatgoogle): Could not use Optional due to serialization req.
-      @Nullable String javaExecPath)
+      @Nullable String javaExecPath,
+      @Nullable GoogleKeyPair sshKeyPair)
       throws Descriptor.FormException, IOException {
     super(
         name,
@@ -86,6 +89,7 @@ public class ComputeEngineInstance extends AbstractCloudSlave {
     this.createSnapshot = createSnapshot;
     this.oneShot = oneShot;
     this.javaExecPath = javaExecPath;
+    this.sshKeyPair = sshKeyPair;
   }
 
   @Override
@@ -145,6 +149,11 @@ public class ComputeEngineInstance extends AbstractCloudSlave {
   /** @return The configured Java executable path, or else the default Java binary. */
   public String getJavaExecPathOrDefault() {
     return !Strings.isNullOrEmpty(javaExecPath) ? javaExecPath : "java";
+  }
+
+  /** @return The configured Linux SSH key pair for this {@link InstanceConfiguration}. */
+  public Optional<GoogleKeyPair> getSSHKeyPair() {
+    return Optional.ofNullable(sshKeyPair);
   }
 
   public ComputeEngineCloud getCloud() throws CloudNotFoundException {

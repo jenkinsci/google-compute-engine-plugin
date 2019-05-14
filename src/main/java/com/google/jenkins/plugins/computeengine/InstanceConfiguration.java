@@ -46,6 +46,7 @@ import com.google.api.services.compute.model.Zone;
 import com.google.common.base.Strings;
 import com.google.jenkins.plugins.computeengine.client.ClientFactory;
 import com.google.jenkins.plugins.computeengine.client.ComputeClient;
+import com.google.jenkins.plugins.computeengine.ssh.GoogleKeyPair;
 import hudson.Extension;
 import hudson.RelativePath;
 import hudson.Util;
@@ -82,6 +83,7 @@ import org.kohsuke.stapler.DataBoundSetter;
 import org.kohsuke.stapler.QueryParameter;
 
 public class InstanceConfiguration implements Describable<InstanceConfiguration> {
+  public static final String SSH_METADATA_KEY = "ssh-keys";
   public static final Long DEFAULT_BOOT_DISK_SIZE_GB = 10L;
   public static final Integer DEFAULT_NUM_EXECUTORS = 1;
   public static final Integer DEFAULT_LAUNCH_TIMEOUT_SECONDS = 300;
@@ -144,6 +146,7 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
   private boolean createSnapshot;
   private String remoteFs;
   private String javaExecPath;
+  private GoogleKeyPair sshKeyPair;
   public Map<String, String> googleLabels;
   public Integer numExecutors;
   public Integer retentionTimeMinutes;
@@ -593,7 +596,8 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
                   ? new OnceRetentionStrategy(retentionTimeMinutes)
                   : new CloudRetentionStrategy(retentionTimeMinutes)),
               getLaunchTimeoutMillis(),
-              javaExecPath);
+              javaExecPath,
+              sshKeyPair);
       return computeEngineInstance;
     } catch (Descriptor.FormException fe) {
       logger.printf("Error provisioning instance: %s", fe.getMessage());
@@ -614,6 +618,11 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
     instance.setName(uniqueName());
     instance.setDescription(description);
     instance.setZone(nameFromSelfLink(zone));
+    instance.setMetadata(newMetadata());
+
+    if (!windows) {
+      sshKeyPair = congifureSSHKeyPair(instance, runAsUser);
+    }
 
     if (StringUtils.isNotEmpty(template)) {
       InstanceTemplate instanceTemplate =
@@ -629,7 +638,9 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
     } else {
       instance.setLabels(googleLabels);
       instance.setMachineType(stripSelfLinkPrefix(machineType));
-      instance.setMetadata(metadata());
+      configureStartupScript(instance);
+      System.err.printf(
+          "\n!!!InstanceConfiguratoin.metadata: %s\n", instance.getMetadata().getItems());
       instance.setTags(tags());
       instance.setScheduling(scheduling());
       instance.setDisks(disks());
@@ -659,11 +670,25 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
     return prefix + suffix;
   }
 
-  private Metadata metadata() {
+  private Metadata newMetadata() {
+    Metadata metadata = new Metadata();
+    metadata.setItems(new ArrayList<Metadata.Items>());
+    return metadata;
+  }
+
+  private GoogleKeyPair congifureSSHKeyPair(Instance instance, String sshUser) {
+    sshKeyPair = GoogleKeyPair.generate(sshUser);
+    instance
+        .getMetadata()
+        .getItems()
+        .add(new Metadata.Items().setKey(SSH_METADATA_KEY).setValue(sshKeyPair.getPublicKey()));
+    return sshKeyPair;
+  }
+
+  private void configureStartupScript(Instance instance) {
     if (notNullOrEmpty(startupScript)) {
-      Metadata metadata = new Metadata();
-      List<Metadata.Items> items = new ArrayList<>();
-      if (this.windows) {
+      List<Metadata.Items> items = instance.getMetadata().getItems();
+      if (windows) {
         items.add(
             new Metadata.Items()
                 .setKey(METADATA_WINDOWS_STARTUP_SCRIPT_KEY)
@@ -672,10 +697,7 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
         items.add(
             new Metadata.Items().setKey(METADATA_LINUX_STARTUP_SCRIPT_KEY).setValue(startupScript));
       }
-      metadata.setItems(items);
-      return metadata;
     }
-    return null;
   }
 
   private Tags tags() {

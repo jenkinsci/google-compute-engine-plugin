@@ -17,6 +17,8 @@
 package com.google.jenkins.plugins.computeengine;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.anyString;
 
 import com.gargoylesoftware.htmlunit.html.HtmlPage;
@@ -34,6 +36,7 @@ import hudson.model.Node;
 import hudson.util.FormValidation;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -184,68 +187,75 @@ public class InstanceConfigurationTest {
   public void testInstanceModel() throws Exception {
     Instance i = instanceConfiguration(MIN_CPU_PLATFORM).instance();
     // General
-    assert (i.getName().startsWith(NAME_PREFIX));
-    assert (i.getDescription().equals(CONFIG_DESC));
-    assert (i.getZone().equals(ZONE));
-    assert (i.getMachineType().equals(MACHINE_TYPE));
-    assert (i.getMinCpuPlatform().equals(MIN_CPU_PLATFORM));
+    assertTrue(i.getName().startsWith(NAME_PREFIX));
+    assertTrue(i.getDescription().equals(CONFIG_DESC));
+    assertTrue(i.getZone().equals(ZONE));
+    assertTrue(i.getMachineType().equals(MACHINE_TYPE));
+    assertTrue(i.getMinCpuPlatform().equals(MIN_CPU_PLATFORM));
 
     // Accelerators
-    assert (i.getGuestAccelerators().get(0).getAcceleratorType().equals(ACCELERATOR_NAME));
-    assert (i.getGuestAccelerators()
-        .get(0)
-        .getAcceleratorCount()
-        .equals(Integer.parseInt(ACCELERATOR_COUNT)));
+    assertTrue(i.getGuestAccelerators().get(0).getAcceleratorType().equals(ACCELERATOR_NAME));
+    assertTrue(
+        i.getGuestAccelerators()
+            .get(0)
+            .getAcceleratorCount()
+            .equals(Integer.parseInt(ACCELERATOR_COUNT)));
 
     // Metadata
-    assert (i.getMetadata()
-        .getItems()
-        .get(0)
-        .getKey()
-        .equals(InstanceConfiguration.METADATA_LINUX_STARTUP_SCRIPT_KEY));
-    assert (i.getMetadata().getItems().get(0).getValue().equals(STARTUP_SCRIPT));
+    Optional<String> startupScript =
+        i.getMetadata().getItems().stream()
+            .filter(
+                item ->
+                    item.getKey().equals(InstanceConfiguration.METADATA_LINUX_STARTUP_SCRIPT_KEY))
+            .map(item -> item.getValue())
+            .findFirst();
+    assertTrue(startupScript.isPresent());
+    assertEquals(startupScript.get(), STARTUP_SCRIPT);
+
+    Optional<String> sshKey =
+        i.getMetadata().getItems().stream()
+            .filter(item -> item.getKey().equals(InstanceConfiguration.SSH_METADATA_KEY))
+            .map(item -> item.getValue())
+            .findFirst();
+    assertTrue(sshKey.isPresent());
+    assertFalse(sshKey.get().isEmpty());
 
     // Network
-    assert (i.getNetworkInterfaces().get(0).getSubnetwork().equals(SUBNETWORK_NAME));
-    assert (i.getNetworkInterfaces()
-        .get(0)
-        .getAccessConfigs()
-        .get(0)
-        .getType()
-        .equals("ONE_TO_ONE_NAT"));
-    assert (i.getNetworkInterfaces()
-        .get(0)
-        .getAccessConfigs()
-        .get(0)
-        .getName()
-        .equals("External NAT"));
+    assertTrue(i.getNetworkInterfaces().get(0).getSubnetwork().equals(SUBNETWORK_NAME));
+    assertTrue(
+        i.getNetworkInterfaces()
+            .get(0)
+            .getAccessConfigs()
+            .get(0)
+            .getType()
+            .equals("ONE_TO_ONE_NAT"));
+    assertTrue(
+        i.getNetworkInterfaces().get(0).getAccessConfigs().get(0).getName().equals("External NAT"));
 
     // Tags
-    assert (i.getTags().getItems().size() == NETWORK_TAGS.split(" ").length);
-    assert (i.getTags().getItems().get(0).equals(NETWORK_TAGS.split(" ")[0]));
-    assert (i.getTags().getItems().get(1).equals(NETWORK_TAGS.split(" ")[1]));
+    assertTrue(i.getTags().getItems().size() == NETWORK_TAGS.split(" ").length);
+    assertTrue(i.getTags().getItems().get(0).equals(NETWORK_TAGS.split(" ")[0]));
+    assertTrue(i.getTags().getItems().get(1).equals(NETWORK_TAGS.split(" ")[1]));
 
     // IAM
-    assert (i.getServiceAccounts().get(0).getEmail().equals(SERVICE_ACCOUNT_EMAIL));
+    assertTrue(i.getServiceAccounts().get(0).getEmail().equals(SERVICE_ACCOUNT_EMAIL));
 
     // Disks
-    assert (i.getDisks().get(0).getAutoDelete().equals(BOOT_DISK_AUTODELETE));
-    assert (i.getDisks().get(0).getBoot().equals(true));
-    assert (i.getDisks().get(0).getInitializeParams().getDiskType().equals(BOOT_DISK_TYPE));
-    assert (i.getDisks()
-        .get(0)
-        .getInitializeParams()
-        .getDiskSizeGb()
-        .equals(Long.parseLong(BOOT_DISK_SIZE_GB_STR)));
-    assert (i.getDisks()
-        .get(0)
-        .getInitializeParams()
-        .getSourceImage()
-        .equals(BOOT_DISK_IMAGE_NAME));
+    assertTrue(i.getDisks().get(0).getAutoDelete().equals(BOOT_DISK_AUTODELETE));
+    assertTrue(i.getDisks().get(0).getBoot().equals(true));
+    assertTrue(i.getDisks().get(0).getInitializeParams().getDiskType().equals(BOOT_DISK_TYPE));
+    assertTrue(
+        i.getDisks()
+            .get(0)
+            .getInitializeParams()
+            .getDiskSizeGb()
+            .equals(Long.parseLong(BOOT_DISK_SIZE_GB_STR)));
+    assertTrue(
+        i.getDisks().get(0).getInitializeParams().getSourceImage().equals(BOOT_DISK_IMAGE_NAME));
 
     InstanceConfiguration instanceConfiguration = instanceConfiguration();
-    assert (!instanceConfiguration.isUseInternalAddress());
-    assert (instanceConfiguration.instance().getMinCpuPlatform() == null);
+    assertTrue(!instanceConfiguration.isUseInternalAddress());
+    assertTrue(instanceConfiguration.instance().getMinCpuPlatform() == null);
   }
 
   public static InstanceConfiguration instanceConfiguration() {
