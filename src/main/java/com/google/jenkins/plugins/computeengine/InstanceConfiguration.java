@@ -624,13 +624,23 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
       sshKeyPair = congifureSSHKeyPair(instance, runAsUser);
     }
 
-    configureStartupScript(instance);
-
     if (StringUtils.isNotEmpty(template)) {
       InstanceTemplate instanceTemplate =
           cloud
               .getClient()
               .getTemplate(nameFromSelfLink(cloud.projectId), nameFromSelfLink(template));
+      /* Since we have to set the metadata to include the SSH keypar, we need to ensure
+      we include metadata properties which might be set in the template. */
+      if (instanceTemplate.getProperties() != null
+          && instanceTemplate.getProperties().getMetadata() != null
+          && instanceTemplate.getProperties().getMetadata().getItems() != null) {
+        instanceTemplate
+            .getProperties()
+            .getMetadata()
+            .getItems()
+            .forEach(instance.getMetadata().getItems()::add);
+      }
+
       Map<String, String> mergedLabels = new HashMap<>(googleLabels);
       if (instanceTemplate.getProperties().getLabels() != null) {
         Map<String, String> templateLabels = instanceTemplate.getProperties().getLabels();
@@ -638,6 +648,7 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
       }
       instance.setLabels(mergedLabels);
     } else {
+      configureStartupScript(instance);
       instance.setLabels(googleLabels);
       instance.setMachineType(stripSelfLinkPrefix(machineType));
       instance.setTags(tags());

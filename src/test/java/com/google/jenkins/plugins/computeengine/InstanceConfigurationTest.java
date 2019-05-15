@@ -186,24 +186,24 @@ public class InstanceConfigurationTest {
 
   @Test
   public void testInstanceModel() throws Exception {
-    Instance i = instanceConfiguration(MIN_CPU_PLATFORM).instance();
+    Instance instance = instanceConfiguration(MIN_CPU_PLATFORM).instance();
     // General
-    assertTrue(i.getName().startsWith(NAME_PREFIX));
-    assertEquals(i.getDescription(), CONFIG_DESC);
-    assertEquals(i.getZone(), ZONE);
-    assertEquals(i.getMachineType(), MACHINE_TYPE);
-    assertEquals(i.getMinCpuPlatform(), MIN_CPU_PLATFORM);
+    assertTrue(instance.getName().startsWith(NAME_PREFIX));
+    assertEquals(instance.getDescription(), CONFIG_DESC);
+    assertEquals(instance.getZone(), ZONE);
+    assertEquals(instance.getMachineType(), MACHINE_TYPE);
+    assertEquals(instance.getMinCpuPlatform(), MIN_CPU_PLATFORM);
 
     // Accelerators
-    assertEquals(i.getGuestAccelerators().get(0).getAcceleratorType(), ACCELERATOR_NAME);
+    assertEquals(instance.getGuestAccelerators().get(0).getAcceleratorType(), ACCELERATOR_NAME);
     // NOTE(craigatgoogle): Cast is required for disambiguation.
     assertEquals(
-        (int) i.getGuestAccelerators().get(0).getAcceleratorCount(),
+        (int) instance.getGuestAccelerators().get(0).getAcceleratorCount(),
         (int) Integer.parseInt(ACCELERATOR_COUNT));
 
     // Metadata
     Optional<String> startupScript =
-        i.getMetadata().getItems().stream()
+        instance.getMetadata().getItems().stream()
             .filter(
                 item ->
                     item.getKey().equals(InstanceConfiguration.METADATA_LINUX_STARTUP_SCRIPT_KEY))
@@ -213,7 +213,7 @@ public class InstanceConfigurationTest {
     assertEquals(startupScript.get(), STARTUP_SCRIPT);
 
     Optional<String> sshKey =
-        i.getMetadata().getItems().stream()
+        instance.getMetadata().getItems().stream()
             .filter(item -> item.getKey().equals(InstanceConfiguration.SSH_METADATA_KEY))
             .map(item -> item.getValue())
             .findFirst();
@@ -221,26 +221,29 @@ public class InstanceConfigurationTest {
     assertFalse(sshKey.get().isEmpty());
 
     // Network
-    assertEquals(i.getNetworkInterfaces().get(0).getSubnetwork(), SUBNETWORK_NAME);
+    assertEquals(instance.getNetworkInterfaces().get(0).getSubnetwork(), SUBNETWORK_NAME);
     assertEquals(
-        i.getNetworkInterfaces().get(0).getAccessConfigs().get(0).getType(), "ONE_TO_ONE_NAT");
+        instance.getNetworkInterfaces().get(0).getAccessConfigs().get(0).getType(),
+        "ONE_TO_ONE_NAT");
     assertEquals(
-        i.getNetworkInterfaces().get(0).getAccessConfigs().get(0).getName(), "External NAT");
+        instance.getNetworkInterfaces().get(0).getAccessConfigs().get(0).getName(), "External NAT");
 
     // Tags
-    assertTrue(i.getTags().getItems().size() == NETWORK_TAGS.split(" ").length);
-    assertEquals(i.getTags().getItems().get(0), NETWORK_TAGS.split(" ")[0]);
-    assertEquals(i.getTags().getItems().get(1), NETWORK_TAGS.split(" ")[1]);
+    assertTrue(instance.getTags().getItems().size() == NETWORK_TAGS.split(" ").length);
+    assertEquals(instance.getTags().getItems().get(0), NETWORK_TAGS.split(" ")[0]);
+    assertEquals(instance.getTags().getItems().get(1), NETWORK_TAGS.split(" ")[1]);
 
     // IAM
-    assertEquals(i.getServiceAccounts().get(0).getEmail(), SERVICE_ACCOUNT_EMAIL);
+    assertEquals(instance.getServiceAccounts().get(0).getEmail(), SERVICE_ACCOUNT_EMAIL);
 
     // Disks
-    assertEquals(i.getDisks().get(0).getAutoDelete(), BOOT_DISK_AUTODELETE);
-    assertTrue(i.getDisks().get(0).getBoot());
-    assertEquals(i.getDisks().get(0).getInitializeParams().getDiskType(), BOOT_DISK_TYPE);
-    assertEquals(i.getDisks().get(0).getInitializeParams().getDiskSizeGb(), BOOT_DISK_SIZE_GB);
-    assertEquals(i.getDisks().get(0).getInitializeParams().getSourceImage(), BOOT_DISK_IMAGE_NAME);
+    assertEquals(instance.getDisks().get(0).getAutoDelete(), BOOT_DISK_AUTODELETE);
+    assertTrue(instance.getDisks().get(0).getBoot());
+    assertEquals(instance.getDisks().get(0).getInitializeParams().getDiskType(), BOOT_DISK_TYPE);
+    assertEquals(
+        instance.getDisks().get(0).getInitializeParams().getDiskSizeGb(), BOOT_DISK_SIZE_GB);
+    assertEquals(
+        instance.getDisks().get(0).getInitializeParams().getSourceImage(), BOOT_DISK_IMAGE_NAME);
 
     InstanceConfiguration instanceConfiguration = instanceConfiguration();
     assertFalse(instanceConfiguration.isUseInternalAddress());
