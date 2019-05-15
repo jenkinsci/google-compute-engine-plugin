@@ -624,6 +624,8 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
       sshKeyPair = congifureSSHKeyPair(instance, runAsUser);
     }
 
+    configureStartupScript(instance);
+
     if (StringUtils.isNotEmpty(template)) {
       InstanceTemplate instanceTemplate =
           cloud
@@ -638,7 +640,6 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
     } else {
       instance.setLabels(googleLabels);
       instance.setMachineType(stripSelfLinkPrefix(machineType));
-      configureStartupScript(instance);
       instance.setTags(tags());
       instance.setScheduling(scheduling());
       instance.setDisks(disks());
@@ -651,6 +652,7 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
         instance.setMinCpuPlatform(minCpuPlatform);
       }
     }
+
     return instance;
   }
 

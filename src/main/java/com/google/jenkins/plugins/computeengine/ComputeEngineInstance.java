@@ -151,7 +151,7 @@ public class ComputeEngineInstance extends AbstractCloudSlave {
     return !Strings.isNullOrEmpty(javaExecPath) ? javaExecPath : "java";
   }
 
-  /** @return The configured Linux SSH key pair for this {@link InstanceConfiguration}. */
+  /** @return The configured Linux SSH key pair for this {@link ComputeEngineInstance}. */
   public Optional<GoogleKeyPair> getSSHKeyPair() {
     return Optional.ofNullable(sshKeyPair);
   }
