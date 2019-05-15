@@ -189,17 +189,17 @@ public class InstanceConfigurationTest {
     Instance instance = instanceConfiguration(MIN_CPU_PLATFORM).instance();
     // General
     assertTrue(instance.getName().startsWith(NAME_PREFIX));
-    assertEquals(instance.getDescription(), CONFIG_DESC);
-    assertEquals(instance.getZone(), ZONE);
-    assertEquals(instance.getMachineType(), MACHINE_TYPE);
-    assertEquals(instance.getMinCpuPlatform(), MIN_CPU_PLATFORM);
+    assertEquals(CONFIG_DESC, instance.getDescription());
+    assertEquals(ZONE, instance.getZone());
+    assertEquals(MACHINE_TYPE, instance.getMachineType());
+    assertEquals(MIN_CPU_PLATFORM, instance.getMinCpuPlatform());
 
     // Accelerators
-    assertEquals(instance.getGuestAccelerators().get(0).getAcceleratorType(), ACCELERATOR_NAME);
+    assertEquals(ACCELERATOR_NAME, instance.getGuestAccelerators().get(0).getAcceleratorType());
     // NOTE(craigatgoogle): Cast is required for disambiguation.
     assertEquals(
-        (int) instance.getGuestAccelerators().get(0).getAcceleratorCount(),
-        (int) Integer.parseInt(ACCELERATOR_COUNT));
+        (int) Integer.parseInt(ACCELERATOR_COUNT),
+        (int) instance.getGuestAccelerators().get(0).getAcceleratorCount());
 
     // Metadata
     Optional<String> startupScript =
@@ -210,7 +210,7 @@ public class InstanceConfigurationTest {
             .map(item -> item.getValue())
             .findFirst();
     assertTrue(startupScript.isPresent());
-    assertEquals(startupScript.get(), STARTUP_SCRIPT);
+    assertEquals(STARTUP_SCRIPT, startupScript.get());
 
     Optional<String> sshKey =
         instance.getMetadata().getItems().stream()
@@ -221,29 +221,29 @@ public class InstanceConfigurationTest {
     assertFalse(sshKey.get().isEmpty());
 
     // Network
-    assertEquals(instance.getNetworkInterfaces().get(0).getSubnetwork(), SUBNETWORK_NAME);
+    assertEquals(SUBNETWORK_NAME, instance.getNetworkInterfaces().get(0).getSubnetwork());
     assertEquals(
-        instance.getNetworkInterfaces().get(0).getAccessConfigs().get(0).getType(),
-        "ONE_TO_ONE_NAT");
+        "ONE_TO_ONE_NAT",
+        instance.getNetworkInterfaces().get(0).getAccessConfigs().get(0).getType());
     assertEquals(
-        instance.getNetworkInterfaces().get(0).getAccessConfigs().get(0).getName(), "External NAT");
+        "External NAT", instance.getNetworkInterfaces().get(0).getAccessConfigs().get(0).getName());
 
     // Tags
     assertTrue(instance.getTags().getItems().size() == NETWORK_TAGS.split(" ").length);
-    assertEquals(instance.getTags().getItems().get(0), NETWORK_TAGS.split(" ")[0]);
-    assertEquals(instance.getTags().getItems().get(1), NETWORK_TAGS.split(" ")[1]);
+    assertEquals(NETWORK_TAGS.split(" ")[0], instance.getTags().getItems().get(0));
+    assertEquals(NETWORK_TAGS.split(" ")[1], instance.getTags().getItems().get(1));
 
     // IAM
-    assertEquals(instance.getServiceAccounts().get(0).getEmail(), SERVICE_ACCOUNT_EMAIL);
+    assertEquals(SERVICE_ACCOUNT_EMAIL, instance.getServiceAccounts().get(0).getEmail());
 
     // Disks
-    assertEquals(instance.getDisks().get(0).getAutoDelete(), BOOT_DISK_AUTODELETE);
+    assertEquals(BOOT_DISK_AUTODELETE, instance.getDisks().get(0).getAutoDelete());
     assertTrue(instance.getDisks().get(0).getBoot());
-    assertEquals(instance.getDisks().get(0).getInitializeParams().getDiskType(), BOOT_DISK_TYPE);
+    assertEquals(BOOT_DISK_TYPE, instance.getDisks().get(0).getInitializeParams().getDiskType());
     assertEquals(
-        instance.getDisks().get(0).getInitializeParams().getDiskSizeGb(), BOOT_DISK_SIZE_GB);
+        BOOT_DISK_SIZE_GB, instance.getDisks().get(0).getInitializeParams().getDiskSizeGb());
     assertEquals(
-        instance.getDisks().get(0).getInitializeParams().getSourceImage(), BOOT_DISK_IMAGE_NAME);
+        BOOT_DISK_IMAGE_NAME, instance.getDisks().get(0).getInitializeParams().getSourceImage());
 
     InstanceConfiguration instanceConfiguration = instanceConfiguration();
     assertFalse(instanceConfiguration.isUseInternalAddress());

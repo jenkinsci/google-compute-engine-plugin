@@ -629,7 +629,7 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
           cloud
               .getClient()
               .getTemplate(nameFromSelfLink(cloud.projectId), nameFromSelfLink(template));
-      /* Since we have to set the metadata to include the SSH keypar, we need to ensure
+      /* Since we have to set the metadata to include the SSH keypair, we need to ensure
       we include metadata properties which might be set in the template. */
       if (instanceTemplate.getProperties() != null
           && instanceTemplate.getProperties().getMetadata() != null
