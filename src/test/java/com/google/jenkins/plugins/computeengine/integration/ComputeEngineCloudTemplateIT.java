@@ -84,7 +84,6 @@ public class ComputeEngineCloudTemplateIT {
     cloud.addConfiguration(
         instanceConfiguration(
             new InstanceConfiguration.Builder()
-                //   .startupScript(DEB_JAVA_STARTUP_SCRIPT)
                 .numExecutorsStr(NUM_EXECUTORS)
                 .labels(LABEL)
                 .oneShot(false)
