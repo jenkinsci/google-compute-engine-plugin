@@ -14,6 +14,19 @@
 # Changelog
 All notable changes to this project will be documented in this file.
 
+## [3.2.0] - 2019-05-16
+### Added
+- Issue #91: Support for configuring a custom java execution path through the javaExecPath field in
+  Instance Configuration.
+
+### Fixed
+- Pull #90: For Usage->IAM credentials step 2, include needed permissions and allow copy-paste. 
+- Pull #97: Expired slack invite link is now a bitly link.
+
+### Changed
+- Issue #100: Populate ssh key in metadata before startup so that it can be referenced in startup
+  scripts.
+
 ## [3.1.1] - 2019-05-01
 ### Fixed
 - Issue #85: Instance IDs are now properly created.
