@@ -18,10 +18,8 @@ package com.google.jenkins.plugins.computeengine;
 
 import com.google.api.services.compute.model.AccessConfig;
 import com.google.api.services.compute.model.Instance;
-import com.google.api.services.compute.model.Metadata;
 import com.google.api.services.compute.model.NetworkInterface;
 import com.google.api.services.compute.model.Operation;
-import com.google.jenkins.plugins.computeengine.client.ComputeClient;
 import com.google.jenkins.plugins.computeengine.ssh.GoogleKeyPair;
 import com.trilead.ssh2.Connection;
 import com.trilead.ssh2.HTTPProxyData;
@@ -35,16 +33,12 @@ import java.io.IOException;
 import java.io.PrintStream;
 import java.net.InetSocketAddress;
 import java.net.Proxy;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import jenkins.model.Jenkins;
 
 public class ComputeEngineLinuxLauncher extends ComputeEngineComputerLauncher {
   public final boolean useInternalAddress;
-
-  public static final String SSH_METADATA_KEY = "ssh-keys";
 
   // TODO: make this configurable
   public static final Integer SSH_PORT = 22;
@@ -105,7 +99,16 @@ public class ComputeEngineLinuxLauncher extends ComputeEngineComputerLauncher {
     PrintStream logger = listener.getLogger();
     logInfo(computer, listener, "Launching instance: " + node.getNodeName());
     try {
-      GoogleKeyPair kp = setupSshKeys(computer);
+      if (!node.getSSHKeyPair().isPresent()) {
+        log(
+            Level.SEVERE,
+            computer,
+            listener,
+            String.format("Failed to retreieve SSH keypair for instance: %s", node.getNodeName()));
+        return;
+      }
+
+      GoogleKeyPair kp = node.getSSHKeyPair().get();
       boolean isBootstrapped = bootstrap(kp, computer, listener);
       if (isBootstrapped) {
         // connect fresh as ROOT
@@ -165,27 +168,6 @@ public class ComputeEngineLinuxLauncher extends ComputeEngineComputerLauncher {
       throws IOException, InterruptedException {
     logInfo(computer, listener, "Verifying: " + checkCommand);
     return conn.exec(checkCommand, logger) == 0;
-  }
-
-  private GoogleKeyPair setupSshKeys(ComputeEngineComputer computer)
-      throws CloudNotFoundException, IOException, InterruptedException {
-    if (computer == null) {
-      throw new IllegalArgumentException("A null ComputeEngineComputer was provided");
-    }
-
-    ComputeEngineInstance node = computer.getNode();
-    if (node == null) {
-      throw new IllegalArgumentException("A ComputeEngineComputer with no node was provided");
-    }
-
-    ComputeEngineCloud cloud = computer.getCloud();
-    ComputeClient client = cloud.getClient();
-
-    GoogleKeyPair kp = GoogleKeyPair.generate(node.sshUser);
-    List<Metadata.Items> items = new ArrayList<>();
-    items.add(new Metadata.Items().setKey(SSH_METADATA_KEY).setValue(kp.getPublicKey()));
-    client.appendInstanceMetadata(cloud.projectId, node.zone, node.getNodeName(), items);
-    return kp;
   }
 
   private boolean bootstrap(GoogleKeyPair kp, ComputeEngineComputer computer, TaskListener listener)

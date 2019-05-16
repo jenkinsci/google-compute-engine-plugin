@@ -16,11 +16,11 @@
 
 package com.google.jenkins.plugins.computeengine.ssh;
 
+import java.io.Serializable;
 import java.util.Map;
 import org.jclouds.ssh.SshKeys;
 
-public class GoogleKeyPair {
-
+public class GoogleKeyPair implements Serializable {
   private final String privateKey;
   private final String publicKey;
   private final String user;

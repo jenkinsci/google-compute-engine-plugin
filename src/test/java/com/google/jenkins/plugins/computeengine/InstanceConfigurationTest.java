@@ -17,6 +17,9 @@
 package com.google.jenkins.plugins.computeengine;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.anyString;
 
 import com.gargoylesoftware.htmlunit.html.HtmlPage;
@@ -34,6 +37,7 @@ import hudson.model.Node;
 import hudson.util.FormValidation;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -61,7 +65,7 @@ public class InstanceConfigurationTest {
   public static final boolean BOOT_DISK_AUTODELETE = true;
   public static final String BOOT_DISK_IMAGE_NAME = "test-image";
   public static final String BOOT_DISK_PROJECT_ID = PROJECT_ID;
-  public static final String BOOT_DISK_SIZE_GB_STR = "10";
+  public static final Long BOOT_DISK_SIZE_GB = 10L;
   public static final Node.Mode NODE_MODE = Node.Mode.EXCLUSIVE;
   public static final String ACCELERATOR_NAME = "test-gpu";
   public static final String ACCELERATOR_COUNT = "1";
@@ -110,7 +114,7 @@ public class InstanceConfigurationTest {
     image
         .setName(BOOT_DISK_IMAGE_NAME)
         .setSelfLink(BOOT_DISK_IMAGE_NAME)
-        .setDiskSizeGb(Long.parseLong(BOOT_DISK_SIZE_GB_STR));
+        .setDiskSizeGb(BOOT_DISK_SIZE_GB);
 
     List<Network> networks = new ArrayList<Network>();
     networks.add(new Network().setName("").setSelfLink(""));
@@ -182,70 +186,68 @@ public class InstanceConfigurationTest {
 
   @Test
   public void testInstanceModel() throws Exception {
-    Instance i = instanceConfiguration(MIN_CPU_PLATFORM).instance();
+    Instance instance = instanceConfiguration(MIN_CPU_PLATFORM).instance();
     // General
-    assert (i.getName().startsWith(NAME_PREFIX));
-    assert (i.getDescription().equals(CONFIG_DESC));
-    assert (i.getZone().equals(ZONE));
-    assert (i.getMachineType().equals(MACHINE_TYPE));
-    assert (i.getMinCpuPlatform().equals(MIN_CPU_PLATFORM));
+    assertTrue(instance.getName().startsWith(NAME_PREFIX));
+    assertEquals(CONFIG_DESC, instance.getDescription());
+    assertEquals(ZONE, instance.getZone());
+    assertEquals(MACHINE_TYPE, instance.getMachineType());
+    assertEquals(MIN_CPU_PLATFORM, instance.getMinCpuPlatform());
 
     // Accelerators
-    assert (i.getGuestAccelerators().get(0).getAcceleratorType().equals(ACCELERATOR_NAME));
-    assert (i.getGuestAccelerators()
-        .get(0)
-        .getAcceleratorCount()
-        .equals(Integer.parseInt(ACCELERATOR_COUNT)));
+    assertEquals(ACCELERATOR_NAME, instance.getGuestAccelerators().get(0).getAcceleratorType());
+    // NOTE(craigatgoogle): Cast is required for disambiguation.
+    assertEquals(
+        (int) Integer.parseInt(ACCELERATOR_COUNT),
+        (int) instance.getGuestAccelerators().get(0).getAcceleratorCount());
 
     // Metadata
-    assert (i.getMetadata()
-        .getItems()
-        .get(0)
-        .getKey()
-        .equals(InstanceConfiguration.METADATA_LINUX_STARTUP_SCRIPT_KEY));
-    assert (i.getMetadata().getItems().get(0).getValue().equals(STARTUP_SCRIPT));
+    Optional<String> startupScript =
+        instance.getMetadata().getItems().stream()
+            .filter(
+                item ->
+                    item.getKey().equals(InstanceConfiguration.METADATA_LINUX_STARTUP_SCRIPT_KEY))
+            .map(item -> item.getValue())
+            .findFirst();
+    assertTrue(startupScript.isPresent());
+    assertEquals(STARTUP_SCRIPT, startupScript.get());
+
+    Optional<String> sshKey =
+        instance.getMetadata().getItems().stream()
+            .filter(item -> item.getKey().equals(InstanceConfiguration.SSH_METADATA_KEY))
+            .map(item -> item.getValue())
+            .findFirst();
+    assertTrue(sshKey.isPresent());
+    assertFalse(sshKey.get().isEmpty());
 
     // Network
-    assert (i.getNetworkInterfaces().get(0).getSubnetwork().equals(SUBNETWORK_NAME));
-    assert (i.getNetworkInterfaces()
-        .get(0)
-        .getAccessConfigs()
-        .get(0)
-        .getType()
-        .equals("ONE_TO_ONE_NAT"));
-    assert (i.getNetworkInterfaces()
-        .get(0)
-        .getAccessConfigs()
-        .get(0)
-        .getName()
-        .equals("External NAT"));
+    assertEquals(SUBNETWORK_NAME, instance.getNetworkInterfaces().get(0).getSubnetwork());
+    assertEquals(
+        "ONE_TO_ONE_NAT",
+        instance.getNetworkInterfaces().get(0).getAccessConfigs().get(0).getType());
+    assertEquals(
+        "External NAT", instance.getNetworkInterfaces().get(0).getAccessConfigs().get(0).getName());
 
     // Tags
-    assert (i.getTags().getItems().size() == NETWORK_TAGS.split(" ").length);
-    assert (i.getTags().getItems().get(0).equals(NETWORK_TAGS.split(" ")[0]));
-    assert (i.getTags().getItems().get(1).equals(NETWORK_TAGS.split(" ")[1]));
+    assertTrue(instance.getTags().getItems().size() == NETWORK_TAGS.split(" ").length);
+    assertEquals(NETWORK_TAGS.split(" ")[0], instance.getTags().getItems().get(0));
+    assertEquals(NETWORK_TAGS.split(" ")[1], instance.getTags().getItems().get(1));
 
     // IAM
-    assert (i.getServiceAccounts().get(0).getEmail().equals(SERVICE_ACCOUNT_EMAIL));
+    assertEquals(SERVICE_ACCOUNT_EMAIL, instance.getServiceAccounts().get(0).getEmail());
 
     // Disks
-    assert (i.getDisks().get(0).getAutoDelete().equals(BOOT_DISK_AUTODELETE));
-    assert (i.getDisks().get(0).getBoot().equals(true));
-    assert (i.getDisks().get(0).getInitializeParams().getDiskType().equals(BOOT_DISK_TYPE));
-    assert (i.getDisks()
-        .get(0)
-        .getInitializeParams()
-        .getDiskSizeGb()
-        .equals(Long.parseLong(BOOT_DISK_SIZE_GB_STR)));
-    assert (i.getDisks()
-        .get(0)
-        .getInitializeParams()
-        .getSourceImage()
-        .equals(BOOT_DISK_IMAGE_NAME));
+    assertEquals(BOOT_DISK_AUTODELETE, instance.getDisks().get(0).getAutoDelete());
+    assertTrue(instance.getDisks().get(0).getBoot());
+    assertEquals(BOOT_DISK_TYPE, instance.getDisks().get(0).getInitializeParams().getDiskType());
+    assertEquals(
+        BOOT_DISK_SIZE_GB, instance.getDisks().get(0).getInitializeParams().getDiskSizeGb());
+    assertEquals(
+        BOOT_DISK_IMAGE_NAME, instance.getDisks().get(0).getInitializeParams().getSourceImage());
 
     InstanceConfiguration instanceConfiguration = instanceConfiguration();
-    assert (!instanceConfiguration.isUseInternalAddress());
-    assert (instanceConfiguration.instance().getMinCpuPlatform() == null);
+    assertFalse(instanceConfiguration.isUseInternalAddress());
+    assertNull(instanceConfiguration.instance().getMinCpuPlatform());
   }
 
   public static InstanceConfiguration instanceConfiguration() {
@@ -268,7 +270,7 @@ public class InstanceConfigurationTest {
         .bootDiskAutoDelete(BOOT_DISK_AUTODELETE)
         .bootDiskSourceImageName(BOOT_DISK_IMAGE_NAME)
         .bootDiskSourceImageProject(BOOT_DISK_PROJECT_ID)
-        .bootDiskSizeGbStr(BOOT_DISK_SIZE_GB_STR)
+        .bootDiskSizeGbStr(String.valueOf(BOOT_DISK_SIZE_GB))
         .windows(WINDOWS)
         .windowsPasswordCredentialsId("")
         .windowsPrivateKeyCredentialsId("")
@@ -296,27 +298,22 @@ public class InstanceConfigurationTest {
 
     // Empty project, image, and credentials should be OK
     FormValidation fv =
-        d.doCheckBootDiskSizeGbStr(
-            r.jenkins, String.valueOf(Long.parseLong(BOOT_DISK_SIZE_GB_STR) - 1L), "", "", "");
+        d.doCheckBootDiskSizeGbStr(r.jenkins, String.valueOf(BOOT_DISK_SIZE_GB - 1L), "", "", "");
     assertEquals(FormValidation.Kind.OK, fv.kind);
 
     fv =
         d.doCheckBootDiskSizeGbStr(
             r.jenkins,
-            String.valueOf(Long.parseLong(BOOT_DISK_SIZE_GB_STR) - 1L),
+            String.valueOf(BOOT_DISK_SIZE_GB - 1L),
             PROJECT_ID,
             BOOT_DISK_IMAGE_NAME,
             PROJECT_ID);
     assertEquals(FormValidation.Kind.ERROR, fv.kind);
 
-    fv =
-        d.doCheckBootDiskSizeGbStr(
-            r.jenkins, String.valueOf(Long.parseLong(BOOT_DISK_SIZE_GB_STR)), "", "", "");
+    fv = d.doCheckBootDiskSizeGbStr(r.jenkins, String.valueOf(BOOT_DISK_SIZE_GB), "", "", "");
     assertEquals(FormValidation.Kind.OK, fv.kind);
 
-    fv =
-        d.doCheckBootDiskSizeGbStr(
-            r.jenkins, String.valueOf(Long.parseLong(BOOT_DISK_SIZE_GB_STR) + 1L), "", "", "");
+    fv = d.doCheckBootDiskSizeGbStr(r.jenkins, String.valueOf(BOOT_DISK_SIZE_GB + 1L), "", "", "");
     assertEquals(FormValidation.Kind.OK, fv.kind);
   }
 }
