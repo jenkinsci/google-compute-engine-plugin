@@ -23,7 +23,6 @@ import com.google.api.services.compute.model.Operation;
 import com.google.jenkins.plugins.computeengine.ssh.GoogleKeyPair;
 import com.trilead.ssh2.Connection;
 import com.trilead.ssh2.HTTPProxyData;
-import com.trilead.ssh2.SCPClient;
 import com.trilead.ssh2.ServerHostKeyVerifier;
 import com.trilead.ssh2.Session;
 import hudson.ProxyConfiguration;
@@ -34,7 +33,6 @@ import java.io.PrintStream;
 import java.net.InetSocketAddress;
 import java.net.Proxy;
 import java.util.logging.Level;
-import java.util.logging.Logger;
 import jenkins.model.Jenkins;
 
 public class ComputeEngineLinuxLauncher extends ComputeEngineComputerLauncher {
@@ -43,7 +41,6 @@ public class ComputeEngineLinuxLauncher extends ComputeEngineComputerLauncher {
   // TODO: make this configurable
   public static final Integer SSH_PORT = 22;
   public static final Integer SSH_TIMEOUT = 10000;
-  private static final Logger LOGGER = Logger.getLogger(ComputeEngineLinuxLauncher.class.getName());
   private static int bootstrapAuthTries = 30;
   private static int bootstrapAuthSleepMs = 15000;
 
@@ -51,34 +48,6 @@ public class ComputeEngineLinuxLauncher extends ComputeEngineComputerLauncher {
       String cloudName, Operation insertOperation, boolean useInternalAddress) {
     super(cloudName, insertOperation.getName(), insertOperation.getZone());
     this.useInternalAddress = useInternalAddress;
-  }
-
-  protected void log(
-      Level level, ComputeEngineComputer computer, TaskListener listener, String message) {
-    try {
-      ComputeEngineCloud cloud = computer.getCloud();
-      cloud.log(LOGGER, level, listener, message);
-    } catch (CloudNotFoundException cnfe) {
-      // TODO: figure out how to log without a handle to the cloud
-    }
-  }
-
-  protected void logException(
-      ComputeEngineComputer computer, TaskListener listener, String message, Throwable exception) {
-    try {
-      ComputeEngineCloud cloud = computer.getCloud();
-      cloud.log(LOGGER, Level.WARNING, listener, message, exception);
-    } catch (CloudNotFoundException cnfe) {
-      // TODO: figure out how to log without a handle to the cloud
-    }
-  }
-
-  protected void logInfo(ComputeEngineComputer computer, TaskListener listener, String message) {
-    log(Level.INFO, computer, listener, message);
-  }
-
-  protected void logWarning(ComputeEngineComputer computer, TaskListener listener, String message) {
-    log(Level.WARNING, computer, listener, message);
   }
 
   @Override
@@ -123,23 +92,9 @@ public class ComputeEngineLinuxLauncher extends ComputeEngineComputerLauncher {
         logWarning(computer, listener, "bootstrapresult failed");
         return;
       }
+
       conn = cleanupConn;
-
-      SCPClient scp = conn.createSCPClient();
-      String jenkinsDir = node.getRemoteFS();
-      logInfo(computer, listener, "Copying agent.jar to: " + jenkinsDir);
-      scp.put(Jenkins.get().getJnlpJars("agent.jar").readFully(), "agent.jar", jenkinsDir);
-
-      // Confirm Java is installed
-      String javaExecPath = node.getJavaExecPathOrDefault();
-      if (!testCommand(
-          computer, conn, String.format("%s -fullversion", javaExecPath), logger, listener)) {
-        logWarning(computer, listener, String.format("Java is not installed at %s", javaExecPath));
-      }
-
-      // TODO: allow jvmopt configuration
-      String launchString = String.format("%s -jar ", javaExecPath) + jenkinsDir + "/agent.jar";
-
+      String launchString = prepareJavaLaunchString(node, computer, conn, logger, listener);
       logInfo(computer, listener, "Launching Jenkins agent via plugin SSH: " + launchString);
       final Session sess = conn.openSession();
       sess.execCommand(launchString);
@@ -157,17 +112,6 @@ public class ComputeEngineLinuxLauncher extends ComputeEngineComputerLauncher {
     } catch (Exception e) {
       logException(computer, listener, "Error getting exception", e);
     }
-  }
-
-  private boolean testCommand(
-      ComputeEngineComputer computer,
-      Connection conn,
-      String checkCommand,
-      PrintStream logger,
-      TaskListener listener)
-      throws IOException, InterruptedException {
-    logInfo(computer, listener, "Verifying: " + checkCommand);
-    return conn.exec(checkCommand, logger) == 0;
   }
 
   private boolean bootstrap(GoogleKeyPair kp, ComputeEngineComputer computer, TaskListener listener)

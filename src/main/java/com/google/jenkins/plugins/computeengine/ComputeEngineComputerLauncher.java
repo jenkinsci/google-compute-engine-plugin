@@ -18,6 +18,8 @@ package com.google.jenkins.plugins.computeengine;
 
 import com.google.api.services.compute.model.Instance;
 import com.google.api.services.compute.model.Operation;
+import com.trilead.ssh2.Connection;
+import com.trilead.ssh2.SCPClient;
 import hudson.model.TaskListener;
 import hudson.slaves.ComputerLauncher;
 import hudson.slaves.SlaveComputer;
@@ -27,15 +29,18 @@ import java.util.logging.Level;
 import java.util.logging.LogRecord;
 import java.util.logging.Logger;
 import java.util.logging.SimpleFormatter;
+import jenkins.model.Jenkins;
 
 public abstract class ComputeEngineComputerLauncher extends ComputerLauncher {
   private static final Logger LOGGER =
       Logger.getLogger(ComputeEngineComputerLauncher.class.getName());
   private static final SimpleFormatter sf = new SimpleFormatter();
+  private static final String AGENT_JAR = "agent.jar";
 
   private final String insertOperationId;
   private final String zone;
   private final String cloudName;
+  protected String pathSeparator = "/";
 
   public ComputeEngineComputerLauncher(String cloudName, String insertOperationId, String zone) {
     super();
@@ -57,6 +62,34 @@ public abstract class ComputeEngineComputerLauncher extends ComputerLauncher {
       PrintStream printStream = listener.getLogger();
       printStream.print(sf.format(lr));
     }
+  }
+
+  protected void log(
+      Level level, ComputeEngineComputer computer, TaskListener listener, String message) {
+    try {
+      ComputeEngineCloud cloud = computer.getCloud();
+      cloud.log(LOGGER, level, listener, message);
+    } catch (CloudNotFoundException cnfe) {
+      log(LOGGER, Level.SEVERE, listener, "FATAL: Could not get cloud");
+    }
+  }
+
+  protected void logException(
+      ComputeEngineComputer computer, TaskListener listener, String message, Throwable exception) {
+    try {
+      ComputeEngineCloud cloud = computer.getCloud();
+      cloud.log(LOGGER, Level.WARNING, listener, message, exception);
+    } catch (CloudNotFoundException cnfe) {
+      log(LOGGER, Level.SEVERE, listener, "FATAL: Could not get cloud");
+    }
+  }
+
+  protected void logInfo(ComputeEngineComputer computer, TaskListener listener, String message) {
+    log(Level.INFO, computer, listener, message);
+  }
+
+  protected void logWarning(ComputeEngineComputer computer, TaskListener listener, String message) {
+    log(Level.WARNING, computer, listener, message);
   }
 
   @Override
@@ -177,6 +210,39 @@ public abstract class ComputeEngineComputerLauncher extends ComputerLauncher {
     } catch (InterruptedException ie) {
 
     }
+  }
+
+  protected String prepareJavaLaunchString(
+      ComputeEngineInstance node,
+      ComputeEngineComputer computer,
+      Connection conn,
+      PrintStream logger,
+      TaskListener listener)
+      throws IOException, InterruptedException {
+    SCPClient scp = conn.createSCPClient();
+    String jenkinsDir = node.getRemoteFS();
+    logInfo(computer, listener, "Copying agent.jar to: " + jenkinsDir);
+    scp.put(Jenkins.get().getJnlpJars(AGENT_JAR).readFully(), AGENT_JAR, jenkinsDir);
+
+    String javaExecPath = node.getJavaExecPathOrDefault();
+    if (!testCommand(
+        computer, conn, String.format("%s -fullversion", javaExecPath), logger, listener)) {
+      logWarning(computer, listener, String.format("Java is not installed at %s", javaExecPath));
+    }
+
+    // TODO: allow jvmopt configuration
+    return String.format("%s -jar ", javaExecPath) + jenkinsDir + pathSeparator + AGENT_JAR;
+  }
+
+  private boolean testCommand(
+      ComputeEngineComputer computer,
+      Connection conn,
+      String checkCommand,
+      PrintStream logger,
+      TaskListener listener)
+      throws IOException, InterruptedException {
+    logInfo(computer, listener, "Verifying: " + checkCommand);
+    return conn.exec(checkCommand, logger) == 0;
   }
 
   protected abstract void launch(
