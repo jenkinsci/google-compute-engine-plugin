@@ -219,16 +219,16 @@ public abstract class ComputeEngineComputerLauncher extends ComputerLauncher {
       PrintStream logger,
       TaskListener listener)
       throws IOException, InterruptedException {
-    SCPClient scp = conn.createSCPClient();
-    String jenkinsDir = node.getRemoteFS();
-    logInfo(computer, listener, "Copying agent.jar to: " + jenkinsDir);
-    scp.put(Jenkins.get().getJnlpJars(AGENT_JAR).readFully(), AGENT_JAR, jenkinsDir);
-
     String javaExecPath = node.getJavaExecPathOrDefault();
     if (!testCommand(
         computer, conn, String.format("%s -fullversion", javaExecPath), logger, listener)) {
       logWarning(computer, listener, String.format("Java is not installed at %s", javaExecPath));
     }
+
+    SCPClient scp = conn.createSCPClient();
+    String jenkinsDir = node.getRemoteFS();
+    logInfo(computer, listener, "Copying agent.jar to: " + jenkinsDir);
+    scp.put(Jenkins.get().getJnlpJars(AGENT_JAR).readFully(), AGENT_JAR, jenkinsDir);
 
     // TODO: allow jvmopt configuration
     return String.format("%s -jar ", javaExecPath) + jenkinsDir + pathSeparator + AGENT_JAR;
