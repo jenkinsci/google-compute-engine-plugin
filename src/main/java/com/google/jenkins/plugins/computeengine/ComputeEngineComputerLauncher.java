@@ -40,7 +40,6 @@ public abstract class ComputeEngineComputerLauncher extends ComputerLauncher {
   private final String insertOperationId;
   private final String zone;
   private final String cloudName;
-  protected String pathSeparator = "/";
 
   public ComputeEngineComputerLauncher(String cloudName, String insertOperationId, String zone) {
     super();
@@ -231,7 +230,7 @@ public abstract class ComputeEngineComputerLauncher extends ComputerLauncher {
     scp.put(Jenkins.get().getJnlpJars(AGENT_JAR).readFully(), AGENT_JAR, jenkinsDir);
 
     // TODO: allow jvmopt configuration
-    return String.format("%s -jar ", javaExecPath) + jenkinsDir + pathSeparator + AGENT_JAR;
+    return String.format("%s -jar ", javaExecPath) + jenkinsDir + getPathSeparator() + AGENT_JAR;
   }
 
   private boolean testCommand(
@@ -244,6 +243,8 @@ public abstract class ComputeEngineComputerLauncher extends ComputerLauncher {
     logInfo(computer, listener, "Verifying: " + checkCommand);
     return conn.exec(checkCommand, logger) == 0;
   }
+
+  protected abstract String getPathSeparator();
 
   protected abstract void launch(
       ComputeEngineComputer computer, TaskListener listener, Instance inst)

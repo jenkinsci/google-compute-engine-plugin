@@ -51,7 +51,6 @@ public class ComputeEngineWindowsLauncher extends ComputeEngineComputerLauncher 
       String cloudName, Operation insertOperation, boolean useInternalAddress) {
     super(cloudName, insertOperation.getName(), insertOperation.getZone());
     this.useInternalAddress = useInternalAddress;
-    this.pathSeparator = "\\";
   }
 
   @Override
@@ -257,5 +256,9 @@ public class ComputeEngineWindowsLauncher extends ComputeEngineComputerLauncher 
         Thread.sleep(5000);
       }
     }
+  }
+
+  protected String getPathSeparator() {
+    return "\\";
   }
 }

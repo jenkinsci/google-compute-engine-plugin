@@ -246,4 +246,8 @@ public class ComputeEngineLinuxLauncher extends ComputeEngineComputerLauncher {
       }
     }
   }
+
+  protected String getPathSeparator() {
+    return "/";
+  }
 }
