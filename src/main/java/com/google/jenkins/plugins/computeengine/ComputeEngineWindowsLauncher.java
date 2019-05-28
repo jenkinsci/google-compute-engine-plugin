@@ -22,16 +22,12 @@ import com.google.api.services.compute.model.Operation;
 import com.trilead.ssh2.Connection;
 import com.trilead.ssh2.HTTPProxyData;
 import com.trilead.ssh2.ServerHostKeyVerifier;
-import com.trilead.ssh2.Session;
 import hudson.ProxyConfiguration;
 import hudson.model.TaskListener;
-import hudson.remoting.Channel;
 import java.io.IOException;
-import java.io.PrintStream;
 import java.net.InetSocketAddress;
 import java.net.Proxy;
 import java.util.Optional;
-import java.util.logging.Level;
 import jenkins.model.Jenkins;
 
 /**
@@ -52,51 +48,6 @@ public class ComputeEngineWindowsLauncher extends ComputeEngineComputerLauncher 
       String cloudName, Operation insertOperation, boolean useInternalAddress) {
     super(cloudName, insertOperation.getName(), insertOperation.getZone());
     this.useInternalAddress = useInternalAddress;
-  }
-
-  @Override
-  protected void launch(ComputeEngineComputer computer, TaskListener listener, Instance inst) {
-    // TODO(#96): Conslidate duplicated launch logic
-    ComputeEngineInstance node = computer.getNode();
-    if (node == null) {
-      log(Level.SEVERE, computer, listener, "Could not get node from computer");
-      return;
-    }
-
-    final Connection conn;
-    Optional<Connection> cleanupConn;
-    PrintStream logger = listener.getLogger();
-    logInfo(computer, listener, "Launching instance: " + node.getNodeName());
-    try {
-      cleanupConn = setupConnection(node, computer, listener);
-      if (!cleanupConn.isPresent()) {
-        return;
-      }
-      conn = cleanupConn.get();
-      String javaExecPath = node.getJavaExecPathOrDefault();
-      if (!checkJavaInstalled(computer, conn, logger, listener, javaExecPath)) {
-        return;
-      }
-      String jenkinsDir = node.getRemoteFS();
-      copyAgentJar(computer, conn, listener, jenkinsDir);
-      String launchString = getJavaLaunchString(javaExecPath, jenkinsDir);
-      logInfo(computer, listener, "Launching Jenkins agent via plugin SSH: " + launchString);
-      final Session sess = conn.openSession();
-      sess.execCommand(launchString);
-      computer.setChannel(
-          sess.getStdout(),
-          sess.getStdin(),
-          logger,
-          new Channel.Listener() {
-            @Override
-            public void onClosed(Channel channel, IOException cause) {
-              sess.close();
-              conn.close();
-            }
-          });
-    } catch (Exception e) {
-      logException(computer, listener, "Error: ", e);
-    }
   }
 
   @Override
@@ -272,6 +223,7 @@ public class ComputeEngineWindowsLauncher extends ComputeEngineComputerLauncher 
     }
   }
 
+  @Override
   protected String getPathSeparator() {
     return "\\";
   }

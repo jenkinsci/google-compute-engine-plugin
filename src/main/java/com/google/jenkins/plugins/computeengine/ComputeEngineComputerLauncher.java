@@ -20,7 +20,9 @@ import com.google.api.services.compute.model.Instance;
 import com.google.api.services.compute.model.Operation;
 import com.trilead.ssh2.Connection;
 import com.trilead.ssh2.SCPClient;
+import com.trilead.ssh2.Session;
 import hudson.model.TaskListener;
+import hudson.remoting.Channel;
 import hudson.slaves.ComputerLauncher;
 import hudson.slaves.SlaveComputer;
 import java.io.IOException;
@@ -261,7 +263,46 @@ public abstract class ComputeEngineComputerLauncher extends ComputerLauncher {
 
   protected abstract String getPathSeparator();
 
-  protected abstract void launch(
-      ComputeEngineComputer computer, TaskListener listener, Instance inst)
-      throws IOException, InterruptedException;
+  private void launch(ComputeEngineComputer computer, TaskListener listener, Instance inst) {
+    ComputeEngineInstance node = computer.getNode();
+    if (node == null) {
+      logWarning(computer, listener, "Could not get node from computer");
+      return;
+    }
+
+    final Connection conn;
+    Optional<Connection> cleanupConn;
+    PrintStream logger = listener.getLogger();
+    logInfo(computer, listener, "Launching instance: " + node.getNodeName());
+    try {
+      cleanupConn = setupConnection(node, computer, listener);
+      if (!cleanupConn.isPresent()) {
+        return;
+      }
+      conn = cleanupConn.get();
+      String javaExecPath = node.getJavaExecPathOrDefault();
+      if (!checkJavaInstalled(computer, conn, logger, listener, javaExecPath)) {
+        return;
+      }
+      String jenkinsDir = node.getRemoteFS();
+      copyAgentJar(computer, conn, listener, jenkinsDir);
+      String launchString = getJavaLaunchString(javaExecPath, jenkinsDir);
+      logInfo(computer, listener, "Launching Jenkins agent via plugin SSH: " + launchString);
+      final Session sess = conn.openSession();
+      sess.execCommand(launchString);
+      computer.setChannel(
+          sess.getStdout(),
+          sess.getStdin(),
+          logger,
+          new Channel.Listener() {
+            @Override
+            public void onClosed(Channel channel, IOException cause) {
+              sess.close();
+              conn.close();
+            }
+          });
+    } catch (Exception e) {
+      logException(computer, listener, "Error: ", e);
+    }
+  }
 }
