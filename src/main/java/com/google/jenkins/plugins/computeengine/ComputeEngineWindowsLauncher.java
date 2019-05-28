@@ -28,6 +28,7 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.Proxy;
 import java.util.Optional;
+import java.util.logging.Logger;
 import jenkins.model.Jenkins;
 
 /**
@@ -36,6 +37,8 @@ import jenkins.model.Jenkins;
  * <p>Launches Compute Engine Windows instances
  */
 public class ComputeEngineWindowsLauncher extends ComputeEngineComputerLauncher {
+  private static final Logger LOGGER =
+      Logger.getLogger(ComputeEngineWindowsLauncher.class.getName());
   public final boolean useInternalAddress;
 
   // TODO: make this configurable
@@ -48,6 +51,10 @@ public class ComputeEngineWindowsLauncher extends ComputeEngineComputerLauncher 
       String cloudName, Operation insertOperation, boolean useInternalAddress) {
     super(cloudName, insertOperation.getName(), insertOperation.getZone());
     this.useInternalAddress = useInternalAddress;
+  }
+
+  protected Logger getLogger() {
+    return LOGGER;
   }
 
   @Override

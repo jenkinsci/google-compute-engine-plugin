@@ -16,7 +16,6 @@
 
 package com.google.jenkins.plugins.computeengine;
 
-import com.google.api.services.compute.model.Instance;
 import com.google.api.services.compute.model.Operation;
 import com.trilead.ssh2.Connection;
 import com.trilead.ssh2.SCPClient;
@@ -66,33 +65,38 @@ public abstract class ComputeEngineComputerLauncher extends ComputerLauncher {
     }
   }
 
-  protected void log(
-      Level level, ComputeEngineComputer computer, TaskListener listener, String message) {
+  private void log(
+      Level level,
+      ComputeEngineComputer computer,
+      TaskListener listener,
+      String message,
+      Throwable exception) {
     try {
       ComputeEngineCloud cloud = computer.getCloud();
-      cloud.log(LOGGER, level, listener, message);
+      cloud.log(getLogger(), level, listener, message, exception);
     } catch (CloudNotFoundException cnfe) {
-      log(LOGGER, Level.SEVERE, listener, "FATAL: Could not get cloud");
+      log(getLogger(), Level.SEVERE, listener, "FATAL: Could not get cloud", cnfe);
     }
   }
 
   protected void logException(
       ComputeEngineComputer computer, TaskListener listener, String message, Throwable exception) {
-    try {
-      ComputeEngineCloud cloud = computer.getCloud();
-      cloud.log(LOGGER, Level.WARNING, listener, message, exception);
-    } catch (CloudNotFoundException cnfe) {
-      log(LOGGER, Level.SEVERE, listener, "FATAL: Could not get cloud");
-    }
+    log(Level.WARNING, computer, listener, message, exception);
   }
 
   protected void logInfo(ComputeEngineComputer computer, TaskListener listener, String message) {
-    log(Level.INFO, computer, listener, message);
+    log(Level.INFO, computer, listener, message, null);
   }
 
   protected void logWarning(ComputeEngineComputer computer, TaskListener listener, String message) {
-    log(Level.WARNING, computer, listener, message);
+    log(Level.WARNING, computer, listener, message, null);
   }
+
+  protected void logSevere(ComputeEngineComputer computer, TaskListener listener, String message) {
+    log(Level.SEVERE, computer, listener, message, null);
+  }
+
+  protected abstract Logger getLogger();
 
   @Override
   public void launch(SlaveComputer slaveComputer, TaskListener listener) {
@@ -133,13 +137,7 @@ public abstract class ComputeEngineComputerLauncher extends ComputerLauncher {
                 insertOperationId, opError.getErrors().get(0).getMessage()));
         return;
       }
-    } catch (IOException ioe) {
-      LOGGER.info(
-          String.format(
-              "Launch failed while waiting for operation %s to complete. Operation error was %s",
-              insertOperationId, opError.getErrors().get(0).getMessage()));
-      return;
-    } catch (InterruptedException ie) {
+    } catch (IOException | InterruptedException e) {
       LOGGER.info(
           String.format(
               "Launch failed while waiting for operation %s to complete. Operation error was %s",
@@ -169,6 +167,7 @@ public abstract class ComputeEngineComputerLauncher extends ComputerLauncher {
             break OUTER;
           case "STOPPING":
           case "SUSPENDING":
+          case "TERMINATED":
             cloud.log(
                 LOGGER,
                 Level.FINEST,
@@ -186,19 +185,13 @@ public abstract class ComputeEngineComputerLauncher extends ComputerLauncher {
                 String.format(
                     "Instance %s was unexpectedly stopped or suspended...", computer.getName()));
             return;
-          case "TERMINATED":
-            cloud.log(
-                LOGGER,
-                Level.FINEST,
-                listener,
-                String.format("Instance %s is being shut down...", computer.getName()));
-            return;
         }
         Thread.sleep(5000);
       }
 
       // Initiate the next launch phase. This is likely an SSH-based process for Linux hosts.
-      launch(computer, listener, computer.refreshInstance());
+      computer.refreshInstance();
+      launch(computer, listener);
     } catch (IOException ioe) {
       ioe.printStackTrace(listener.error(ioe.getMessage()));
       node = (ComputeEngineInstance) slaveComputer.getNode();
@@ -229,7 +222,9 @@ public abstract class ComputeEngineComputerLauncher extends ComputerLauncher {
       ComputeEngineInstance node, ComputeEngineComputer computer, TaskListener listener)
       throws Exception;
 
-  protected boolean checkJavaInstalled(
+  protected abstract String getPathSeparator();
+
+  private boolean checkJavaInstalled(
       ComputeEngineComputer computer,
       Connection conn,
       PrintStream logger,
@@ -249,7 +244,7 @@ public abstract class ComputeEngineComputerLauncher extends ComputerLauncher {
     return false;
   }
 
-  protected void copyAgentJar(
+  private void copyAgentJar(
       ComputeEngineComputer computer, Connection conn, TaskListener listener, String jenkinsDir)
       throws IOException {
     SCPClient scp = conn.createSCPClient();
@@ -257,13 +252,11 @@ public abstract class ComputeEngineComputerLauncher extends ComputerLauncher {
     scp.put(Jenkins.get().getJnlpJars(AGENT_JAR).readFully(), AGENT_JAR, jenkinsDir);
   }
 
-  protected String getJavaLaunchString(String javaExecPath, String jenkinsDir) {
+  private String getJavaLaunchString(String javaExecPath, String jenkinsDir) {
     return String.format("%s -jar %s%s%s", javaExecPath, jenkinsDir, getPathSeparator(), AGENT_JAR);
   }
 
-  protected abstract String getPathSeparator();
-
-  private void launch(ComputeEngineComputer computer, TaskListener listener, Instance inst) {
+  private void launch(ComputeEngineComputer computer, TaskListener listener) {
     ComputeEngineInstance node = computer.getNode();
     if (node == null) {
       logWarning(computer, listener, "Could not get node from computer");

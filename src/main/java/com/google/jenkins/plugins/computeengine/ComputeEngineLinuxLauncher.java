@@ -30,10 +30,12 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.Proxy;
 import java.util.Optional;
-import java.util.logging.Level;
+import java.util.logging.Logger;
 import jenkins.model.Jenkins;
 
 public class ComputeEngineLinuxLauncher extends ComputeEngineComputerLauncher {
+  private static final Logger LOGGER = Logger.getLogger(ComputeEngineLinuxLauncher.class.getName());
+
   public final boolean useInternalAddress;
 
   // TODO: make this configurable
@@ -48,13 +50,16 @@ public class ComputeEngineLinuxLauncher extends ComputeEngineComputerLauncher {
     this.useInternalAddress = useInternalAddress;
   }
 
+  protected Logger getLogger() {
+    return LOGGER;
+  }
+
   @Override
   protected Optional<Connection> setupConnection(
       ComputeEngineInstance node, ComputeEngineComputer computer, TaskListener listener)
       throws Exception {
     if (!node.getSSHKeyPair().isPresent()) {
-      log(
-          Level.SEVERE,
+      logSevere(
           computer,
           listener,
           String.format("Failed to retreieve SSH keypair for instance: %s", node.getNodeName()));
