@@ -94,7 +94,13 @@ public class ComputeEngineLinuxLauncher extends ComputeEngineComputerLauncher {
       }
 
       conn = cleanupConn;
-      String launchString = prepareJavaLaunchString(node, computer, conn, logger, listener);
+      String javaExecPath = node.getJavaExecPathOrDefault();
+      if (!checkJavaInstalled(computer, conn, logger, listener, javaExecPath)) {
+        return;
+      }
+      String jenkinsDir = node.getRemoteFS();
+      copyAgentJar(computer, conn, listener, jenkinsDir);
+      String launchString = getJavaLaunchString(javaExecPath, jenkinsDir);
       logInfo(computer, listener, "Launching Jenkins agent via plugin SSH: " + launchString);
       final Session sess = conn.openSession();
       sess.execCommand(launchString);

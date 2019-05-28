@@ -211,28 +211,6 @@ public abstract class ComputeEngineComputerLauncher extends ComputerLauncher {
     }
   }
 
-  protected String prepareJavaLaunchString(
-      ComputeEngineInstance node,
-      ComputeEngineComputer computer,
-      Connection conn,
-      PrintStream logger,
-      TaskListener listener)
-      throws IOException, InterruptedException {
-    String javaExecPath = node.getJavaExecPathOrDefault();
-    if (!testCommand(
-        computer, conn, String.format("%s -fullversion", javaExecPath), logger, listener)) {
-      logWarning(computer, listener, String.format("Java is not installed at %s", javaExecPath));
-    }
-
-    SCPClient scp = conn.createSCPClient();
-    String jenkinsDir = node.getRemoteFS();
-    logInfo(computer, listener, "Copying agent.jar to: " + jenkinsDir);
-    scp.put(Jenkins.get().getJnlpJars(AGENT_JAR).readFully(), AGENT_JAR, jenkinsDir);
-
-    // TODO: allow jvmopt configuration
-    return String.format("%s -jar ", javaExecPath) + jenkinsDir + getPathSeparator() + AGENT_JAR;
-  }
-
   private boolean testCommand(
       ComputeEngineComputer computer,
       Connection conn,
@@ -242,6 +220,36 @@ public abstract class ComputeEngineComputerLauncher extends ComputerLauncher {
       throws IOException, InterruptedException {
     logInfo(computer, listener, "Verifying: " + checkCommand);
     return conn.exec(checkCommand, logger) == 0;
+  }
+
+  protected boolean checkJavaInstalled(
+      ComputeEngineComputer computer,
+      Connection conn,
+      PrintStream logger,
+      TaskListener listener,
+      String javaExecPath){
+    try {
+      if (testCommand(
+          computer, conn, String.format("%s -fullversion", javaExecPath), logger, listener)) {
+        return true;
+      }
+    } catch (IOException | InterruptedException ex) {
+      logException(computer, listener, "Failed to check java: ", ex);
+      return false;
+    }
+
+    logWarning(computer, listener, String.format("Java is not installed at %s", javaExecPath));
+    return false;
+  }
+
+  protected void copyAgentJar(ComputeEngineComputer computer, Connection conn, TaskListener listener, String jenkinsDir) throws IOException {
+    SCPClient scp = conn.createSCPClient();
+    logInfo(computer, listener, "Copying agent.jar to: " + jenkinsDir);
+    scp.put(Jenkins.get().getJnlpJars(AGENT_JAR).readFully(), AGENT_JAR, jenkinsDir);
+  }
+
+  protected String getJavaLaunchString(String javaExecPath, String jenkinsDir) {
+    return String.format("%s -jar %s%s%s", javaExecPath, jenkinsDir, getPathSeparator(), AGENT_JAR);
   }
 
   protected abstract String getPathSeparator();
