@@ -23,6 +23,7 @@ import com.cloudbees.plugins.credentials.common.StandardUsernameCredentials;
 import com.cloudbees.plugins.credentials.common.StandardUsernameListBoxModel;
 import com.cloudbees.plugins.credentials.common.StandardUsernamePasswordCredentials;
 import com.google.common.base.Strings;
+import edu.umd.cs.findbugs.annotations.NonNull;
 import hudson.Extension;
 import hudson.model.Describable;
 import hudson.model.Descriptor;
@@ -50,8 +51,8 @@ import org.kohsuke.stapler.QueryParameter;
 @Builder(builderClassName = "Builder")
 @AllArgsConstructor
 public class WindowsConfiguration implements Describable<WindowsConfiguration> {
-  private String passwordCredentialsId;
-  private String privateKeyCredentialsId;
+  @NonNull private String passwordCredentialsId;
+  @NonNull private String privateKeyCredentialsId;
 
   @DataBoundConstructor
   public WindowsConfiguration() {}
@@ -62,7 +63,7 @@ public class WindowsConfiguration implements Describable<WindowsConfiguration> {
    * @return password in plain text to use for SSH
    */
   public String getPassword() {
-    if (passwordCredentialsId == null) {
+    if (passwordCredentialsId.isEmpty()) {
       return null;
     }
     StandardUsernamePasswordCredentials cred =
@@ -85,7 +86,7 @@ public class WindowsConfiguration implements Describable<WindowsConfiguration> {
    * @return SSH private key in plain text to use for SSH
    */
   public StandardUsernameCredentials getPrivateKeyCredentials() {
-    if (privateKeyCredentialsId == null) {
+    if (privateKeyCredentialsId.isEmpty()) {
       return null;
     }
     return CredentialsMatchers.firstOrNull(
