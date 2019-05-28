@@ -32,6 +32,7 @@ import java.io.IOException;
 import java.io.PrintStream;
 import java.net.InetSocketAddress;
 import java.net.Proxy;
+import java.util.Optional;
 import java.util.logging.Level;
 import jenkins.model.Jenkins;
 
@@ -51,8 +52,7 @@ public class ComputeEngineLinuxLauncher extends ComputeEngineComputerLauncher {
   }
 
   @Override
-  protected void launch(ComputeEngineComputer computer, TaskListener listener, Instance inst)
-      throws IOException, InterruptedException {
+  protected void launch(ComputeEngineComputer computer, TaskListener listener, Instance inst) {
     // TODO(#96): Conslidate duplicated launch logic
     ComputeEngineInstance node = computer.getNode();
     if (node == null) {
@@ -60,40 +60,16 @@ public class ComputeEngineLinuxLauncher extends ComputeEngineComputerLauncher {
       return;
     }
 
-    final Connection bootstrapConn;
     final Connection conn;
-    Connection cleanupConn = null; // java's code path analysis for final
-    // doesn't work that well.
-    boolean successful = false;
+    Optional<Connection> cleanupConn;
     PrintStream logger = listener.getLogger();
     logInfo(computer, listener, "Launching instance: " + node.getNodeName());
     try {
-      if (!node.getSSHKeyPair().isPresent()) {
-        log(
-            Level.SEVERE,
-            computer,
-            listener,
-            String.format("Failed to retreieve SSH keypair for instance: %s", node.getNodeName()));
+      cleanupConn = setupConnection(node, computer, listener);
+      if (!cleanupConn.isPresent()) {
         return;
       }
-
-      GoogleKeyPair kp = node.getSSHKeyPair().get();
-      boolean isBootstrapped = bootstrap(kp, computer, listener);
-      if (isBootstrapped) {
-        // connect fresh as ROOT
-        logInfo(computer, listener, "connect fresh as root");
-        cleanupConn = connectToSsh(computer, listener);
-        if (!cleanupConn.authenticateWithPublicKey(
-            node.sshUser, kp.getPrivateKey().toCharArray(), "")) {
-          logWarning(computer, listener, "Authentication failed");
-          return; // failed to connect
-        }
-      } else {
-        logWarning(computer, listener, "bootstrapresult failed");
-        return;
-      }
-
-      conn = cleanupConn;
+      conn = cleanupConn.get();
       String javaExecPath = node.getJavaExecPathOrDefault();
       if (!checkJavaInstalled(computer, conn, logger, listener, javaExecPath)) {
         return;
@@ -118,6 +94,39 @@ public class ComputeEngineLinuxLauncher extends ComputeEngineComputerLauncher {
     } catch (Exception e) {
       logException(computer, listener, "Error getting exception", e);
     }
+  }
+
+  @Override
+  protected Optional<Connection> setupConnection(
+      ComputeEngineInstance node, ComputeEngineComputer computer, TaskListener listener)
+      throws Exception {
+    if (!node.getSSHKeyPair().isPresent()) {
+      log(
+          Level.SEVERE,
+          computer,
+          listener,
+          String.format("Failed to retreieve SSH keypair for instance: %s", node.getNodeName()));
+      return Optional.empty();
+    }
+
+    Connection cleanupConn;
+    GoogleKeyPair kp = node.getSSHKeyPair().get();
+    boolean isBootstrapped = bootstrap(kp, computer, listener);
+    if (isBootstrapped) {
+      // connect fresh as ROOT
+      logInfo(computer, listener, "connect fresh as root");
+      cleanupConn = connectToSsh(computer, listener);
+      if (!cleanupConn.authenticateWithPublicKey(
+          node.sshUser, kp.getPrivateKey().toCharArray(), "")) {
+        logWarning(computer, listener, "Authentication failed");
+        return Optional.empty(); // failed to connect
+      }
+    } else {
+      logWarning(computer, listener, "bootstrapresult failed");
+      return Optional.empty();
+    }
+
+    return Optional.of(cleanupConn);
   }
 
   private boolean bootstrap(GoogleKeyPair kp, ComputeEngineComputer computer, TaskListener listener)

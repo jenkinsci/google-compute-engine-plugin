@@ -30,6 +30,7 @@ import java.io.IOException;
 import java.io.PrintStream;
 import java.net.InetSocketAddress;
 import java.net.Proxy;
+import java.util.Optional;
 import java.util.logging.Level;
 import jenkins.model.Jenkins;
 
@@ -54,8 +55,7 @@ public class ComputeEngineWindowsLauncher extends ComputeEngineComputerLauncher 
   }
 
   @Override
-  protected void launch(ComputeEngineComputer computer, TaskListener listener, Instance inst)
-      throws IOException, InterruptedException {
+  protected void launch(ComputeEngineComputer computer, TaskListener listener, Instance inst) {
     // TODO(#96): Conslidate duplicated launch logic
     ComputeEngineInstance node = computer.getNode();
     if (node == null) {
@@ -63,29 +63,16 @@ public class ComputeEngineWindowsLauncher extends ComputeEngineComputerLauncher 
       return;
     }
 
-    final Connection bootstrapConn;
     final Connection conn;
-    Connection cleanupConn = null;
-    /** java's code path analysis for final doesn't work that well. */
-    boolean successful = false;
+    Optional<Connection> cleanupConn;
     PrintStream logger = listener.getLogger();
     logInfo(computer, listener, "Launching instance: " + node.getNodeName());
     try {
-      boolean isBootstrapped = bootstrap(computer, listener);
-      if (!isBootstrapped) {
-        logWarning(computer, listener, "bootstrapresult failed");
+      cleanupConn = setupConnection(node, computer, listener);
+      if (!cleanupConn.isPresent()) {
         return;
       }
-
-      // connect fresh as ROOT
-      logInfo(computer, listener, "connect fresh as root");
-      cleanupConn = connectToSsh(computer, listener);
-      if (!authenticateSSH(node.windowsConfig.get(), cleanupConn, listener)) {
-        logWarning(computer, listener, "Authentication failed");
-        return; // failed to connect
-      }
-
-      conn = cleanupConn;
+      conn = cleanupConn.get();
       String javaExecPath = node.getJavaExecPathOrDefault();
       if (!checkJavaInstalled(computer, conn, logger, listener, javaExecPath)) {
         return;
@@ -110,6 +97,27 @@ public class ComputeEngineWindowsLauncher extends ComputeEngineComputerLauncher 
     } catch (Exception e) {
       logException(computer, listener, "Error: ", e);
     }
+  }
+
+  @Override
+  protected Optional<Connection> setupConnection(
+      ComputeEngineInstance node, ComputeEngineComputer computer, TaskListener listener)
+      throws Exception {
+    boolean isBootstrapped = bootstrap(computer, listener);
+    if (!isBootstrapped) {
+      logWarning(computer, listener, "bootstrapresult failed");
+      return Optional.empty();
+    }
+
+    // connect fresh as ROOT
+    logInfo(computer, listener, "connect fresh as root");
+    Connection cleanupConn = connectToSsh(computer, listener);
+    if (!authenticateSSH(node.windowsConfig.get(), cleanupConn, listener)) {
+      logWarning(computer, listener, "Authentication failed");
+      return Optional.empty(); // failed to connect
+    }
+
+    return Optional.of(cleanupConn);
   }
 
   private boolean authenticateSSH(

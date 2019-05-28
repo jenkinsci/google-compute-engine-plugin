@@ -25,6 +25,7 @@ import hudson.slaves.ComputerLauncher;
 import hudson.slaves.SlaveComputer;
 import java.io.IOException;
 import java.io.PrintStream;
+import java.util.Optional;
 import java.util.logging.Level;
 import java.util.logging.LogRecord;
 import java.util.logging.Logger;
@@ -222,12 +223,16 @@ public abstract class ComputeEngineComputerLauncher extends ComputerLauncher {
     return conn.exec(checkCommand, logger) == 0;
   }
 
+  protected abstract Optional<Connection> setupConnection(
+      ComputeEngineInstance node, ComputeEngineComputer computer, TaskListener listener)
+      throws Exception;
+
   protected boolean checkJavaInstalled(
       ComputeEngineComputer computer,
       Connection conn,
       PrintStream logger,
       TaskListener listener,
-      String javaExecPath){
+      String javaExecPath) {
     try {
       if (testCommand(
           computer, conn, String.format("%s -fullversion", javaExecPath), logger, listener)) {
@@ -242,7 +247,9 @@ public abstract class ComputeEngineComputerLauncher extends ComputerLauncher {
     return false;
   }
 
-  protected void copyAgentJar(ComputeEngineComputer computer, Connection conn, TaskListener listener, String jenkinsDir) throws IOException {
+  protected void copyAgentJar(
+      ComputeEngineComputer computer, Connection conn, TaskListener listener, String jenkinsDir)
+      throws IOException {
     SCPClient scp = conn.createSCPClient();
     logInfo(computer, listener, "Copying agent.jar to: " + jenkinsDir);
     scp.put(Jenkins.get().getJnlpJars(AGENT_JAR).readFully(), AGENT_JAR, jenkinsDir);
