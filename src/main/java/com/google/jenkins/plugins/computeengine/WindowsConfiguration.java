@@ -55,7 +55,9 @@ public class WindowsConfiguration implements Describable<WindowsConfiguration> {
   @NonNull private String privateKeyCredentialsId;
 
   @DataBoundConstructor
-  public WindowsConfiguration() {}
+  public WindowsConfiguration() {
+    passwordCredentialsId = privateKeyCredentialsId = "";
+  }
 
   /**
    * Gets the password if a username and password credential is provided
