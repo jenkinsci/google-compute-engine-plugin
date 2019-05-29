@@ -109,7 +109,9 @@ public class ComputeEngineLinuxLauncher extends ComputeEngineComputerLauncher {
                   node.getSshUser(), kp.getPrivateKey().toCharArray(), "");
         } catch (IOException e) {
           logException(computer, listener, "Exception trying to authenticate", e);
-          bootstrapConn.close();
+          if (bootstrapConn != null) {
+            bootstrapConn.close();
+          }
         }
         if (isAuthenticated) {
           break;

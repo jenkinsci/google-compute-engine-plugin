@@ -236,11 +236,12 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
 
   private static String stripSelfLinkPrefix(String s) {
     if (s.contains("https://www.googleapis.com")) {
-      return s.substring(s.indexOf("/projects/") + 1, s.length());
+      return s.substring(s.indexOf("/projects/") + 1);
     }
     return s;
   }
 
+  @SuppressWarnings("unchecked")
   public Descriptor<InstanceConfiguration> getDescriptor() {
     return Jenkins.get().getDescriptor(getClass());
   }
@@ -284,19 +285,19 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
           cloud.getClient().insertInstance(cloud.getProjectId(), template, instance);
       logger.println("Sent insert request for instance configuration [" + description + "]");
       String targetRemoteFs = this.remoteFs;
-      ComputeEngineComputerLauncher launcher = null;
+      ComputeEngineComputerLauncher launcher;
       if (this.windowsConfiguration != null) {
         launcher =
             new ComputeEngineWindowsLauncher(
                 cloud.getCloudName(), operation, this.useInternalAddress);
-        if (targetRemoteFs == null || targetRemoteFs.isEmpty()) {
+        if (Strings.isNullOrEmpty(targetRemoteFs)) {
           targetRemoteFs = "C:\\";
         }
       } else {
         launcher =
             new ComputeEngineLinuxLauncher(
                 cloud.getCloudName(), operation, this.useInternalAddress);
-        if (targetRemoteFs == null || targetRemoteFs.isEmpty()) {
+        if (Strings.isNullOrEmpty(targetRemoteFs)) {
           targetRemoteFs = "/tmp";
         }
       }
@@ -344,7 +345,7 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
     instance.setMetadata(newMetadata());
 
     if (windowsConfiguration == null) {
-      sshKeyPair = congifureSSHKeyPair(instance, runAsUser);
+      sshKeyPair = configureSSHKeyPair(instance, runAsUser);
     }
 
     if (StringUtils.isNotEmpty(template)) {
@@ -406,11 +407,11 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
 
   private Metadata newMetadata() {
     Metadata metadata = new Metadata();
-    metadata.setItems(new ArrayList<Metadata.Items>());
+    metadata.setItems(new ArrayList<>());
     return metadata;
   }
 
-  private GoogleKeyPair congifureSSHKeyPair(Instance instance, String sshUser) {
+  private GoogleKeyPair configureSSHKeyPair(Instance instance, String sshUser) {
     GoogleKeyPair sshKeyPair = GoogleKeyPair.generate(sshUser);
     instance
         .getMetadata()
@@ -534,7 +535,7 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
     }
 
     public static String defaultRunAsUser() {
-      return DEFAULT_RUN_AS_USER.toString();
+      return DEFAULT_RUN_AS_USER;
     }
 
     public static WindowsConfiguration defaultWindowsConfiguration() {

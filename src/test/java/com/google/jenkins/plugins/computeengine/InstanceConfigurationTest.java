@@ -160,7 +160,7 @@ public class InstanceConfigurationTest {
 
   @Test
   public void testConfigRoundtrip() throws Exception {
-    InstanceConfiguration want = instanceConfiguration().minCpuPlatform("").build();
+    InstanceConfiguration want = instanceConfigurationBuilder().minCpuPlatform("").build();
 
     InstanceConfiguration.DescriptorImpl.setComputeClient(computeClient);
     AcceleratorConfiguration.DescriptorImpl.setComputeClient(computeClient);
@@ -186,7 +186,8 @@ public class InstanceConfigurationTest {
 
   @Test
   public void testInstanceModel() throws Exception {
-    Instance instance = instanceConfiguration().minCpuPlatform(MIN_CPU_PLATFORM).build().instance();
+    Instance instance =
+        instanceConfigurationBuilder().minCpuPlatform(MIN_CPU_PLATFORM).build().instance();
     // General
     assertTrue(instance.getName().startsWith(NAME_PREFIX));
     assertEquals(CONFIG_DESC, instance.getDescription());
@@ -245,13 +246,13 @@ public class InstanceConfigurationTest {
     assertEquals(
         BOOT_DISK_IMAGE_NAME, instance.getDisks().get(0).getInitializeParams().getSourceImage());
 
-    InstanceConfiguration instanceConfiguration = instanceConfiguration().build();
+    InstanceConfiguration instanceConfiguration = instanceConfigurationBuilder().build();
     assertFalse(instanceConfiguration.isUseInternalAddress());
     assertNull(instanceConfiguration.instance().getMinCpuPlatform());
     assertNull(instanceConfiguration.getWindowsConfiguration());
   }
 
-  public static InstanceConfiguration.Builder instanceConfiguration() {
+  public static InstanceConfiguration.Builder instanceConfigurationBuilder() {
     return InstanceConfiguration.builder()
         .namePrefix(NAME_PREFIX)
         .region(REGION)

@@ -86,7 +86,7 @@ public class ComputeEngineWindowsLauncher extends ComputeEngineComputerLauncher 
       TaskListener listener)
       throws Exception {
     boolean isAuthenticated;
-    if (windowsConfig.getPrivateKeyCredentialsId() != null) {
+    if (windowsConfig.getPrivateKeyCredentialsId().isEmpty()) {
       isAuthenticated =
           SSHAuthenticator.newInstance(
                   sshConnection, windowsConfig.getPrivateKeyCredentials(), windowsUsername)
@@ -108,8 +108,7 @@ public class ComputeEngineWindowsLauncher extends ComputeEngineComputerLauncher 
     ComputeEngineInstance node = computer.getNode();
     if (node == null) {
       throw new IllegalArgumentException("A ComputeEngineComputer with no node was provided");
-    }
-    if (!node.getWindowsConfig().isPresent()) {
+    } else if (!node.getWindowsConfig().isPresent()) {
       throw new IllegalArgumentException("A non-windows ComputeEngineComputer was provided.");
     }
     WindowsConfiguration windowsConfig = node.getWindowsConfig().get();
@@ -126,7 +125,9 @@ public class ComputeEngineWindowsLauncher extends ComputeEngineComputerLauncher 
               authenticateSSH(node.getSshUser(), windowsConfig, bootstrapConn, listener);
         } catch (IOException e) {
           logException(computer, listener, "Exception trying to authenticate", e);
-          bootstrapConn.close();
+          if (bootstrapConn != null) {
+            bootstrapConn.close();
+          }
         }
         if (isAuthenticated) {
           break;

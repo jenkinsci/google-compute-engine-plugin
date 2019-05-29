@@ -75,9 +75,7 @@ public class ComputeEngineCloudNonStandardJavaIT {
   @ClassRule public static JenkinsRule jenkinsRule = new JenkinsRule();
 
   private static ComputeClient client;
-  private static ComputeEngineCloud cloud;
   private static Map<String, String> label = getLabel(ComputeEngineCloudNonStandardJavaIT.class);
-  private static InstanceConfiguration instanceConfiguration;
   private static Collection<PlannedNode> planned;
   private static Instance instance;
 
@@ -85,10 +83,10 @@ public class ComputeEngineCloudNonStandardJavaIT {
   public static void init() throws Exception {
     log.info("init");
     initCredentials(jenkinsRule);
-    cloud = initCloud(jenkinsRule);
+    ComputeEngineCloud cloud = initCloud(jenkinsRule);
     client = initClient(jenkinsRule, label, log);
 
-    instanceConfiguration =
+    InstanceConfiguration instanceConfiguration =
         instanceConfigurationBuilder()
             .startupScript(NON_STANDARD_JAVA_STARTUP_SCRIPT)
             .numExecutorsStr(NUM_EXECUTORS)
@@ -115,5 +113,10 @@ public class ComputeEngineCloudNonStandardJavaIT {
   @Test
   public void testWorkerCreatedOnePlannedNode() {
     assertEquals(1, planned.size());
+  }
+
+  @Test
+  public void testInstanceStatusRunning() {
+    assertEquals("RUNNING", instance.getStatus());
   }
 }

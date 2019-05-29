@@ -119,7 +119,6 @@ public class ComputeEngineInstance extends AbstractCloudSlave {
       cloud.getClient().terminateInstanceWithStatus(cloud.getProjectId(), zone, name, "RUNNING");
     } catch (CloudNotFoundException cnfe) {
       listener.error(cnfe.getMessage());
-      return;
     }
   }
 

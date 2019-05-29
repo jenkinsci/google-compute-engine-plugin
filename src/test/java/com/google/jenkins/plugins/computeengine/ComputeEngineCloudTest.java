@@ -14,11 +14,14 @@
 
 package com.google.jenkins.plugins.computeengine;
 
-import static com.google.jenkins.plugins.computeengine.InstanceConfigurationTest.instanceConfiguration;
+import static com.google.jenkins.plugins.computeengine.InstanceConfigurationTest.A_LABEL;
+import static com.google.jenkins.plugins.computeengine.InstanceConfigurationTest.instanceConfigurationBuilder;
 import static com.google.jenkins.plugins.computeengine.client.ClientFactoryTest.ACCOUNT_ID;
 import static com.google.jenkins.plugins.computeengine.client.ClientFactoryTest.PRIVATE_KEY;
 import static org.hamcrest.Matchers.isEmptyOrNullString;
 import static org.hamcrest.Matchers.not;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
 
 import com.cloudbees.plugins.credentials.Credentials;
 import com.cloudbees.plugins.credentials.CredentialsStore;
@@ -71,32 +74,32 @@ public class ComputeEngineCloudTest {
 
     // Add a few InstanceConfigurations
     List<InstanceConfiguration> ics = new ArrayList<>();
-    ics.add(instanceConfiguration().build());
-    ics.add(instanceConfiguration().build());
+    ics.add(instanceConfigurationBuilder().build());
+    ics.add(instanceConfigurationBuilder().build());
     ComputeEngineCloud cloud =
         new ComputeEngineCloud(CLOUD_NAME, PROJECT_ID, PROJECT_ID, INSTANCE_CAP_STR);
     cloud.setInstanceId(INSTANCE_ID);
     cloud.setConfigurations(ics);
 
     // Ensure names are set
-    Assert.assertEquals(INSTANCE_ID, cloud.getInstanceId());
-    Assert.assertEquals(ComputeEngineCloud.CLOUD_PREFIX + CLOUD_NAME, cloud.name);
-    Assert.assertEquals(CLOUD_NAME, cloud.getCloudName());
-    Assert.assertEquals(CLOUD_NAME, cloud.getDisplayName());
+    assertEquals(INSTANCE_ID, cloud.getInstanceId());
+    assertEquals(ComputeEngineCloud.CLOUD_PREFIX + CLOUD_NAME, cloud.name);
+    assertEquals(CLOUD_NAME, cloud.getCloudName());
+    assertEquals(CLOUD_NAME, cloud.getDisplayName());
     Assert.assertNotEquals(CLOUD_NAME, cloud.name);
 
     // Ensure ComputeClient is created
-    Assert.assertNotNull("ComputeClient was not initialized", cloud.getClient());
+    assertNotNull("ComputeClient was not initialized", cloud.getClient());
 
     // Ensure transient properties were initialized
     for (InstanceConfiguration ic : ics) {
-      Assert.assertEquals(
+      assertEquals(
           "Cloud reference was not set on child InstanceConfiguration", ic.getCloud(), cloud);
     }
   }
 
   @Test
-  public void instanceIdWasGenerated() throws Exception {
+  public void instanceIdWasGenerated() {
     ComputeEngineCloud cloud =
         new ComputeEngineCloud(CLOUD_NAME, PROJECT_ID, PROJECT_ID, INSTANCE_CAP_STR);
     Assert.assertThat(
@@ -108,20 +111,19 @@ public class ComputeEngineCloudTest {
   @Test
   public void getConfigurationsByLabelSimple() throws Exception {
     // Add a few InstanceConfigurations
-    List<InstanceConfiguration> ics = Lists.newArrayList(instanceConfiguration().build());
+    List<InstanceConfiguration> ics = Lists.newArrayList(instanceConfigurationBuilder().build());
     ComputeEngineCloud cloud =
         new ComputeEngineCloud(CLOUD_NAME, PROJECT_ID, PROJECT_ID, INSTANCE_CAP_STR);
     cloud.setConfigurations(ics);
 
     // Configuration for description should match
-    Assert.assertEquals(
+    assertEquals(
         ics.get(0), cloud.getInstanceConfigurationByDescription(ics.get(0).getDescription()));
 
     // Should be able to provision a label
-    Label label = new LabelAtom(InstanceConfigurationTest.A_LABEL);
+    Label label = new LabelAtom(A_LABEL);
     Assert.assertTrue(
-        "Should be able to provision for label " + InstanceConfigurationTest.A_LABEL,
-        cloud.canProvision(label));
+        "Should be able to provision for label " + A_LABEL, cloud.canProvision(label));
 
     // Configuration for label should match
     Assert.assertEquals(ics, cloud.getInstanceConfigurations(label));
@@ -131,19 +133,19 @@ public class ComputeEngineCloudTest {
   public void getConfigurationsByLabelMulti() throws Exception {
     // Add a few InstanceConfigurations
     List<InstanceConfiguration> ics =
-        Lists.newArrayList(instanceConfiguration().build(), instanceConfiguration().build());
+        Lists.newArrayList(
+            instanceConfigurationBuilder().build(), instanceConfigurationBuilder().build());
     ComputeEngineCloud cloud =
         new ComputeEngineCloud(CLOUD_NAME, PROJECT_ID, PROJECT_ID, INSTANCE_CAP_STR);
     cloud.setConfigurations(ics);
 
     // Should be able to provision a label
-    Label label = new LabelAtom(InstanceConfigurationTest.A_LABEL);
+    Label label = new LabelAtom(A_LABEL);
     Assert.assertTrue(
-        "Should be able to provision for label " + InstanceConfigurationTest.A_LABEL,
-        cloud.canProvision(label));
+        "Should be able to provision for label " + A_LABEL, cloud.canProvision(label));
 
     // Configuration for label should match
-    Assert.assertEquals(ics, cloud.getInstanceConfigurations(label));
+    assertEquals(ics, cloud.getInstanceConfigurations(label));
   }
 
   @Test
@@ -156,9 +158,9 @@ public class ComputeEngineCloudTest {
 
     ComputeEngineCloud.GoogleCloudDescriptor d = new ComputeEngineCloud.GoogleCloudDescriptor();
     ListBoxModel got = d.doFillCredentialsIdItems(r.jenkins, PROJECT_ID);
-    Assert.assertEquals("Should have returned 1 credential", 2, got.size());
-    Assert.assertEquals("First credential should be - none -", "- none -", got.get(0).name);
-    Assert.assertEquals("Second credential should be " + PROJECT_ID, PROJECT_ID, got.get(1).name);
+    assertEquals("Should have returned 1 credential", 2, got.size());
+    assertEquals("First credential should be - none -", "- none -", got.get(0).name);
+    assertEquals("Second credential should be " + PROJECT_ID, PROJECT_ID, got.get(1).name);
   }
 
   @Test
@@ -167,10 +169,10 @@ public class ComputeEngineCloudTest {
 
     // Validate project ID validation
     FormValidation fv = d.doCheckProjectId(null);
-    Assert.assertEquals(FormValidation.Kind.ERROR, fv.kind);
+    assertEquals(FormValidation.Kind.ERROR, fv.kind);
     fv = d.doCheckProjectId("");
-    Assert.assertEquals(FormValidation.Kind.ERROR, fv.kind);
+    assertEquals(FormValidation.Kind.ERROR, fv.kind);
     fv = d.doCheckProjectId(PROJECT_ID);
-    Assert.assertEquals(FormValidation.Kind.OK, fv.kind);
+    assertEquals(FormValidation.Kind.OK, fv.kind);
   }
 }

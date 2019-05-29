@@ -145,7 +145,7 @@ public class ComputeEngineCloudWindowsIT {
     assertNotNull("GOOGLE_BOOT_DISK_IMAGE_NAME env var must be set", bootDiskImageName);
 
     ServiceAccountConfig sac = new StringJsonServiceAccountConfig(serviceAccountKeyJson);
-    Credentials c = new GoogleRobotPrivateKeyCredentials(projectId, sac, null);
+    Credentials c = (Credentials) new GoogleRobotPrivateKeyCredentials(projectId, sac, null);
 
     CredentialsStore store = new SystemCredentialsProvider.ProviderImpl().getStore(r.jenkins);
     store.addCredentials(Domain.global(), c);

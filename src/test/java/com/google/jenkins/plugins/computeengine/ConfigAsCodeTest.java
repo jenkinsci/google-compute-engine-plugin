@@ -21,7 +21,7 @@ public class ConfigAsCodeTest {
 
   @Test
   @ConfiguredWithCode("configuration-as-code.yml")
-  public void shouldCreateCloudInstanceFromCode() throws Exception {
+  public void shouldCreateCloudInstanceFromCode() {
     assertEquals("Zero clouds found", jenkinsRule.jenkins.clouds.size(), 1);
     ComputeEngineCloud cloud =
         (ComputeEngineCloud) jenkinsRule.jenkins.clouds.getByName("gce-jenkins-build");

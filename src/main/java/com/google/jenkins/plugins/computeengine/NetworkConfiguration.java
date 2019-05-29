@@ -38,6 +38,7 @@ public abstract class NetworkConfiguration implements Describable<NetworkConfigu
     this.subnetwork = subnetwork;
   }
 
+  @SuppressWarnings("unchecked")
   public Descriptor<NetworkConfiguration> getDescriptor() {
     return Jenkins.get().getDescriptor(getClass());
   }

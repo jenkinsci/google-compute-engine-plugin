@@ -83,7 +83,6 @@ public class ComputeEngineCloud extends AbstractCloudImpl {
   private final String credentialsId;
 
   private String instanceId;
-
   private List<InstanceConfiguration> configurations;
 
   private transient volatile ComputeClient client;

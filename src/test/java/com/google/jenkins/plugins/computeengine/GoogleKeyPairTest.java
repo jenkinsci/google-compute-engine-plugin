@@ -19,14 +19,12 @@ package com.google.jenkins.plugins.computeengine;
 import static org.junit.Assert.assertNotNull;
 
 import com.google.jenkins.plugins.computeengine.ssh.GoogleKeyPair;
-import java.util.logging.Logger;
 import org.junit.Test;
 
 public class GoogleKeyPairTest {
-  private static final Logger LOGGER = Logger.getLogger(GoogleKeyPairTest.class.getName());
 
   @Test
-  public void KeyPairGeneration() throws Exception {
+  public void KeyPairGeneration() {
     GoogleKeyPair gkp = GoogleKeyPair.generate("user");
     assertNotNull(gkp.toString());
     assert (gkp.getPublicKey().contains("user"));

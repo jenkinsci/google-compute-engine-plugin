@@ -51,6 +51,7 @@ public class AcceleratorConfiguration implements Describable<AcceleratorConfigur
     return Integer.parseInt(gpuCount);
   }
 
+  @SuppressWarnings("unchecked")
   public Descriptor<AcceleratorConfiguration> getDescriptor() {
     return Jenkins.get().getDescriptor(getClass());
   }
