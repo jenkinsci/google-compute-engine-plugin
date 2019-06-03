@@ -22,9 +22,6 @@
             <f:entry title="${%Description}" field="description">
                 <f:textbox/>
             </f:entry>
-            <f:entry title="${%Launch Timeout (seconds)}" field="launchTimeoutSecondsStr">
-                <f:textbox default="${descriptor.defaultLaunchTimeoutSeconds()}"/>
-            </f:entry>
             <f:entry title="${%Node Retention Time (minutes)}" field="retentionTimeMinutesStr">
                 <f:textbox default="${descriptor.defaultRetentionTimeMinutes()}"/>
             </f:entry>
@@ -35,15 +32,6 @@
             <f:entry title="${%Number of Executors}" field="numExecutorsStr">
                 <f:textbox default="1"/>
             </f:entry>
-            <f:entry title="${%Run as user}" field="runAsUser">
-                <f:textbox default="${descriptor.defaultRunAsUser()}"/>
-            </f:entry>
-            <f:entry title="${%Remote Location}" field="remoteFs">
-                <f:textbox default=""/>
-            </f:entry>
-            <f:entry title="${%Java Exec Path}" field="javaExecPath">
-                <f:textbox default="java"/> 
-            </f:entry>
             <f:entry field="windows" title="${%Windows?}">
                 <f:checkbox/>
             </f:entry>
@@ -52,6 +40,24 @@
             </f:entry>
             <f:entry field="windowsPrivateKeyCredentialsId" title="${%Windows SSH Private Key Credentials}">
                 <c:select/>
+            </f:entry>
+        </f:section>
+
+        <f:section title="Launch Configuration">
+            <f:entry title="${%Launch Timeout (seconds)}" field="launchTimeoutSecondsStr">
+                <f:textbox default="${descriptor.defaultLaunchTimeoutSeconds()}"/>
+            </f:entry>
+            <f:entry title="${%Use Internal IP?}" field="useInternalAddress">
+                <f:checkbox/>
+            </f:entry>
+            <f:entry title="${%Run as user}" field="runAsUser">
+                <f:textbox default="${descriptor.defaultRunAsUser()}"/>
+            </f:entry>
+            <f:entry title="${%Remote Location}" field="remoteFs">
+                <f:textbox default=""/>
+            </f:entry>
+            <f:entry title="${%Java Exec Path}" field="javaExecPath">
+                <f:textbox default="java"/>
             </f:entry>
         </f:section>
 
@@ -104,9 +110,6 @@
                         <f:textbox/>
                     </f:entry>
                     <f:entry field="externalAddress" title="${%Attach External IP?}">
-                        <f:checkbox/>
-                    </f:entry>
-                    <f:entry field="useInternalAddress" title="${%Use Internal IP?}">
                         <f:checkbox/>
                     </f:entry>
                 </f:section>
