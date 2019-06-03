@@ -111,20 +111,37 @@ public class ComputeEngineCloudTest {
   }
 
   @Test
-  public void labels() throws Exception {
-    // Create a credential
-    Credentials c =
-        (Credentials) new GoogleRobotPrivateKeyCredentials(ACCOUNT_ID, serviceAccountConfig, null);
-    CredentialsStore store = new SystemCredentialsProvider.ProviderImpl().getStore(r.jenkins);
-    store.addCredentials(Domain.global(), c);
-
+  public void getConfigurationsByLabelSimple() throws Exception {
     // Add a few InstanceConfigurations
     List<InstanceConfiguration> ics = new ArrayList<>();
     ics.add(InstanceConfigurationTest.instanceConfiguration());
     ComputeEngineCloud cloud =
-        new ComputeEngineCloud(CLOUD_NAME, PROJECT_ID, PROJECT_ID, INSTANCE_CAP_STR);
+            new ComputeEngineCloud(CLOUD_NAME, PROJECT_ID, PROJECT_ID, INSTANCE_CAP_STR);
     cloud.setConfigurations(ics);
 
+    // Configuration for description should match
+    Assert.assertEquals(ics.get(0), cloud.getInstanceConfigurationByDescription(ics.get(0).getDescription()));
+
+    // Should be able to provision a label
+    Label l = new LabelAtom(InstanceConfigurationTest.A_LABEL);
+    Assert.assertTrue(
+            "Should be able to provision for label " + InstanceConfigurationTest.A_LABEL,
+            cloud.canProvision(l));
+
+    // Configuration for label should match
+    Assert.assertEquals(ics, cloud.getInstanceConfigurations(l));
+  }
+
+  @Test
+  public void getConfigurationsByLabelMulti() throws Exception {
+    // Add a few InstanceConfigurations
+    List<InstanceConfiguration> ics = new ArrayList<>();
+    ics.add(InstanceConfigurationTest.instanceConfiguration());
+    ics.add(InstanceConfigurationTest.instanceConfiguration());
+    ComputeEngineCloud cloud =
+        new ComputeEngineCloud(CLOUD_NAME, PROJECT_ID, PROJECT_ID, INSTANCE_CAP_STR);
+    cloud.setConfigurations(ics);
+    
     // Should be able to provision a label
     Label l = new LabelAtom(InstanceConfigurationTest.A_LABEL);
     Assert.assertTrue(
@@ -132,10 +149,7 @@ public class ComputeEngineCloudTest {
         cloud.canProvision(l));
 
     // Configuration for label should match
-    Assert.assertEquals(ics.get(0), cloud.getInstanceConfig(l));
-
-    // Configuration for description should match
-    Assert.assertEquals(ics.get(0), cloud.getInstanceConfig(ics.get(0).getDescription()));
+    Assert.assertEquals(ics, cloud.getInstanceConfigurations(l));
   }
 
   @Test

@@ -177,7 +177,7 @@ public class InstanceConfigurationTest {
     final HtmlPage configure = r.createWebClient().goTo("configure");
     r.submit(configure.getFormByName("config"));
     InstanceConfiguration got =
-        ((ComputeEngineCloud) r.jenkins.clouds.iterator().next()).getInstanceConfig(CONFIG_DESC);
+        ((ComputeEngineCloud) r.jenkins.clouds.iterator().next()).getInstanceConfigurationByDescription(CONFIG_DESC);
     r.assertEqualBeans(
         want,
         got,

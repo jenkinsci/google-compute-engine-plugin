@@ -93,7 +93,7 @@ public class ComputeEngineCloudSnapshotCreatedIT {
             label);
 
     cloud.addConfiguration(instanceConfiguration);
-    assertTrue(cloud.getInstanceConfig(instanceConfiguration.getDescription()).isCreateSnapshot());
+    assertTrue(cloud.getInstanceConfigurationByDescription(instanceConfiguration.getDescription()).isCreateSnapshot());
 
     FreeStyleProject project = jenkinsRule.createFreeStyleProject();
     Builder step = new Shell("exit 1");
