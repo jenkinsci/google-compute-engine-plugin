@@ -16,28 +16,6 @@
 
 package com.google.jenkins.plugins.computeengine.integration;
 
-import com.google.common.collect.Lists;
-import com.google.jenkins.plugins.computeengine.ComputeEngineCloud;
-import com.google.jenkins.plugins.computeengine.InstanceConfiguration;
-import com.google.jenkins.plugins.computeengine.client.ComputeClient;
-import hudson.model.Node;
-import hudson.model.labels.LabelAtom;
-import hudson.slaves.NodeProvisioner;
-import hudson.slaves.NodeProvisioner.PlannedNode;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.rules.Timeout;
-import org.jvnet.hudson.test.JenkinsRule;
-
-import java.io.IOException;
-import java.util.Collection;
-import java.util.Iterator;
-import java.util.Map;
-import java.util.concurrent.TimeUnit;
-import java.util.logging.Logger;
-
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.DEB_JAVA_STARTUP_SCRIPT;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.LABEL;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.NULL_TEMPLATE;
@@ -51,12 +29,34 @@ import static com.google.jenkins.plugins.computeengine.integration.ITUtil.instan
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.teardownResources;
 import static org.junit.Assert.assertEquals;
 
+import com.google.common.collect.Lists;
+import com.google.jenkins.plugins.computeengine.ComputeEngineCloud;
+import com.google.jenkins.plugins.computeengine.InstanceConfiguration;
+import com.google.jenkins.plugins.computeengine.client.ComputeClient;
+import hudson.model.Node;
+import hudson.model.labels.LabelAtom;
+import hudson.slaves.NodeProvisioner.PlannedNode;
+import java.io.IOException;
+import java.util.Collection;
+import java.util.Iterator;
+import java.util.Map;
+import java.util.concurrent.TimeUnit;
+import java.util.logging.Logger;
+import org.junit.AfterClass;
+import org.junit.BeforeClass;
+import org.junit.ClassRule;
+import org.junit.Test;
+import org.junit.rules.Timeout;
+import org.jvnet.hudson.test.JenkinsRule;
+
 /**
  * Integration test suite for {@link ComputeEngineCloud}. Verifies that instances can be created
- * with multiple matching {@link InstanceConfiguration} and that these instances are properly provisioned.
+ * with multiple matching {@link InstanceConfiguration} and that these instances are properly
+ * provisioned.
  */
 public class ComputeEngineCloudMultipeMatchingConfigurationsIT {
-  private static Logger log = Logger.getLogger(ComputeEngineCloudMultipeMatchingConfigurationsIT.class.getName());
+  private static Logger log =
+      Logger.getLogger(ComputeEngineCloudMultipeMatchingConfigurationsIT.class.getName());
 
   private static final String DESC_1 = "type_1";
   private static final String DESC_2 = "type_2";
@@ -67,7 +67,8 @@ public class ComputeEngineCloudMultipeMatchingConfigurationsIT {
   @ClassRule public static JenkinsRule jenkinsRule = new JenkinsRule();
 
   private static ComputeClient client;
-  private static Map<String, String> label = getLabel(ComputeEngineCloudMultipeMatchingConfigurationsIT.class);
+  private static Map<String, String> label =
+      getLabel(ComputeEngineCloudMultipeMatchingConfigurationsIT.class);
   private static Collection<PlannedNode> planned;
 
   @BeforeClass
@@ -77,7 +78,8 @@ public class ComputeEngineCloudMultipeMatchingConfigurationsIT {
     ComputeEngineCloud cloud = initCloud(jenkinsRule);
     client = initClient(jenkinsRule, label, log);
 
-    InstanceConfiguration.Builder builder1 = new InstanceConfiguration.Builder()
+    InstanceConfiguration.Builder builder1 =
+        new InstanceConfiguration.Builder()
             .startupScript(DEB_JAVA_STARTUP_SCRIPT)
             .numExecutorsStr(NUM_EXECUTORS)
             .labels(LABEL)
@@ -86,7 +88,8 @@ public class ComputeEngineCloudMultipeMatchingConfigurationsIT {
     InstanceConfiguration configuration1 = instanceConfiguration(builder1, label);
     configuration1.setDescription(DESC_1);
 
-    InstanceConfiguration.Builder builder2 = new InstanceConfiguration.Builder()
+    InstanceConfiguration.Builder builder2 =
+        new InstanceConfiguration.Builder()
             .startupScript(DEB_JAVA_STARTUP_SCRIPT)
             .numExecutorsStr(NUM_EXECUTORS)
             .labels(LABEL)
@@ -94,12 +97,8 @@ public class ComputeEngineCloudMultipeMatchingConfigurationsIT {
 
     InstanceConfiguration configuration2 = instanceConfiguration(builder2, label);
     configuration2.setDescription(DESC_2);
-    cloud.setConfigurations(
-            Lists.newArrayList(
-                    configuration1,
-                    configuration2
-            ));
-    
+    cloud.setConfigurations(Lists.newArrayList(configuration1, configuration2));
+
     planned = cloud.provision(new LabelAtom(LABEL), 2);
   }
 
@@ -119,7 +118,8 @@ public class ComputeEngineCloudMultipeMatchingConfigurationsIT {
     checkOneNode(plannedNode, DESC_2);
   }
 
-  private void checkOneNode(PlannedNode plannedNode, String desc) throws InterruptedException, java.util.concurrent.ExecutionException {
+  private void checkOneNode(PlannedNode plannedNode, String desc)
+      throws InterruptedException, java.util.concurrent.ExecutionException {
     String name = plannedNode.displayName;
     plannedNode.future.get();
     Node node = jenkinsRule.jenkins.getNode(name);

@@ -14,6 +14,7 @@
 
 package com.google.jenkins.plugins.computeengine;
 
+import static com.google.jenkins.plugins.computeengine.InstanceConfigurationTest.instanceConfiguration;
 import static com.google.jenkins.plugins.computeengine.client.ClientFactoryTest.ACCOUNT_ID;
 import static com.google.jenkins.plugins.computeengine.client.ClientFactoryTest.PRIVATE_KEY;
 import static org.hamcrest.Matchers.isEmptyOrNullString;
@@ -23,6 +24,7 @@ import com.cloudbees.plugins.credentials.Credentials;
 import com.cloudbees.plugins.credentials.CredentialsStore;
 import com.cloudbees.plugins.credentials.SystemCredentialsProvider;
 import com.cloudbees.plugins.credentials.domains.Domain;
+import com.google.common.collect.Lists;
 import com.google.jenkins.plugins.credentials.oauth.GoogleRobotPrivateKeyCredentials;
 import com.google.jenkins.plugins.credentials.oauth.ServiceAccountConfig;
 import hudson.model.Label;
@@ -69,8 +71,8 @@ public class ComputeEngineCloudTest {
 
     // Add a few InstanceConfigurations
     List<InstanceConfiguration> ics = new ArrayList<>();
-    ics.add(InstanceConfigurationTest.instanceConfiguration());
-    ics.add(InstanceConfigurationTest.instanceConfiguration());
+    ics.add(instanceConfiguration());
+    ics.add(instanceConfiguration());
     ComputeEngineCloud cloud =
         new ComputeEngineCloud(CLOUD_NAME, PROJECT_ID, PROJECT_ID, INSTANCE_CAP_STR);
     cloud.setInstanceId(INSTANCE_ID);
@@ -93,7 +95,7 @@ public class ComputeEngineCloudTest {
     }
 
     // Add another InstanceConfiguration and ensure properties are initialized
-    cloud.addConfiguration(InstanceConfigurationTest.instanceConfiguration());
+    cloud.addConfiguration(instanceConfiguration());
     for (InstanceConfiguration ic : ics) {
       Assert.assertEquals(
           "Cloud reference was not set on child InstanceConfiguration", ic.cloud, cloud);
@@ -113,43 +115,42 @@ public class ComputeEngineCloudTest {
   @Test
   public void getConfigurationsByLabelSimple() throws Exception {
     // Add a few InstanceConfigurations
-    List<InstanceConfiguration> ics = new ArrayList<>();
-    ics.add(InstanceConfigurationTest.instanceConfiguration());
+    List<InstanceConfiguration> ics = Lists.newArrayList(instanceConfiguration());
     ComputeEngineCloud cloud =
-            new ComputeEngineCloud(CLOUD_NAME, PROJECT_ID, PROJECT_ID, INSTANCE_CAP_STR);
+        new ComputeEngineCloud(CLOUD_NAME, PROJECT_ID, PROJECT_ID, INSTANCE_CAP_STR);
     cloud.setConfigurations(ics);
 
     // Configuration for description should match
-    Assert.assertEquals(ics.get(0), cloud.getInstanceConfigurationByDescription(ics.get(0).getDescription()));
+    Assert.assertEquals(
+        ics.get(0), cloud.getInstanceConfigurationByDescription(ics.get(0).getDescription()));
 
     // Should be able to provision a label
-    Label l = new LabelAtom(InstanceConfigurationTest.A_LABEL);
+    Label label = new LabelAtom(InstanceConfigurationTest.A_LABEL);
     Assert.assertTrue(
-            "Should be able to provision for label " + InstanceConfigurationTest.A_LABEL,
-            cloud.canProvision(l));
+        "Should be able to provision for label " + InstanceConfigurationTest.A_LABEL,
+        cloud.canProvision(label));
 
     // Configuration for label should match
-    Assert.assertEquals(ics, cloud.getInstanceConfigurations(l));
+    Assert.assertEquals(ics, cloud.getInstanceConfigurations(label));
   }
 
   @Test
   public void getConfigurationsByLabelMulti() throws Exception {
     // Add a few InstanceConfigurations
-    List<InstanceConfiguration> ics = new ArrayList<>();
-    ics.add(InstanceConfigurationTest.instanceConfiguration());
-    ics.add(InstanceConfigurationTest.instanceConfiguration());
+    List<InstanceConfiguration> ics =
+        Lists.newArrayList(instanceConfiguration(), instanceConfiguration());
     ComputeEngineCloud cloud =
         new ComputeEngineCloud(CLOUD_NAME, PROJECT_ID, PROJECT_ID, INSTANCE_CAP_STR);
     cloud.setConfigurations(ics);
-    
+
     // Should be able to provision a label
-    Label l = new LabelAtom(InstanceConfigurationTest.A_LABEL);
+    Label label = new LabelAtom(InstanceConfigurationTest.A_LABEL);
     Assert.assertTrue(
         "Should be able to provision for label " + InstanceConfigurationTest.A_LABEL,
-        cloud.canProvision(l));
+        cloud.canProvision(label));
 
     // Configuration for label should match
-    Assert.assertEquals(ics, cloud.getInstanceConfigurations(l));
+    Assert.assertEquals(ics, cloud.getInstanceConfigurations(label));
   }
 
   @Test

@@ -90,7 +90,10 @@ public class ComputeEngineCloudNoSnapshotCreatedIT {
             label);
 
     cloud.addConfiguration(instanceConfiguration);
-    assertTrue(cloud.getInstanceConfigurationByDescription(instanceConfiguration.getDescription()).isCreateSnapshot());
+    assertTrue(
+        cloud
+            .getInstanceConfigurationByDescription(instanceConfiguration.getDescription())
+            .isCreateSnapshot());
 
     FreeStyleProject project = jenkinsRule.createFreeStyleProject();
     Builder step = new Shell("echo works");
