@@ -20,9 +20,12 @@ import static org.mockito.ArgumentMatchers.anyString;
 
 import com.google.api.services.compute.model.Network;
 import com.google.api.services.compute.model.Subnetwork;
+import com.google.common.collect.ImmutableList;
+import com.google.jenkins.plugins.computeengine.AutofilledNetworkConfiguration.DescriptorImpl;
 import com.google.jenkins.plugins.computeengine.client.ComputeClient;
 import hudson.util.FormValidation;
 import hudson.util.ListBoxModel;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import org.junit.Assert;
@@ -35,11 +38,14 @@ import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.junit.MockitoJUnitRunner;
 
+// TODO(#49): Parallelize all unit tests
 @RunWith(MockitoJUnitRunner.class)
 public class AutofilledNetworkConfigurationTest {
-  public final String NETWORK_NAME = "test-network";
-  public final String SUBNETWORK_NAME = "test-subnetwork";
-  public final String REGION = "test-region";
+  private static final String NETWORK_NAME = "test-network";
+  private static final String SUBNETWORK_NAME = "test-subnetwork";
+  private static final String REGION = "test-region";
+  private static final String PROJECT_ID = "test-project";
+  private static final String CREDENTIALS_ID = "test-credentials";
 
   @Rule public JenkinsRule r = new JenkinsRule();
 
@@ -89,35 +95,29 @@ public class AutofilledNetworkConfigurationTest {
   }
 
   @Test
-  public void descriptorSubnetwork() throws Exception {
-    // Set up mock
-    List<Subnetwork> subnetworks = new ArrayList<Subnetwork>();
-    subnetworks.add(new Subnetwork().setName(SUBNETWORK_NAME).setSelfLink(SUBNETWORK_NAME));
-    Mockito.when(computeClient.getSubnetworks(anyString(), anyString(), anyString()))
-        .thenReturn(subnetworks);
-    AutofilledNetworkConfiguration.DescriptorImpl.setComputeClient(computeClient);
-
-    // Test items returned by subnetwork dropdown filler
-    AutofilledNetworkConfiguration.DescriptorImpl d =
-        new AutofilledNetworkConfiguration.DescriptorImpl();
-
-    // No subnetworks returned if region is empty
-    ListBoxModel got = d.doFillSubnetworkItems(r.jenkins, "", "", "", "");
+  public void testDoFillSubnetworkItemsEmptyRegion() throws IOException {
+    DescriptorImpl descriptor = subnetworkFillDescriptorSetup(ImmutableList.of(SUBNETWORK_NAME));
+    ListBoxModel got =
+        descriptor.doFillSubnetworkItems(r.jenkins, "", "", PROJECT_ID, CREDENTIALS_ID);
     Assert.assertEquals(0, got.size());
+  }
 
-    // Default network should return default subnetwork
-    got = d.doFillSubnetworkItems(r.jenkins, "default", REGION, "", "");
-    Assert.assertEquals(1, got.size());
+  @Test
+  public void testDoFillSubnetworkItemsValid() throws IOException {
+    DescriptorImpl descriptor =
+        subnetworkFillDescriptorSetup(ImmutableList.of("default", SUBNETWORK_NAME));
+    ListBoxModel got =
+        descriptor.doFillSubnetworkItems(r.jenkins, "default", REGION, PROJECT_ID, CREDENTIALS_ID);
+    Assert.assertEquals(2, got.size());
     Assert.assertEquals("default", got.get(0).name);
+  }
 
-    // Network should return a subnetwork
-    got = d.doFillSubnetworkItems(r.jenkins, NETWORK_NAME, REGION, "", "");
-    Assert.assertEquals(1, got.size());
-    Assert.assertEquals(SUBNETWORK_NAME, got.get(0).name);
-
-    // No subnetworks should return a specific error
-    subnetworks.clear();
-    got = d.doFillSubnetworkItems(r.jenkins, NETWORK_NAME, REGION, "", "");
+  @Test
+  public void testDoFillSubnetworkItemsNoSubnetworks() throws IOException {
+    DescriptorImpl descriptorImpl = subnetworkFillDescriptorSetup(ImmutableList.of());
+    ListBoxModel got =
+        descriptorImpl.doFillSubnetworkItems(
+            r.jenkins, "default", REGION, PROJECT_ID, CREDENTIALS_ID);
     Assert.assertEquals(1, got.size());
     Assert.assertEquals(InstanceConfiguration.ERROR_NO_SUBNETS, got.get(0).name);
   }
@@ -137,5 +137,17 @@ public class AutofilledNetworkConfigurationTest {
 
     fv = d.doCheckSubnetwork(NETWORK_NAME);
     Assert.assertEquals(FormValidation.Kind.OK, fv.kind);
+  }
+
+  private DescriptorImpl subnetworkFillDescriptorSetup(List<String> subnetworkNames)
+      throws IOException {
+    List<Subnetwork> subnetworks = new ArrayList<>();
+    subnetworkNames.forEach(
+        subnet -> subnetworks.add(new Subnetwork().setName(subnet).setSelfLink(subnet)));
+    ComputeClient computeClient = Mockito.mock(ComputeClient.class);
+    Mockito.when(computeClient.getSubnetworks(anyString(), anyString(), anyString()))
+        .thenReturn(subnetworks);
+    DescriptorImpl.setComputeClient(computeClient);
+    return new DescriptorImpl();
   }
 }

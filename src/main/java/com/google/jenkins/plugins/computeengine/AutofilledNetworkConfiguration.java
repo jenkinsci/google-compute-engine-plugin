@@ -101,11 +101,6 @@ public class AutofilledNetworkConfiguration extends NetworkConfiguration {
         return items;
       }
 
-      if (network.endsWith("default")) {
-        items.add(new ListBoxModel.Option("default", "default", true));
-        return items;
-      }
-
       try {
         ComputeClient compute = computeClient(context, credentialsId);
         List<Subnetwork> subnetworks = compute.getSubnetworks(projectId, network, region);
@@ -119,15 +114,9 @@ public class AutofilledNetworkConfiguration extends NetworkConfiguration {
           items.add(s.getName(), s.getSelfLink());
         }
         return items;
-      } catch (IOException ioe) {
+      } catch (IOException | IllegalArgumentException e) {
         String message = "Error retrieving subnetworks";
-        LOGGER.log(Level.SEVERE, message, ioe);
-        items.clear();
-        items.add(message);
-        return items;
-      } catch (IllegalArgumentException iae) {
-        String message = "Error retrieving subnetworks";
-        LOGGER.log(Level.SEVERE, message, iae);
+        LOGGER.log(Level.SEVERE, message, e);
         items.clear();
         items.add(message);
         return items;
