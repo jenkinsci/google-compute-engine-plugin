@@ -23,27 +23,24 @@ import com.google.api.services.compute.model.Operation;
 import com.google.jenkins.plugins.computeengine.ssh.GoogleKeyPair;
 import com.trilead.ssh2.Connection;
 import com.trilead.ssh2.HTTPProxyData;
-import com.trilead.ssh2.SCPClient;
 import com.trilead.ssh2.ServerHostKeyVerifier;
-import com.trilead.ssh2.Session;
 import hudson.ProxyConfiguration;
 import hudson.model.TaskListener;
-import hudson.remoting.Channel;
 import java.io.IOException;
-import java.io.PrintStream;
 import java.net.InetSocketAddress;
 import java.net.Proxy;
-import java.util.logging.Level;
+import java.util.Optional;
 import java.util.logging.Logger;
 import jenkins.model.Jenkins;
 
 public class ComputeEngineLinuxLauncher extends ComputeEngineComputerLauncher {
+  private static final Logger LOGGER = Logger.getLogger(ComputeEngineLinuxLauncher.class.getName());
+
   public final boolean useInternalAddress;
 
   // TODO: make this configurable
   public static final Integer SSH_PORT = 22;
   public static final Integer SSH_TIMEOUT = 10000;
-  private static final Logger LOGGER = Logger.getLogger(ComputeEngineLinuxLauncher.class.getName());
   private static int bootstrapAuthTries = 30;
   private static int bootstrapAuthSleepMs = 15000;
 
@@ -53,121 +50,40 @@ public class ComputeEngineLinuxLauncher extends ComputeEngineComputerLauncher {
     this.useInternalAddress = useInternalAddress;
   }
 
-  protected void log(
-      Level level, ComputeEngineComputer computer, TaskListener listener, String message) {
-    try {
-      ComputeEngineCloud cloud = computer.getCloud();
-      cloud.log(LOGGER, level, listener, message);
-    } catch (CloudNotFoundException cnfe) {
-      // TODO: figure out how to log without a handle to the cloud
-    }
-  }
-
-  protected void logException(
-      ComputeEngineComputer computer, TaskListener listener, String message, Throwable exception) {
-    try {
-      ComputeEngineCloud cloud = computer.getCloud();
-      cloud.log(LOGGER, Level.WARNING, listener, message, exception);
-    } catch (CloudNotFoundException cnfe) {
-      // TODO: figure out how to log without a handle to the cloud
-    }
-  }
-
-  protected void logInfo(ComputeEngineComputer computer, TaskListener listener, String message) {
-    log(Level.INFO, computer, listener, message);
-  }
-
-  protected void logWarning(ComputeEngineComputer computer, TaskListener listener, String message) {
-    log(Level.WARNING, computer, listener, message);
+  protected Logger getLogger() {
+    return LOGGER;
   }
 
   @Override
-  protected void launch(ComputeEngineComputer computer, TaskListener listener, Instance inst)
-      throws IOException, InterruptedException {
-    // TODO(#96): Conslidate duplicated launch logic
-    ComputeEngineInstance node = computer.getNode();
-    if (node == null) {
-      logWarning(computer, listener, "Could not get node from computer");
-      return;
+  protected Optional<Connection> setupConnection(
+      ComputeEngineInstance node, ComputeEngineComputer computer, TaskListener listener)
+      throws Exception {
+    if (!node.getSSHKeyPair().isPresent()) {
+      logSevere(
+          computer,
+          listener,
+          String.format("Failed to retreieve SSH keypair for instance: %s", node.getNodeName()));
+      return Optional.empty();
     }
 
-    final Connection bootstrapConn;
-    final Connection conn;
-    Connection cleanupConn = null; // java's code path analysis for final
-    // doesn't work that well.
-    boolean successful = false;
-    PrintStream logger = listener.getLogger();
-    logInfo(computer, listener, "Launching instance: " + node.getNodeName());
-    try {
-      if (!node.getSSHKeyPair().isPresent()) {
-        log(
-            Level.SEVERE,
-            computer,
-            listener,
-            String.format("Failed to retreieve SSH keypair for instance: %s", node.getNodeName()));
-        return;
+    Connection cleanupConn;
+    GoogleKeyPair kp = node.getSSHKeyPair().get();
+    boolean isBootstrapped = bootstrap(kp, computer, listener);
+    if (isBootstrapped) {
+      // connect fresh as ROOT
+      logInfo(computer, listener, "connect fresh as root");
+      cleanupConn = connectToSsh(computer, listener);
+      if (!cleanupConn.authenticateWithPublicKey(
+          node.sshUser, kp.getPrivateKey().toCharArray(), "")) {
+        logWarning(computer, listener, "Authentication failed");
+        return Optional.empty(); // failed to connect
       }
-
-      GoogleKeyPair kp = node.getSSHKeyPair().get();
-      boolean isBootstrapped = bootstrap(kp, computer, listener);
-      if (isBootstrapped) {
-        // connect fresh as ROOT
-        logInfo(computer, listener, "connect fresh as root");
-        cleanupConn = connectToSsh(computer, listener);
-        if (!cleanupConn.authenticateWithPublicKey(
-            node.sshUser, kp.getPrivateKey().toCharArray(), "")) {
-          logWarning(computer, listener, "Authentication failed");
-          return; // failed to connect
-        }
-      } else {
-        logWarning(computer, listener, "bootstrapresult failed");
-        return;
-      }
-      conn = cleanupConn;
-
-      SCPClient scp = conn.createSCPClient();
-      String jenkinsDir = node.getRemoteFS();
-      logInfo(computer, listener, "Copying agent.jar to: " + jenkinsDir);
-      scp.put(Jenkins.get().getJnlpJars("agent.jar").readFully(), "agent.jar", jenkinsDir);
-
-      // Confirm Java is installed
-      String javaExecPath = node.getJavaExecPathOrDefault();
-      if (!testCommand(
-          computer, conn, String.format("%s -fullversion", javaExecPath), logger, listener)) {
-        logWarning(computer, listener, String.format("Java is not installed at %s", javaExecPath));
-      }
-
-      // TODO: allow jvmopt configuration
-      String launchString = String.format("%s -jar ", javaExecPath) + jenkinsDir + "/agent.jar";
-
-      logInfo(computer, listener, "Launching Jenkins agent via plugin SSH: " + launchString);
-      final Session sess = conn.openSession();
-      sess.execCommand(launchString);
-      computer.setChannel(
-          sess.getStdout(),
-          sess.getStdin(),
-          logger,
-          new Channel.Listener() {
-            @Override
-            public void onClosed(Channel channel, IOException cause) {
-              sess.close();
-              conn.close();
-            }
-          });
-    } catch (Exception e) {
-      logException(computer, listener, "Error getting exception", e);
+    } else {
+      logWarning(computer, listener, "bootstrapresult failed");
+      return Optional.empty();
     }
-  }
 
-  private boolean testCommand(
-      ComputeEngineComputer computer,
-      Connection conn,
-      String checkCommand,
-      PrintStream logger,
-      TaskListener listener)
-      throws IOException, InterruptedException {
-    logInfo(computer, listener, "Verifying: " + checkCommand);
-    return conn.exec(checkCommand, logger) == 0;
+    return Optional.of(cleanupConn);
   }
 
   private boolean bootstrap(GoogleKeyPair kp, ComputeEngineComputer computer, TaskListener listener)
@@ -301,5 +217,10 @@ public class ComputeEngineLinuxLauncher extends ComputeEngineComputerLauncher {
         Thread.sleep(5000);
       }
     }
+  }
+
+  @Override
+  protected String getPathSeparator() {
+    return "/";
   }
 }
