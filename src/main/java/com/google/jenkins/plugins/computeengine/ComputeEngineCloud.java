@@ -275,6 +275,7 @@ public class ComputeEngineCloud extends AbstractCloudImpl {
           break;
         }
 
+        // Get next config in round robin fashion
         InstanceConfiguration config = configs.get(i % configs.size());
 
         final ComputeEngineInstance node = config.provision(StreamTaskListener.fromStdout());
