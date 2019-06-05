@@ -23,7 +23,6 @@ import com.cloudbees.plugins.credentials.common.StandardUsernameCredentials;
 import com.cloudbees.plugins.credentials.common.StandardUsernameListBoxModel;
 import com.cloudbees.plugins.credentials.common.StandardUsernamePasswordCredentials;
 import com.google.common.base.Strings;
-import edu.umd.cs.findbugs.annotations.NonNull;
 import hudson.Extension;
 import hudson.model.Describable;
 import hudson.model.Descriptor;
@@ -31,12 +30,15 @@ import hudson.model.Item;
 import hudson.security.ACL;
 import hudson.util.FormValidation;
 import hudson.util.ListBoxModel;
+import java.io.Serializable;
 import java.util.ArrayList;
 import jenkins.model.Jenkins;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
+import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.Setter;
+import lombok.ToString;
 import org.kohsuke.stapler.AncestorInPath;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.DataBoundSetter;
@@ -50,14 +52,15 @@ import org.kohsuke.stapler.QueryParameter;
 @Setter(onMethod = @__(@DataBoundSetter))
 @Builder(builderClassName = "Builder")
 @AllArgsConstructor
-public class WindowsConfiguration implements Describable<WindowsConfiguration> {
-  @NonNull private String passwordCredentialsId;
-  @NonNull private String privateKeyCredentialsId;
+@ToString
+@EqualsAndHashCode
+public class WindowsConfiguration implements Describable<WindowsConfiguration>, Serializable {
+  private static final long serialVersionUID = 1L;
+  private String passwordCredentialsId;
+  private String privateKeyCredentialsId;
 
   @DataBoundConstructor
-  public WindowsConfiguration() {
-    passwordCredentialsId = privateKeyCredentialsId = "";
-  }
+  public WindowsConfiguration() {}
 
   /**
    * Gets the password if a username and password credential is provided
@@ -88,7 +91,7 @@ public class WindowsConfiguration implements Describable<WindowsConfiguration> {
    * @return SSH private key in plain text to use for SSH
    */
   public StandardUsernameCredentials getPrivateKeyCredentials() {
-    if (privateKeyCredentialsId.isEmpty()) {
+    if (Strings.isNullOrEmpty(privateKeyCredentialsId)) {
       return null;
     }
     return CredentialsMatchers.firstOrNull(

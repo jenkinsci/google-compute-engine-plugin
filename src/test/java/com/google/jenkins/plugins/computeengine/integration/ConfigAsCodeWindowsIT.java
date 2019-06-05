@@ -30,18 +30,23 @@ import org.jvnet.hudson.test.JenkinsRule;
 
 public class ConfigAsCodeWindowsIT {
 
-  private static Logger log = Logger.getLogger(ConfigAsCodeTestIT.class.getName());
+  private static Logger log = Logger.getLogger(ConfigAsCodeWindowsIT.class.getName());
   @ClassRule public static JenkinsRule jenkinsRule = new JenkinsRule();
 
   @ClassRule
   public static Timeout timeout = new Timeout(5 * TEST_TIMEOUT_MULTIPLIER, TimeUnit.MINUTES);
 
   private static ComputeClient client;
-  private static Map<String, String> label = getLabel(ConfigAsCodeTestIT.class);
+  private static Map<String, String> label = getLabel(ConfigAsCodeWindowsIT.class);
 
   @BeforeClass
   public static void init() throws Exception {
     log.info("init");
+    ConfigurationAsCode.get()
+        .configure(
+            ConfigAsCodeWindowsIT.class
+                .getResource("configuration-as-code-windows-it.yml")
+                .toString());
     initCredentials(jenkinsRule);
     client = initClient(jenkinsRule, label, log);
   }
@@ -53,8 +58,6 @@ public class ConfigAsCodeWindowsIT {
 
   @Test
   public void testWindowsWorkerCreated() throws Exception {
-    ConfigurationAsCode.get()
-        .configure(this.getClass().getResource("configuration-as-code-windows-it.yml").toString());
     ComputeEngineCloud cloud =
         (ComputeEngineCloud) jenkinsRule.jenkins.clouds.getByName("gce-integration");
 

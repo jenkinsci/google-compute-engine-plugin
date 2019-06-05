@@ -62,6 +62,10 @@ public class ComputeEngineWindowsLauncher extends ComputeEngineComputerLauncher 
   protected Optional<Connection> setupConnection(
       ComputeEngineInstance node, ComputeEngineComputer computer, TaskListener listener)
       throws Exception {
+    if (!node.getWindowsConfig().isPresent()) {
+      logWarning(computer, listener, "Non-windows node provided");
+      return Optional.empty();
+    }
     boolean isBootstrapped = bootstrap(computer, listener);
     if (!isBootstrapped) {
       logWarning(computer, listener, "bootstrapresult failed");
@@ -86,7 +90,7 @@ public class ComputeEngineWindowsLauncher extends ComputeEngineComputerLauncher 
       TaskListener listener)
       throws Exception {
     boolean isAuthenticated;
-    if (windowsConfig.getPrivateKeyCredentialsId().isEmpty()) {
+    if (!windowsConfig.getPrivateKeyCredentialsId().isEmpty()) {
       isAuthenticated =
           SSHAuthenticator.newInstance(
                   sshConnection, windowsConfig.getPrivateKeyCredentials(), windowsUsername)
@@ -112,7 +116,10 @@ public class ComputeEngineWindowsLauncher extends ComputeEngineComputerLauncher 
       throw new IllegalArgumentException("A non-windows ComputeEngineComputer was provided.");
     }
     WindowsConfiguration windowsConfig = node.getWindowsConfig().get();
-
+    if (!windowsConfig.equals(
+        computer.getCloud().getConfigurations().get(0).getWindowsConfiguration())) {
+      throw new IllegalArgumentException("Failed to load windows configuration properly");
+    }
     Connection bootstrapConn = null;
     try {
       int tries = bootstrapAuthTries;
@@ -233,6 +240,7 @@ public class ComputeEngineWindowsLauncher extends ComputeEngineComputerLauncher 
         // keep retrying until SSH comes up
         logInfo(computer, listener, "Failed to connect via ssh: " + e.getMessage());
         logInfo(computer, listener, "Waiting for SSH to come up. Sleeping 5.");
+        e.printStackTrace();
         Thread.sleep(5000);
       }
     }

@@ -16,8 +16,8 @@ jenkins:
             runAsUser:          jenkins
             remoteFs:           ''
             windowsConfiguration:
-              passwordCredentialsId: ''
-              privateKeyCredentialsId: windowsPrivateKeyId
+              passwordCredentialsId: windowsPasswordId
+              privateKeyCredentialsId: ''
             oneShot:            true
             createSnapshot:     false
             region:             "https://www.googleapis.com/compute/v1/projects/${env.GOOGLE_PROJECT_ID}/regions/us-west1"
@@ -26,17 +26,27 @@ jenkins:
             machineType:        "https://www.googleapis.com/compute/v1/projects/${env.GOOGLE_PROJECT_ID}/zones/us-west1-a/machineTypes/n1-standard-1"
             preemptible:        false
             minCpuPlatform:     '' # tried not setting, added when 'saved' in UI
-            startupScript:      "Stop-Service sshd\n$ConfiguredPublicKey = \"${env.GOOGLE_PUBLIC_KEY}\"\nWrite-Output \"Second phase\"\nSet-Content -Path $env:PROGRAMDATA\\ssh\\administrators_authorized_keys -Value $ConfiguredPublicKey\nicacls $env:PROGRAMDATA\\ssh\\administrators_authorized_keys /inheritance:jenkinsRule\nicacls $env:PROGRAMDATA\\ssh\\administrators_authorized_keys /grant SYSTEM:`(F`)\nicacls $env:PROGRAMDATA\\ssh\\administrators_authorized_keys /grant BUILTIN\\Administrators:`(F`)\nRestart-Service sshd"
+            startupScript:      "Stop-Service sshd\n$ConfiguredPublicKey = \":${env.GOOGLE_PUBLIC_KEY}\"\nWrite-Output \"Second phase\"\nSet-Content -Path $env:PROGRAMDATA\\ssh\\administrators_authorized_keys -Value $ConfiguredPublicKey\nicacls $env:PROGRAMDATA\\ssh\\administrators_authorized_keys /inheritance:jenkinsRule\nicacls $env:PROGRAMDATA\\ssh\\administrators_authorized_keys /grant SYSTEM:`(F`)\nicacls $env:PROGRAMDATA\\ssh\\administrators_authorized_keys /grant BUILTIN\\Administrators:`(F`)\nRestart-Service sshd"
             networkConfiguration:
               autofilled:
                 network:        default
                 subnetwork:     default
-            networkTags:        ssh
+            networkTags:        "jenkins-agent ssh"
             externalAddress:    true
             useInternalAddress: false
             bootDiskSourceImageProject: ${env.GOOGLE_BOOT_DISK_PROJECT_ID}
-            bootDiskSourceImageName: "projects/${env.GOOGLE_BOOT_DISK_PROJECT_ID}/global/images/family/${env.GOOGLE_BOOT_DISK_IMAGE_NAME}"
+            bootDiskSourceImageName: "projects/${env.GOOGLE_BOOT_DISK_PROJECT_ID}/global/images/${env.GOOGLE_BOOT_DISK_IMAGE_NAME}"
             bootDiskType:       "https://www.googleapis.com/compute/v1/projects/${env.GOOGLE_PROJECT_ID}/zones/us-west1-a/diskTypes/pd-ssd"
             bootDiskSizeGbStr:  50
             bootDiskAutoDelete: true
             serviceAccountEmail: ''
+credentials:
+  system:
+    domainCredentials:
+      - credentials:
+        - usernamePassword:
+            scope: SYSTEM
+            id: windowsPasswordId
+            username: jenkins
+            description: "integration test password key for windows"
+            password: ${env.GOOGLE_JENKINS_PASSWORD}
