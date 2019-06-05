@@ -89,11 +89,6 @@
       <version>2.1.16</version>
     </dependency>
     <dependency>
-      <groupId>org.jenkins-ci.plugins</groupId>
-      <artifactId>plain-credentials</artifactId>
-      <version>1.5</version>
-    </dependency>
-    <dependency>
       <groupId>com.google.apis</groupId>
       <artifactId>google-api-services-compute</artifactId>
       <version>v1-rev199-1.22.0</version>
@@ -124,6 +119,7 @@
       <version>1.18.6</version>
       <scope>provided</scope>
     </dependency>
+    <!-- Test Dependencies -->
     <dependency>
       <groupId>junit</groupId>
       <artifactId>junit</artifactId>
@@ -140,6 +136,12 @@
       <groupId>org.awaitility</groupId>
       <artifactId>awaitility</artifactId>
       <version>3.0.0</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.jenkins-ci.plugins</groupId>
+      <artifactId>plain-credentials</artifactId>
+      <version>1.5</version>
       <scope>test</scope>
     </dependency>
     <dependency>
