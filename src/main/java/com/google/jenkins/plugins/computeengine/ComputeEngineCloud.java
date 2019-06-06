@@ -52,12 +52,14 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.logging.Level;
 import java.util.logging.LogRecord;
 import java.util.logging.Logger;
 import java.util.logging.SimpleFormatter;
+import java.util.stream.Collectors;
 import javax.annotation.Nonnull;
 import javax.servlet.ServletException;
 import jenkins.model.Jenkins;
@@ -250,21 +252,21 @@ public class ComputeEngineCloud extends AbstractCloudImpl {
 
   @Override
   public Collection<PlannedNode> provision(Label label, int excessWorkload) {
-    List<PlannedNode> r = new ArrayList<>();
+    List<PlannedNode> result = new ArrayList<>();
     try {
-      // TODO: retrieve and iterate a list of InstanceConfiguration that match label
-      final InstanceConfiguration config = getInstanceConfig(label);
+      List<InstanceConfiguration> configs = getInstanceConfigurations(label);
       LOGGER.log(
           Level.INFO,
-          "Provisioning node from config "
-              + config
+          "Provisioning node from configs "
+              + configs
               + " for excess workload of "
               + excessWorkload
               + " units of label '"
               + label
               + "'");
+      int availableCapacity = availableNodeCapacity();
+      int i = 0;
       while (excessWorkload > 0) {
-        Integer availableCapacity = availableNodeCapacity();
         if (availableCapacity <= 0) {
           LOGGER.warning(
               String.format(
@@ -273,45 +275,15 @@ public class ComputeEngineCloud extends AbstractCloudImpl {
           break;
         }
 
+        // Get next config in round robin fashion
+        InstanceConfiguration config = configs.get(i % configs.size());
+
         final ComputeEngineInstance node = config.provision(StreamTaskListener.fromStdout());
         Jenkins.get().addNode(node);
-        r.add(
-            new PlannedNode(
-                node.getNodeName(),
-                Computer.threadPoolForRemoting.submit(
-                    () -> {
-                      long startTime = System.currentTimeMillis();
-                      LOGGER.log(
-                          Level.INFO,
-                          String.format(
-                              "Waiting %dms for node %s to connect",
-                              config.getLaunchTimeoutMillis(), node.getNodeName()));
-                      try {
-                        Computer c = node.toComputer();
-                        if (c != null) {
-                          c.connect(false)
-                              .get(config.getLaunchTimeoutMillis(), TimeUnit.MILLISECONDS);
-                          LOGGER.log(
-                              Level.INFO,
-                              String.format(
-                                  "%dms elapsed waiting for node %s to connect",
-                                  System.currentTimeMillis() - startTime, node.getNodeName()));
-                        } else {
-                          LOGGER.log(
-                              Level.WARNING,
-                              String.format("No computer for node %s found", node.getNodeName()));
-                        }
-                      } catch (TimeoutException e) {
-                        LOGGER.log(
-                            Level.WARNING,
-                            String.format(
-                                "Timeout waiting for node %s to connect", node.getNodeName()),
-                            e);
-                      }
-                      return null;
-                    }),
-                node.getNumExecutors()));
+        result.add(createPlannedNode(config, node));
         excessWorkload -= node.getNumExecutors();
+        availableCapacity -= node.getNumExecutors();
+        i++;
       }
     } catch (IOException ioe) {
       LOGGER.log(Level.WARNING, "Error provisioning node", ioe);
@@ -323,7 +295,46 @@ public class ComputeEngineCloud extends AbstractCloudImpl {
               label.getName()),
           nce.getMessage());
     }
-    return r;
+    return result;
+  }
+
+  private PlannedNode createPlannedNode(InstanceConfiguration config, ComputeEngineInstance node) {
+    return new PlannedNode(
+        node.getNodeName(), getPlannedNodeFuture(config, node), node.getNumExecutors());
+  }
+
+  private Future<Node> getPlannedNodeFuture(
+      InstanceConfiguration config, ComputeEngineInstance node) {
+    return Computer.threadPoolForRemoting.submit(
+        () -> {
+          long startTime = System.currentTimeMillis();
+          LOGGER.log(
+              Level.INFO,
+              String.format(
+                  "Waiting %dms for node %s to connect",
+                  config.getLaunchTimeoutMillis(), node.getNodeName()));
+          try {
+            Computer c = node.toComputer();
+            if (c != null) {
+              c.connect(false).get(config.getLaunchTimeoutMillis(), TimeUnit.MILLISECONDS);
+              LOGGER.log(
+                  Level.INFO,
+                  String.format(
+                      "%dms elapsed waiting for node %s to connect",
+                      System.currentTimeMillis() - startTime, node.getNodeName()));
+            } else {
+              LOGGER.log(
+                  Level.WARNING,
+                  String.format("No computer for node %s found", node.getNodeName()));
+            }
+          } catch (TimeoutException e) {
+            LOGGER.log(
+                Level.WARNING,
+                String.format("Timeout waiting for node %s to connect", node.getNodeName()),
+                e);
+          }
+          return null;
+        });
   }
 
   /**
@@ -365,39 +376,46 @@ public class ComputeEngineCloud extends AbstractCloudImpl {
   @Override
   public boolean canProvision(Label label) {
     try {
-      getInstanceConfig(label);
+      getInstanceConfigurations(label);
       return true;
     } catch (NoConfigurationException nce) {
       return false;
     }
   }
 
-  /** Gets {@link InstanceConfiguration} that has the matching {@link Label}. */
-  public InstanceConfiguration getInstanceConfig(Label label) throws NoConfigurationException {
+  /** Gets all instances of {@link InstanceConfiguration} that has the matching {@link Label}. */
+  public List<InstanceConfiguration> getInstanceConfigurations(Label label)
+      throws NoConfigurationException {
     if (configurations == null) {
       throw new NoConfigurationException(
           String.format(
               "Cloud %s does not have any defined instance configurations.", this.getCloudName()));
     }
 
-    for (InstanceConfiguration configuration : configurations) {
-      if (configuration.getMode() == Node.Mode.NORMAL) {
-        if (label == null || label.matches(configuration.getLabelSet())) {
-          return configuration;
-        }
-      } else if (configuration.getMode() == Node.Mode.EXCLUSIVE) {
-        if (label != null && label.matches(configuration.getLabelSet())) {
-          return configuration;
-        }
-      }
+    List<InstanceConfiguration> configurations =
+        this.configurations.stream()
+            .filter(configuration -> matchesLabel(configuration, label))
+            .collect(Collectors.toList());
+
+    if (configurations.isEmpty()) {
+      throw new NoConfigurationException(
+          String.format(
+              "Cloud %s does not have any matching instance configurations.", this.getCloudName()));
     }
-    throw new NoConfigurationException(
-        String.format(
-            "Cloud %s does not have any matching instance configurations.", this.getCloudName()));
+    return configurations;
+  }
+
+  private boolean matchesLabel(InstanceConfiguration configuration, Label label) {
+    if (configuration.getMode() == Node.Mode.NORMAL) {
+      return label == null || label.matches(configuration.getLabelSet());
+    } else if (configuration.getMode() == Node.Mode.EXCLUSIVE) {
+      return label != null && label.matches(configuration.getLabelSet());
+    }
+    return false;
   }
 
   /** Gets {@link InstanceConfiguration} that has the matching Description. */
-  public InstanceConfiguration getInstanceConfig(String description) {
+  public InstanceConfiguration getInstanceConfigurationByDescription(String description) {
     for (InstanceConfiguration c : configurations) {
       if (c.getDescription().equals(description)) {
         return c;
@@ -412,7 +430,7 @@ public class ComputeEngineCloud extends AbstractCloudImpl {
     if (configuration == null) {
       throw HttpResponses.error(SC_BAD_REQUEST, "The 'configuration' query parameter is missing");
     }
-    InstanceConfiguration c = getInstanceConfig(configuration);
+    InstanceConfiguration c = getInstanceConfigurationByDescription(configuration);
     if (c == null) {
       throw HttpResponses.error(SC_BAD_REQUEST, "No such Instance Configuration: " + configuration);
     }
