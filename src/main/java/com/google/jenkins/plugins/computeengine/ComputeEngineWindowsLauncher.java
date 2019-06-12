@@ -28,6 +28,7 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.Proxy;
 import java.util.Optional;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 import jenkins.model.Jenkins;
 import lombok.Getter;
@@ -240,7 +241,6 @@ public class ComputeEngineWindowsLauncher extends ComputeEngineComputerLauncher 
         // keep retrying until SSH comes up
         logInfo(computer, listener, "Failed to connect via ssh: " + e.getMessage());
         logInfo(computer, listener, "Waiting for SSH to come up. Sleeping 5.");
-        e.printStackTrace();
         Thread.sleep(5000);
       }
     }
