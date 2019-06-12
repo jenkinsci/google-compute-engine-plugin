@@ -77,7 +77,6 @@ public class InstanceConfigurationTest {
   public static final String SERVICE_ACCOUNT_EMAIL = "test-service-account";
   public static final String RETENTION_TIME_MINUTES_STR = "1";
   public static final String LAUNCH_TIMEOUT_SECONDS_STR = "100";
-  public static final boolean WINDOWS = false;
 
   @Mock public ComputeClient computeClient;
 
@@ -161,7 +160,7 @@ public class InstanceConfigurationTest {
 
   @Test
   public void testConfigRoundtrip() throws Exception {
-    InstanceConfiguration want = instanceConfiguration();
+    InstanceConfiguration want = instanceConfigurationBuilder().minCpuPlatform("").build();
 
     InstanceConfiguration.DescriptorImpl.setComputeClient(computeClient);
     AcceleratorConfiguration.DescriptorImpl.setComputeClient(computeClient);
@@ -182,12 +181,13 @@ public class InstanceConfigurationTest {
     r.assertEqualBeans(
         want,
         got,
-        "namePrefix,region,zone,machineType,preemptible,windows,minCpuPlatform,startupScript,bootDiskType,bootDiskSourceImageName,bootDiskSourceImageProject,bootDiskSizeGb,acceleratorConfiguration,networkConfiguration,externalAddress,networkTags,serviceAccountEmail");
+        "namePrefix,region,zone,machineType,preemptible,windowsConfiguration,minCpuPlatform,startupScript,bootDiskType,bootDiskSourceImageName,bootDiskSourceImageProject,bootDiskSizeGb,acceleratorConfiguration,networkConfiguration,externalAddress,networkTags,serviceAccountEmail");
   }
 
   @Test
   public void testInstanceModel() throws Exception {
-    Instance instance = instanceConfiguration(MIN_CPU_PLATFORM).instance();
+    Instance instance =
+        instanceConfigurationBuilder().minCpuPlatform(MIN_CPU_PLATFORM).build().instance();
     // General
     assertTrue(instance.getName().startsWith(NAME_PREFIX));
     assertEquals(CONFIG_DESC, instance.getDescription());
@@ -246,17 +246,14 @@ public class InstanceConfigurationTest {
     assertEquals(
         BOOT_DISK_IMAGE_NAME, instance.getDisks().get(0).getInitializeParams().getSourceImage());
 
-    InstanceConfiguration instanceConfiguration = instanceConfiguration();
+    InstanceConfiguration instanceConfiguration = instanceConfigurationBuilder().build();
     assertFalse(instanceConfiguration.isUseInternalAddress());
     assertNull(instanceConfiguration.instance().getMinCpuPlatform());
+    assertNull(instanceConfiguration.getWindowsConfiguration());
   }
 
-  public static InstanceConfiguration instanceConfiguration() {
-    return instanceConfiguration("");
-  }
-
-  public static InstanceConfiguration instanceConfiguration(String minCpuPlatform) {
-    return new InstanceConfiguration.Builder()
+  public static InstanceConfiguration.Builder instanceConfigurationBuilder() {
+    return InstanceConfiguration.builder()
         .namePrefix(NAME_PREFIX)
         .region(REGION)
         .zone(ZONE)
@@ -264,7 +261,6 @@ public class InstanceConfigurationTest {
         .numExecutorsStr(NUM_EXECUTORS)
         .startupScript(STARTUP_SCRIPT)
         .preemptible(PREEMPTIBLE)
-        .minCpuPlatform(minCpuPlatform)
         .labels(LABEL)
         .description(CONFIG_DESC)
         .bootDiskType(BOOT_DISK_TYPE)
@@ -272,9 +268,6 @@ public class InstanceConfigurationTest {
         .bootDiskSourceImageName(BOOT_DISK_IMAGE_NAME)
         .bootDiskSourceImageProject(BOOT_DISK_PROJECT_ID)
         .bootDiskSizeGbStr(String.valueOf(BOOT_DISK_SIZE_GB))
-        .windows(WINDOWS)
-        .windowsPasswordCredentialsId("")
-        .windowsPrivateKeyCredentialsId("")
         .createSnapshot(false)
         .remoteFs(null)
         .networkConfiguration(new AutofilledNetworkConfiguration(NETWORK_NAME, SUBNETWORK_NAME))
@@ -288,8 +281,7 @@ public class InstanceConfigurationTest {
         .acceleratorConfiguration(new AcceleratorConfiguration(ACCELERATOR_NAME, ACCELERATOR_COUNT))
         .runAsUser(RUN_AS_USER)
         .oneShot(false)
-        .template(null)
-        .build();
+        .template(null);
   }
 
   @Test

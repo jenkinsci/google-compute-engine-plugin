@@ -28,8 +28,10 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.Proxy;
 import java.util.Optional;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 import jenkins.model.Jenkins;
+import lombok.Getter;
 
 /**
  * Launcher for Windows agents
@@ -39,7 +41,7 @@ import jenkins.model.Jenkins;
 public class ComputeEngineWindowsLauncher extends ComputeEngineComputerLauncher {
   private static final Logger LOGGER =
       Logger.getLogger(ComputeEngineWindowsLauncher.class.getName());
-  public final boolean useInternalAddress;
+  @Getter private final boolean useInternalAddress;
 
   // TODO: make this configurable
   public static final Integer SSH_PORT = 22;
@@ -61,6 +63,10 @@ public class ComputeEngineWindowsLauncher extends ComputeEngineComputerLauncher 
   protected Optional<Connection> setupConnection(
       ComputeEngineInstance node, ComputeEngineComputer computer, TaskListener listener)
       throws Exception {
+    if (!node.getWindowsConfig().isPresent()) {
+      logWarning(computer, listener, "Non-windows node provided");
+      return Optional.empty();
+    }
     boolean isBootstrapped = bootstrap(computer, listener);
     if (!isBootstrapped) {
       logWarning(computer, listener, "bootstrapresult failed");
@@ -70,7 +76,7 @@ public class ComputeEngineWindowsLauncher extends ComputeEngineComputerLauncher 
     // connect fresh as ROOT
     logInfo(computer, listener, "connect fresh as root");
     Connection cleanupConn = connectToSsh(computer, listener);
-    if (!authenticateSSH(node.windowsConfig.get(), cleanupConn, listener)) {
+    if (!authenticateSSH(node.getSshUser(), node.getWindowsConfig().get(), cleanupConn, listener)) {
       logWarning(computer, listener, "Authentication failed");
       return Optional.empty(); // failed to connect
     }
@@ -79,11 +85,13 @@ public class ComputeEngineWindowsLauncher extends ComputeEngineComputerLauncher 
   }
 
   private boolean authenticateSSH(
-      WindowsConfiguration windowsConfig, Connection sshConnection, TaskListener listener)
+      String windowsUsername,
+      WindowsConfiguration windowsConfig,
+      Connection sshConnection,
+      TaskListener listener)
       throws Exception {
     boolean isAuthenticated;
-    String windowsUsername = windowsConfig.getWindowsUsername();
-    if (windowsConfig.getPrivateKeyCredentialsId().isPresent()) {
+    if (!windowsConfig.getPrivateKeyCredentialsId().isEmpty()) {
       isAuthenticated =
           SSHAuthenticator.newInstance(
                   sshConnection, windowsConfig.getPrivateKeyCredentials(), windowsUsername)
@@ -105,21 +113,29 @@ public class ComputeEngineWindowsLauncher extends ComputeEngineComputerLauncher 
     ComputeEngineInstance node = computer.getNode();
     if (node == null) {
       throw new IllegalArgumentException("A ComputeEngineComputer with no node was provided");
+    } else if (!node.getWindowsConfig().isPresent()) {
+      throw new IllegalArgumentException("A non-windows ComputeEngineComputer was provided.");
     }
-    WindowsConfiguration windowsConfig = node.windowsConfig.get();
-
+    WindowsConfiguration windowsConfig = node.getWindowsConfig().get();
+    if (!windowsConfig.equals(
+        computer.getCloud().getConfigurations().get(0).getWindowsConfiguration())) {
+      throw new IllegalArgumentException("Failed to load windows configuration properly");
+    }
     Connection bootstrapConn = null;
     try {
       int tries = bootstrapAuthTries;
       boolean isAuthenticated = false;
       while (tries-- > 0) {
-        logInfo(computer, listener, "Authenticating as " + windowsConfig.getWindowsUsername());
+        logInfo(computer, listener, "Authenticating as " + node.getSshUser());
         try {
           bootstrapConn = connectToSsh(computer, listener);
-          isAuthenticated = authenticateSSH(windowsConfig, bootstrapConn, listener);
+          isAuthenticated =
+              authenticateSSH(node.getSshUser(), windowsConfig, bootstrapConn, listener);
         } catch (IOException e) {
           logException(computer, listener, "Exception trying to authenticate", e);
-          bootstrapConn.close();
+          if (bootstrapConn != null) {
+            bootstrapConn.close();
+          }
         }
         if (isAuthenticated) {
           break;

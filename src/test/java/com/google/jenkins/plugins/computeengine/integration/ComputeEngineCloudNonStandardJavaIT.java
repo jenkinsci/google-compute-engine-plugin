@@ -26,11 +26,12 @@ import static com.google.jenkins.plugins.computeengine.integration.ITUtil.getLab
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.initClient;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.initCloud;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.initCredentials;
-import static com.google.jenkins.plugins.computeengine.integration.ITUtil.instanceConfiguration;
+import static com.google.jenkins.plugins.computeengine.integration.ITUtil.instanceConfigurationBuilder;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.teardownResources;
 import static org.junit.Assert.assertEquals;
 
 import com.google.api.services.compute.model.Instance;
+import com.google.common.collect.ImmutableList;
 import com.google.jenkins.plugins.computeengine.ComputeEngineCloud;
 import com.google.jenkins.plugins.computeengine.InstanceConfiguration;
 import com.google.jenkins.plugins.computeengine.client.ComputeClient;
@@ -74,9 +75,7 @@ public class ComputeEngineCloudNonStandardJavaIT {
   @ClassRule public static JenkinsRule jenkinsRule = new JenkinsRule();
 
   private static ComputeClient client;
-  private static ComputeEngineCloud cloud;
   private static Map<String, String> label = getLabel(ComputeEngineCloudNonStandardJavaIT.class);
-  private static InstanceConfiguration instanceConfiguration;
   private static Collection<PlannedNode> planned;
   private static Instance instance;
 
@@ -84,22 +83,22 @@ public class ComputeEngineCloudNonStandardJavaIT {
   public static void init() throws Exception {
     log.info("init");
     initCredentials(jenkinsRule);
-    cloud = initCloud(jenkinsRule);
+    ComputeEngineCloud cloud = initCloud(jenkinsRule);
     client = initClient(jenkinsRule, label, log);
 
-    instanceConfiguration =
-        instanceConfiguration(
-            new InstanceConfiguration.Builder()
-                .startupScript(NON_STANDARD_JAVA_STARTUP_SCRIPT)
-                .numExecutorsStr(NUM_EXECUTORS)
-                .labels(LABEL)
-                .oneShot(false)
-                .createSnapshot(false)
-                .template(NULL_TEMPLATE)
-                .javaExecPath(NON_STANDARD_JAVA_PATH),
-            label);
+    InstanceConfiguration instanceConfiguration =
+        instanceConfigurationBuilder()
+            .startupScript(NON_STANDARD_JAVA_STARTUP_SCRIPT)
+            .numExecutorsStr(NUM_EXECUTORS)
+            .labels(LABEL)
+            .oneShot(false)
+            .createSnapshot(false)
+            .template(NULL_TEMPLATE)
+            .javaExecPath(NON_STANDARD_JAVA_PATH)
+            .googleLabels(label)
+            .build();
 
-    cloud.addConfiguration(instanceConfiguration);
+    cloud.setConfigurations(ImmutableList.of(instanceConfiguration));
     planned = cloud.provision(new LabelAtom(LABEL), 1);
     planned.iterator().next().future.get();
     instance =
@@ -114,5 +113,10 @@ public class ComputeEngineCloudNonStandardJavaIT {
   @Test
   public void testWorkerCreatedOnePlannedNode() {
     assertEquals(1, planned.size());
+  }
+
+  @Test
+  public void testInstanceStatusRunning() {
+    assertEquals("RUNNING", instance.getStatus());
   }
 }

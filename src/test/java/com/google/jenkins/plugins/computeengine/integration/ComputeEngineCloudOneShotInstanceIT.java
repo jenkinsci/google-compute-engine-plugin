@@ -25,11 +25,11 @@ import static com.google.jenkins.plugins.computeengine.integration.ITUtil.getLab
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.initClient;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.initCloud;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.initCredentials;
-import static com.google.jenkins.plugins.computeengine.integration.ITUtil.instanceConfiguration;
+import static com.google.jenkins.plugins.computeengine.integration.ITUtil.instanceConfigurationBuilder;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.teardownResources;
 
+import com.google.common.collect.ImmutableList;
 import com.google.jenkins.plugins.computeengine.ComputeEngineCloud;
-import com.google.jenkins.plugins.computeengine.InstanceConfiguration;
 import com.google.jenkins.plugins.computeengine.client.ComputeClient;
 import hudson.model.FreeStyleBuild;
 import hudson.model.FreeStyleProject;
@@ -70,16 +70,17 @@ public class ComputeEngineCloudOneShotInstanceIT {
     ComputeEngineCloud cloud = initCloud(jenkinsRule);
     client = initClient(jenkinsRule, label, log);
 
-    cloud.addConfiguration(
-        instanceConfiguration(
-            new InstanceConfiguration.Builder()
+    cloud.setConfigurations(
+        ImmutableList.of(
+            instanceConfigurationBuilder()
                 .startupScript(DEB_JAVA_STARTUP_SCRIPT)
                 .numExecutorsStr(NUM_EXECUTORS)
                 .labels(LABEL)
                 .oneShot(true)
                 .createSnapshot(false)
-                .template(NULL_TEMPLATE),
-            label));
+                .template(NULL_TEMPLATE)
+                .googleLabels(label)
+                .build()));
     jenkinsRule.jenkins.getNodesObject().setNodes(Collections.emptyList());
 
     FreeStyleProject project = jenkinsRule.createFreeStyleProject();

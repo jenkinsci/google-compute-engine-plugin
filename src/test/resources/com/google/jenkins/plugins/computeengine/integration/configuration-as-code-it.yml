@@ -15,9 +15,6 @@ jenkins:
             numExecutorsStr:    1
             runAsUser:          jenkins
             remoteFs:           ''
-            windows:            false
-            windowsPasswordCredentialsId: ''    # tried not setting, added when saved in UI
-            windowsPrivateKeyCredentialsId: ''  # tried not setting, added when saved in UI
             oneShot:            true
             createSnapshot:     false
             region:             "https://www.googleapis.com/compute/v1/projects/${env.GOOGLE_PROJECT_ID}/regions/us-west1"

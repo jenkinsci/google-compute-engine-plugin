@@ -25,7 +25,6 @@ import hudson.model.TaskListener;
 import hudson.slaves.AbstractCloudComputer;
 import hudson.slaves.AbstractCloudSlave;
 import hudson.slaves.ComputerLauncher;
-import hudson.slaves.NodeProperty;
 import hudson.slaves.RetentionStrategy;
 import java.io.IOException;
 import java.util.Collections;
@@ -34,24 +33,28 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.annotation.Nullable;
 import jenkins.model.Jenkins;
+import lombok.Builder;
+import lombok.Getter;
 
+@Getter
 public class ComputeEngineInstance extends AbstractCloudSlave {
   private static final long serialVersionUID = 1;
   private static final Logger LOGGER = Logger.getLogger(ComputeEngineInstance.class.getName());
 
   // TODO: https://issues.jenkins-ci.org/browse/JENKINS-55518
-  public final String zone;
-  public final String cloudName;
-  public final String sshUser;
-  public final transient Optional<WindowsConfiguration> windowsConfig;
-  public final boolean createSnapshot;
-  public final boolean oneShot;
+  private final String zone;
+  private final String cloudName;
+  private final String sshUser;
+  private final transient Optional<WindowsConfiguration> windowsConfig;
+  private final boolean createSnapshot;
+  private final boolean oneShot;
   private final String javaExecPath;
   private final GoogleKeyPair sshKeyPair;
-  public Integer launchTimeout; // Seconds
+  private Integer launchTimeout; // Seconds
   private Boolean connected;
 
-  public ComputeEngineInstance(
+  @Builder
+  private ComputeEngineInstance(
       String cloudName,
       String name,
       String zone,
@@ -80,7 +83,7 @@ public class ComputeEngineInstance extends AbstractCloudSlave {
         labelString,
         launcher,
         retentionStrategy,
-        Collections.<NodeProperty<?>>emptyList());
+        Collections.emptyList());
     this.launchTimeout = launchTimeout;
     this.zone = zone;
     this.cloudName = cloudName;
@@ -108,38 +111,19 @@ public class ComputeEngineInstance extends AbstractCloudSlave {
           && computer != null
           && !computer.getBuilds().failureOnly().isEmpty()) {
         LOGGER.log(Level.INFO, "Creating snapshot for node ... " + this.getNodeName());
-        cloud.getClient().createSnapshot(cloud.projectId, this.zone, this.getNodeName());
+        cloud.getClient().createSnapshot(cloud.getProjectId(), this.zone, this.getNodeName());
       }
 
       // If the instance is running, attempt to terminate it. This is an asynch call and we
       // return immediately, hoping for the best.
-      cloud.getClient().terminateInstanceWithStatus(cloud.projectId, zone, name, "RUNNING");
+      cloud.getClient().terminateInstanceWithStatus(cloud.getProjectId(), zone, name, "RUNNING");
     } catch (CloudNotFoundException cnfe) {
       listener.error(cnfe.getMessage());
-      return;
     }
-  }
-
-  /**
-   * Based on the instance configuration, whether to create snapshot for an instance with failed
-   * builds at deletion time.
-   *
-   * @return Whether or not to create the snapshot.
-   */
-  public boolean isCreateSnapshot() {
-    return createSnapshot;
-  }
-
-  public String getCloudName() {
-    return cloudName;
   }
 
   public void onConnected() {
     this.connected = true;
-  }
-
-  public Boolean getConnected() {
-    return this.connected;
   }
 
   public long getLaunchTimeoutMillis() {

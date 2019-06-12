@@ -21,7 +21,7 @@ public class ConfigAsCodeTest {
 
   @Test
   @ConfiguredWithCode("configuration-as-code.yml")
-  public void shouldCreateCloudInstanceFromCode() throws Exception {
+  public void shouldCreateCloudInstanceFromCode() {
     assertEquals("Zero clouds found", jenkinsRule.jenkins.clouds.size(), 1);
     ComputeEngineCloud cloud =
         (ComputeEngineCloud) jenkinsRule.jenkins.clouds.getByName("gce-jenkins-build");
@@ -29,7 +29,7 @@ public class ConfigAsCodeTest {
     assertEquals("Project id is wrong", "gce-jenkins", cloud.getProjectId());
     assertEquals("Wrong instance cap str", "53", cloud.getInstanceCapStr());
     assertEquals("Wrong instance cap", 53, cloud.getInstanceCap());
-    assertEquals("Wrong credentials", "gce-jenkins", cloud.credentialsId);
+    assertEquals("Wrong credentials", "gce-jenkins", cloud.getCredentialsId());
 
     assertEquals("Configurations number wrong", 1, cloud.getConfigurations().size());
     InstanceConfiguration configuration = cloud.getConfigurations().get(0);

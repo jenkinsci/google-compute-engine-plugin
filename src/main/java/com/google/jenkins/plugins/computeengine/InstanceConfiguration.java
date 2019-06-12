@@ -18,13 +18,6 @@ package com.google.jenkins.plugins.computeengine;
 
 import static com.google.jenkins.plugins.computeengine.client.ComputeClient.nameFromSelfLink;
 
-import com.cloudbees.jenkins.plugins.sshcredentials.impl.BasicSSHUserPrivateKey;
-import com.cloudbees.plugins.credentials.CredentialsMatchers;
-import com.cloudbees.plugins.credentials.CredentialsProvider;
-import com.cloudbees.plugins.credentials.common.StandardListBoxModel;
-import com.cloudbees.plugins.credentials.common.StandardUsernameCredentials;
-import com.cloudbees.plugins.credentials.common.StandardUsernameListBoxModel;
-import com.cloudbees.plugins.credentials.common.StandardUsernamePasswordCredentials;
 import com.cloudbees.plugins.credentials.domains.DomainRequirement;
 import com.google.api.services.compute.model.AcceleratorConfig;
 import com.google.api.services.compute.model.AccessConfig;
@@ -47,18 +40,16 @@ import com.google.common.base.Strings;
 import com.google.jenkins.plugins.computeengine.client.ClientFactory;
 import com.google.jenkins.plugins.computeengine.client.ComputeClient;
 import com.google.jenkins.plugins.computeengine.ssh.GoogleKeyPair;
+import edu.umd.cs.findbugs.annotations.Nullable;
 import hudson.Extension;
 import hudson.RelativePath;
 import hudson.Util;
 import hudson.model.Describable;
 import hudson.model.Descriptor;
-import hudson.model.Item;
 import hudson.model.Label;
 import hudson.model.Node;
-import hudson.model.Node.Mode;
 import hudson.model.TaskListener;
 import hudson.model.labels.LabelAtom;
-import hudson.security.ACL;
 import hudson.slaves.CloudRetentionStrategy;
 import hudson.util.FormValidation;
 import hudson.util.ListBoxModel;
@@ -74,6 +65,12 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import jenkins.model.Jenkins;
+import lombok.AccessLevel;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Getter;
+import lombok.Setter;
+import org.apache.commons.lang.NotImplementedException;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.text.RandomStringGenerator;
 import org.jenkinsci.plugins.durabletask.executors.OnceRetentionStrategy;
@@ -82,6 +79,12 @@ import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.DataBoundSetter;
 import org.kohsuke.stapler.QueryParameter;
 
+@Getter
+@Setter(onMethod = @__(@DataBoundSetter))
+/* TODO(rzwitserloot/lombok#2050): Prevent duplicate methods called "build" for custom build method
+ *   until lombok 1.18.8 is released. */
+@Builder(builderClassName = "Builder", buildMethodName = "notbuild")
+@AllArgsConstructor
 public class InstanceConfiguration implements Describable<InstanceConfiguration> {
   public static final String SSH_METADATA_KEY = "ssh-keys";
   public static final Long DEFAULT_BOOT_DISK_SIZE_GB = 10L;
@@ -139,74 +142,25 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
   private String bootDiskSizeGbStr;
   private boolean oneShot;
   private String template;
-  private boolean windows;
-  private String windowsPasswordCredentialsId;
-  private String windowsPrivateKeyCredentialsId;
-  private Optional<WindowsConfiguration> windowsConfig;
+  // Optional not possible due to serialization requirement
+  @Nullable private WindowsConfiguration windowsConfiguration;
   private boolean createSnapshot;
   private String remoteFs;
   private String javaExecPath;
   private GoogleKeyPair sshKeyPair;
-  public Map<String, String> googleLabels;
-  public Integer numExecutors;
-  public Integer retentionTimeMinutes;
-  public Integer launchTimeoutSeconds;
-  public Long bootDiskSizeGb;
-  public transient Set<LabelAtom> labelSet;
+  private Map<String, String> googleLabels;
+  private Integer numExecutors;
+  private Integer retentionTimeMinutes;
+  private Integer launchTimeoutSeconds;
+  private Long bootDiskSizeGb;
+  private transient Set<LabelAtom> labelSet;
+
+  @Getter(AccessLevel.PROTECTED)
+  @Setter(AccessLevel.PROTECTED)
   protected transient ComputeEngineCloud cloud;
 
   @DataBoundConstructor
-  public InstanceConfiguration(
-      String labelString,
-      boolean windows,
-      String runAsUser,
-      String windowsPasswordCredentialsId,
-      String windowsPrivateKeyCredentialsId) {
-    this.setLabels(labelString);
-    this.setWindows(windows);
-    this.setRunAsUser(runAsUser);
-    this.setWindowsPasswordCredentialsId(windowsPasswordCredentialsId);
-    this.setWindowsPrivateKeyCredentialsId(windowsPrivateKeyCredentialsId);
-    this.setWindowsConfig(
-        makeWindowsConfiguration(
-            windows, runAsUser, windowsPasswordCredentialsId, windowsPrivateKeyCredentialsId));
-    readResolve();
-  }
-
-  /**
-   * Sets the Java executable path for this instance.
-   *
-   * @param javaExecPath The Java executable path to be set.
-   */
-  @DataBoundSetter
-  public void setJavaExecPath(String javaExecPath) {
-    this.javaExecPath = javaExecPath;
-  }
-
-  @DataBoundSetter
-  public void setDescription(String description) {
-    this.description = description;
-  }
-
-  @DataBoundSetter
-  public void setNamePrefix(String namePrefix) {
-    this.namePrefix = namePrefix;
-  }
-
-  @DataBoundSetter
-  public void setRegion(String region) {
-    this.region = region;
-  }
-
-  @DataBoundSetter
-  public void setZone(String zone) {
-    this.zone = zone;
-  }
-
-  @DataBoundSetter
-  public void setMachineType(String machineType) {
-    this.machineType = machineType;
-  }
+  public InstanceConfiguration() {}
 
   @DataBoundSetter
   public void setNumExecutorsStr(String numExecutorsStr) {
@@ -215,83 +169,14 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
   }
 
   @DataBoundSetter
-  public void setStartupScript(String startupScript) {
-    this.startupScript = startupScript;
-  }
-
-  @DataBoundSetter
-  public void setPreemptible(boolean preemptible) {
-    this.preemptible = preemptible;
-  }
-
-  @DataBoundSetter
-  public void setMinCpuPlatform(String minCpuPlatform) {
-    this.minCpuPlatform = minCpuPlatform;
-  }
-
-  // Provided through constructor
-  private void setLabels(String labels) {
-    this.labels = Util.fixNull(labels);
-  }
-
-  // Provided through constructor
-  public void setRunAsUser(String runAsUser) {
-    this.runAsUser = runAsUser;
-  }
-
-  @DataBoundSetter
-  public void setBootDiskType(String bootDiskType) {
-    this.bootDiskType = bootDiskType;
-  }
-
-  @DataBoundSetter
-  public void setBootDiskAutoDelete(boolean bootDiskAutoDelete) {
-    this.bootDiskAutoDelete = bootDiskAutoDelete;
-  }
-
-  @DataBoundSetter
-  public void setBootDiskSourceImageName(String bootDiskSourceImageName) {
-    this.bootDiskSourceImageName = bootDiskSourceImageName;
-  }
-
-  @DataBoundSetter
-  public void setBootDiskSourceImageProject(String bootDiskSourceImageProject) {
-    this.bootDiskSourceImageProject = bootDiskSourceImageProject;
-  }
-
-  @DataBoundSetter
-  public void setNetworkConfiguration(NetworkConfiguration networkConfiguration) {
-    this.networkConfiguration = networkConfiguration;
-  }
-
-  @DataBoundSetter
-  public void setExternalAddress(boolean externalAddress) {
-    this.externalAddress = externalAddress;
-  }
-
-  @DataBoundSetter
-  public void setUseInternalAddress(boolean useInternalAddress) {
-    this.useInternalAddress = useInternalAddress;
+  public void setLabelString(String labelString) {
+    this.labels = Util.fixNull(labelString);
+    readResolve();
   }
 
   @DataBoundSetter
   public void setNetworkTags(String networkTags) {
     this.networkTags = Util.fixNull(networkTags).trim();
-  }
-
-  @DataBoundSetter
-  public void setServiceAccountEmail(String serviceAccountEmail) {
-    this.serviceAccountEmail = serviceAccountEmail;
-  }
-
-  @DataBoundSetter
-  public void setMode(Mode mode) {
-    this.mode = mode;
-  }
-
-  @DataBoundSetter
-  public void setAcceleratorConfiguration(AcceleratorConfiguration acceleratorConfiguration) {
-    this.acceleratorConfiguration = acceleratorConfiguration;
   }
 
   @DataBoundSetter
@@ -321,38 +206,8 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
   }
 
   @DataBoundSetter
-  public void setTemplate(String template) {
-    this.template = template;
-  }
-
-  // Provided through constructor
-  public void setWindows(boolean windows) {
-    this.windows = windows;
-  }
-
-  // Provided through constructor
-  public void setWindowsPasswordCredentialsId(String windowsPasswordCredentialsId) {
-    this.windowsPasswordCredentialsId = windowsPasswordCredentialsId;
-  }
-
-  // Provided through constructor
-  public void setWindowsPrivateKeyCredentialsId(String windowsPrivateKeyCredentialsId) {
-    this.windowsPrivateKeyCredentialsId = windowsPrivateKeyCredentialsId;
-  }
-
-  // Generated in constructor
-  public void setWindowsConfig(Optional<WindowsConfiguration> windowsConfig) {
-    this.windowsConfig = windowsConfig;
-  }
-
-  @DataBoundSetter
   public void setCreateSnapshot(boolean createSnapshot) {
     this.createSnapshot = createSnapshot && this.oneShot;
-  }
-
-  @DataBoundSetter
-  public void setRemoteFs(String remoteFs) {
-    this.remoteFs = remoteFs;
   }
 
   public static Integer intOrDefault(String toParse, Integer defaultTo) {
@@ -381,135 +236,12 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
 
   private static String stripSelfLinkPrefix(String s) {
     if (s.contains("https://www.googleapis.com")) {
-      return s.substring(s.indexOf("/projects/") + 1, s.length());
+      return s.substring(s.indexOf("/projects/") + 1);
     }
     return s;
   }
 
-  public String getDescription() {
-    return description;
-  }
-
-  public String getNamePrefix() {
-    return namePrefix;
-  }
-
-  public String getRegion() {
-    return region;
-  }
-
-  public String getZone() {
-    return zone;
-  }
-
-  public String getMachineType() {
-    return machineType;
-  }
-
-  public String getNumExecutorsStr() {
-    return numExecutorsStr;
-  }
-
-  public String getStartupScript() {
-    return startupScript;
-  }
-
-  public boolean isPreemptible() {
-    return preemptible;
-  }
-
-  public String getMinCpuPlatform() {
-    return minCpuPlatform;
-  }
-
-  public String getRunAsUser() {
-    return runAsUser;
-  }
-
-  public String getBootDiskType() {
-    return bootDiskType;
-  }
-
-  public boolean isBootDiskAutoDelete() {
-    return bootDiskAutoDelete;
-  }
-
-  public String getBootDiskSourceImageName() {
-    return bootDiskSourceImageName;
-  }
-
-  public String getBootDiskSourceImageProject() {
-    return bootDiskSourceImageProject;
-  }
-
-  public NetworkConfiguration getNetworkConfiguration() {
-    return networkConfiguration;
-  }
-
-  public boolean isExternalAddress() {
-    return externalAddress;
-  }
-
-  public boolean isUseInternalAddress() {
-    return useInternalAddress;
-  }
-
-  public String getNetworkTags() {
-    return networkTags;
-  }
-
-  public String getServiceAccountEmail() {
-    return serviceAccountEmail;
-  }
-
-  public AcceleratorConfiguration getAcceleratorConfiguration() {
-    return acceleratorConfiguration;
-  }
-
-  public String getRetentionTimeMinutesStr() {
-    return retentionTimeMinutesStr;
-  }
-
-  public String getLaunchTimeoutSecondsStr() {
-    return launchTimeoutSecondsStr;
-  }
-
-  public String getBootDiskSizeGbStr() {
-    return bootDiskSizeGbStr;
-  }
-
-  public boolean isOneShot() {
-    return oneShot;
-  }
-
-  public String getTemplate() {
-    return template;
-  }
-
-  public boolean isWindows() {
-    return windows;
-  }
-
-  public String getWindowsPasswordCredentialsId() {
-    return windowsPasswordCredentialsId;
-  }
-
-  public String getWindowsPrivateKeyCredentialsId() {
-    return windowsPrivateKeyCredentialsId;
-  }
-
-  public Optional<WindowsConfiguration> getWindowsConfig() {
-    return windowsConfig;
-  }
-
-  public boolean isCreateSnapshot() {
-    return createSnapshot;
-  }
-
-  public String getRemoteFs() {
-    return remoteFs;
-  }
-
+  @SuppressWarnings("unchecked")
   public Descriptor<InstanceConfiguration> getDescriptor() {
     return Jenkins.get().getDescriptor(getClass());
   }
@@ -522,21 +254,12 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
     return labelSet;
   }
 
-  public Node.Mode getMode() {
-    return mode;
-  }
-
   public String getDisplayName() {
     return description;
   }
 
   public int getLaunchTimeoutMillis() {
     return launchTimeoutSeconds * 1000;
-  }
-
-  /** @return The Java executable path for this {@link InstanceConfiguration}. */
-  public String getJavaExecPath() {
-    return javaExecPath;
   }
 
   public void appendLabels(Map<String, String> labels) {
@@ -558,47 +281,48 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
     try {
       Instance instance = instance();
       // TODO: JENKINS-55285
-      Operation operation = cloud.getClient().insertInstance(cloud.projectId, template, instance);
+      Operation operation =
+          cloud.getClient().insertInstance(cloud.getProjectId(), template, instance);
       logger.println("Sent insert request for instance configuration [" + description + "]");
       String targetRemoteFs = this.remoteFs;
-      ComputeEngineComputerLauncher launcher = null;
-      if (this.windows) {
+      ComputeEngineComputerLauncher launcher;
+      if (this.windowsConfiguration != null) {
         launcher =
             new ComputeEngineWindowsLauncher(
                 cloud.getCloudName(), operation, this.useInternalAddress);
-        if (targetRemoteFs == null || targetRemoteFs.isEmpty()) {
+        if (Strings.isNullOrEmpty(targetRemoteFs)) {
           targetRemoteFs = "C:\\";
         }
       } else {
         launcher =
             new ComputeEngineLinuxLauncher(
                 cloud.getCloudName(), operation, this.useInternalAddress);
-        if (targetRemoteFs == null || targetRemoteFs.isEmpty()) {
+        if (Strings.isNullOrEmpty(targetRemoteFs)) {
           targetRemoteFs = "/tmp";
         }
       }
-      ComputeEngineInstance computeEngineInstance =
-          new ComputeEngineInstance(
-              cloud.name,
-              instance.getName(),
-              instance.getZone(),
-              instance.getDescription(),
-              runAsUser,
-              targetRemoteFs,
-              windowsConfig,
-              createSnapshot,
-              oneShot,
-              numExecutors,
-              mode,
-              labels,
-              launcher,
-              (oneShot
+      return ComputeEngineInstance.builder()
+          .cloudName(cloud.name)
+          .name(instance.getName())
+          .zone(instance.getZone())
+          .nodeDescription(instance.getDescription())
+          .sshUser(runAsUser)
+          .remoteFS(targetRemoteFs)
+          .windowsConfig(Optional.ofNullable(windowsConfiguration))
+          .createSnapshot(createSnapshot)
+          .oneShot(oneShot)
+          .numExecutors(numExecutors)
+          .mode(mode)
+          .labelString(labels)
+          .launcher(launcher)
+          .retentionStrategy(
+              oneShot
                   ? new OnceRetentionStrategy(retentionTimeMinutes)
-                  : new CloudRetentionStrategy(retentionTimeMinutes)),
-              getLaunchTimeoutMillis(),
-              javaExecPath,
-              sshKeyPair);
-      return computeEngineInstance;
+                  : new CloudRetentionStrategy(retentionTimeMinutes))
+          .launchTimeout(getLaunchTimeoutMillis())
+          .javaExecPath(javaExecPath)
+          .sshKeyPair(sshKeyPair)
+          .build();
     } catch (Descriptor.FormException fe) {
       logger.printf("Error provisioning instance: %s", fe.getMessage());
       return null;
@@ -620,15 +344,15 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
     instance.setZone(nameFromSelfLink(zone));
     instance.setMetadata(newMetadata());
 
-    if (!windows) {
-      sshKeyPair = congifureSSHKeyPair(instance, runAsUser);
+    if (windowsConfiguration == null) {
+      sshKeyPair = configureSSHKeyPair(instance, runAsUser);
     }
 
     if (StringUtils.isNotEmpty(template)) {
       InstanceTemplate instanceTemplate =
           cloud
               .getClient()
-              .getTemplate(nameFromSelfLink(cloud.projectId), nameFromSelfLink(template));
+              .getTemplate(nameFromSelfLink(cloud.getProjectId()), nameFromSelfLink(template));
       /* Since we have to set the metadata to include the SSH keypair, we need to ensure
       we include metadata properties which might be set in the template. */
       if (instanceTemplate.getProperties() != null
@@ -683,11 +407,11 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
 
   private Metadata newMetadata() {
     Metadata metadata = new Metadata();
-    metadata.setItems(new ArrayList<Metadata.Items>());
+    metadata.setItems(new ArrayList<>());
     return metadata;
   }
 
-  private GoogleKeyPair congifureSSHKeyPair(Instance instance, String sshUser) {
+  private GoogleKeyPair configureSSHKeyPair(Instance instance, String sshUser) {
     GoogleKeyPair sshKeyPair = GoogleKeyPair.generate(sshUser);
     instance
         .getMetadata()
@@ -699,7 +423,7 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
   private void configureStartupScript(Instance instance) {
     if (notNullOrEmpty(startupScript)) {
       List<Metadata.Items> items = instance.getMetadata().getItems();
-      if (windows) {
+      if (windowsConfiguration != null) {
         items.add(
             new Metadata.Items()
                 .setKey(METADATA_WINDOWS_STARTUP_SCRIPT_KEY)
@@ -743,12 +467,12 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
 
   private List<AcceleratorConfig> accelerators() {
     if (acceleratorConfiguration != null
-        && notNullOrEmpty(acceleratorConfiguration.gpuCount)
-        && notNullOrEmpty(acceleratorConfiguration.gpuType)) {
+        && notNullOrEmpty(acceleratorConfiguration.getGpuCount())
+        && notNullOrEmpty(acceleratorConfiguration.getGpuType())) {
       List<AcceleratorConfig> accelerators = new ArrayList<>();
       accelerators.add(
           new AcceleratorConfig()
-              .setAcceleratorType(acceleratorConfiguration.gpuType)
+              .setAcceleratorType(acceleratorConfiguration.getGpuType())
               .setAcceleratorCount(acceleratorConfiguration.gpuCount()));
       return accelerators;
     }
@@ -811,7 +535,14 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
     }
 
     public static String defaultRunAsUser() {
-      return DEFAULT_RUN_AS_USER.toString();
+      return DEFAULT_RUN_AS_USER;
+    }
+
+    public static WindowsConfiguration defaultWindowsConfiguration() {
+      return WindowsConfiguration.builder()
+          .passwordCredentialsId("")
+          .privateKeyCredentialsId("")
+          .build();
     }
 
     public static NetworkConfiguration defaultNetworkConfiguration() {
@@ -1142,50 +873,6 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
       return FormValidation.ok();
     }
 
-    public ListBoxModel doFillWindowsPasswordCredentialsIdItems(
-        @AncestorInPath Jenkins context, @QueryParameter String value) {
-      if (context == null || !context.hasPermission(Item.CONFIGURE)) {
-        return new StandardListBoxModel();
-      }
-      List<DomainRequirement> domainRequirements = new ArrayList<DomainRequirement>();
-      return new StandardListBoxModel()
-          .withEmptySelection()
-          .withMatching(
-              CredentialsMatchers.instanceOf(StandardUsernamePasswordCredentials.class),
-              CredentialsProvider.lookupCredentials(
-                  StandardUsernamePasswordCredentials.class,
-                  context,
-                  ACL.SYSTEM,
-                  domainRequirements));
-    }
-
-    public ListBoxModel doFillWindowsPrivateKeyCredentialsIdItems(
-        @AncestorInPath Jenkins context, @QueryParameter String value) {
-      if (context == null || !context.hasPermission(Item.CONFIGURE)) {
-        return new StandardUsernameListBoxModel();
-      }
-      List<DomainRequirement> domainRequirements = new ArrayList<DomainRequirement>();
-      return new StandardUsernameListBoxModel()
-          .withEmptySelection()
-          .withMatching(
-              CredentialsMatchers.instanceOf(BasicSSHUserPrivateKey.class),
-              CredentialsProvider.lookupCredentials(
-                  StandardUsernameCredentials.class, context, ACL.SYSTEM, domainRequirements));
-    }
-
-    public FormValidation doCheckWindowsPrivateKeyCredentialsId(
-        @AncestorInPath Jenkins context,
-        @QueryParameter String value,
-        @QueryParameter("windows") boolean windows,
-        @QueryParameter("windowsPasswordCredentialsId") String windowsPasswordCredentialsId) {
-      if (windows
-          && (Strings.isNullOrEmpty(value)
-              && Strings.isNullOrEmpty(windowsPasswordCredentialsId))) {
-        return FormValidation.error("A password or private key credential is required");
-      }
-      return FormValidation.ok();
-    }
-
     public FormValidation doCheckCreateSnapshot(
         @AncestorInPath Jenkins context,
         @QueryParameter boolean value,
@@ -1197,205 +884,69 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
     }
   }
 
-  private static Optional<WindowsConfiguration> makeWindowsConfiguration(
-      boolean windows,
-      String runAsUser,
-      String windowsPasswordCredentialsId,
-      String windowsPrivateKeyCredentialsId) {
-    if (windows) {
-      return Optional.of(
-          new WindowsConfiguration(
-              runAsUser, windowsPasswordCredentialsId, windowsPrivateKeyCredentialsId));
-    } else {
-      return Optional.empty();
-    }
-  }
-
-  // For use in Builder only
-  private InstanceConfiguration() {}
-
   public static class Builder {
-
-    private InstanceConfiguration instanceConfiguration;
-
-    public Builder() {
-      instanceConfiguration = new InstanceConfiguration();
-    }
-
-    public Builder description(String description) {
-      instanceConfiguration.setDescription(description);
-      return this;
-    }
-
-    public Builder namePrefix(String namePrefix) {
-      instanceConfiguration.setNamePrefix(namePrefix);
-      return this;
-    }
-
-    public Builder region(String region) {
-      instanceConfiguration.setRegion(region);
-      return this;
-    }
-
-    public Builder zone(String zone) {
-      instanceConfiguration.setZone(zone);
-      return this;
-    }
-
-    public Builder machineType(String machineType) {
-      instanceConfiguration.setMachineType(machineType);
-      return this;
-    }
-
-    public Builder numExecutorsStr(String numExecutorsStr) {
-      instanceConfiguration.setNumExecutorsStr(numExecutorsStr);
-      return this;
-    }
-
-    public Builder startupScript(String startupScript) {
-      instanceConfiguration.setStartupScript(startupScript);
-      return this;
-    }
-
-    public Builder preemptible(boolean preemptible) {
-      instanceConfiguration.setPreemptible(preemptible);
-      return this;
-    }
-
-    public Builder minCpuPlatform(String minCpuPlatform) {
-      instanceConfiguration.setMinCpuPlatform(minCpuPlatform);
-      return this;
-    }
-
-    public Builder labels(String labels) {
-      instanceConfiguration.setLabels(labels);
-      return this;
-    }
-
-    public Builder runAsUser(String runAsUser) {
-      instanceConfiguration.setRunAsUser(runAsUser);
-      return this;
-    }
-
-    public Builder bootDiskType(String bootDiskType) {
-      instanceConfiguration.setBootDiskType(bootDiskType);
-      return this;
-    }
-
-    public Builder bootDiskAutoDelete(boolean bootDiskAutoDelete) {
-      instanceConfiguration.setBootDiskAutoDelete(bootDiskAutoDelete);
-      return this;
-    }
-
-    public Builder bootDiskSourceImageName(String bootDiskSourceImageName) {
-      instanceConfiguration.setBootDiskSourceImageName(bootDiskSourceImageName);
-      return this;
-    }
-
-    public Builder bootDiskSourceImageProject(String bootDiskSourceImageProject) {
-      instanceConfiguration.setBootDiskSourceImageProject(bootDiskSourceImageProject);
-      return this;
-    }
-
-    public Builder networkConfiguration(NetworkConfiguration networkConfiguration) {
-      instanceConfiguration.setNetworkConfiguration(networkConfiguration);
-      return this;
-    }
-
-    public Builder externalAddress(boolean externalAddress) {
-      instanceConfiguration.setExternalAddress(externalAddress);
-      return this;
-    }
-
-    public Builder useInternalAddress(boolean useInternalAddress) {
-      instanceConfiguration.setUseInternalAddress(useInternalAddress);
-      return this;
-    }
-
-    public Builder networkTags(String networkTags) {
-      instanceConfiguration.setNetworkTags(networkTags);
-      return this;
-    }
-
-    public Builder serviceAccountEmail(String serviceAccountEmail) {
-      instanceConfiguration.setServiceAccountEmail(serviceAccountEmail);
-      return this;
-    }
-
-    public Builder mode(Node.Mode mode) {
-      instanceConfiguration.setMode(mode);
-      return this;
-    }
-
-    public Builder acceleratorConfiguration(AcceleratorConfiguration acceleratorConfiguration) {
-      instanceConfiguration.setAcceleratorConfiguration(acceleratorConfiguration);
-      return this;
-    }
-
-    public Builder retentionTimeMinutesStr(String retentionTimeMinutesStr) {
-      instanceConfiguration.setRetentionTimeMinutesStr(retentionTimeMinutesStr);
-      return this;
-    }
-
-    public Builder launchTimeoutSecondsStr(String launchTimeoutSecondsStr) {
-      instanceConfiguration.setLaunchTimeoutSecondsStr(launchTimeoutSecondsStr);
-      return this;
-    }
-
-    public Builder bootDiskSizeGbStr(String bootDiskSizeGbStr) {
-      this.instanceConfiguration.setBootDiskSizeGbStr(bootDiskSizeGbStr);
-      return this;
-    }
-
-    public Builder oneShot(boolean oneShot) {
-      instanceConfiguration.setOneShot(oneShot);
-      return this;
-    }
-
-    public Builder template(String template) {
-      instanceConfiguration.setTemplate(template);
-      return this;
-    }
-
-    public Builder windows(boolean windows) {
-      instanceConfiguration.setWindows(windows);
-      return this;
-    }
-
-    public Builder windowsPasswordCredentialsId(String windowsPasswordCredentialsId) {
-      instanceConfiguration.setWindowsPasswordCredentialsId(windowsPasswordCredentialsId);
-      return this;
-    }
-
-    public Builder windowsPrivateKeyCredentialsId(String windowsPrivateKeyCredentialsId) {
-      instanceConfiguration.setWindowsPrivateKeyCredentialsId(windowsPrivateKeyCredentialsId);
-      return this;
-    }
-
-    public Builder createSnapshot(boolean createSnapshot) {
-      instanceConfiguration.setCreateSnapshot(createSnapshot);
-      return this;
-    }
-
-    public Builder remoteFs(String remoteFs) {
-      instanceConfiguration.setRemoteFs(remoteFs);
-      return this;
-    }
-
-    public Builder javaExecPath(String javaExecPath) {
-      instanceConfiguration.setJavaExecPath(javaExecPath);
-      return this;
-    }
-
     public InstanceConfiguration build() {
-      instanceConfiguration.setWindowsConfig(
-          makeWindowsConfiguration(
-              instanceConfiguration.windows,
-              instanceConfiguration.runAsUser,
-              instanceConfiguration.windowsPasswordCredentialsId,
-              instanceConfiguration.windowsPrivateKeyCredentialsId));
-      instanceConfiguration.readResolve();
+      InstanceConfiguration instanceConfiguration = new InstanceConfiguration();
+      instanceConfiguration.setDescription(this.description);
+      instanceConfiguration.setNamePrefix(this.namePrefix);
+      instanceConfiguration.setRegion(this.region);
+      instanceConfiguration.setZone(this.zone);
+      instanceConfiguration.setMachineType(this.machineType);
+      instanceConfiguration.setNumExecutorsStr(this.numExecutorsStr);
+      instanceConfiguration.setStartupScript(this.startupScript);
+      instanceConfiguration.setPreemptible(this.preemptible);
+      instanceConfiguration.setMinCpuPlatform(this.minCpuPlatform);
+      instanceConfiguration.setLabelString(this.labels);
+      instanceConfiguration.setRunAsUser(this.runAsUser);
+      instanceConfiguration.setWindowsConfiguration(this.windowsConfiguration);
+      instanceConfiguration.setBootDiskType(this.bootDiskType);
+      instanceConfiguration.setBootDiskAutoDelete(this.bootDiskAutoDelete);
+      instanceConfiguration.setBootDiskSourceImageName(this.bootDiskSourceImageName);
+      instanceConfiguration.setBootDiskSourceImageProject(this.bootDiskSourceImageProject);
+      instanceConfiguration.setNetworkConfiguration(this.networkConfiguration);
+      instanceConfiguration.setExternalAddress(this.externalAddress);
+      instanceConfiguration.setUseInternalAddress(this.useInternalAddress);
+      instanceConfiguration.setNetworkTags(this.networkTags);
+      instanceConfiguration.setServiceAccountEmail(this.serviceAccountEmail);
+      instanceConfiguration.setMode(this.mode);
+      instanceConfiguration.setAcceleratorConfiguration(this.acceleratorConfiguration);
+      instanceConfiguration.setRetentionTimeMinutesStr(this.retentionTimeMinutesStr);
+      instanceConfiguration.setLaunchTimeoutSecondsStr(this.launchTimeoutSecondsStr);
+      instanceConfiguration.setBootDiskSizeGbStr(this.bootDiskSizeGbStr);
+      instanceConfiguration.setOneShot(this.oneShot);
+      instanceConfiguration.setTemplate(this.template);
+      instanceConfiguration.setCreateSnapshot(this.createSnapshot);
+      instanceConfiguration.setRemoteFs(this.remoteFs);
+      instanceConfiguration.setJavaExecPath(this.javaExecPath);
+      if (googleLabels != null) {
+        instanceConfiguration.appendLabels(this.googleLabels);
+      }
       return instanceConfiguration;
+    }
+
+    // Private methods defined to exclude these from the builder and skip Lombok generating them.
+    private Builder numExecutors(Integer numExecutors) {
+      throw new NotImplementedException();
+    }
+
+    private Builder retentionTimeMinutes(Integer retentionTimeMinutes) {
+      throw new NotImplementedException();
+    }
+
+    private Builder launchTimeoutSeconds(Integer launchTimeoutSeconds) {
+      throw new NotImplementedException();
+    }
+
+    private Builder bootDiskSizeGb(Long bootDiskSizeGb) {
+      throw new NotImplementedException();
+    }
+
+    private Builder labelSet(Set<LabelAtom> labelSet) {
+      throw new NotImplementedException();
+    }
+
+    private Builder cloud(ComputeEngineCloud cloud) {
+      throw new NotImplementedException();
     }
   }
 }

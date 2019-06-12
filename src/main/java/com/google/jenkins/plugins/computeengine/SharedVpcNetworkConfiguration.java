@@ -18,14 +18,16 @@ import com.google.common.base.Strings;
 import hudson.Extension;
 import hudson.RelativePath;
 import hudson.util.FormValidation;
+import lombok.Getter;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.QueryParameter;
 
+@Getter
 public class SharedVpcNetworkConfiguration extends NetworkConfiguration {
   public static final String SUBNETWORK_TEMPLATE = "projects/%s/regions/%s/subnetworks/%s";
-  public final String projectId;
-  public final String subnetworkShortName;
-  public final String region;
+  private final String projectId;
+  private final String subnetworkShortName;
+  private final String region;
 
   @DataBoundConstructor
   public SharedVpcNetworkConfiguration(

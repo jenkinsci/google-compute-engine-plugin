@@ -16,8 +16,11 @@
 
 package com.google.jenkins.plugins.computeengine;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotEquals;
+import static org.junit.Assert.assertTrue;
+
 import hudson.util.FormValidation;
-import org.junit.Assert;
 import org.junit.Test;
 
 public class SharedVpcNetworkConfigurationTest {
@@ -31,11 +34,11 @@ public class SharedVpcNetworkConfigurationTest {
     // Empty constructor
     SharedVpcNetworkConfiguration anc =
         new SharedVpcNetworkConfiguration(PROJECT_ID, REGION, SUBNETWORK_NAME);
-    Assert.assertEquals(anc.network, "");
-    Assert.assertEquals(anc.projectId, PROJECT_ID);
-    Assert.assertNotEquals(anc.subnetwork, SUBNETWORK_NAME);
-    Assert.assertEquals(anc.subnetworkShortName, SUBNETWORK_NAME);
-    Assert.assertEquals(anc.region, REGION);
+    assertTrue(anc.getNetwork().isEmpty());
+    assertEquals(PROJECT_ID, anc.getProjectId());
+    assertNotEquals(SUBNETWORK_NAME, anc.getSubnetwork());
+    assertEquals(SUBNETWORK_NAME, anc.getSubnetworkShortName());
+    assertEquals(REGION, anc.getRegion());
   }
 
   @Test
@@ -45,19 +48,19 @@ public class SharedVpcNetworkConfigurationTest {
 
     // Subnetwork with slash returns an error
     FormValidation fv = d.doCheckSubnetworkName(BAD_SUBNETWORK_NAME);
-    Assert.assertEquals(FormValidation.Kind.ERROR, fv.kind);
+    assertEquals(FormValidation.Kind.ERROR, fv.kind);
 
     // Empty Subnetwork returns an error
     fv = d.doCheckSubnetworkName("");
-    Assert.assertEquals(FormValidation.Kind.ERROR, fv.kind);
+    assertEquals(FormValidation.Kind.ERROR, fv.kind);
 
     // Null Subnetwork returns an error
     fv = d.doCheckSubnetworkName(null);
-    Assert.assertEquals(FormValidation.Kind.ERROR, fv.kind);
+    assertEquals(FormValidation.Kind.ERROR, fv.kind);
 
     // Good Subnetwork returns ok
     fv = d.doCheckSubnetworkName(SUBNETWORK_NAME);
-    Assert.assertEquals(FormValidation.Kind.OK, fv.kind);
+    assertEquals(FormValidation.Kind.OK, fv.kind);
   }
 
   @Test
@@ -67,15 +70,15 @@ public class SharedVpcNetworkConfigurationTest {
 
     // Empty project returns an error
     FormValidation fv = d.doCheckProjectId("");
-    Assert.assertEquals(FormValidation.Kind.ERROR, fv.kind);
+    assertEquals(FormValidation.Kind.ERROR, fv.kind);
 
     // Null project returns an error
     fv = d.doCheckProjectId(null);
-    Assert.assertEquals(FormValidation.Kind.ERROR, fv.kind);
+    assertEquals(FormValidation.Kind.ERROR, fv.kind);
 
     // Good project returns ok
     fv = d.doCheckProjectId(PROJECT_ID);
-    Assert.assertEquals(FormValidation.Kind.OK, fv.kind);
+    assertEquals(FormValidation.Kind.OK, fv.kind);
   }
 
   @Test
@@ -85,22 +88,22 @@ public class SharedVpcNetworkConfigurationTest {
 
     // All empty params returns an error
     FormValidation fv = d.doCheckRegion("region-textbox", "");
-    Assert.assertEquals(FormValidation.Kind.ERROR, fv.kind);
+    assertEquals(FormValidation.Kind.ERROR, fv.kind);
 
     // Empty region dropdown returns an error
     fv = d.doCheckRegion("region-textbox", "");
-    Assert.assertEquals(FormValidation.Kind.ERROR, fv.kind);
+    assertEquals(FormValidation.Kind.ERROR, fv.kind);
 
     // Empty region returns an error
     fv = d.doCheckRegion("", "region-dropdown");
-    Assert.assertEquals(FormValidation.Kind.ERROR, fv.kind);
+    assertEquals(FormValidation.Kind.ERROR, fv.kind);
 
     // Mismatched regions return an error
     fv = d.doCheckRegion("region-textbox", "region-dropdown");
-    Assert.assertEquals(FormValidation.Kind.ERROR, fv.kind);
+    assertEquals(FormValidation.Kind.ERROR, fv.kind);
 
     // Matching regions return no error
     fv = d.doCheckRegion("region", "https://selflink/project/region");
-    Assert.assertEquals(FormValidation.Kind.OK, fv.kind);
+    assertEquals(FormValidation.Kind.OK, fv.kind);
   }
 }

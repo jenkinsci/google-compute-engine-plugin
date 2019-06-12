@@ -29,6 +29,7 @@ import com.google.api.services.compute.model.Image;
 import com.google.api.services.compute.model.Instance;
 import com.google.api.services.compute.model.Operation;
 import com.google.api.services.compute.model.Snapshot;
+import com.google.common.collect.ImmutableList;
 import com.google.jenkins.plugins.computeengine.client.ClientFactory;
 import com.google.jenkins.plugins.computeengine.client.ComputeClient;
 import com.google.jenkins.plugins.computeengine.ssh.GoogleKeyPair;
@@ -232,7 +233,7 @@ public class ComputeEngineCloudWindowsIT {
 
     InstanceConfiguration ic = validInstanceConfiguration1(LABEL, false, false);
     ComputeEngineCloud cloud = (ComputeEngineCloud) r.jenkins.clouds.get(0);
-    cloud.addConfiguration(ic);
+    cloud.setConfigurations(ImmutableList.of(ic));
 
     // Add a new node
     Collection<NodeProvisioner.PlannedNode> planned = cloud.provision(new LabelAtom(LABEL), 1);
@@ -269,7 +270,7 @@ public class ComputeEngineCloudWindowsIT {
     logOutput.reset();
 
     ComputeEngineCloud cloud = (ComputeEngineCloud) r.jenkins.clouds.get(0);
-    cloud.addConfiguration(snapshotInstanceConfiguration());
+    cloud.setConfigurations(ImmutableList.of(snapshotInstanceConfiguration()));
 
     FreeStyleProject project = r.createFreeStyleProject();
     Builder step = new BatchFile("exit 1");
@@ -338,7 +339,7 @@ public class ComputeEngineCloudWindowsIT {
             + "Restart-Service sshd";
 
     InstanceConfiguration ic =
-        new InstanceConfiguration.Builder()
+        InstanceConfiguration.builder()
             .namePrefix(NAME_PREFIX)
             .region(REGION)
             .zone(ZONE)
@@ -355,9 +356,11 @@ public class ComputeEngineCloudWindowsIT {
                 "projects/" + bootDiskProjectId + "/global/images/" + bootDiskImageName)
             .bootDiskSourceImageProject(bootDiskProjectId)
             .bootDiskSizeGbStr(BOOT_DISK_SIZE_GB_STR)
-            .windows(true)
-            .windowsPasswordCredentialsId("")
-            .windowsPrivateKeyCredentialsId(windowsPrivateKeyCredentialId)
+            .windowsConfiguration(
+                WindowsConfiguration.builder()
+                    .passwordCredentialsId("")
+                    .privateKeyCredentialsId(windowsPrivateKeyCredentialId)
+                    .build())
             .createSnapshot(createSnapshot)
             .remoteFs(null)
             .networkConfiguration(new AutofilledNetworkConfiguration(NETWORK_NAME, SUBNETWORK_NAME))

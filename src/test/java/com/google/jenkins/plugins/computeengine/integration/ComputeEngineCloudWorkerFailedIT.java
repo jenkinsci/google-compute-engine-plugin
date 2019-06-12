@@ -24,11 +24,11 @@ import static com.google.jenkins.plugins.computeengine.integration.ITUtil.getLab
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.initClient;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.initCloud;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.initCredentials;
-import static com.google.jenkins.plugins.computeengine.integration.ITUtil.instanceConfiguration;
+import static com.google.jenkins.plugins.computeengine.integration.ITUtil.instanceConfigurationBuilder;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.teardownResources;
 
+import com.google.common.collect.ImmutableList;
 import com.google.jenkins.plugins.computeengine.ComputeEngineCloud;
-import com.google.jenkins.plugins.computeengine.InstanceConfiguration;
 import com.google.jenkins.plugins.computeengine.client.ComputeClient;
 import hudson.model.labels.LabelAtom;
 import hudson.slaves.NodeProvisioner.PlannedNode;
@@ -69,16 +69,17 @@ public class ComputeEngineCloudWorkerFailedIT {
     client = initClient(jenkinsRule, label, log);
 
     // This configuration creates an instance with no Java installed.
-    cloud.addConfiguration(
-        instanceConfiguration(
-            new InstanceConfiguration.Builder()
+    cloud.setConfigurations(
+        ImmutableList.of(
+            instanceConfigurationBuilder()
                 .startupScript("")
                 .numExecutorsStr(NUM_EXECUTORS)
                 .labels(LABEL)
                 .oneShot(false)
                 .createSnapshot(false)
-                .template(NULL_TEMPLATE),
-            label));
+                .template(NULL_TEMPLATE)
+                .googleLabels(label)
+                .build()));
 
     planned = cloud.provision(new LabelAtom(LABEL), 1);
   }

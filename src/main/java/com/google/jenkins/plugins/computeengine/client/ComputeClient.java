@@ -44,6 +44,7 @@ import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import lombok.Setter;
 import org.apache.commons.lang.StringUtils;
 
 /**
@@ -51,6 +52,7 @@ import org.apache.commons.lang.StringUtils;
  *
  * @see <a href="https://cloud.google.com/compute/">Cloud Engine</a>
  */
+@Setter
 public class ComputeClient {
   private Compute compute;
 
@@ -88,10 +90,6 @@ public class ComputeClient {
       }
     }
     return winner;
-  }
-
-  public void setCompute(Compute compute) {
-    this.compute = compute;
   }
 
   /**
