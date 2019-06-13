@@ -28,7 +28,6 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.Proxy;
 import java.util.Optional;
-import java.util.logging.Level;
 import java.util.logging.Logger;
 import jenkins.model.Jenkins;
 import lombok.Getter;

@@ -50,7 +50,6 @@ import hudson.model.Label;
 import hudson.model.Node;
 import hudson.model.TaskListener;
 import hudson.model.labels.LabelAtom;
-import hudson.slaves.CloudRetentionStrategy;
 import hudson.util.FormValidation;
 import hudson.util.ListBoxModel;
 import java.io.IOException;
@@ -73,7 +72,6 @@ import lombok.Setter;
 import org.apache.commons.lang.NotImplementedException;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.text.RandomStringGenerator;
-import org.jenkinsci.plugins.durabletask.executors.OnceRetentionStrategy;
 import org.kohsuke.stapler.AncestorInPath;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.DataBoundSetter;
@@ -315,10 +313,7 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
           .mode(mode)
           .labelString(labels)
           .launcher(launcher)
-          .retentionStrategy(
-              oneShot
-                  ? new OnceRetentionStrategy(retentionTimeMinutes)
-                  : new CloudRetentionStrategy(retentionTimeMinutes))
+          .retentionStrategy(new ComputeEngineRetentionStrategy(retentionTimeMinutes, oneShot))
           .launchTimeout(getLaunchTimeoutMillis())
           .javaExecPath(javaExecPath)
           .sshKeyPair(sshKeyPair)

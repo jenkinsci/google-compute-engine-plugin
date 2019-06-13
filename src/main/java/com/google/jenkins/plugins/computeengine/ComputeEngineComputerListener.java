@@ -20,13 +20,15 @@ import hudson.Extension;
 import hudson.model.Computer;
 import hudson.model.TaskListener;
 import hudson.slaves.ComputerListener;
+import java.io.IOException;
 
 @Extension
 public class ComputeEngineComputerListener extends ComputerListener {
   @Override
-  public void onOnline(Computer c, TaskListener listener) {
+  public void onOnline(Computer c, TaskListener listener) throws IOException {
     if (c instanceof ComputeEngineComputer) {
-      ((ComputeEngineComputer) c).onConnected();
+      ComputeEngineComputer computer = (ComputeEngineComputer) c;
+      computer.onConnected(listener);
     }
   }
 }

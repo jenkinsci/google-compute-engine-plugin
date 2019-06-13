@@ -17,10 +17,17 @@
 package com.google.jenkins.plugins.computeengine;
 
 import com.google.api.services.compute.model.Instance;
+import hudson.model.Executor;
+import hudson.model.Result;
+import hudson.model.TaskListener;
+import hudson.remoting.Channel;
 import hudson.slaves.AbstractCloudComputer;
 import java.io.IOException;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Future;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import jenkins.model.CauseOfInterruption;
 import org.kohsuke.stapler.DataBoundSetter;
 import org.kohsuke.stapler.HttpRedirect;
 import org.kohsuke.stapler.HttpResponse;
@@ -28,6 +35,7 @@ import org.kohsuke.stapler.HttpResponse;
 public class ComputeEngineComputer extends AbstractCloudComputer<ComputeEngineInstance> {
 
   private volatile Instance instance;
+  private Future<Boolean> preemptedFuture;
 
   private static final Logger LOGGER = Logger.getLogger(ComputeEngineCloud.class.getName());
 
@@ -40,10 +48,57 @@ public class ComputeEngineComputer extends AbstractCloudComputer<ComputeEngineIn
     return (ComputeEngineInstance) super.getNode();
   }
 
-  public void onConnected() {
+  void onConnected(TaskListener listener) throws IOException {
     ComputeEngineInstance node = getNode();
     if (node != null) {
       node.onConnected();
+      if (getPreemptible()) {
+        String nodeName = node.getNodeName();
+        LOGGER.log(
+            Level.INFO, "Instance " + nodeName + " is preemptive, setting up preemption listener");
+        preemptedFuture = getChannel().callAsync(new PreemptedCheckCallable(listener));
+        getChannel()
+            .addListener(
+                new Channel.Listener() {
+                  @Override
+                  public void onClosed(Channel channel, IOException cause) {
+                    LOGGER.log(Level.FINE, "Got channel close event");
+                    if (getPreempted()) {
+                      LOGGER.log(
+                          Level.FINE, "Preempted node channel closed, terminating all executors");
+                      getExecutors().forEach(executor -> interruptExecutor(executor, nodeName));
+                    }
+                  }
+                });
+      }
+    }
+  }
+
+  private void interruptExecutor(Executor executor, String nodeName) {
+    LOGGER.log(Level.INFO, "Terminating executor " + executor + " node " + nodeName);
+    executor.interrupt(
+        Result.FAILURE,
+        new CauseOfInterruption() {
+          @Override
+          public String getShortDescription() {
+            return "Instance " + nodeName + " was preempted";
+          }
+        });
+  }
+
+  boolean getPreemptible() {
+    try {
+      return getInstance().getScheduling().getPreemptible();
+    } catch (IOException | NullPointerException e) {
+      return false;
+    }
+  }
+
+  boolean getPreempted() {
+    try {
+      return preemptedFuture != null && preemptedFuture.isDone() && preemptedFuture.get();
+    } catch (InterruptedException | ExecutionException e) {
+      return false;
     }
   }
 
