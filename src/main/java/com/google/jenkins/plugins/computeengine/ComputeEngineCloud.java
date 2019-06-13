@@ -43,7 +43,7 @@ import hudson.slaves.NodeProvisioner.PlannedNode;
 import hudson.util.FormValidation;
 import hudson.util.HttpResponses;
 import hudson.util.ListBoxModel;
-import hudson.util.StreamTaskListener;
+
 import java.io.IOException;
 import java.io.PrintStream;
 import java.util.ArrayList;
@@ -251,7 +251,7 @@ public class ComputeEngineCloud extends AbstractCloudImpl {
         // Get next config in round robin fashion
         InstanceConfiguration config = configs.get(i % configs.size());
 
-        final ComputeEngineInstance node = config.provision(StreamTaskListener.fromStdout());
+        final ComputeEngineInstance node = config.provision();
         Jenkins.get().addNode(node);
         result.add(createPlannedNode(config, node));
         excessWorkload -= node.getNumExecutors();
@@ -408,7 +408,7 @@ public class ComputeEngineCloud extends AbstractCloudImpl {
       throw HttpResponses.error(SC_BAD_REQUEST, "No such Instance Configuration: " + configuration);
     }
 
-    ComputeEngineInstance node = c.provision(StreamTaskListener.fromStdout());
+    ComputeEngineInstance node = c.provision();
     if (node == null) throw HttpResponses.error(SC_BAD_REQUEST, "Could not provision new node.");
     Jenkins.get().addNode(node);
 

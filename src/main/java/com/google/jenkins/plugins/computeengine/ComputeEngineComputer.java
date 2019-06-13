@@ -80,7 +80,7 @@ public class ComputeEngineComputer extends AbstractCloudComputer<ComputeEngineIn
         });
   }
 
-  boolean getPreemptible() {
+  public boolean getPreemptible() {
     try {
       return getInstance().getScheduling().getPreemptible();
     } catch (IOException | NullPointerException e) {
@@ -88,7 +88,7 @@ public class ComputeEngineComputer extends AbstractCloudComputer<ComputeEngineIn
     }
   }
 
-  boolean getPreempted() {
+  public boolean getPreempted() {
     try {
       return preemptedFuture != null && preemptedFuture.isDone() && preemptedFuture.get();
     } catch (InterruptedException | ExecutionException e) {

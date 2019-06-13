@@ -48,12 +48,10 @@ import hudson.model.Describable;
 import hudson.model.Descriptor;
 import hudson.model.Label;
 import hudson.model.Node;
-import hudson.model.TaskListener;
 import hudson.model.labels.LabelAtom;
 import hudson.util.FormValidation;
 import hudson.util.ListBoxModel;
 import java.io.IOException;
-import java.io.PrintStream;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -63,12 +61,15 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.logging.Level;
+
 import jenkins.model.Jenkins;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.Setter;
+import lombok.extern.java.Log;
 import org.apache.commons.lang.NotImplementedException;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.text.RandomStringGenerator;
@@ -83,6 +84,7 @@ import org.kohsuke.stapler.QueryParameter;
  *   until lombok 1.18.8 is released. */
 @Builder(builderClassName = "Builder", buildMethodName = "notbuild")
 @AllArgsConstructor
+@Log
 public class InstanceConfiguration implements Describable<InstanceConfiguration> {
   public static final String SSH_METADATA_KEY = "ssh-keys";
   public static final Long DEFAULT_BOOT_DISK_SIZE_GB = 10L;
@@ -274,14 +276,13 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
     googleLabels.put(key, value);
   }
 
-  public ComputeEngineInstance provision(TaskListener listener) throws IOException {
-    PrintStream logger = listener.getLogger();
+  public ComputeEngineInstance provision() throws IOException {
     try {
       Instance instance = instance();
       // TODO: JENKINS-55285
       Operation operation =
           cloud.getClient().insertInstance(cloud.getProjectId(), template, instance);
-      logger.println("Sent insert request for instance configuration [" + description + "]");
+      log.info("Sent insert request for instance configuration [" + description + "]");
       String targetRemoteFs = this.remoteFs;
       ComputeEngineComputerLauncher launcher;
       if (this.windowsConfiguration != null) {
@@ -319,7 +320,7 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
           .sshKeyPair(sshKeyPair)
           .build();
     } catch (Descriptor.FormException fe) {
-      logger.printf("Error provisioning instance: %s", fe.getMessage());
+      log.log(Level.WARNING, "Error provisioning instance: " + fe.getMessage(), fe);
       return null;
     }
   }
