@@ -26,26 +26,20 @@ import java.io.IOException;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.logging.Level;
-import java.util.logging.Logger;
 import jenkins.model.CauseOfInterruption;
+import lombok.extern.java.Log;
 import org.kohsuke.stapler.DataBoundSetter;
 import org.kohsuke.stapler.HttpRedirect;
 import org.kohsuke.stapler.HttpResponse;
 
+@Log
 public class ComputeEngineComputer extends AbstractCloudComputer<ComputeEngineInstance> {
 
   private volatile Instance instance;
   private Future<Boolean> preemptedFuture;
 
-  private static final Logger LOGGER = Logger.getLogger(ComputeEngineCloud.class.getName());
-
   public ComputeEngineComputer(ComputeEngineInstance slave) {
     super(slave);
-  }
-
-  @Override
-  public ComputeEngineInstance getNode() {
-    return (ComputeEngineInstance) super.getNode();
   }
 
   void onConnected(TaskListener listener) throws IOException {
@@ -54,7 +48,7 @@ public class ComputeEngineComputer extends AbstractCloudComputer<ComputeEngineIn
       node.onConnected();
       if (getPreemptible()) {
         String nodeName = node.getNodeName();
-        LOGGER.log(
+        log.log(
             Level.INFO, "Instance " + nodeName + " is preemptive, setting up preemption listener");
         preemptedFuture = getChannel().callAsync(new PreemptedCheckCallable(listener));
         getChannel()
@@ -62,9 +56,9 @@ public class ComputeEngineComputer extends AbstractCloudComputer<ComputeEngineIn
                 new Channel.Listener() {
                   @Override
                   public void onClosed(Channel channel, IOException cause) {
-                    LOGGER.log(Level.FINE, "Got channel close event");
+                    log.log(Level.FINE, "Got channel close event");
                     if (getPreempted()) {
-                      LOGGER.log(
+                      log.log(
                           Level.FINE, "Preempted node channel closed, terminating all executors");
                       getExecutors().forEach(executor -> interruptExecutor(executor, nodeName));
                     }
@@ -75,7 +69,7 @@ public class ComputeEngineComputer extends AbstractCloudComputer<ComputeEngineIn
   }
 
   private void interruptExecutor(Executor executor, String nodeName) {
-    LOGGER.log(Level.INFO, "Terminating executor " + executor + " node " + nodeName);
+    log.log(Level.INFO, "Terminating executor " + executor + " node " + nodeName);
     executor.interrupt(
         Result.FAILURE,
         new CauseOfInterruption() {
@@ -179,7 +173,7 @@ public class ComputeEngineComputer extends AbstractCloudComputer<ComputeEngineIn
         node.terminate();
       } catch (InterruptedException ie) {
         // Termination Exception
-        LOGGER.log(Level.WARNING, "Node Termination Error", ie);
+        log.log(Level.WARNING, "Node Termination Error", ie);
       }
     }
     return new HttpRedirect("..");

@@ -28,18 +28,17 @@ import hudson.security.ACLContext;
 import hudson.slaves.RetentionStrategy;
 import java.util.List;
 import java.util.logging.Level;
-import java.util.logging.Logger;
 import jenkins.model.Jenkins;
+import lombok.extern.java.Log;
 import org.jenkinsci.plugins.durabletask.executors.OnceRetentionStrategy;
 
 /**
  * A strategy that allows: - setting one shot instances {@link OnceRetentionStrategy} - in case of
  * preemption of GCP instance to restart preempted tasks
  */
+@Log
 public class ComputeEngineRetentionStrategy extends RetentionStrategy<ComputeEngineComputer>
     implements ExecutorListener {
-  private static final Logger LOGGER =
-      Logger.getLogger(ComputeEngineRetentionStrategy.class.getName());
 
   private final OnceRetentionStrategy delegate;
   private final boolean oneShot;
@@ -105,13 +104,13 @@ public class ComputeEngineRetentionStrategy extends RetentionStrategy<ComputeEng
     final boolean preempted = computer.getPreempted();
     Queue.Task baseTask = getBaseTask(task);
     if (preemptible && preempted) {
-      LOGGER.log(Level.INFO, baseTask + " is preemptive and was preempted");
+      log.log(Level.INFO, baseTask + " is preemptive and was preempted");
       List<Action> actions = generateActionsForTask(task);
       try (ACLContext notUsed = ACL.as(task.getDefaultAuthentication())) {
         Jenkins.get().getQueue().schedule2(baseTask, 0, actions);
       }
     } else if (preemptible) {
-      LOGGER.log(Level.INFO, baseTask + " is preemptive and was NOT preempted");
+      log.log(Level.INFO, baseTask + " is preemptive and was NOT preempted");
     }
   }
 
@@ -120,9 +119,9 @@ public class ComputeEngineRetentionStrategy extends RetentionStrategy<ComputeEng
     try {
       final Job job = (Job) baseTask;
       final List causes = job.getLastBuild().getCauses();
-      LOGGER.log(Level.FINE, "Causes: " + causes);
+      log.log(Level.FINE, "Causes: " + causes);
     } catch (Exception e) {
-      LOGGER.log(Level.WARNING, "Exception for " + baseTask, e);
+      log.log(Level.WARNING, "Exception for " + baseTask, e);
     }
     return ImmutableList.of(
         new CauseAction(new Cause.UserIdCause()), new CauseAction(new RebuildCause()));
