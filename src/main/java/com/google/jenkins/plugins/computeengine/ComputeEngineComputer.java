@@ -80,6 +80,11 @@ public class ComputeEngineComputer extends AbstractCloudComputer<ComputeEngineIn
         });
   }
 
+  /**
+   * Check if instance is preemptible.
+   * 
+   * @return true if instance was set as preemptible.
+   */
   public boolean getPreemptible() {
     try {
       return getInstance().getScheduling().getPreemptible();
@@ -88,6 +93,11 @@ public class ComputeEngineComputer extends AbstractCloudComputer<ComputeEngineIn
     }
   }
 
+  /**
+   * Check if instance was actually preempted.
+   * 
+   * @return true if instance was preempted (we can use it to reschedule job in this case).
+   */
   public boolean getPreempted() {
     try {
       return preemptedFuture != null && preemptedFuture.isDone() && preemptedFuture.get();
@@ -168,8 +178,6 @@ public class ComputeEngineComputer extends AbstractCloudComputer<ComputeEngineIn
     ComputeEngineInstance node = getNode();
     if (node != null) {
       try {
-        ComputeEngineCloud cloud = getCloud();
-
         node.terminate();
       } catch (InterruptedException ie) {
         // Termination Exception

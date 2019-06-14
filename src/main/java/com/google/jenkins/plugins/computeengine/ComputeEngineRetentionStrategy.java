@@ -16,21 +16,16 @@
 package com.google.jenkins.plugins.computeengine;
 
 import com.google.common.collect.ImmutableList;
-import hudson.model.Action;
-import hudson.model.Cause;
-import hudson.model.CauseAction;
-import hudson.model.Executor;
-import hudson.model.ExecutorListener;
-import hudson.model.Job;
-import hudson.model.Queue;
+import hudson.model.*;
 import hudson.security.ACL;
 import hudson.security.ACLContext;
 import hudson.slaves.RetentionStrategy;
-import java.util.List;
-import java.util.logging.Level;
 import jenkins.model.Jenkins;
 import lombok.extern.java.Log;
 import org.jenkinsci.plugins.durabletask.executors.OnceRetentionStrategy;
+
+import java.util.List;
+import java.util.logging.Level;
 
 /**
  * A strategy that allows: - setting one shot instances {@link OnceRetentionStrategy} - in case of
@@ -39,16 +34,15 @@ import org.jenkinsci.plugins.durabletask.executors.OnceRetentionStrategy;
 @Log
 public class ComputeEngineRetentionStrategy extends RetentionStrategy<ComputeEngineComputer>
     implements ExecutorListener {
-
   private final OnceRetentionStrategy delegate;
   private final boolean oneShot;
 
   /**
    * Creates the retention strategy.
    *
-   * @param retentionTimeMinutes number of minutes of idleness after which to kill the slave; serves
-   *     a backup in case the strategy fails to detect the end of a task
-   * @param oneShot create one shot instance strategy
+   * @param retentionTimeMinutes Number of minutes of idleness after which to kill the slave; serves
+   *                             a backup in case the strategy fails to detect the end of a task.
+   * @param oneShot              Create one shot instance strategy.
    */
   ComputeEngineRetentionStrategy(int retentionTimeMinutes, boolean oneShot) {
     this.oneShot = oneShot;
@@ -74,7 +68,9 @@ public class ComputeEngineRetentionStrategy extends RetentionStrategy<ComputeEng
 
   @Override
   public void taskCompleted(Executor executor, Queue.Task task, long durationMS) {
-    checkPreempted(executor, task);
+    if (wasPreempted(executor)) {
+      rescheduleTask(task);
+    }
     if (oneShot) {
       delegate.taskCompleted(executor, task, durationMS);
     }
@@ -83,7 +79,9 @@ public class ComputeEngineRetentionStrategy extends RetentionStrategy<ComputeEng
   @Override
   public void taskCompletedWithProblems(
       Executor executor, Queue.Task task, long durationMS, Throwable problems) {
-    checkPreempted(executor, task);
+    if (wasPreempted(executor)) {
+      rescheduleTask(task);
+    }
     if (oneShot) {
       delegate.taskCompletedWithProblems(executor, task, durationMS, problems);
     }
@@ -98,19 +96,18 @@ public class ComputeEngineRetentionStrategy extends RetentionStrategy<ComputeEng
     return parent;
   }
 
-  private void checkPreempted(Executor executor, Queue.Task task) {
+  private boolean wasPreempted(Executor executor) {
     ComputeEngineComputer computer = (ComputeEngineComputer) executor.getOwner();
-    final boolean preemptible = computer.getPreemptible();
     final boolean preempted = computer.getPreempted();
+    return preempted;
+  }
+
+  private void rescheduleTask(Queue.Task task) {
     Queue.Task baseTask = getBaseTask(task);
-    if (preemptible && preempted) {
-      log.log(Level.INFO, baseTask + " is preemptive and was preempted");
-      List<Action> actions = generateActionsForTask(task);
-      try (ACLContext notUsed = ACL.as(task.getDefaultAuthentication())) {
-        Jenkins.get().getQueue().schedule2(baseTask, 0, actions);
-      }
-    } else if (preemptible) {
-      log.log(Level.INFO, baseTask + " is preemptive and was NOT preempted");
+    log.log(Level.INFO, baseTask + " was preempted, rescheduling");
+    List<Action> actions = generateActionsForTask(task);
+    try (ACLContext notUsed = ACL.as(task.getDefaultAuthentication())) {
+      Jenkins.get().getQueue().schedule2(baseTask, 0, actions);
     }
   }
 
@@ -119,7 +116,7 @@ public class ComputeEngineRetentionStrategy extends RetentionStrategy<ComputeEng
     try {
       final Job job = (Job) baseTask;
       final List causes = job.getLastBuild().getCauses();
-      log.log(Level.FINE, "Causes: " + causes);
+      log.log(Level.FINE, "Original causes: " + causes);
     } catch (Exception e) {
       log.log(Level.WARNING, "Exception for " + baseTask, e);
     }

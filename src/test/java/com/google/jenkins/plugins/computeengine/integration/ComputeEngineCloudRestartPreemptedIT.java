@@ -63,7 +63,6 @@ import static org.junit.Assert.assertTrue;
  */
 @Log
 public class ComputeEngineCloudRestartPreemptedIT {
-
   @ClassRule
   public static Timeout timeout = new Timeout(15 * TEST_TIMEOUT_MULTIPLIER, TimeUnit.MINUTES);
 
@@ -89,6 +88,8 @@ public class ComputeEngineCloudRestartPreemptedIT {
             .template(NULL_TEMPLATE)
             .preemptible(true)
             .googleLabels(label)
+                .launchTimeoutSecondsStr("10000")
+                .retentionTimeMinutesStr("30")
             .build();
 
     cloud.setConfigurations(Lists.newArrayList(configuration));
@@ -112,10 +113,15 @@ public class ComputeEngineCloudRestartPreemptedIT {
     ComputeEngineComputer computer = (ComputeEngineComputer) node.toComputer();
     assertTrue("Configuration was set as preemptible but saw as not", computer.getPreemptible());
 
-    System.out.println("Sending mainatanance event to " + name);
+    log.info("Start checking");
+    Thread.sleep(TimeUnit.MINUTES.toMillis(5));
+    Awaitility.await()
+            .timeout(5, TimeUnit.MINUTES)
+            .until(node::isAcceptingTasks);
+    log.info("Sending mainatanance event to " + name);
     client.simulateMaintenanceEvent(PROJECT_ID, ZONE, name);
     Awaitility.await()
-            .timeout(1, TimeUnit.MINUTES)
+            .timeout(5, TimeUnit.MINUTES)
             .until(computer::getPreempted);
   }
 }

@@ -58,16 +58,21 @@ final class PreemptedCheckCallable extends MasterToSlaveCallable<Boolean, IOExce
    */
   @Override
   public Boolean call() throws IOException {
-    HttpTransport transport = new NetHttpTransport();
-    GenericUrl metadata = new GenericUrl(METADATA_SERVER_URL);
-    HttpRequest request = transport.createRequestFactory().buildGetRequest(metadata);
-    request.setHeaders(new HttpHeaders().set("Metadata-Flavor", "Google"));
-    request.setReadTimeout(Integer.MAX_VALUE);
+    HttpRequest request = createMetadataRequest();
     listener.getLogger().println("Preemptive instance, listening to metadata for preemption event");
     HttpResponse response = request.execute();
     final String result = IOUtils.toString(response.getContent(), Charsets.UTF_8);
     listener.getLogger().println("Got preemption event " + result);
     response.disconnect();
     return "TRUE".equals(result);
+  }
+
+  private HttpRequest createMetadataRequest() throws IOException {
+    HttpTransport transport = new NetHttpTransport();
+    GenericUrl metadata = new GenericUrl(METADATA_SERVER_URL);
+    HttpRequest request = transport.createRequestFactory().buildGetRequest(metadata);
+    request.setHeaders(new HttpHeaders().set("Metadata-Flavor", "Google"));
+    request.setReadTimeout(Integer.MAX_VALUE);
+    return request;
   }
 }
