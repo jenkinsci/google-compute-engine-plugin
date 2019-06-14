@@ -28,7 +28,6 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.Proxy;
 import java.util.Optional;
-import java.util.logging.Level;
 import java.util.logging.Logger;
 import jenkins.model.Jenkins;
 import lombok.Getter;
@@ -63,7 +62,7 @@ public class ComputeEngineWindowsLauncher extends ComputeEngineComputerLauncher 
   protected Optional<Connection> setupConnection(
       ComputeEngineInstance node, ComputeEngineComputer computer, TaskListener listener)
       throws Exception {
-    if (!node.getWindowsConfig().isPresent()) {
+    if (node.getWindowsConfig() == null) {
       logWarning(computer, listener, "Non-windows node provided");
       return Optional.empty();
     }
@@ -76,7 +75,7 @@ public class ComputeEngineWindowsLauncher extends ComputeEngineComputerLauncher 
     // connect fresh as ROOT
     logInfo(computer, listener, "connect fresh as root");
     Connection cleanupConn = connectToSsh(computer, listener);
-    if (!authenticateSSH(node.getSshUser(), node.getWindowsConfig().get(), cleanupConn, listener)) {
+    if (!authenticateSSH(node.getSshUser(), node.getWindowsConfig(), cleanupConn, listener)) {
       logWarning(computer, listener, "Authentication failed");
       return Optional.empty(); // failed to connect
     }
@@ -113,10 +112,10 @@ public class ComputeEngineWindowsLauncher extends ComputeEngineComputerLauncher 
     ComputeEngineInstance node = computer.getNode();
     if (node == null) {
       throw new IllegalArgumentException("A ComputeEngineComputer with no node was provided");
-    } else if (!node.getWindowsConfig().isPresent()) {
+    } else if (node.getWindowsConfig() == null) {
       throw new IllegalArgumentException("A non-windows ComputeEngineComputer was provided.");
     }
-    WindowsConfiguration windowsConfig = node.getWindowsConfig().get();
+    WindowsConfiguration windowsConfig = node.getWindowsConfig();
     Connection bootstrapConn = null;
     try {
       int tries = bootstrapAuthTries;

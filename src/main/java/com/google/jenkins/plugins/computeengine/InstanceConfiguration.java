@@ -62,7 +62,6 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Set;
 import jenkins.model.Jenkins;
 import lombok.AccessLevel;
@@ -308,7 +307,7 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
           .nodeDescription(instance.getDescription())
           .sshUser(runAsUser)
           .remoteFS(targetRemoteFs)
-          .windowsConfig(Optional.ofNullable(windowsConfiguration))
+          .windowsConfig(windowsConfiguration)
           .createSnapshot(createSnapshot)
           .oneShot(oneShot)
           .numExecutors(numExecutors)
