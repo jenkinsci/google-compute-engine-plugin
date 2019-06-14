@@ -26,12 +26,11 @@ import hudson.model.Queue;
 import hudson.security.ACL;
 import hudson.security.ACLContext;
 import hudson.slaves.RetentionStrategy;
+import java.util.List;
+import java.util.logging.Level;
 import jenkins.model.Jenkins;
 import lombok.extern.java.Log;
 import org.jenkinsci.plugins.durabletask.executors.OnceRetentionStrategy;
-
-import java.util.List;
-import java.util.logging.Level;
 
 /**
  * A strategy that allows: - setting one shot instances {@link OnceRetentionStrategy} - in case of
@@ -47,8 +46,8 @@ public class ComputeEngineRetentionStrategy extends RetentionStrategy<ComputeEng
    * Creates the retention strategy.
    *
    * @param retentionTimeMinutes Number of minutes of idleness after which to kill the slave; serves
-   *                             a backup in case the strategy fails to detect the end of a task.
-   * @param oneShot              Create one shot instance strategy.
+   *     a backup in case the strategy fails to detect the end of a task.
+   * @param oneShot Create one shot instance strategy.
    */
   ComputeEngineRetentionStrategy(int retentionTimeMinutes, boolean oneShot) {
     this.oneShot = oneShot;

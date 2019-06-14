@@ -16,34 +16,6 @@
 
 package com.google.jenkins.plugins.computeengine.integration;
 
-import com.google.common.collect.Lists;
-import com.google.jenkins.plugins.computeengine.ComputeEngineCloud;
-import com.google.jenkins.plugins.computeengine.ComputeEngineComputer;
-import com.google.jenkins.plugins.computeengine.InstanceConfiguration;
-import com.google.jenkins.plugins.computeengine.client.ComputeClient;
-import hudson.model.FreeStyleBuild;
-import hudson.model.FreeStyleProject;
-import hudson.model.Node;
-import hudson.model.labels.LabelAtom;
-import hudson.model.queue.QueueTaskFuture;
-import hudson.slaves.NodeProvisioner.PlannedNode;
-import hudson.tasks.Builder;
-import hudson.tasks.Shell;
-import lombok.extern.java.Log;
-import org.awaitility.Awaitility;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.rules.Timeout;
-import org.jvnet.hudson.test.JenkinsRule;
-
-import java.io.IOException;
-import java.util.Collection;
-import java.util.Iterator;
-import java.util.Map;
-import java.util.concurrent.TimeUnit;
-
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.DEB_JAVA_STARTUP_SCRIPT;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.LABEL;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.NULL_TEMPLATE;
@@ -62,6 +34,33 @@ import static hudson.model.Result.SUCCESS;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
+import com.google.common.collect.Lists;
+import com.google.jenkins.plugins.computeengine.ComputeEngineCloud;
+import com.google.jenkins.plugins.computeengine.ComputeEngineComputer;
+import com.google.jenkins.plugins.computeengine.InstanceConfiguration;
+import com.google.jenkins.plugins.computeengine.client.ComputeClient;
+import hudson.model.FreeStyleBuild;
+import hudson.model.FreeStyleProject;
+import hudson.model.Node;
+import hudson.model.labels.LabelAtom;
+import hudson.model.queue.QueueTaskFuture;
+import hudson.slaves.NodeProvisioner.PlannedNode;
+import hudson.tasks.Builder;
+import hudson.tasks.Shell;
+import java.io.IOException;
+import java.util.Collection;
+import java.util.Iterator;
+import java.util.Map;
+import java.util.concurrent.TimeUnit;
+import lombok.extern.java.Log;
+import org.awaitility.Awaitility;
+import org.junit.AfterClass;
+import org.junit.BeforeClass;
+import org.junit.ClassRule;
+import org.junit.Test;
+import org.junit.rules.Timeout;
+import org.jvnet.hudson.test.JenkinsRule;
+
 /**
  * Integration test suite for {@link ComputeEngineCloud}. Verifies that instances with preempted
  * flag will be restarted when preempted.
@@ -71,8 +70,7 @@ public class ComputeEngineCloudRestartPreemptedIT {
   @ClassRule
   public static Timeout timeout = new Timeout(15 * TEST_TIMEOUT_MULTIPLIER, TimeUnit.MINUTES);
 
-  @ClassRule
-  public static JenkinsRule jenkinsRule = new JenkinsRule();
+  @ClassRule public static JenkinsRule jenkinsRule = new JenkinsRule();
 
   private static ComputeClient client;
   private static Map<String, String> label = getLabel(ComputeEngineCloudRestartPreemptedIT.class);
@@ -133,6 +131,9 @@ public class ComputeEngineCloudRestartPreemptedIT {
 
     Awaitility.await()
         .timeout(5, TimeUnit.MINUTES)
-        .until(() -> freeStyleBuild.getNextBuild() != null && freeStyleBuild.getNextBuild().getResult() == SUCCESS);
+        .until(
+            () ->
+                freeStyleBuild.getNextBuild() != null
+                    && freeStyleBuild.getNextBuild().getResult() == SUCCESS);
   }
 }
