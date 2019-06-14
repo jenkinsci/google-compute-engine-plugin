@@ -71,13 +71,13 @@ public class ComputeEngineCloudRestartPreemptedIT {
   private static ComputeClient client;
   private static Map<String, String> label =
       getLabel(ComputeEngineCloudRestartPreemptedIT.class);
-  private static Collection<PlannedNode> planned;
+  private static ComputeEngineCloud cloud;
 
   @BeforeClass
   public static void init() throws Exception {
     log.info("init");
     initCredentials(jenkinsRule);
-    ComputeEngineCloud cloud = initCloud(jenkinsRule);
+    cloud = initCloud(jenkinsRule);
     client = initClient(jenkinsRule, label, log);
 
     InstanceConfiguration configuration =
@@ -93,8 +93,6 @@ public class ComputeEngineCloudRestartPreemptedIT {
             .build();
 
     cloud.setConfigurations(Lists.newArrayList(configuration));
-
-    planned = cloud.provision(new LabelAtom(LABEL), 1);
   }
 
   @AfterClass
@@ -104,6 +102,7 @@ public class ComputeEngineCloudRestartPreemptedIT {
 
   @Test
   public void testIfNodeWasPreempted() throws Exception {
+    Collection<PlannedNode> planned = cloud.provision(new LabelAtom(LABEL), 1);
     Iterator<PlannedNode> iterator = planned.iterator();
     PlannedNode plannedNode = iterator.next();
     String name = plannedNode.displayName;
@@ -113,12 +112,10 @@ public class ComputeEngineCloudRestartPreemptedIT {
     ComputeEngineComputer computer = (ComputeEngineComputer) node.toComputer();
     assertTrue("Configuration was set as preemptible but saw as not", computer.getPreemptible());
 
-    log.info("Start checking");
-    Thread.sleep(TimeUnit.MINUTES.toMillis(5));
     Awaitility.await()
             .timeout(5, TimeUnit.MINUTES)
-            .until(node::isAcceptingTasks);
-    log.info("Sending mainatanance event to " + name);
+            .until(() -> computer.getLog().contains("listening to metadata for preemption even"));
+    
     client.simulateMaintenanceEvent(PROJECT_ID, ZONE, name);
     Awaitility.await()
             .timeout(5, TimeUnit.MINUTES)

@@ -48,8 +48,9 @@ public class ComputeEngineComputer extends AbstractCloudComputer<ComputeEngineIn
       node.onConnected();
       if (getPreemptible()) {
         String nodeName = node.getNodeName();
-        log.log(
-            Level.INFO, "Instance " + nodeName + " is preemptive, setting up preemption listener");
+        final String msg = "Instance " + nodeName + " is preemptive, setting up preemption listener";
+        log.log(Level.INFO, msg);
+        listener.getLogger().println(msg);
         preemptedFuture = getChannel().callAsync(new PreemptedCheckCallable(listener));
         getChannel()
             .addListener(
