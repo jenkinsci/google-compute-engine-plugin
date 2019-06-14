@@ -595,7 +595,8 @@ public class ComputeClient {
     return operation.getError();
   }
 
-  public void simulateMaintenanceEvent(String projectId, String zone, String instanceId) throws IOException {
+  public void simulateMaintenanceEvent(String projectId, String zone, String instanceId)
+      throws IOException {
     compute.instances().simulateMaintenanceEvent(projectId, zone, instanceId).execute();
   }
 }

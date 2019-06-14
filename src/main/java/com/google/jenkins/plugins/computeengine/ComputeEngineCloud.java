@@ -43,7 +43,6 @@ import hudson.slaves.NodeProvisioner.PlannedNode;
 import hudson.util.FormValidation;
 import hudson.util.HttpResponses;
 import hudson.util.ListBoxModel;
-
 import java.io.IOException;
 import java.io.PrintStream;
 import java.util.ArrayList;

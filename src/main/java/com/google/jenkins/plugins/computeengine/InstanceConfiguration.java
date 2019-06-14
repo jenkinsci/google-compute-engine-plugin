@@ -62,7 +62,6 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.logging.Level;
-
 import jenkins.model.Jenkins;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
