@@ -45,7 +45,7 @@ public class ComputeEngineInstance extends AbstractCloudSlave {
   private final String zone;
   private final String cloudName;
   private final String sshUser;
-  private final transient Optional<WindowsConfiguration> windowsConfig;
+  private final WindowsConfiguration windowsConfig;
   private final boolean createSnapshot;
   private final boolean oneShot;
   private final String javaExecPath;
@@ -61,7 +61,8 @@ public class ComputeEngineInstance extends AbstractCloudSlave {
       String nodeDescription,
       String sshUser,
       String remoteFS,
-      Optional<WindowsConfiguration> windowsConfig,
+      // NOTE(stephenashank): Could not use optional due to serialization req.
+      @Nullable WindowsConfiguration windowsConfig,
       boolean createSnapshot,
       boolean oneShot,
       int numExecutors,
