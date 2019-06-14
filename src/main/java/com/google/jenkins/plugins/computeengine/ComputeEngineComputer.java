@@ -93,6 +93,7 @@ public class ComputeEngineComputer extends AbstractCloudComputer<ComputeEngineIn
       Scheduling scheduling = getInstance().getScheduling();
       return scheduling != null && scheduling.getPreemptible();
     } catch (IOException e) {
+      log.log(Level.WARNING, "Error when getting preemptible status", e);
       return false;
     }
   }
@@ -106,6 +107,7 @@ public class ComputeEngineComputer extends AbstractCloudComputer<ComputeEngineIn
     try {
       return preemptedFuture != null && preemptedFuture.isDone() && preemptedFuture.get();
     } catch (InterruptedException | ExecutionException e) {
+      log.log(Level.WARNING, "Error when getting preempted status", e);
       return false;
     }
   }

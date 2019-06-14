@@ -16,11 +16,6 @@
 
 package com.google.jenkins.plugins.computeengine.integration;
 
-import static com.google.jenkins.plugins.computeengine.integration.ITUtil.*;
-import static hudson.model.Result.FAILURE;
-import static hudson.model.Result.SUCCESS;
-import static org.junit.Assert.*;
-
 import com.google.common.collect.Lists;
 import com.google.jenkins.plugins.computeengine.ComputeEngineCloud;
 import com.google.jenkins.plugins.computeengine.ComputeEngineComputer;
@@ -34,11 +29,6 @@ import hudson.model.queue.QueueTaskFuture;
 import hudson.slaves.NodeProvisioner.PlannedNode;
 import hudson.tasks.Builder;
 import hudson.tasks.Shell;
-import java.io.IOException;
-import java.util.Collection;
-import java.util.Iterator;
-import java.util.Map;
-import java.util.concurrent.TimeUnit;
 import lombok.extern.java.Log;
 import org.awaitility.Awaitility;
 import org.junit.AfterClass;
@@ -47,6 +37,30 @@ import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.rules.Timeout;
 import org.jvnet.hudson.test.JenkinsRule;
+
+import java.io.IOException;
+import java.util.Collection;
+import java.util.Iterator;
+import java.util.Map;
+import java.util.concurrent.TimeUnit;
+
+import static com.google.jenkins.plugins.computeengine.integration.ITUtil.DEB_JAVA_STARTUP_SCRIPT;
+import static com.google.jenkins.plugins.computeengine.integration.ITUtil.LABEL;
+import static com.google.jenkins.plugins.computeengine.integration.ITUtil.NULL_TEMPLATE;
+import static com.google.jenkins.plugins.computeengine.integration.ITUtil.NUM_EXECUTORS;
+import static com.google.jenkins.plugins.computeengine.integration.ITUtil.PROJECT_ID;
+import static com.google.jenkins.plugins.computeengine.integration.ITUtil.TEST_TIMEOUT_MULTIPLIER;
+import static com.google.jenkins.plugins.computeengine.integration.ITUtil.ZONE;
+import static com.google.jenkins.plugins.computeengine.integration.ITUtil.getLabel;
+import static com.google.jenkins.plugins.computeengine.integration.ITUtil.initClient;
+import static com.google.jenkins.plugins.computeengine.integration.ITUtil.initCloud;
+import static com.google.jenkins.plugins.computeengine.integration.ITUtil.initCredentials;
+import static com.google.jenkins.plugins.computeengine.integration.ITUtil.instanceConfigurationBuilder;
+import static com.google.jenkins.plugins.computeengine.integration.ITUtil.teardownResources;
+import static hudson.model.Result.FAILURE;
+import static hudson.model.Result.SUCCESS;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 /**
  * Integration test suite for {@link ComputeEngineCloud}. Verifies that instances with preempted
@@ -57,7 +71,8 @@ public class ComputeEngineCloudRestartPreemptedIT {
   @ClassRule
   public static Timeout timeout = new Timeout(15 * TEST_TIMEOUT_MULTIPLIER, TimeUnit.MINUTES);
 
-  @ClassRule public static JenkinsRule jenkinsRule = new JenkinsRule();
+  @ClassRule
+  public static JenkinsRule jenkinsRule = new JenkinsRule();
 
   private static ComputeClient client;
   private static Map<String, String> label = getLabel(ComputeEngineCloudRestartPreemptedIT.class);
