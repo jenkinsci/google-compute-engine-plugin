@@ -117,10 +117,6 @@ public class ComputeEngineWindowsLauncher extends ComputeEngineComputerLauncher 
       throw new IllegalArgumentException("A non-windows ComputeEngineComputer was provided.");
     }
     WindowsConfiguration windowsConfig = node.getWindowsConfig().get();
-    if (!windowsConfig.equals(
-        computer.getCloud().getConfigurations().get(0).getWindowsConfiguration())) {
-      throw new IllegalArgumentException("Failed to load windows configuration properly");
-    }
     Connection bootstrapConn = null;
     try {
       int tries = bootstrapAuthTries;
