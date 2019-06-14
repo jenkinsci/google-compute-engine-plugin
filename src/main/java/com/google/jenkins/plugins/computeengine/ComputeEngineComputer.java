@@ -17,6 +17,7 @@
 package com.google.jenkins.plugins.computeengine;
 
 import com.google.api.services.compute.model.Instance;
+import com.google.api.services.compute.model.Scheduling;
 import hudson.model.Executor;
 import hudson.model.Result;
 import hudson.model.TaskListener;
@@ -89,8 +90,9 @@ public class ComputeEngineComputer extends AbstractCloudComputer<ComputeEngineIn
    */
   public boolean getPreemptible() {
     try {
-      return getInstance().getScheduling().getPreemptible();
-    } catch (IOException | NullPointerException e) {
+      Scheduling scheduling = getInstance().getScheduling();
+      return scheduling != null && scheduling.getPreemptible();
+    } catch (IOException e) {
       return false;
     }
   }
