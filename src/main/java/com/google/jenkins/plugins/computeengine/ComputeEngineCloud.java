@@ -271,10 +271,13 @@ public class ComputeEngineCloud extends AbstractCloudImpl {
   }
 
   /**
-   * Choose semi randomly config from list of available configs.
+   * Choose config from list of available configs.
+   * Current implementation use round robin strategy starting at semi random element of list.
+   * Because most of times arriving requests asks for only 1 new node, we dont want 
+   * to start every time from 1 element.
    *
    * @param configs List of configs to choose from.
-   * @return Pseudo random config from list.
+   * @return Chosen config from list.
    */
   private InstanceConfiguration chooseConfigFromList(List<InstanceConfiguration> configs) {
     return configs.get(Math.abs(configsNext++) % configs.size());
