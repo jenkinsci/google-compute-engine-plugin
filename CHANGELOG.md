@@ -14,6 +14,23 @@
 # Changelog
 All notable changes to this project will be documented in this file.
 
+## [3.2.1] - 2019-06-19
+### Added
+- Issue #117 Added note in help file for node retention time to account for VM instance boot time.
+
+### Fixed
+- Issue #106 Fixed bug where it was assumed default subnetwork under default network was also default.
+- Issue #114 Fix bug in windows config where it was assumed the windows-related instance configuration was first configuration
+under ComputeEngineCloud.
+- Made windows configuration in instance configuration non-transient to make it serializable.
+
+### Changed
+- Issue #65 Replaced public getters and setters with lombok annotations.
+- Issue #104 Moved check Java command after copying agent.jar during instance launch.
+- Issue #108 Removed "Use Internal IP?" from advanced tab of instance configuration.
+- Issue #107 Instance Configurations are chosen in round robin fashion if one instance configuration fails to provision nodes.
+
+
 ## [3.2.0] - 2019-05-16
 ### Added
 - Issue #91: Support for configuring a custom java execution path through the javaExecPath field in
