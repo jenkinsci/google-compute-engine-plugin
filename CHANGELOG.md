@@ -14,7 +14,7 @@
 # Changelog
 All notable changes to this project will be documented in this file.
 
-## [3.2.1] - 2019-06-19
+## [3.3.0] - 2019-06-19
 ### Added
 - Issue #117 Added note in help file for node retention time to account for VM instance boot time.
 
@@ -27,7 +27,7 @@ under ComputeEngineCloud.
 ### Changed
 - Issue #65 Replaced public getters and setters with lombok annotations.
 - Issue #104 Moved check Java command after copying agent.jar during instance launch.
-- Issue #108 Removed "Use Internal IP?" from advanced tab of instance configuration.
+- Issue #108 Moved "Use Internal IP?" from Networking section under advanced instance configuration to Launch Configuration section.
 - Issue #107 Instance Configurations are chosen in round robin fashion if one instance configuration fails to provision nodes.
 
 
