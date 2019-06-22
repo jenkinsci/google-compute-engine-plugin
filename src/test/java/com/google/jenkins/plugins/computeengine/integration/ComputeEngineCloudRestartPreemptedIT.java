@@ -68,7 +68,7 @@ import org.jvnet.hudson.test.JenkinsRule;
 @Log
 public class ComputeEngineCloudRestartPreemptedIT {
   @ClassRule
-  public static Timeout timeout = new Timeout(15 * TEST_TIMEOUT_MULTIPLIER, TimeUnit.MINUTES);
+  public static Timeout timeout = new Timeout(20 * TEST_TIMEOUT_MULTIPLIER, TimeUnit.MINUTES);
 
   @ClassRule public static JenkinsRule jenkinsRule = new JenkinsRule();
 
@@ -120,17 +120,17 @@ public class ComputeEngineCloudRestartPreemptedIT {
     QueueTaskFuture<FreeStyleBuild> taskFuture = project.scheduleBuild2(0);
 
     Awaitility.await()
-        .timeout(5, TimeUnit.MINUTES)
+        .timeout(7, TimeUnit.MINUTES)
         .until(() -> computer.getLog().contains("listening to metadata for preemption event"));
 
     client.simulateMaintenanceEvent(PROJECT_ID, ZONE, name);
-    Awaitility.await().timeout(5, TimeUnit.MINUTES).until(computer::getPreempted);
+    Awaitility.await().timeout(8, TimeUnit.MINUTES).until(computer::getPreempted);
 
     FreeStyleBuild freeStyleBuild = taskFuture.get();
     assertEquals(FAILURE, freeStyleBuild.getResult());
 
     Awaitility.await()
-        .timeout(5, TimeUnit.MINUTES)
+        .timeout(9, TimeUnit.MINUTES)
         .until(
             () ->
                 freeStyleBuild.getNextBuild() != null
