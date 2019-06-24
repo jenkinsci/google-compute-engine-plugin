@@ -64,6 +64,7 @@ import javax.annotation.Nonnull;
 import javax.servlet.ServletException;
 import jenkins.model.Jenkins;
 import lombok.Getter;
+import lombok.extern.java.Log;
 import org.kohsuke.stapler.AncestorInPath;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.DataBoundSetter;
@@ -71,13 +72,14 @@ import org.kohsuke.stapler.HttpResponse;
 import org.kohsuke.stapler.QueryParameter;
 
 @Getter
+@Log
 public class ComputeEngineCloud extends AbstractCloudImpl {
   public static final String CLOUD_PREFIX = "gce-";
   public static final String CONFIG_LABEL_KEY = "jenkins_config_name";
   public static final String CLOUD_ID_LABEL_KEY = "jenkins_cloud_id";
 
-  private static final Logger LOGGER = Logger.getLogger(ComputeEngineCloud.class.getName());
   private static final SimpleFormatter sf = new SimpleFormatter();
+  private static int configsNext;
 
   private final String projectId;
   private final String credentialsId;
@@ -176,7 +178,7 @@ public class ComputeEngineCloud extends AbstractCloudImpl {
           new ClientFactory(Jenkins.get(), new ArrayList<>(), credentialsId);
       return clientFactory.compute();
     } catch (IOException e) {
-      LOGGER.log(Level.SEVERE, "Exception when creating GCE client", e);
+      log.log(Level.SEVERE, "Exception when creating GCE client", e);
       // TODO: https://github.com/jenkinsci/google-compute-engine-plugin/issues/62
       return null;
     }
@@ -228,7 +230,7 @@ public class ComputeEngineCloud extends AbstractCloudImpl {
     List<PlannedNode> result = new ArrayList<>();
     try {
       List<InstanceConfiguration> configs = getInstanceConfigurations(label);
-      LOGGER.log(
+      log.log(
           Level.INFO,
           "Provisioning node from configs "
               + configs
@@ -238,30 +240,27 @@ public class ComputeEngineCloud extends AbstractCloudImpl {
               + label
               + "'");
       int availableCapacity = availableNodeCapacity();
-      int i = 0;
       while (excessWorkload > 0) {
         if (availableCapacity <= 0) {
-          LOGGER.warning(
+          log.warning(
               String.format(
                   "Could not provision new nodes to meet excess workload demand (%d). Cloud provider %s has reached its configured capacity of %d",
                   excessWorkload, getCloudName(), getInstanceCap()));
           break;
         }
 
-        // Get next config in round robin fashion
-        InstanceConfiguration config = configs.get(i % configs.size());
+        InstanceConfiguration config = chooseConfigFromList(configs);
 
         final ComputeEngineInstance node = config.provision(StreamTaskListener.fromStdout());
         Jenkins.get().addNode(node);
         result.add(createPlannedNode(config, node));
         excessWorkload -= node.getNumExecutors();
         availableCapacity -= node.getNumExecutors();
-        i++;
       }
     } catch (IOException ioe) {
-      LOGGER.log(Level.WARNING, "Error provisioning node", ioe);
+      log.log(Level.WARNING, "Error provisioning node", ioe);
     } catch (NoConfigurationException nce) {
-      LOGGER.log(
+      log.log(
           Level.WARNING,
           String.format(
               "An instance configuration could not be found to provision a node for label %s",
@@ -269,6 +268,19 @@ public class ComputeEngineCloud extends AbstractCloudImpl {
           nce.getMessage());
     }
     return result;
+  }
+
+  /**
+   * Choose config from list of available configs.
+   * Current implementation use round robin strategy starting at semi random element of list.
+   * Because most of times arriving requests asks for only 1 new node, we dont want 
+   * to start every time from 1 element.
+   *
+   * @param configs List of configs to choose from.
+   * @return Chosen config from list.
+   */
+  private InstanceConfiguration chooseConfigFromList(List<InstanceConfiguration> configs) {
+    return configs.get(Math.abs(configsNext++) % configs.size());
   }
 
   private PlannedNode createPlannedNode(InstanceConfiguration config, ComputeEngineInstance node) {
@@ -281,7 +293,7 @@ public class ComputeEngineCloud extends AbstractCloudImpl {
     return Computer.threadPoolForRemoting.submit(
         () -> {
           long startTime = System.currentTimeMillis();
-          LOGGER.log(
+          log.log(
               Level.INFO,
               String.format(
                   "Waiting %dms for node %s to connect",
@@ -290,18 +302,18 @@ public class ComputeEngineCloud extends AbstractCloudImpl {
             Computer c = node.toComputer();
             if (c != null) {
               c.connect(false).get(config.getLaunchTimeoutMillis(), TimeUnit.MILLISECONDS);
-              LOGGER.log(
+              log.log(
                   Level.INFO,
                   String.format(
                       "%dms elapsed waiting for node %s to connect",
                       System.currentTimeMillis() - startTime, node.getNodeName()));
             } else {
-              LOGGER.log(
+              log.log(
                   Level.WARNING,
                   String.format("No computer for node %s found", node.getNodeName()));
             }
           } catch (TimeoutException e) {
-            LOGGER.log(
+            log.log(
                 Level.WARNING,
                 String.format("Timeout waiting for node %s to connect", node.getNodeName()),
                 e);
@@ -334,11 +346,10 @@ public class ComputeEngineCloud extends AbstractCloudImpl {
         }
       }
       Integer capacity = getInstanceCap() - instances.size();
-      LOGGER.info(
-          String.format("Found capacity for %d nodes in cloud %s", capacity, getCloudName()));
+      log.info(String.format("Found capacity for %d nodes in cloud %s", capacity, getCloudName()));
       return (getInstanceCap() - instances.size());
     } catch (IOException ioe) {
-      LOGGER.warning(
+      log.warning(
           String.format(
               "An error occurred counting the number of existing instances in cloud %s: %s",
               getCloudName(), ioe.getMessage()));
