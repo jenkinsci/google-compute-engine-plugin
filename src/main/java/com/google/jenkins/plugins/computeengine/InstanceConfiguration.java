@@ -92,8 +92,6 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
   public static final Integer DEFAULT_RETENTION_TIME_MINUTES =
       (DEFAULT_LAUNCH_TIMEOUT_SECONDS / 60) + 1;
   public static final String DEFAULT_RUN_AS_USER = "jenkins";
-  public static final String ERROR_NO_SUBNETS =
-      "No subnetworks exist in the given network and region.";
   public static final String METADATA_LINUX_STARTUP_SCRIPT_KEY = "startup-script";
   public static final String METADATA_WINDOWS_STARTUP_SCRIPT_KEY = "windows-startup-script-ps1";
   public static final String NAT_TYPE = "ONE_TO_ONE_NAT";

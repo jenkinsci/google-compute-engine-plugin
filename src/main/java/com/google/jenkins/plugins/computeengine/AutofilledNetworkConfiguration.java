@@ -14,8 +14,6 @@
 
 package com.google.jenkins.plugins.computeengine;
 
-import static com.google.jenkins.plugins.computeengine.InstanceConfiguration.ERROR_NO_SUBNETS;
-
 import com.google.api.services.compute.model.Network;
 import com.google.api.services.compute.model.Subnetwork;
 import com.google.common.base.Strings;
@@ -67,18 +65,12 @@ public class AutofilledNetworkConfiguration extends NetworkConfiguration {
           items.add(n.getName(), n.getSelfLink());
         }
         return items;
-      } catch (IOException ioe) {
+      } catch (IOException | IllegalArgumentException e) {
         String message = "Error retrieving networks";
-        LOGGER.log(Level.SEVERE, message, ioe);
+        LOGGER.log(Level.SEVERE, message, e);
         items.clear();
-        items.add(message);
+        items.add(new ListBoxModel.Option(message, "", true));
         return items;
-      } catch (IllegalArgumentException iae) {
-        String message = "Error retrieving networks";
-        LOGGER.log(Level.SEVERE, message, iae);
-        items.clear();
-        items.add(message);
-        return null;
       }
     }
 
@@ -106,7 +98,7 @@ public class AutofilledNetworkConfiguration extends NetworkConfiguration {
         List<Subnetwork> subnetworks = compute.getSubnetworks(projectId, network, region);
 
         if (subnetworks.size() == 0) {
-          items.add(new ListBoxModel.Option(ERROR_NO_SUBNETS, ERROR_NO_SUBNETS, true));
+          items.add(new ListBoxModel.Option("default", "default", true));
           return items;
         }
 
@@ -118,15 +110,12 @@ public class AutofilledNetworkConfiguration extends NetworkConfiguration {
         String message = "Error retrieving subnetworks";
         LOGGER.log(Level.SEVERE, message, e);
         items.clear();
-        items.add(message);
+        items.add(new ListBoxModel.Option(message, "", true));
         return items;
       }
     }
 
     public FormValidation doCheckSubnetwork(@QueryParameter String value) {
-      if (value.equals(ERROR_NO_SUBNETS)) {
-        return FormValidation.error(ERROR_NO_SUBNETS);
-      }
       if (value.isEmpty()) {
         return FormValidation.error("Please select a subnetwork...");
       }
