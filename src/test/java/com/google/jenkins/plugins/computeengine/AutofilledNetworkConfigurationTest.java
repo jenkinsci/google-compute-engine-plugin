@@ -24,6 +24,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.jenkins.plugins.computeengine.AutofilledNetworkConfiguration.DescriptorImpl;
 import com.google.jenkins.plugins.computeengine.client.ComputeClient;
 import hudson.util.FormValidation;
+import hudson.util.FormValidation.Kind;
 import hudson.util.ListBoxModel;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -55,7 +56,7 @@ public class AutofilledNetworkConfigurationTest {
   public void init() {}
 
   @Test
-  public void construction() {
+  public void testConstructor() {
     // Empty constructor
     AutofilledNetworkConfiguration anc = new AutofilledNetworkConfiguration();
     Assert.assertEquals(anc.getNetwork(), "");
@@ -67,31 +68,28 @@ public class AutofilledNetworkConfigurationTest {
   }
 
   @Test
-  public void descriptorNetwork() throws Exception {
-    // Set up mock
-    List<Network> networks = new ArrayList<Network>();
-    networks.add(new Network().setName(NETWORK_NAME).setSelfLink(NETWORK_NAME));
-    Mockito.when(computeClient.getNetworks(anyString())).thenReturn(networks);
-    AutofilledNetworkConfiguration.DescriptorImpl.setComputeClient(computeClient);
-
-    // Test items returned by network dropdown filler
+  public void testDoFillNetworkItems() throws IOException {
     AutofilledNetworkConfiguration.DescriptorImpl d =
-        new AutofilledNetworkConfiguration.DescriptorImpl();
+        networkFillDescriptorSetup(ImmutableList.of(NETWORK_NAME));
     ListBoxModel got = d.doFillNetworkItems(r.jenkins, "", "");
-    Assert.assertEquals(
-        networks.size() + 1, got.size()); // Add 1 to expected as callee inserts 1 empty item
+    Assert.assertEquals(2, got.size()); // One item from client, one empty item inserted by callee
+    Assert.assertTrue(got.get(0).value.isEmpty());
     Assert.assertEquals(NETWORK_NAME, got.get(1).name);
   }
 
   @Test
-  public void descriptorNetworkValidation() {
+  public void testDoCheckNetworkItemsEmpty() {
     AutofilledNetworkConfiguration.DescriptorImpl d =
         new AutofilledNetworkConfiguration.DescriptorImpl();
     FormValidation fv = d.doCheckNetwork("");
     Assert.assertEquals(FormValidation.Kind.ERROR, fv.kind);
+  }
 
-    fv = d.doCheckNetwork(NETWORK_NAME);
-    Assert.assertEquals(FormValidation.Kind.OK, fv.kind);
+  @Test
+  public void testDoCheckNetworkItemsValid() {
+    DescriptorImpl descriptor = new AutofilledNetworkConfiguration.DescriptorImpl();
+    FormValidation result = descriptor.doCheckNetwork(NETWORK_NAME);
+    Assert.assertEquals(Kind.OK, result.kind);
   }
 
   @Test
@@ -119,24 +117,34 @@ public class AutofilledNetworkConfigurationTest {
         descriptorImpl.doFillSubnetworkItems(
             r.jenkins, "default", REGION, PROJECT_ID, CREDENTIALS_ID);
     Assert.assertEquals(1, got.size());
-    Assert.assertEquals(InstanceConfiguration.ERROR_NO_SUBNETS, got.get(0).name);
+    Assert.assertEquals("default", got.get(0).name);
   }
 
   @Test
-  public void descriptorSubnetworkValidation() {
+  public void testDoCheckSubnetworkItemsEmpty() {
     AutofilledNetworkConfiguration.DescriptorImpl d =
         new AutofilledNetworkConfiguration.DescriptorImpl();
-
-    // No network returns an error
-    FormValidation fv = d.doCheckSubnetwork(InstanceConfiguration.ERROR_NO_SUBNETS);
+    // An empty value will be selected for error cases and for missing region
+    FormValidation fv = d.doCheckSubnetwork("");
     Assert.assertEquals(FormValidation.Kind.ERROR, fv.kind);
+  }
 
-    // No subnetwork returns an error
-    fv = d.doCheckSubnetwork("");
-    Assert.assertEquals(FormValidation.Kind.ERROR, fv.kind);
-
-    fv = d.doCheckSubnetwork(NETWORK_NAME);
+  @Test
+  public void testDoCheckSubnetworkItemsValid() {
+    AutofilledNetworkConfiguration.DescriptorImpl d =
+        new AutofilledNetworkConfiguration.DescriptorImpl();
+    FormValidation fv = d.doCheckSubnetwork(SUBNETWORK_NAME);
     Assert.assertEquals(FormValidation.Kind.OK, fv.kind);
+  }
+
+  private DescriptorImpl networkFillDescriptorSetup(List<String> networkNames) throws IOException {
+    List<Network> networks = new ArrayList<>();
+    networkNames.forEach(
+        network -> networks.add(new Network().setName(network).setSelfLink(network)));
+    ComputeClient computeClient = Mockito.mock(ComputeClient.class);
+    Mockito.when(computeClient.getNetworks(anyString())).thenReturn(networks);
+    DescriptorImpl.setComputeClient(computeClient);
+    return new DescriptorImpl();
   }
 
   private DescriptorImpl subnetworkFillDescriptorSetup(List<String> subnetworkNames)
