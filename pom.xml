@@ -47,6 +47,16 @@
       <name>Evan Brown</name>
       <email>evanbrown@google.com</email>
     </developer>
+    <developer>
+      <id>stephenshank</id>
+      <name>Stephen Shank</name>
+      <email>stephenshank@google.com</email>
+    </developer>
+    <developer>
+      <id>craigbarber</id>
+      <name>Craig Barber</name>
+      <email>craigbarber@google.com</email>
+    </developer>
   </developers>
 
   <scm>
