@@ -271,10 +271,9 @@ public class ComputeEngineCloud extends AbstractCloudImpl {
   }
 
   /**
-   * Choose config from list of available configs.
-   * Current implementation use round robin strategy starting at semi random element of list.
-   * Because most of times arriving requests asks for only 1 new node, we dont want 
-   * to start every time from 1 element.
+   * Choose config from list of available configs. Current implementation use round robin strategy
+   * starting at semi random element of list. Because most of times arriving requests asks for only
+   * 1 new node, we dont want to start every time from 1 element.
    *
    * @param configs List of configs to choose from.
    * @return Chosen config from list.
