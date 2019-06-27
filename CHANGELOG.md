@@ -14,6 +14,16 @@
 # Changelog
 All notable changes to this project will be documented in this file.
 
+## [3.3.2] - 2019-06-27
+### Fixed
+- Issue #106: Fixed regression where users with Legacy VPC networks could not provision instances
+  because no subnetworks are available. In the UI, the subnetwork "default" will be chosen when
+  there are no subnetworks in the provided network and region.
+
+### Changed
+- PR #116: When there are multiple configurations for a cloud, made the selection of the next
+  configuration more randomized.
+
 ## [3.3.0] - 2019-06-19
 ### Added
 - Issue #117 Added note in help file for node retention time to account for VM instance boot time.
