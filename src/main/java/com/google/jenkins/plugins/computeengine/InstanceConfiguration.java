@@ -55,14 +55,7 @@ import hudson.util.FormValidation;
 import hudson.util.ListBoxModel;
 import java.io.IOException;
 import java.io.PrintStream;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import jenkins.model.Jenkins;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
@@ -355,11 +348,26 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
       if (instanceTemplate.getProperties() != null
           && instanceTemplate.getProperties().getMetadata() != null
           && instanceTemplate.getProperties().getMetadata().getItems() != null) {
+        List<Metadata.Items> instanceItems = instance.getMetadata().getItems();
         instanceTemplate
             .getProperties()
             .getMetadata()
             .getItems()
-            .forEach(instance.getMetadata().getItems()::add);
+            .forEach(
+                item -> {
+                  if (item.getKey().equals(SSH_METADATA_KEY)) {
+                    Metadata.Items existing =
+                        instanceItems.stream()
+                            .filter(m -> m.getKey().equals(item.getKey()))
+                            .findFirst()
+                            .orElse(null);
+                    if (existing != null) {
+                      existing.setValue(existing.getValue() + " " + item.getValue());
+                      return;
+                    }
+                  }
+                  instanceItems.add(item);
+                });
       }
 
       Map<String, String> mergedLabels = new HashMap<>(googleLabels);

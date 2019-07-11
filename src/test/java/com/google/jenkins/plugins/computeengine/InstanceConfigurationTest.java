@@ -23,21 +23,15 @@ import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.anyString;
 
 import com.gargoylesoftware.htmlunit.html.HtmlPage;
-import com.google.api.services.compute.model.AcceleratorType;
-import com.google.api.services.compute.model.DiskType;
-import com.google.api.services.compute.model.Image;
-import com.google.api.services.compute.model.Instance;
-import com.google.api.services.compute.model.MachineType;
-import com.google.api.services.compute.model.Network;
-import com.google.api.services.compute.model.Region;
-import com.google.api.services.compute.model.Subnetwork;
-import com.google.api.services.compute.model.Zone;
+import com.google.api.services.compute.model.*;
 import com.google.jenkins.plugins.computeengine.client.ComputeClient;
 import hudson.model.Node;
 import hudson.util.FormValidation;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -66,6 +60,7 @@ public class InstanceConfigurationTest {
   public static final String BOOT_DISK_IMAGE_NAME = "test-image";
   public static final String BOOT_DISK_PROJECT_ID = PROJECT_ID;
   public static final Long BOOT_DISK_SIZE_GB = 10L;
+  public static final String TEMPLATE_NAME = "test-template";
   public static final Node.Mode NODE_MODE = Node.Mode.EXCLUSIVE;
   public static final String ACCELERATOR_NAME = "test-gpu";
   public static final String ACCELERATOR_COUNT = "1";
@@ -78,6 +73,7 @@ public class InstanceConfigurationTest {
   public static final String RETENTION_TIME_MINUTES_STR = "1";
   public static final String LAUNCH_TIMEOUT_SECONDS_STR = "100";
 
+  @Mock public ComputeEngineCloud cloud;
   @Mock public ComputeClient computeClient;
 
   @Rule public JenkinsRule r = new JenkinsRule();
@@ -132,6 +128,20 @@ public class InstanceConfigurationTest {
             .setSelfLink(ACCELERATOR_NAME)
             .setMaximumCardsPerInstance(Integer.parseInt(ACCELERATOR_COUNT)));
 
+    InstanceTemplate instanceTemplate =
+        new InstanceTemplate()
+            .setName(TEMPLATE_NAME)
+            .setProperties(
+                new InstanceProperties()
+                    .setMetadata(
+                        new Metadata()
+                            .setItems(
+                                Stream.of(
+                                        new Metadata.Items()
+                                            .set("key", "ssh-keys")
+                                            .set("value", "TEST"))
+                                    .collect(Collectors.toList()))));
+
     Mockito.when(computeClient.getRegions(anyString())).thenReturn(regions);
     Mockito.when(computeClient.getZones(anyString(), anyString())).thenReturn(zones);
     Mockito.when(computeClient.getMachineTypes(anyString(), anyString())).thenReturn(machineTypes);
@@ -144,6 +154,9 @@ public class InstanceConfigurationTest {
     Mockito.when(computeClient.getNetworks(anyString())).thenReturn(networks);
     Mockito.when(computeClient.getSubnetworks(anyString(), anyString(), anyString()))
         .thenReturn(subnetworks);
+    Mockito.when(cloud.getProjectId()).thenReturn(PROJECT_ID);
+    Mockito.when(cloud.getClient()).thenReturn(computeClient);
+    Mockito.when(computeClient.getTemplate(anyString(), anyString())).thenReturn(instanceTemplate);
   }
 
   @Test
@@ -250,6 +263,23 @@ public class InstanceConfigurationTest {
     assertFalse(instanceConfiguration.isUseInternalAddress());
     assertNull(instanceConfiguration.instance().getMinCpuPlatform());
     assertNull(instanceConfiguration.getWindowsConfiguration());
+  }
+
+  @Test
+  public void testInstanceMetadata() throws Exception {
+    InstanceConfiguration instanceConfiguration =
+        instanceConfigurationBuilder().template(TEMPLATE_NAME).build();
+    instanceConfiguration.appendLabel("test", "test");
+    instanceConfiguration.cloud = cloud;
+
+    Instance instance = instanceConfiguration.instance();
+
+    Object[] sshKeys =
+        instance.getMetadata().getItems().stream()
+            .filter(item -> item.getKey().equals(InstanceConfiguration.SSH_METADATA_KEY))
+            .map(item -> item.getValue())
+            .toArray();
+    assertEquals(sshKeys.length, 1);
   }
 
   public static InstanceConfiguration.Builder instanceConfigurationBuilder() {
