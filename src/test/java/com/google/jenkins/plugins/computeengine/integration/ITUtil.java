@@ -49,6 +49,7 @@ import com.google.jenkins.plugins.computeengine.InstanceConfiguration;
 import com.google.jenkins.plugins.computeengine.StringJsonServiceAccountConfig;
 import com.google.jenkins.plugins.computeengine.client.ClientFactory;
 import com.google.jenkins.plugins.computeengine.client.ComputeClient;
+import com.google.jenkins.plugins.computeengine.ssh.GoogleKeyPair;
 import com.google.jenkins.plugins.credentials.oauth.GoogleRobotPrivateKeyCredentials;
 import com.google.jenkins.plugins.credentials.oauth.ServiceAccountConfig;
 import hudson.model.Node;
@@ -107,6 +108,9 @@ class ITUtil {
   private static final String SERVICE_ACCOUNT_EMAIL = "";
   private static final String RETENTION_TIME_MINUTES_STR = "";
   private static final String LAUNCH_TIMEOUT_SECONDS_STR = "";
+  static final String SSH_USER = "test-user";
+  private static final GoogleKeyPair SSH_KEY = GoogleKeyPair.generate(SSH_USER);
+  static final String SSH_PRIVATE_KEY = SSH_KEY.getPrivateKey();
   static final int TEST_TIMEOUT_MULTIPLIER = SystemUtils.IS_OS_WINDOWS ? 3 : 1;
 
   static String format(String s) {
@@ -197,7 +201,10 @@ class ITUtil {
                 of(
                     new Metadata.Items()
                         .setKey(METADATA_LINUX_STARTUP_SCRIPT_KEY)
-                        .setValue(DEB_JAVA_STARTUP_SCRIPT))));
+                        .setValue(DEB_JAVA_STARTUP_SCRIPT),
+                    new Metadata.Items()
+                        .setKey(InstanceConfiguration.SSH_METADATA_KEY)
+                        .setValue(SSH_KEY.getPublicKey()))));
     instanceProperties.setNetworkInterfaces(
         of(
             new NetworkInterface()

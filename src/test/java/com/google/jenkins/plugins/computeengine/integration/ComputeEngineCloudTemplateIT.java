@@ -32,13 +32,19 @@ import static com.google.jenkins.plugins.computeengine.integration.ITUtil.initCr
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.instanceConfigurationBuilder;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.teardownResources;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
+import com.google.api.services.compute.model.AccessConfig;
 import com.google.api.services.compute.model.Instance;
 import com.google.api.services.compute.model.InstanceTemplate;
+import com.google.api.services.compute.model.NetworkInterface;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.jenkins.plugins.computeengine.ComputeEngineCloud;
+import com.google.jenkins.plugins.computeengine.InstanceConfiguration;
 import com.google.jenkins.plugins.computeengine.client.ComputeClient;
+import com.trilead.ssh2.Connection;
+import com.trilead.ssh2.ServerHostKeyVerifier;
 import hudson.model.labels.LabelAtom;
 import hudson.slaves.NodeProvisioner.PlannedNode;
 import java.io.IOException;
@@ -64,6 +70,8 @@ public class ComputeEngineCloudTemplateIT {
       format("projects/%s/global/instanceTemplates/test-template");
   private static final String GOOGLE_LABEL_KEY = "test-label";
   private static final String GOOGLE_LABEL_VALUE = "test-value";
+  private static final Integer SSH_PORT = 22;
+  private static final Integer SSH_TIMEOUT = 10000;
 
   @ClassRule
   public static Timeout timeout = new Timeout(5 * TEST_TIMEOUT_MULTIPLIER, TimeUnit.MINUTES);
@@ -130,5 +138,40 @@ public class ComputeEngineCloudTemplateIT {
   public void testTemplateCloudIdLabelKeyAndValue() {
     assertEquals(
         cloud.getInstanceId(), instance.getLabels().get(ComputeEngineCloud.CLOUD_ID_LABEL_KEY));
+  }
+
+  @Test
+  public void testConnectionWithTemplateSshKey() throws IOException, Exception {
+    Connection conn = null;
+    try {
+      NetworkInterface nic = instance.getNetworkInterfaces().get(0);
+      String host = "";
+      if (nic.getAccessConfigs() != null) {
+        for (AccessConfig ac : nic.getAccessConfigs()) {
+          if (ac.getType().equals(InstanceConfiguration.NAT_TYPE)) {
+            host = ac.getNatIP();
+          }
+        }
+      }
+      int port = SSH_PORT;
+      conn = new Connection(host, port);
+      conn.connect(
+          new ServerHostKeyVerifier() {
+            public boolean verifyServerHostKey(
+                String hostname, int port, String serverHostKeyAlgorithm, byte[] serverHostKey)
+                throws Exception {
+              return true;
+            }
+          },
+          SSH_TIMEOUT,
+          SSH_TIMEOUT);
+      assertTrue(
+          conn.authenticateWithPublicKey(
+              ITUtil.SSH_USER, ITUtil.SSH_PRIVATE_KEY.toCharArray(), ""));
+    } finally {
+      if (conn != null) {
+        conn.close();
+      }
+    }
   }
 }

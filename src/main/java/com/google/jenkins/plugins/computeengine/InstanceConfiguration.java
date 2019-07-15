@@ -55,7 +55,14 @@ import hudson.util.FormValidation;
 import hudson.util.ListBoxModel;
 import java.io.IOException;
 import java.io.PrintStream;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import jenkins.model.Jenkins;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
@@ -148,6 +155,25 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
   @Getter(AccessLevel.PROTECTED)
   @Setter(AccessLevel.PROTECTED)
   protected transient ComputeEngineCloud cloud;
+
+  private static List<Metadata.Items> mergeMetadataItems(
+      List<Metadata.Items> winner, List<Metadata.Items> loser) {
+    if (loser == null) {
+      loser = new ArrayList<Metadata.Items>();
+    }
+
+    for (Metadata.Items existing : loser) {
+      String existingKey = existing.getKey();
+      Metadata.Items duplicate =
+          winner.stream().filter(m -> m.getKey().equals(existingKey)).findFirst().orElse(null);
+      if (duplicate == null) {
+        winner.add(existing);
+      } else if (existingKey.equals(SSH_METADATA_KEY)) {
+        duplicate.setValue(duplicate.getValue() + "\n" + existing.getValue());
+      }
+    }
+    return winner;
+  }
 
   @DataBoundConstructor
   public InstanceConfiguration() {}
@@ -348,26 +374,10 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
       if (instanceTemplate.getProperties() != null
           && instanceTemplate.getProperties().getMetadata() != null
           && instanceTemplate.getProperties().getMetadata().getItems() != null) {
+        List<Metadata.Items> instanceTemplateItems =
+            instanceTemplate.getProperties().getMetadata().getItems();
         List<Metadata.Items> instanceItems = instance.getMetadata().getItems();
-        instanceTemplate
-            .getProperties()
-            .getMetadata()
-            .getItems()
-            .forEach(
-                item -> {
-                  if (item.getKey().equals(SSH_METADATA_KEY)) {
-                    Metadata.Items existing =
-                        instanceItems.stream()
-                            .filter(m -> m.getKey().equals(item.getKey()))
-                            .findFirst()
-                            .orElse(null);
-                    if (existing != null) {
-                      existing.setValue(existing.getValue() + " " + item.getValue());
-                      return;
-                    }
-                  }
-                  instanceItems.add(item);
-                });
+        instance.getMetadata().setItems(mergeMetadataItems(instanceItems, instanceTemplateItems));
       }
 
       Map<String, String> mergedLabels = new HashMap<>(googleLabels);
