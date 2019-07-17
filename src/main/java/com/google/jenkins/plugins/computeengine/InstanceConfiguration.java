@@ -156,6 +156,25 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
   @Setter(AccessLevel.PROTECTED)
   protected transient ComputeEngineCloud cloud;
 
+  private static List<Metadata.Items> mergeMetadataItems(
+      List<Metadata.Items> winner, List<Metadata.Items> loser) {
+    if (loser == null) {
+      loser = new ArrayList<Metadata.Items>();
+    }
+
+    for (Metadata.Items existing : loser) {
+      String existingKey = existing.getKey();
+      Metadata.Items duplicate =
+          winner.stream().filter(m -> m.getKey().equals(existingKey)).findFirst().orElse(null);
+      if (duplicate == null) {
+        winner.add(existing);
+      } else if (existingKey.equals(SSH_METADATA_KEY)) {
+        duplicate.setValue(duplicate.getValue() + "\n" + existing.getValue());
+      }
+    }
+    return winner;
+  }
+
   @DataBoundConstructor
   public InstanceConfiguration() {}
 
@@ -355,11 +374,10 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
       if (instanceTemplate.getProperties() != null
           && instanceTemplate.getProperties().getMetadata() != null
           && instanceTemplate.getProperties().getMetadata().getItems() != null) {
-        instanceTemplate
-            .getProperties()
-            .getMetadata()
-            .getItems()
-            .forEach(instance.getMetadata().getItems()::add);
+        List<Metadata.Items> instanceTemplateItems =
+            instanceTemplate.getProperties().getMetadata().getItems();
+        List<Metadata.Items> instanceItems = instance.getMetadata().getItems();
+        instance.getMetadata().setItems(mergeMetadataItems(instanceItems, instanceTemplateItems));
       }
 
       Map<String, String> mergedLabels = new HashMap<>(googleLabels);
