@@ -359,10 +359,10 @@ public class ComputeClient {
     return insert.execute();
   }
 
-  public Operation terminateInstance(String projectId, String zone, String InstanceId)
+  public Operation terminateInstance(String projectId, String zone, String instanceId)
       throws IOException {
     zone = nameFromSelfLink(zone);
-    return compute.instances().delete(projectId, zone, InstanceId).execute();
+    return compute.instances().delete(projectId, zone, instanceId).execute();
   }
 
   public Operation terminateInstanceWithStatus(
@@ -593,5 +593,10 @@ public class ComputeClient {
       }
     }
     return operation.getError();
+  }
+
+  public void simulateMaintenanceEvent(String projectId, String zone, String instanceId)
+      throws IOException {
+    compute.instances().simulateMaintenanceEvent(projectId, zone, instanceId).execute();
   }
 }

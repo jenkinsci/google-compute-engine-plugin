@@ -17,33 +17,101 @@
 package com.google.jenkins.plugins.computeengine;
 
 import com.google.api.services.compute.model.Instance;
+import com.google.api.services.compute.model.Scheduling;
+import hudson.model.Executor;
+import hudson.model.Result;
+import hudson.model.TaskListener;
 import hudson.slaves.AbstractCloudComputer;
 import java.io.IOException;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
 import java.util.logging.Level;
-import java.util.logging.Logger;
+import jenkins.model.CauseOfInterruption;
+import lombok.extern.java.Log;
 import org.kohsuke.stapler.DataBoundSetter;
 import org.kohsuke.stapler.HttpRedirect;
 import org.kohsuke.stapler.HttpResponse;
 
+@Log
 public class ComputeEngineComputer extends AbstractCloudComputer<ComputeEngineInstance> {
 
   private volatile Instance instance;
-
-  private static final Logger LOGGER = Logger.getLogger(ComputeEngineCloud.class.getName());
+  private CompletableFuture<Boolean> preemptedFuture;
 
   public ComputeEngineComputer(ComputeEngineInstance slave) {
     super(slave);
   }
 
-  @Override
-  public ComputeEngineInstance getNode() {
-    return (ComputeEngineInstance) super.getNode();
-  }
-
-  public void onConnected() {
+  void onConnected(TaskListener listener) {
     ComputeEngineInstance node = getNode();
     if (node != null) {
       node.onConnected();
+      if (getPreemptible()) {
+        String nodeName = node.getNodeName();
+        final String msg =
+            "Instance " + nodeName + " is preemptive, setting up preemption listener";
+        log.log(Level.INFO, msg);
+        listener.getLogger().println(msg);
+        preemptedFuture =
+            CompletableFuture.supplyAsync(
+                () -> getPreemptedStatus(listener, nodeName), threadPoolForRemoting);
+      }
+    }
+  }
+
+  private Boolean getPreemptedStatus(TaskListener listener, String nodeName) {
+    try {
+      boolean value = getChannel().call(new PreemptedCheckCallable(listener));
+      log.log(Level.FINE, "Got information that node was preempted with value [" + value + "]");
+      if (value) {
+        log.log(Level.FINE, "Preempted node was preempted, terminating all executors");
+        getChannel().close();
+        getExecutors().forEach(executor -> interruptExecutor(executor, nodeName));
+      }
+      return value;
+    } catch (InterruptedException | IOException e) {
+      throw new RuntimeException(e);
+    }
+  }
+
+  private void interruptExecutor(Executor executor, String nodeName) {
+    log.log(Level.INFO, "Terminating executor " + executor + " node " + nodeName);
+    executor.interrupt(
+        Result.FAILURE,
+        new CauseOfInterruption() {
+          @Override
+          public String getShortDescription() {
+            return "Instance " + nodeName + " was preempted";
+          }
+        });
+  }
+
+  /**
+   * Check if instance is preemptible.
+   *
+   * @return true if instance was set as preemptible.
+   */
+  public boolean getPreemptible() {
+    try {
+      Scheduling scheduling = getInstance().getScheduling();
+      return scheduling != null && scheduling.getPreemptible();
+    } catch (IOException e) {
+      log.log(Level.WARNING, "Error when getting preemptible status", e);
+      return false;
+    }
+  }
+
+  /**
+   * Check if instance was actually preempted.
+   *
+   * @return true if instance was preempted (we can use it to reschedule job in this case).
+   */
+  public boolean getPreempted() {
+    try {
+      return preemptedFuture != null && preemptedFuture.isDone() && preemptedFuture.get();
+    } catch (InterruptedException | ExecutionException e) {
+      log.log(Level.WARNING, "Error when getting preempted status", e);
+      return false;
     }
   }
 
@@ -119,12 +187,10 @@ public class ComputeEngineComputer extends AbstractCloudComputer<ComputeEngineIn
     ComputeEngineInstance node = getNode();
     if (node != null) {
       try {
-        ComputeEngineCloud cloud = getCloud();
-
         node.terminate();
       } catch (InterruptedException ie) {
         // Termination Exception
-        LOGGER.log(Level.WARNING, "Node Termination Error", ie);
+        log.log(Level.WARNING, "Node Termination Error", ie);
       }
     }
     return new HttpRedirect("..");
