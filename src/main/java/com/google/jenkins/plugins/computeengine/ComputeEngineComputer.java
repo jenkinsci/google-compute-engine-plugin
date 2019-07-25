@@ -21,7 +21,6 @@ import com.google.api.services.compute.model.Scheduling;
 import hudson.model.Executor;
 import hudson.model.Result;
 import hudson.model.TaskListener;
-import hudson.remoting.Channel;
 import hudson.slaves.AbstractCloudComputer;
 import java.io.IOException;
 import java.util.concurrent.CompletableFuture;
@@ -43,7 +42,7 @@ public class ComputeEngineComputer extends AbstractCloudComputer<ComputeEngineIn
     super(slave);
   }
 
-  void onConnected(TaskListener listener) throws IOException {
+  void onConnected(TaskListener listener) {
     ComputeEngineInstance node = getNode();
     if (node != null) {
       node.onConnected();
@@ -53,33 +52,25 @@ public class ComputeEngineComputer extends AbstractCloudComputer<ComputeEngineIn
             "Instance " + nodeName + " is preemptive, setting up preemption listener";
         log.log(Level.INFO, msg);
         listener.getLogger().println(msg);
-        preemptedFuture = 
-            CompletableFuture.supplyAsync(() -> {
-              try {
-                final Boolean value = getChannel().callAsync(new PreemptedCheckCallable(listener)).get();
-                log.log(Level.INFO, "Got information that node was preempted with value [" + value + "]");
-                if (value) {
-                  getChannel().close();
-                }
-                return value;
-              } catch (InterruptedException|ExecutionException|IOException e) {
-                throw new RuntimeException(e);
-              }
-            }, threadPoolForRemoting);
-        getChannel()
-            .addListener(
-                new Channel.Listener() {
-                  @Override
-                  public void onClosed(Channel channel, IOException cause) {
-                    log.log(Level.FINE, "Got channel close event");
-                    if (getPreempted()) {
-                      log.log(
-                          Level.FINE, "Preempted node channel closed, terminating all executors");
-                      getExecutors().forEach(executor -> interruptExecutor(executor, nodeName));
-                    }
-                  }
-                });
+        preemptedFuture =
+            CompletableFuture.supplyAsync(
+                () -> getPreemptedStatus(listener, nodeName), threadPoolForRemoting);
       }
+    }
+  }
+
+  private Boolean getPreemptedStatus(TaskListener listener, String nodeName) {
+    try {
+      final Boolean value = getChannel().callAsync(new PreemptedCheckCallable(listener)).get();
+      log.log(Level.FINE, "Got information that node was preempted with value [" + value + "]");
+      if (value) {
+        log.log(Level.FINE, "Preempted node channel closed, terminating all executors");
+        getExecutors().forEach(executor -> interruptExecutor(executor, nodeName));
+        getChannel().close();
+      }
+      return value;
+    } catch (InterruptedException | ExecutionException | IOException e) {
+      throw new RuntimeException(e);
     }
   }
 
