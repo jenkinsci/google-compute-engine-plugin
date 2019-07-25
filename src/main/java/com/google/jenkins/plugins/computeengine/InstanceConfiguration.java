@@ -892,6 +892,20 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
       }
       return FormValidation.ok();
     }
+
+    public FormValidation doCheckNumExecutorsStr(
+        @AncestorInPath Jenkins context,
+        @QueryParameter String value,
+        @QueryParameter("oneShot") boolean oneShot) {
+      int numExecutors = intOrDefault(value, DEFAULT_NUM_EXECUTORS);
+      if (numExecutors < 1) {
+        return FormValidation.error(
+            Messages.InstanceConfiguration_NumExecutorsLessThanOneConfigError());
+      } else if (numExecutors > 1 && oneShot) {
+        return FormValidation.error(Messages.InstanceConfiguration_NumExecutorsOneShotError());
+      }
+      return FormValidation.ok();
+    }
   }
 
   public static class Builder {

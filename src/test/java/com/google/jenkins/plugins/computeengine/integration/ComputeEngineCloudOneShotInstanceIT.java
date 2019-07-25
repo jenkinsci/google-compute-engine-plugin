@@ -27,18 +27,24 @@ import static com.google.jenkins.plugins.computeengine.integration.ITUtil.initCl
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.initCredentials;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.instanceConfigurationBuilder;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.teardownResources;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotEquals;
+import static org.junit.Assert.assertNotNull;
 
 import com.google.common.collect.ImmutableList;
 import com.google.jenkins.plugins.computeengine.ComputeEngineCloud;
 import com.google.jenkins.plugins.computeengine.client.ComputeClient;
 import hudson.model.FreeStyleBuild;
 import hudson.model.FreeStyleProject;
+import hudson.model.Node;
+import hudson.model.Result;
 import hudson.model.labels.LabelAtom;
 import hudson.tasks.Builder;
 import hudson.tasks.Shell;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.Map;
+import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
 import org.awaitility.Awaitility;
@@ -62,6 +68,8 @@ public class ComputeEngineCloudOneShotInstanceIT {
   private static ComputeClient client;
   private static Map<String, String> label = getLabel(ComputeEngineCloudOneShotInstanceIT.class);
   private static FreeStyleBuild build;
+  private static String nodeName;
+  private static Future<FreeStyleBuild> otherBuildFuture;
 
   @BeforeClass
   public static void init() throws Exception {
@@ -87,7 +95,18 @@ public class ComputeEngineCloudOneShotInstanceIT {
     Builder step = new Shell("echo works");
     project.getBuildersList().add(step);
     project.setAssignedLabel(new LabelAtom(LABEL));
-    build = jenkinsRule.buildAndAssertSuccess(project);
+    Future<FreeStyleBuild> buildFuture = project.scheduleBuild2(0);
+
+    FreeStyleProject otherProject = jenkinsRule.createFreeStyleProject();
+    Builder otherStep = new Shell("echo \"also works\"");
+    otherProject.getBuildersList().add(otherStep);
+    otherProject.setAssignedLabel(new LabelAtom(LABEL));
+    otherBuildFuture = otherProject.scheduleBuild2(0);
+
+    build = buildFuture.get();
+    assertNotNull(build);
+    assertEquals(Result.SUCCESS, build.getResult());
+    nodeName = build.getBuiltOn().getNodeName();
   }
 
   @AfterClass
@@ -104,7 +123,7 @@ public class ComputeEngineCloudOneShotInstanceIT {
   public void testOneShotInstanceNodeDeletedFromJenkins() {
     Awaitility.await()
         .timeout(10, TimeUnit.SECONDS)
-        .until(() -> jenkinsRule.jenkins.getNodes().isEmpty());
+        .until(() -> jenkinsRule.jenkins.getNode(nodeName) == null);
   }
 
   @Test
@@ -113,5 +132,20 @@ public class ComputeEngineCloudOneShotInstanceIT {
         .timeout(3, TimeUnit.MINUTES)
         .pollInterval(10, TimeUnit.SECONDS)
         .until(() -> client.getInstancesWithLabel(PROJECT_ID, label).isEmpty());
+  }
+
+  @Test
+  public void testOtherInstanceRanOnDifferentNode() throws Exception {
+    Node node = otherBuildFuture.get().getBuiltOn();
+    assertNotNull(node);
+    assertNotEquals(nodeName, node.getNodeName());
+  }
+
+  @Test
+  public void testOtherInstanceSuccessful() throws Exception {
+    FreeStyleBuild otherBuild = otherBuildFuture.get();
+    assertNotNull(otherBuild);
+    assertEquals(Result.SUCCESS, otherBuild.getResult());
+    jenkinsRule.assertLogContains("also works", otherBuild);
   }
 }
