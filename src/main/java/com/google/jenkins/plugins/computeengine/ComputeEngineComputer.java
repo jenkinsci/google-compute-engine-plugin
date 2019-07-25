@@ -24,8 +24,8 @@ import hudson.model.TaskListener;
 import hudson.remoting.Channel;
 import hudson.slaves.AbstractCloudComputer;
 import java.io.IOException;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.Future;
 import java.util.logging.Level;
 import jenkins.model.CauseOfInterruption;
 import lombok.extern.java.Log;
@@ -37,7 +37,7 @@ import org.kohsuke.stapler.HttpResponse;
 public class ComputeEngineComputer extends AbstractCloudComputer<ComputeEngineInstance> {
 
   private volatile Instance instance;
-  private Future<Boolean> preemptedFuture;
+  private CompletableFuture<Boolean> preemptedFuture;
 
   public ComputeEngineComputer(ComputeEngineInstance slave) {
     super(slave);
@@ -53,7 +53,19 @@ public class ComputeEngineComputer extends AbstractCloudComputer<ComputeEngineIn
             "Instance " + nodeName + " is preemptive, setting up preemption listener";
         log.log(Level.INFO, msg);
         listener.getLogger().println(msg);
-        preemptedFuture = getChannel().callAsync(new PreemptedCheckCallable(listener));
+        preemptedFuture = 
+            CompletableFuture.supplyAsync(() -> {
+              try {
+                final Boolean value = getChannel().callAsync(new PreemptedCheckCallable(listener)).get();
+                log.log(Level.INFO, "Got information that node was preempted with value [" + value + "]");
+                if (value) {
+                  getChannel().close();
+                }
+                return value;
+              } catch (InterruptedException|ExecutionException|IOException e) {
+                throw new RuntimeException(e);
+              }
+            }, threadPoolForRemoting);
         getChannel()
             .addListener(
                 new Channel.Listener() {
