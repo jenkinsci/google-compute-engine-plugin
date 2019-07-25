@@ -91,6 +91,7 @@ public class ComputeEngineCloudRestartPreemptedIT {
             .template(NULL_TEMPLATE)
             .preemptible(true)
             .googleLabels(label)
+            .oneShot(false)
             .build();
 
     cloud.setConfigurations(Lists.newArrayList(configuration));
@@ -114,7 +115,7 @@ public class ComputeEngineCloudRestartPreemptedIT {
     assertTrue("Configuration was set as preemptible but saw as not", computer.getPreemptible());
 
     FreeStyleProject project = jenkinsRule.createFreeStyleProject();
-    Builder step = new Shell("sleep 20");
+    Builder step = new Shell("sleep 60");
     project.getBuildersList().add(step);
     project.setAssignedLabel(new LabelAtom(LABEL));
     QueueTaskFuture<FreeStyleBuild> taskFuture = project.scheduleBuild2(0);

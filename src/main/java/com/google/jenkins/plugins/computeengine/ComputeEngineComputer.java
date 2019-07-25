@@ -61,15 +61,15 @@ public class ComputeEngineComputer extends AbstractCloudComputer<ComputeEngineIn
 
   private Boolean getPreemptedStatus(TaskListener listener, String nodeName) {
     try {
-      final Boolean value = getChannel().callAsync(new PreemptedCheckCallable(listener)).get();
+      boolean value = getChannel().call(new PreemptedCheckCallable(listener));
       log.log(Level.FINE, "Got information that node was preempted with value [" + value + "]");
       if (value) {
-        log.log(Level.FINE, "Preempted node channel closed, terminating all executors");
-        getExecutors().forEach(executor -> interruptExecutor(executor, nodeName));
+        log.log(Level.FINE, "Preempted node was preempted, terminating all executors");
         getChannel().close();
+        getExecutors().forEach(executor -> interruptExecutor(executor, nodeName));
       }
       return value;
-    } catch (InterruptedException | ExecutionException | IOException e) {
+    } catch (InterruptedException | IOException e) {
       throw new RuntimeException(e);
     }
   }
