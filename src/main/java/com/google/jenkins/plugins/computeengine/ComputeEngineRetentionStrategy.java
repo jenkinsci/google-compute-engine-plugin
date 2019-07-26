@@ -67,7 +67,14 @@ public class ComputeEngineRetentionStrategy extends RetentionStrategy<ComputeEng
   @Override
   public void taskAccepted(Executor executor, Queue.Task task) {
     if (oneShot) {
-      delegate.taskAccepted(executor, task);
+      // When a oneshot instance is used only one task is run, so better not accept more.
+      synchronized (this) {
+        ComputeEngineComputer computer = (ComputeEngineComputer) executor.getOwner();
+        if (computer.isAcceptingTasks()) {
+          computer.setAcceptingTasks(false);
+          delegate.taskAccepted(executor, task);
+        }
+      }
     }
   }
 
