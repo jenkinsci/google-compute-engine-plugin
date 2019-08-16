@@ -49,7 +49,7 @@ public abstract class ComputeEngineComputerLauncher extends ComputerLauncher {
   private static final SimpleFormatter sf = new SimpleFormatter();
   private static final String AGENT_JAR = "agent.jar";
 
-  // TODO: make this configurable
+  // TODO(google-compute-engine-plugin/issues/134): make this configurable
   public static final Integer SSH_PORT = 22;
   public static final Integer SSH_TIMEOUT = 10000;
 
@@ -334,7 +334,7 @@ public abstract class ComputeEngineComputerLauncher extends ComputerLauncher {
       try {
         long waitTime = System.currentTimeMillis() - startTime;
         if (timeout > 0 && waitTime > timeout) {
-          // TODO: better exception
+          // TODO(google-compute-engine-plugin/issues/135): better exception
           throw new Exception(
               "Timed out after "
                   + (waitTime / 1000)
@@ -346,7 +346,7 @@ public abstract class ComputeEngineComputerLauncher extends ComputerLauncher {
 
         String host = "";
 
-        // TODO: handle multiple NICs
+        // TODO(google-compute-engine-plugin/issues/136): handle multiple NICs
         NetworkInterface nic = instance.getNetworkInterfaces().get(0);
 
         if (this.useInternalAddress) {
@@ -390,7 +390,7 @@ public abstract class ComputeEngineComputerLauncher extends ComputerLauncher {
           conn.setProxyData(proxyData);
           logInfo(computer, listener, "Using HTTP Proxy Configuration");
         }
-        // TODO: verify host key
+        // TODO(google-compute-engine-plugin/issues/137): verify host key
         conn.connect(
             new ServerHostKeyVerifier() {
               public boolean verifyServerHostKey(
