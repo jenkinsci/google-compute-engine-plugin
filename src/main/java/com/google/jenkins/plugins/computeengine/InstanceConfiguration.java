@@ -130,6 +130,7 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
   private NetworkConfiguration networkConfiguration;
   private boolean externalAddress;
   private boolean useInternalAddress;
+  private boolean ignoreProxy;
   private String networkTags;
   private String serviceAccountEmail;
   private Node.Mode mode;
@@ -328,6 +329,7 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
           .windowsConfig(windowsConfiguration)
           .createSnapshot(createSnapshot)
           .oneShot(oneShot)
+          .ignoreProxy(ignoreProxy)
           .numExecutors(numExecutors)
           .mode(mode)
           .labelString(labels)
@@ -932,6 +934,7 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
       instanceConfiguration.setNetworkConfiguration(this.networkConfiguration);
       instanceConfiguration.setExternalAddress(this.externalAddress);
       instanceConfiguration.setUseInternalAddress(this.useInternalAddress);
+      instanceConfiguration.setIgnoreProxy(this.ignoreProxy);
       instanceConfiguration.setNetworkTags(this.networkTags);
       instanceConfiguration.setServiceAccountEmail(this.serviceAccountEmail);
       instanceConfiguration.setMode(this.mode);

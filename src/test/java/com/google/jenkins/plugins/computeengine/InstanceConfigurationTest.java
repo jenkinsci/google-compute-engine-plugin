@@ -321,6 +321,7 @@ public class InstanceConfigurationTest {
         .networkConfiguration(new AutofilledNetworkConfiguration(NETWORK_NAME, SUBNETWORK_NAME))
         .externalAddress(EXTERNAL_ADDR)
         .useInternalAddress(false)
+        .ignoreProxy(false)
         .networkTags(NETWORK_TAGS)
         .serviceAccountEmail(SERVICE_ACCOUNT_EMAIL)
         .retentionTimeMinutesStr(RETENTION_TIME_MINUTES_STR)
