@@ -374,7 +374,9 @@ public abstract class ComputeEngineComputerLauncher extends ComputerLauncher {
         Connection conn = new Connection(host, port);
         ProxyConfiguration proxyConfig = Jenkins.get().proxy;
         Proxy proxy = proxyConfig == null ? Proxy.NO_PROXY : proxyConfig.createProxy(host);
-        if (!node.isIgnoreProxy() && !proxy.equals(Proxy.NO_PROXY) && proxy.address() instanceof InetSocketAddress) {
+        if (!node.isIgnoreProxy()
+            && !proxy.equals(Proxy.NO_PROXY)
+            && proxy.address() instanceof InetSocketAddress) {
           InetSocketAddress address = (InetSocketAddress) proxy.address();
           HTTPProxyData proxyData = null;
           if (proxyConfig.getUserName() != null) {
