@@ -17,6 +17,7 @@
 package com.google.jenkins.plugins.computeengine;
 
 import com.google.api.services.compute.model.Operation;
+import com.google.graphite.platforms.plugin.client.ComputeClient.OperationException;
 import com.trilead.ssh2.Connection;
 import com.trilead.ssh2.SCPClient;
 import com.trilead.ssh2.Session;
@@ -125,11 +126,16 @@ public abstract class ComputeEngineComputerLauncher extends ComputerLauncher {
               node.getLaunchTimeout(), insertOperationId));
       /* This call will log a null error when the operation is complete, or a relevant error if it
        * fails. */
-      opError =
-          cloud
-              .getClient()
-              .waitForOperationCompletion(
-                  cloud.getProjectId(), insertOperationId, zone, node.getLaunchTimeoutMillis());
+      try {
+        Operation operation =
+            cloud
+                .getClient()
+                .waitForOperationCompletion(
+                    cloud.getProjectId(), insertOperationId, zone, node.getLaunchTimeoutMillis());
+        opError = operation.getError();
+      } catch (OperationException e) {
+        opError = e.getError();
+      }
       if (opError != null) {
         LOGGER.info(
             String.format(
@@ -137,7 +143,7 @@ public abstract class ComputeEngineComputerLauncher extends ComputerLauncher {
                 insertOperationId, opError.getErrors().get(0).getMessage()));
         return;
       }
-    } catch (IOException | InterruptedException e) {
+    } catch (InterruptedException e) {
       LOGGER.info(
           String.format(
               "Launch failed while waiting for operation %s to complete. Operation error was %s",

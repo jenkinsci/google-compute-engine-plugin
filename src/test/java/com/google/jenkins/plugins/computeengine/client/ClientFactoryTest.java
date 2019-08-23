@@ -20,7 +20,6 @@ import com.cloudbees.plugins.credentials.Credentials;
 import com.cloudbees.plugins.credentials.CredentialsStore;
 import com.cloudbees.plugins.credentials.SystemCredentialsProvider;
 import com.cloudbees.plugins.credentials.domains.Domain;
-import com.cloudbees.plugins.credentials.domains.DomainRequirement;
 import com.google.jenkins.plugins.credentials.oauth.GoogleRobotPrivateKeyCredentials;
 import com.google.jenkins.plugins.credentials.oauth.ServiceAccountConfig;
 import java.security.PrivateKey;
@@ -72,12 +71,11 @@ public class ClientFactoryTest {
 
   @Test
   public void defaultTransport() throws Exception {
-    Credentials c =
-        (Credentials) new GoogleRobotPrivateKeyCredentials(ACCOUNT_ID, serviceAccountConfig, null);
+    Credentials c = new GoogleRobotPrivateKeyCredentials(ACCOUNT_ID, serviceAccountConfig, null);
     CredentialsStore store = new SystemCredentialsProvider.ProviderImpl().getStore(r.jenkins);
     store.addCredentials(Domain.global(), c);
 
-    ClientFactory cf = new ClientFactory(r.jenkins, new ArrayList<DomainRequirement>(), ACCOUNT_ID);
+    ClientFactory cf = new ClientFactory(r.jenkins, new ArrayList<>(), ACCOUNT_ID);
     Assert.assertNotNull(cf.compute());
   }
 }

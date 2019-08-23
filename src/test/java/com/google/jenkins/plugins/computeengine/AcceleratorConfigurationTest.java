@@ -21,7 +21,8 @@ import static com.google.jenkins.plugins.computeengine.InstanceConfigurationTest
 import static org.mockito.ArgumentMatchers.anyString;
 
 import com.google.api.services.compute.model.AcceleratorType;
-import com.google.jenkins.plugins.computeengine.client.ComputeClient;
+import com.google.common.collect.ImmutableList;
+import com.google.graphite.platforms.plugin.client.ComputeClient;
 import hudson.util.ListBoxModel;
 import java.util.ArrayList;
 import java.util.List;
@@ -72,8 +73,8 @@ public class AcceleratorConfigurationTest {
             .setName(ACCELERATOR_NAME + "2")
             .setSelfLink(ACCELERATOR_NAME + "2")
             .setMaximumCardsPerInstance(Integer.parseInt(ACCELERATOR_COUNT) + 1));
-    Mockito.when(computeClient.getAcceleratorTypes(anyString(), anyString()))
-        .thenReturn(acceleratorTypes);
+    Mockito.when(computeClient.listAcceleratorTypes(anyString(), anyString()))
+        .thenReturn(ImmutableList.copyOf(acceleratorTypes));
     AcceleratorConfiguration.DescriptorImpl.setComputeClient(computeClient);
 
     // Test items returned by dropdown filler

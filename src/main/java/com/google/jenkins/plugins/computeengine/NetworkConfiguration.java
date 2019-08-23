@@ -16,9 +16,8 @@
 
 package com.google.jenkins.plugins.computeengine;
 
-import com.cloudbees.plugins.credentials.domains.DomainRequirement;
+import com.google.graphite.platforms.plugin.client.ComputeClient;
 import com.google.jenkins.plugins.computeengine.client.ClientFactory;
-import com.google.jenkins.plugins.computeengine.client.ComputeClient;
 import hudson.model.Describable;
 import hudson.model.Descriptor;
 import java.io.IOException;
@@ -61,8 +60,7 @@ public abstract class NetworkConfiguration implements Describable<NetworkConfigu
       if (computeClient != null) {
         return computeClient;
       }
-      ClientFactory clientFactory =
-          new ClientFactory(context, new ArrayList<DomainRequirement>(), credentialsId);
+      ClientFactory clientFactory = new ClientFactory(context, new ArrayList<>(), credentialsId);
       return clientFactory.compute();
     }
 

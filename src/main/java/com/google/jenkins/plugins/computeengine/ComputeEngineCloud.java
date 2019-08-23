@@ -26,8 +26,8 @@ import com.cloudbees.plugins.credentials.domains.DomainRequirement;
 import com.google.api.services.compute.model.Instance;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableMap;
+import com.google.graphite.platforms.plugin.client.ComputeClient;
 import com.google.jenkins.plugins.computeengine.client.ClientFactory;
-import com.google.jenkins.plugins.computeengine.client.ComputeClient;
 import com.google.jenkins.plugins.credentials.oauth.GoogleOAuth2Credentials;
 import hudson.Extension;
 import hudson.model.Computer;
@@ -331,7 +331,7 @@ public class ComputeEngineCloud extends AbstractCloudImpl {
       // We only care about instances that have a label indicating they
       // belong to this cloud
       Map<String, String> filterLabel = ImmutableMap.of(CLOUD_ID_LABEL_KEY, getInstanceId());
-      List<Instance> instances = getClient().getInstancesWithLabel(projectId, filterLabel);
+      List<Instance> instances = getClient().listInstancesWithLabel(projectId, filterLabel);
 
       // Don't count instances that are not running (or starting up)
       Iterator it = instances.iterator();
@@ -467,7 +467,7 @@ public class ComputeEngineCloud extends AbstractCloudImpl {
         ClientFactory clientFactory =
             new ClientFactory(context, new ArrayList<DomainRequirement>(), value);
         ComputeClient compute = clientFactory.compute();
-        compute.getRegions(projectId);
+        compute.listRegions(projectId);
         return FormValidation.ok(
             "The credential successfully made an API request to Google Compute Engine.");
       } catch (IOException ioe) {

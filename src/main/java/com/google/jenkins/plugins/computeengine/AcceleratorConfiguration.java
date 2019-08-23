@@ -16,10 +16,9 @@
 
 package com.google.jenkins.plugins.computeengine;
 
-import com.cloudbees.plugins.credentials.domains.DomainRequirement;
 import com.google.api.services.compute.model.AcceleratorType;
+import com.google.graphite.platforms.plugin.client.ComputeClient;
 import com.google.jenkins.plugins.computeengine.client.ClientFactory;
-import com.google.jenkins.plugins.computeengine.client.ComputeClient;
 import hudson.Extension;
 import hudson.RelativePath;
 import hudson.model.Describable;
@@ -69,13 +68,12 @@ public class AcceleratorConfiguration implements Describable<AcceleratorConfigur
       computeClient = client;
     }
 
-    private static ComputeClient computeClient(Jenkins context, String credentialsId)
-        throws IOException {
+    private static com.google.graphite.platforms.plugin.client.ComputeClient computeClient(
+        Jenkins context, String credentialsId) throws IOException {
       if (computeClient != null) {
         return computeClient;
       }
-      ClientFactory clientFactory =
-          new ClientFactory(context, new ArrayList<DomainRequirement>(), credentialsId);
+      ClientFactory clientFactory = new ClientFactory(context, new ArrayList<>(), credentialsId);
       return clientFactory.compute();
     }
 
@@ -87,7 +85,7 @@ public class AcceleratorConfiguration implements Describable<AcceleratorConfigur
       ListBoxModel items = new ListBoxModel();
       try {
         ComputeClient compute = computeClient(context, credentialsId);
-        List<AcceleratorType> acceleratorTypes = compute.getAcceleratorTypes(projectId, zone);
+        List<AcceleratorType> acceleratorTypes = compute.listAcceleratorTypes(projectId, zone);
 
         for (AcceleratorType a : acceleratorTypes) {
           items.add(a.getName(), a.getSelfLink());

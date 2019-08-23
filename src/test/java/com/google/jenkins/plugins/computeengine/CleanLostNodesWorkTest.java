@@ -23,7 +23,7 @@ import static org.mockito.Mockito.verifyZeroInteractions;
 import static org.mockito.Mockito.when;
 
 import com.google.api.services.compute.model.Instance;
-import com.google.jenkins.plugins.computeengine.client.ComputeClient;
+import com.google.graphite.platforms.plugin.client.ComputeClient;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -69,7 +69,7 @@ public class CleanLostNodesWorkTest {
   public void shouldNotCleanAnyInstance() throws Exception {
     final String instanceName = "inst-1";
     Instance remoteInstance = new Instance().setName(instanceName).setStatus("RUNNING");
-    when(client.getInstancesWithLabel(eq(TEST_PROJECT_ID), anyMap()))
+    when(client.listInstancesWithLabel(eq(TEST_PROJECT_ID), anyMap()))
         .thenReturn(of(remoteInstance));
 
     ComputeEngineInstance localInstance = Mockito.mock(ComputeEngineInstance.class);
@@ -81,7 +81,7 @@ public class CleanLostNodesWorkTest {
     r.jenkins.addNode(localInstance);
 
     getWorker().doRun();
-    verify(client).getInstancesWithLabel(eq(TEST_PROJECT_ID), anyMap());
+    verify(client).listInstancesWithLabel(eq(TEST_PROJECT_ID), anyMap());
     verifyZeroInteractions(client);
   }
 
@@ -91,14 +91,14 @@ public class CleanLostNodesWorkTest {
     final String zone = "test-zone";
     Instance remoteInstance =
         new Instance().setName(instanceName).setZone(zone).setStatus("RUNNING");
-    when(client.getInstancesWithLabel(eq(TEST_PROJECT_ID), anyMap()))
+    when(client.listInstancesWithLabel(eq(TEST_PROJECT_ID), anyMap()))
         .thenReturn(of(remoteInstance));
 
     r.jenkins.clouds.add(cloud);
 
     getWorker().doRun();
-    verify(client).getInstancesWithLabel(eq(TEST_PROJECT_ID), anyMap());
-    verify(client).terminateInstance(eq(TEST_PROJECT_ID), eq(zone), eq(instanceName));
+    verify(client).listInstancesWithLabel(eq(TEST_PROJECT_ID), anyMap());
+    verify(client).terminateInstanceAsync(eq(TEST_PROJECT_ID), eq(zone), eq(instanceName));
   }
 
   @Test
@@ -107,13 +107,13 @@ public class CleanLostNodesWorkTest {
     final String zone = "test-zone";
     Instance remoteInstance =
         new Instance().setName(instanceName).setZone(zone).setStatus("STOPPING");
-    when(client.getInstancesWithLabel(eq(TEST_PROJECT_ID), anyMap()))
+    when(client.listInstancesWithLabel(eq(TEST_PROJECT_ID), anyMap()))
         .thenReturn(of(remoteInstance));
 
     r.jenkins.clouds.add(cloud);
 
     getWorker().doRun();
-    verify(client).getInstancesWithLabel(eq(TEST_PROJECT_ID), anyMap());
+    verify(client).listInstancesWithLabel(eq(TEST_PROJECT_ID), anyMap());
     verifyZeroInteractions(client);
   }
 }

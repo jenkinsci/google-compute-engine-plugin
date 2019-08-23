@@ -16,7 +16,7 @@
 
 package com.google.jenkins.plugins.computeengine.integration;
 
-import static com.google.jenkins.plugins.computeengine.client.ComputeClient.nameFromSelfLink;
+import static com.google.graphite.platforms.plugin.client.util.ClientUtil.nameFromSelfLink;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.DEB_JAVA_STARTUP_SCRIPT;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.LABEL;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.NUM_EXECUTORS;
@@ -36,8 +36,8 @@ import static org.junit.Assert.assertEquals;
 import com.google.api.services.compute.model.Instance;
 import com.google.api.services.compute.model.InstanceTemplate;
 import com.google.common.collect.ImmutableList;
+import com.google.graphite.platforms.plugin.client.ComputeClient;
 import com.google.jenkins.plugins.computeengine.ComputeEngineCloud;
-import com.google.jenkins.plugins.computeengine.client.ComputeClient;
 import hudson.model.labels.LabelAtom;
 import hudson.slaves.NodeProvisioner.PlannedNode;
 import java.io.IOException;
@@ -95,7 +95,7 @@ public class ComputeEngineCloudTemplateNoGoogleLabelsIT {
                 .build()));
 
     InstanceTemplate instanceTemplate = createTemplate(null, TEMPLATE);
-    client.insertTemplate(cloud.getProjectId(), instanceTemplate);
+    client.insertTemplateAsync(cloud.getProjectId(), instanceTemplate);
     Collection<PlannedNode> planned = cloud.provision(new LabelAtom(LABEL), 1);
 
     String name = planned.iterator().next().displayName;
@@ -106,7 +106,7 @@ public class ComputeEngineCloudTemplateNoGoogleLabelsIT {
   @AfterClass
   public static void teardown() throws IOException {
     try {
-      client.deleteTemplate(cloud.getProjectId(), nameFromSelfLink(TEMPLATE));
+      client.deleteTemplateAsync(cloud.getProjectId(), nameFromSelfLink(TEMPLATE));
     } catch (Exception e) {
       // noop
     }

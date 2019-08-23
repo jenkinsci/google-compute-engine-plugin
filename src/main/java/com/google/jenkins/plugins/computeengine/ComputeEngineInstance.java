@@ -17,6 +17,7 @@
 package com.google.jenkins.plugins.computeengine;
 
 import com.google.common.base.Strings;
+import com.google.graphite.platforms.plugin.client.ComputeClient.OperationException;
 import com.google.jenkins.plugins.computeengine.ssh.GoogleKeyPair;
 import hudson.Extension;
 import hudson.model.Computer;
@@ -112,14 +113,18 @@ public class ComputeEngineInstance extends AbstractCloudSlave {
           && computer != null
           && !computer.getBuilds().failureOnly().isEmpty()) {
         LOGGER.log(Level.INFO, "Creating snapshot for node ... " + this.getNodeName());
-        cloud.getClient().createSnapshot(cloud.getProjectId(), this.zone, this.getNodeName());
+        cloud
+            .getClient()
+            .createSnapshotSync(cloud.getProjectId(), this.zone, this.getNodeName(), 120000);
       }
 
       // If the instance is running, attempt to terminate it. This is an asynch call and we
       // return immediately, hoping for the best.
-      cloud.getClient().terminateInstance(cloud.getProjectId(), zone, name);
+      cloud.getClient().terminateInstanceAsync(cloud.getProjectId(), zone, name);
     } catch (CloudNotFoundException cnfe) {
       listener.error(cnfe.getMessage());
+    } catch (OperationException oe) {
+      listener.error(oe.getError().toPrettyString());
     }
   }
 

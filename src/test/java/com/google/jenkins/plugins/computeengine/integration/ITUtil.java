@@ -17,10 +17,10 @@
 package com.google.jenkins.plugins.computeengine.integration;
 
 import static com.google.common.collect.ImmutableList.of;
+import static com.google.graphite.platforms.plugin.client.util.ClientUtil.nameFromSelfLink;
 import static com.google.jenkins.plugins.computeengine.InstanceConfiguration.METADATA_LINUX_STARTUP_SCRIPT_KEY;
 import static com.google.jenkins.plugins.computeengine.InstanceConfiguration.NAT_NAME;
 import static com.google.jenkins.plugins.computeengine.InstanceConfiguration.NAT_TYPE;
-import static com.google.jenkins.plugins.computeengine.client.ComputeClient.nameFromSelfLink;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
@@ -42,13 +42,13 @@ import com.google.api.services.compute.model.Operation;
 import com.google.api.services.compute.model.Tags;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableMap;
+import com.google.graphite.platforms.plugin.client.ComputeClient;
 import com.google.jenkins.plugins.computeengine.AcceleratorConfiguration;
 import com.google.jenkins.plugins.computeengine.AutofilledNetworkConfiguration;
 import com.google.jenkins.plugins.computeengine.ComputeEngineCloud;
 import com.google.jenkins.plugins.computeengine.InstanceConfiguration;
 import com.google.jenkins.plugins.computeengine.StringJsonServiceAccountConfig;
 import com.google.jenkins.plugins.computeengine.client.ClientFactory;
-import com.google.jenkins.plugins.computeengine.client.ComputeClient;
 import com.google.jenkins.plugins.computeengine.ssh.GoogleKeyPair;
 import com.google.jenkins.plugins.credentials.oauth.GoogleRobotPrivateKeyCredentials;
 import com.google.jenkins.plugins.credentials.oauth.ServiceAccountConfig;
@@ -253,7 +253,7 @@ class ITUtil {
   private static void deleteIntegrationInstances(
       boolean waitForCompletion, ComputeClient client, Map<String, String> label, Logger log)
       throws IOException {
-    List<Instance> instances = client.getInstancesWithLabel(PROJECT_ID, label);
+    List<Instance> instances = client.listInstancesWithLabel(PROJECT_ID, label);
     for (Instance i : instances) {
       safeDelete(i.getName(), waitForCompletion, client, log);
     }
@@ -262,7 +262,7 @@ class ITUtil {
   private static void safeDelete(
       String instanceId, boolean waitForCompletion, ComputeClient client, Logger log) {
     try {
-      Operation operation = client.terminateInstance(PROJECT_ID, ZONE, instanceId);
+      Operation operation = client.terminateInstanceAsync(PROJECT_ID, ZONE, instanceId);
       if (waitForCompletion) {
         client.waitForOperationCompletion(
             PROJECT_ID, operation.getName(), operation.getZone(), 3 * 60 * 1000);

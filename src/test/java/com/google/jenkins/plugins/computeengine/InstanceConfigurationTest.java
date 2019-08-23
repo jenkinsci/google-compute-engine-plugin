@@ -35,7 +35,8 @@ import com.google.api.services.compute.model.Network;
 import com.google.api.services.compute.model.Region;
 import com.google.api.services.compute.model.Subnetwork;
 import com.google.api.services.compute.model.Zone;
-import com.google.jenkins.plugins.computeengine.client.ComputeClient;
+import com.google.common.collect.ImmutableList;
+import com.google.graphite.platforms.plugin.client.ComputeClient;
 import hudson.model.Node;
 import hudson.util.FormValidation;
 import java.util.ArrayList;
@@ -153,18 +154,24 @@ public class InstanceConfigurationTest {
                                             .set("value", "TEST"))
                                     .collect(Collectors.toList()))));
 
-    Mockito.when(computeClient.getRegions(anyString())).thenReturn(regions);
-    Mockito.when(computeClient.getZones(anyString(), anyString())).thenReturn(zones);
-    Mockito.when(computeClient.getMachineTypes(anyString(), anyString())).thenReturn(machineTypes);
-    Mockito.when(computeClient.cpuPlatforms(anyString(), anyString())).thenReturn(cpuPlatforms);
-    Mockito.when(computeClient.getBootDiskTypes(anyString(), anyString())).thenReturn(diskTypes);
+    Mockito.when(computeClient.listRegions(anyString())).thenReturn(ImmutableList.copyOf(regions));
+    Mockito.when(computeClient.listZones(anyString(), anyString()))
+        .thenReturn(ImmutableList.copyOf(zones));
+    Mockito.when(computeClient.listMachineTypes(anyString(), anyString()))
+        .thenReturn(ImmutableList.copyOf(machineTypes));
+    Mockito.when(computeClient.listCpuPlatforms(anyString(), anyString()))
+        .thenReturn(ImmutableList.copyOf(cpuPlatforms));
+    Mockito.when(computeClient.listBootDiskTypes(anyString(), anyString()))
+        .thenReturn(ImmutableList.copyOf(diskTypes));
     Mockito.when(computeClient.getImage(anyString(), anyString())).thenReturn(image);
-    Mockito.when(computeClient.getImages(anyString())).thenReturn(imageTypes);
-    Mockito.when(computeClient.getAcceleratorTypes(anyString(), anyString()))
-        .thenReturn(acceleratorTypes);
-    Mockito.when(computeClient.getNetworks(anyString())).thenReturn(networks);
-    Mockito.when(computeClient.getSubnetworks(anyString(), anyString(), anyString()))
-        .thenReturn(subnetworks);
+    Mockito.when(computeClient.listImages(anyString()))
+        .thenReturn(ImmutableList.copyOf(imageTypes));
+    Mockito.when(computeClient.listAcceleratorTypes(anyString(), anyString()))
+        .thenReturn(ImmutableList.copyOf(acceleratorTypes));
+    Mockito.when(computeClient.listNetworks(anyString()))
+        .thenReturn(ImmutableList.copyOf(networks));
+    Mockito.when(computeClient.listSubnetworks(anyString(), anyString(), anyString()))
+        .thenReturn(ImmutableList.copyOf(subnetworks));
     Mockito.when(cloud.getProjectId()).thenReturn(PROJECT_ID);
     Mockito.when(cloud.getClient()).thenReturn(computeClient);
     Mockito.when(computeClient.getTemplate(anyString(), anyString())).thenReturn(instanceTemplate);
@@ -172,11 +179,11 @@ public class InstanceConfigurationTest {
 
   @Test
   public void testClient() throws Exception {
-    List<Region> regions = computeClient.getRegions(anyString());
+    List<Region> regions = computeClient.listRegions(anyString());
     assert (regions.size() == 2);
     assert (regions.get(1).getName().equals(REGION));
 
-    List<Zone> zones = computeClient.getZones(PROJECT_ID, REGION);
+    List<Zone> zones = computeClient.listZones(PROJECT_ID, REGION);
     assert (zones.size() == 2);
     assert (zones.get(1).getName().equals(ZONE));
     assert (zones.get(1).getSelfLink().equals(ZONE));

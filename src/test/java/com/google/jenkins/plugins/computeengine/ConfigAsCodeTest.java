@@ -2,10 +2,12 @@ package com.google.jenkins.plugins.computeengine;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
+import static org.mockito.ArgumentMatchers.any;
 
 import com.cloudbees.plugins.credentials.CredentialsStore;
 import com.cloudbees.plugins.credentials.SystemCredentialsProvider;
 import com.cloudbees.plugins.credentials.domains.Domain;
+import com.google.api.client.googleapis.auth.oauth2.GoogleCredential;
 import com.google.jenkins.plugins.credentials.oauth.GoogleRobotPrivateKeyCredentials;
 import hudson.model.Node;
 import io.jenkins.plugins.casc.misc.ConfiguredWithCode;
@@ -60,6 +62,8 @@ public class ConfigAsCodeTest {
     GoogleRobotPrivateKeyCredentials credentials =
         Mockito.mock(GoogleRobotPrivateKeyCredentials.class);
     Mockito.when(credentials.getId()).thenReturn("gce-jenkins");
+    Mockito.when(credentials.getGoogleCredential(any()))
+        .thenReturn(Mockito.mock(GoogleCredential.class));
 
     CredentialsStore store =
         new SystemCredentialsProvider.ProviderImpl().getStore(jenkinsRule.jenkins);

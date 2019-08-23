@@ -17,14 +17,10 @@ package com.google.jenkins.plugins.computeengine.client;
 import com.cloudbees.plugins.credentials.CredentialsMatchers;
 import com.cloudbees.plugins.credentials.CredentialsProvider;
 import com.cloudbees.plugins.credentials.domains.DomainRequirement;
+import com.google.api.client.auth.oauth2.Credential;
 import com.google.api.client.googleapis.javanet.GoogleNetHttpTransport;
-import com.google.api.client.googleapis.services.AbstractGoogleClientRequest;
-import com.google.api.client.googleapis.services.GoogleClientRequestInitializer;
-import com.google.api.client.http.HttpRequestInitializer;
 import com.google.api.client.http.HttpTransport;
-import com.google.api.client.json.JsonFactory;
-import com.google.api.client.json.jackson2.JacksonFactory;
-import com.google.api.services.compute.Compute;
+import com.google.graphite.platforms.plugin.client.ComputeClient;
 import com.google.jenkins.plugins.computeengine.ComputeEngineScopeRequirement;
 import com.google.jenkins.plugins.credentials.oauth.GoogleRobotCredentials;
 import hudson.AbortException;
@@ -33,6 +29,7 @@ import hudson.security.ACL;
 import java.io.IOException;
 import java.security.GeneralSecurityException;
 import java.util.List;
+import java.util.Optional;
 
 /** Creates clients for communicating with Google APIs. */
 public class ClientFactory {
@@ -40,10 +37,7 @@ public class ClientFactory {
 
   private static HttpTransport DEFAULT_TRANSPORT;
 
-  private final HttpTransport transport;
-  private final JsonFactory jsonFactory;
-  private final GoogleRobotCredentials credentials;
-  private final HttpRequestInitializer gcred;
+  private final com.google.graphite.platforms.plugin.client.ClientFactory clientFactory;
 
   /**
    * @param itemGroup A handle to the Jenkins instance
@@ -58,17 +52,17 @@ public class ClientFactory {
       throw new IllegalArgumentException(Messages.ClientFactory_CredentialsIdRequired());
     }
 
+    HttpTransport transport;
     try {
-      this.transport = getDefaultTransport();
+      transport = getDefaultTransport();
     } catch (GeneralSecurityException e) {
       throw new AbortException(
           Messages.ClientFactory_FailedToInitializeHTTPTransport(e.getMessage()));
     }
-    this.jsonFactory = new JacksonFactory();
 
     ComputeEngineScopeRequirement requirement = new ComputeEngineScopeRequirement();
 
-    this.credentials =
+    GoogleRobotCredentials credentials =
         CredentialsMatchers.firstOrNull(
             CredentialsProvider.lookupCredentials(
                 GoogleRobotCredentials.class, itemGroup, ACL.SYSTEM, domainRequirements),
@@ -78,8 +72,17 @@ public class ClientFactory {
       throw new AbortException(Messages.ClientFactory_FailedToRetrieveCredentials(credentialsId));
     }
 
+    Credential gcred;
     try {
-      this.gcred = credentials.getGoogleCredential(requirement);
+      gcred = credentials.getGoogleCredential(requirement);
+    } catch (GeneralSecurityException e) {
+      throw new AbortException(
+          Messages.ClientFactory_FailedToInitializeHTTPTransport(e.getMessage()));
+    }
+    try {
+      this.clientFactory =
+          new com.google.graphite.platforms.plugin.client.ClientFactory(
+              Optional.of(transport), gcred, APPLICATION_NAME);
     } catch (GeneralSecurityException e) {
       throw new AbortException(
           Messages.ClientFactory_FailedToInitializeHTTPTransport(e.getMessage()));
@@ -99,20 +102,6 @@ public class ClientFactory {
   }
 
   public ComputeClient compute() {
-    ComputeClient client = new ComputeClient();
-    client.setCompute(
-        new Compute.Builder(transport, jsonFactory, gcred)
-            .setGoogleClientRequestInitializer(
-                new GoogleClientRequestInitializer() {
-                  @Override
-                  public void initialize(AbstractGoogleClientRequest<?> request)
-                      throws IOException {
-                    request.setRequestHeaders(
-                        (request.getRequestHeaders().setUserAgent(APPLICATION_NAME)));
-                  }
-                })
-            .setApplicationName(APPLICATION_NAME)
-            .build());
-    return client;
+    return clientFactory.computeClient();
   }
 }

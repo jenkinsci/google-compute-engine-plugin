@@ -32,8 +32,8 @@ import static org.junit.Assert.assertEquals;
 
 import com.google.api.services.compute.model.Instance;
 import com.google.common.collect.ImmutableList;
+import com.google.graphite.platforms.plugin.client.ComputeClient;
 import com.google.jenkins.plugins.computeengine.ComputeEngineCloud;
-import com.google.jenkins.plugins.computeengine.client.ComputeClient;
 import hudson.model.labels.LabelAtom;
 import hudson.slaves.NodeProvisioner.PlannedNode;
 import java.io.IOException;

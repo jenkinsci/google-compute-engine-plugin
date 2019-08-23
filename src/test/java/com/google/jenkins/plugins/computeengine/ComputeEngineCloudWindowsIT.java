@@ -24,14 +24,13 @@ import com.cloudbees.plugins.credentials.CredentialsStore;
 import com.cloudbees.plugins.credentials.SystemCredentialsProvider;
 import com.cloudbees.plugins.credentials.common.StandardUsernameCredentials;
 import com.cloudbees.plugins.credentials.domains.Domain;
-import com.cloudbees.plugins.credentials.domains.DomainRequirement;
 import com.google.api.services.compute.model.Image;
 import com.google.api.services.compute.model.Instance;
 import com.google.api.services.compute.model.Operation;
 import com.google.api.services.compute.model.Snapshot;
 import com.google.common.collect.ImmutableList;
+import com.google.graphite.platforms.plugin.client.ComputeClient;
 import com.google.jenkins.plugins.computeengine.client.ClientFactory;
-import com.google.jenkins.plugins.computeengine.client.ComputeClient;
 import com.google.jenkins.plugins.computeengine.ssh.GoogleKeyPair;
 import com.google.jenkins.plugins.credentials.oauth.GoogleRobotPrivateKeyCredentials;
 import com.google.jenkins.plugins.credentials.oauth.ServiceAccountConfig;
@@ -181,8 +180,7 @@ public class ComputeEngineCloudWindowsIT {
     assertEquals(1, r.jenkins.clouds.size());
 
     // Get a compute client for out-of-band calls to GCE
-    ClientFactory clientFactory =
-        new ClientFactory(r.jenkins, new ArrayList<DomainRequirement>(), projectId);
+    ClientFactory clientFactory = new ClientFactory(r.jenkins, new ArrayList<>(), projectId);
     client = clientFactory.compute();
     assertNotNull("ComputeClient can not be null", client);
 
@@ -295,7 +293,7 @@ public class ComputeEngineCloudWindowsIT {
     } finally {
       try {
         // cleanup
-        client.deleteSnapshot(projectId, worker.getNodeName());
+        client.deleteSnapshotAsync(projectId, worker.getNodeName());
       } catch (Exception e) {
       }
     }
@@ -382,7 +380,7 @@ public class ComputeEngineCloudWindowsIT {
   }
 
   private static void deleteIntegrationInstances(boolean waitForCompletion) throws IOException {
-    List<Instance> instances = client.getInstancesWithLabel(projectId, INTEGRATION_LABEL);
+    List<Instance> instances = client.listInstancesWithLabel(projectId, INTEGRATION_LABEL);
     for (Instance i : instances) {
       safeDelete(i.getName(), waitForCompletion);
     }
@@ -390,7 +388,7 @@ public class ComputeEngineCloudWindowsIT {
 
   private static void safeDelete(String instanceId, boolean waitForCompletion) {
     try {
-      Operation op = client.terminateInstance(projectId, ZONE, instanceId);
+      Operation op = client.terminateInstanceAsync(projectId, ZONE, instanceId);
       if (waitForCompletion)
         client.waitForOperationCompletion(projectId, op.getName(), op.getZone(), 3 * 60 * 1000);
     } catch (Exception e) {
