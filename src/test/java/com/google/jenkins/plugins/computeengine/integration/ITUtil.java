@@ -78,7 +78,7 @@ class ITUtil {
 
   static final String PROJECT_ID = System.getenv("GOOGLE_PROJECT_ID");
   private static final String CREDENTIALS = loadCredentialsString();
-  private static final String CLOUD_NAME = "integration";
+  static final String CLOUD_NAME = "integration";
   private static final String NAME_PREFIX = "integration";
   private static final String REGION = format("projects/%s/regions/us-west1");
   static final String ZONE = "us-west1-a";

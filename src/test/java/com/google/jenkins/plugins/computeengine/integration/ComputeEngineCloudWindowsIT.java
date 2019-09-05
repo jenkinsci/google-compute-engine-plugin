@@ -12,8 +12,16 @@
  * the License.
  */
 
-package com.google.jenkins.plugins.computeengine;
+package com.google.jenkins.plugins.computeengine.integration;
 
+import static com.google.jenkins.plugins.computeengine.integration.ITUtil.CLOUD_NAME;
+import static com.google.jenkins.plugins.computeengine.integration.ITUtil.LABEL;
+import static com.google.jenkins.plugins.computeengine.integration.ITUtil.NULL_TEMPLATE;
+import static com.google.jenkins.plugins.computeengine.integration.ITUtil.NUM_EXECUTORS;
+import static com.google.jenkins.plugins.computeengine.integration.ITUtil.PROJECT_ID;
+import static com.google.jenkins.plugins.computeengine.integration.ITUtil.SNAPSHOT_LABEL;
+import static com.google.jenkins.plugins.computeengine.integration.ITUtil.ZONE;
+import static com.google.jenkins.plugins.computeengine.integration.ITUtil.initCredentials;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 
@@ -21,7 +29,6 @@ import com.cloudbees.jenkins.plugins.sshcredentials.impl.BasicSSHUserPrivateKey;
 import com.cloudbees.plugins.credentials.Credentials;
 import com.cloudbees.plugins.credentials.CredentialsScope;
 import com.cloudbees.plugins.credentials.CredentialsStore;
-import com.cloudbees.plugins.credentials.SecretBytes;
 import com.cloudbees.plugins.credentials.SystemCredentialsProvider;
 import com.cloudbees.plugins.credentials.common.StandardUsernameCredentials;
 import com.cloudbees.plugins.credentials.domains.Domain;
@@ -32,10 +39,11 @@ import com.google.api.services.compute.model.Snapshot;
 import com.google.cloud.graphite.platforms.plugin.client.ClientFactory;
 import com.google.cloud.graphite.platforms.plugin.client.ComputeClient;
 import com.google.common.collect.ImmutableList;
+import com.google.jenkins.plugins.computeengine.ComputeEngineCloud;
+import com.google.jenkins.plugins.computeengine.InstanceConfiguration;
+import com.google.jenkins.plugins.computeengine.WindowsConfiguration;
 import com.google.jenkins.plugins.computeengine.client.ClientUtil;
 import com.google.jenkins.plugins.computeengine.ssh.GoogleKeyPair;
-import com.google.jenkins.plugins.credentials.oauth.GoogleRobotPrivateKeyCredentials;
-import com.google.jenkins.plugins.credentials.oauth.JsonServiceAccountConfig;
 import hudson.model.FreeStyleBuild;
 import hudson.model.FreeStyleProject;
 import hudson.model.Node;
@@ -46,7 +54,6 @@ import hudson.tasks.BatchFile;
 import hudson.tasks.Builder;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -69,38 +76,16 @@ import org.jvnet.hudson.test.JenkinsRule;
 public class ComputeEngineCloudWindowsIT {
   private static Logger log = Logger.getLogger(ComputeEngineCloudWindowsIT.class.getName());
 
-  private static final String CLOUD_NAME = "integration";
-  private static final String NAME_PREFIX = "integration";
-  private static final String REGION = format("projects/%s/regions/us-west1");
-  private static final String ZONE = "us-west1-a";
-  private static final String ZONE_BASE = format("projects/%s/zones/" + ZONE);
-  private static final String LABEL = "integration";
-  private static final String SNAPSHOT_LABEL = "snapshot";
-  private static final String MACHINE_TYPE = ZONE_BASE + "/machineTypes/n1-standard-1";
-  private static final String NUM_EXECUTORS = "1";
-  private static final boolean PREEMPTIBLE = false;
-  private static final String CONFIG_DESC = "integration";
-  private static final String MIN_CPU_PLATFORM = "Intel Broadwell";
-  private static final String BOOT_DISK_TYPE = ZONE_BASE + "/diskTypes/pd-ssd"; // hmm
-  private static final boolean BOOT_DISK_AUTODELETE = true;
   private static final String BOOT_DISK_SIZE_GB_STR = "50";
-  private static final Node.Mode NODE_MODE = Node.Mode.EXCLUSIVE;
-  private static final String ACCELERATOR_NAME = "";
-  private static final String ACCELERATOR_COUNT = "";
   private static final String RUN_AS_USER = "jenkins";
 
   private static Map<String, String> INTEGRATION_LABEL;
 
   static {
-    INTEGRATION_LABEL = new HashMap<String, String>();
+    INTEGRATION_LABEL = new HashMap<>();
     INTEGRATION_LABEL.put("integration", "delete");
   }
 
-  private static final String NETWORK_NAME = format("projects/%s/global/networks/default");
-  private static final String SUBNETWORK_NAME = "default";
-  private static final boolean EXTERNAL_ADDR = true;
-  private static final String NETWORK_TAGS = "ssh";
-  private static final String SERVICE_ACCOUNT_EMAIL = "";
   private static final String RETENTION_TIME_MINUTES_STR = "600";
   private static final String LAUNCH_TIMEOUT_SECONDS_STR = "3000";
 
@@ -110,20 +95,11 @@ public class ComputeEngineCloudWindowsIT {
   private static ByteArrayOutputStream logOutput;
 
   private static ComputeClient client;
-  private static String projectId;
   private static String bootDiskProjectId;
   private static String bootDiskImageName;
 
   private static String publicKey;
   private static String windowsPrivateKeyCredentialId;
-
-  private static String format(String s) {
-    String projectId = System.getenv("GOOGLE_PROJECT_ID");
-    if (projectId == null) {
-      throw new RuntimeException("GOOGLE_PROJECT_ID env var must be set");
-    }
-    return String.format(s, projectId);
-  }
 
   @ClassRule public static JenkinsRule r = new JenkinsRule();
 
@@ -133,28 +109,13 @@ public class ComputeEngineCloudWindowsIT {
     logOutput = new ByteArrayOutputStream();
     sh = new StreamHandler(logOutput, new SimpleFormatter());
 
-    // Add a service account credential
-    projectId = System.getenv("GOOGLE_PROJECT_ID");
-    assertNotNull("GOOGLE_PROJECT_ID env var must be set", projectId);
-
-    String serviceAccountKeyJson = System.getenv("GOOGLE_CREDENTIALS");
-    assertNotNull("GOOGLE_CREDENTIALS env var must be set", serviceAccountKeyJson);
-
     bootDiskProjectId = System.getenv("GOOGLE_BOOT_DISK_PROJECT_ID");
     assertNotNull("GOOGLE_BOOT_DISK_PROJECT_ID env var must be set", bootDiskProjectId);
 
     bootDiskImageName = System.getenv("GOOGLE_BOOT_DISK_IMAGE_NAME");
     assertNotNull("GOOGLE_BOOT_DISK_IMAGE_NAME env var must be set", bootDiskImageName);
 
-    SecretBytes bytes =
-        SecretBytes.fromBytes(serviceAccountKeyJson.getBytes(StandardCharsets.UTF_8));
-    JsonServiceAccountConfig sac = new JsonServiceAccountConfig();
-    sac.setSecretJsonKey(bytes);
-    assertNotNull(sac.getAccountId());
-    Credentials c = (Credentials) new GoogleRobotPrivateKeyCredentials(projectId, sac, null);
-
-    CredentialsStore store = new SystemCredentialsProvider.ProviderImpl().getStore(r.jenkins);
-    store.addCredentials(Domain.global(), c);
+    Credentials c = initCredentials(r);
 
     // Create credentials for SSH
     GoogleKeyPair kp = GoogleKeyPair.generate("");
@@ -170,11 +131,12 @@ public class ComputeEngineCloudWindowsIT {
             new BasicSSHUserPrivateKey.DirectEntryPrivateKeySource(kp.getPrivateKey()),
             null,
             "integration test private key for windows");
+    CredentialsStore store = new SystemCredentialsProvider.ProviderImpl().getStore(r.jenkins);
     store.addCredentials(Domain.global(), windowsPrivateKeyCredential);
     windowsPrivateKeyCredentialId = windowsPrivateKeyCredential.getId();
 
     // Add Cloud plugin
-    ComputeEngineCloud gcp = new ComputeEngineCloud(CLOUD_NAME, projectId, projectId, "10");
+    ComputeEngineCloud gcp = new ComputeEngineCloud(CLOUD_NAME, PROJECT_ID, PROJECT_ID, "10");
 
     // Capture log output to make sense of most failures
     cloudLogger =
@@ -187,7 +149,7 @@ public class ComputeEngineCloudWindowsIT {
     assertEquals(1, r.jenkins.clouds.size());
 
     // Get a compute client for out-of-band calls to GCE
-    ClientFactory clientFactory = ClientUtil.getClientFactory(r.jenkins, projectId);
+    ClientFactory clientFactory = ClientUtil.getClientFactory(r.jenkins, PROJECT_ID);
     client = clientFactory.computeClient();
     assertNotNull("ComputeClient can not be null", client);
 
@@ -254,7 +216,7 @@ public class ComputeEngineCloudWindowsIT {
     // There should be no warning logs
     assertEquals(logs(), false, logs().contains("WARNING"));
 
-    Instance i = cloud.getClient().getInstance(projectId, ZONE, name);
+    Instance i = cloud.getClient().getInstance(PROJECT_ID, ZONE, name);
 
     // The created instance should have 3 labels
     assertEquals(logs(), 3, i.getLabels().size());
@@ -294,13 +256,13 @@ public class ComputeEngineCloudWindowsIT {
                   r.jenkins.getNode(worker.getNodeName())
                       == null); // Assert that there is 0 nodes after job finished
 
-      Snapshot createdSnapshot = client.getSnapshot(projectId, worker.getNodeName());
+      Snapshot createdSnapshot = client.getSnapshot(PROJECT_ID, worker.getNodeName());
       assertNotNull(logs(), createdSnapshot);
       assertEquals(logs(), createdSnapshot.getStatus(), "READY");
     } finally {
       try {
         // cleanup
-        client.deleteSnapshotAsync(projectId, worker.getNodeName());
+        client.deleteSnapshotAsync(PROJECT_ID, worker.getNodeName());
       } catch (Exception e) {
       }
     }
@@ -343,51 +305,30 @@ public class ComputeEngineCloudWindowsIT {
             + "icacls $env:PROGRAMDATA\\ssh\\administrators_authorized_keys /grant BUILTIN\\Administrators:`(F`)\n"
             + "Restart-Service sshd";
 
-    InstanceConfiguration ic =
-        InstanceConfiguration.builder()
-            .namePrefix(NAME_PREFIX)
-            .region(REGION)
-            .zone(ZONE)
-            .machineType(MACHINE_TYPE)
-            .numExecutorsStr(NUM_EXECUTORS)
-            .startupScript(startupScript)
-            .preemptible(PREEMPTIBLE)
-            .minCpuPlatform(MIN_CPU_PLATFORM)
-            .labels(labels)
-            .description(CONFIG_DESC)
-            .bootDiskType(BOOT_DISK_TYPE)
-            .bootDiskAutoDelete(BOOT_DISK_AUTODELETE)
-            .bootDiskSourceImageName(
-                "projects/" + bootDiskProjectId + "/global/images/" + bootDiskImageName)
-            .bootDiskSourceImageProject(bootDiskProjectId)
-            .bootDiskSizeGbStr(BOOT_DISK_SIZE_GB_STR)
-            .windowsConfiguration(
-                WindowsConfiguration.builder()
-                    .passwordCredentialsId("")
-                    .privateKeyCredentialsId(windowsPrivateKeyCredentialId)
-                    .build())
-            .createSnapshot(createSnapshot)
-            .remoteFs(null)
-            .networkConfiguration(new AutofilledNetworkConfiguration(NETWORK_NAME, SUBNETWORK_NAME))
-            .externalAddress(EXTERNAL_ADDR)
-            .useInternalAddress(false)
-            .networkTags(NETWORK_TAGS)
-            .serviceAccountEmail(SERVICE_ACCOUNT_EMAIL)
-            .retentionTimeMinutesStr(RETENTION_TIME_MINUTES_STR)
-            .launchTimeoutSecondsStr(LAUNCH_TIMEOUT_SECONDS_STR)
-            .mode(NODE_MODE)
-            .acceleratorConfiguration(
-                new AcceleratorConfiguration(ACCELERATOR_NAME, ACCELERATOR_COUNT))
-            .runAsUser(RUN_AS_USER)
-            .oneShot(oneShot)
-            .template(null)
-            .build();
-    ic.appendLabels(INTEGRATION_LABEL);
-    return ic;
+    return ITUtil.instanceConfigurationBuilder()
+        .numExecutorsStr(NUM_EXECUTORS)
+        .startupScript(startupScript)
+        .labels(labels)
+        .bootDiskSourceImageName(
+            "projects/" + bootDiskProjectId + "/global/images/" + bootDiskImageName)
+        .bootDiskSourceImageProject(bootDiskProjectId)
+        .bootDiskSizeGbStr(BOOT_DISK_SIZE_GB_STR)
+        .windowsConfiguration(
+            WindowsConfiguration.builder()
+                .passwordCredentialsId("")
+                .privateKeyCredentialsId(windowsPrivateKeyCredentialId)
+                .build())
+        .createSnapshot(createSnapshot)
+        .retentionTimeMinutesStr(RETENTION_TIME_MINUTES_STR)
+        .launchTimeoutSecondsStr(LAUNCH_TIMEOUT_SECONDS_STR)
+        .oneShot(oneShot)
+        .template(NULL_TEMPLATE)
+        .googleLabels(INTEGRATION_LABEL)
+        .build();
   }
 
   private static void deleteIntegrationInstances(boolean waitForCompletion) throws IOException {
-    List<Instance> instances = client.listInstancesWithLabel(projectId, INTEGRATION_LABEL);
+    List<Instance> instances = client.listInstancesWithLabel(PROJECT_ID, INTEGRATION_LABEL);
     for (Instance i : instances) {
       safeDelete(i.getName(), waitForCompletion);
     }
@@ -395,9 +336,9 @@ public class ComputeEngineCloudWindowsIT {
 
   private static void safeDelete(String instanceId, boolean waitForCompletion) {
     try {
-      Operation op = client.terminateInstanceAsync(projectId, ZONE, instanceId);
+      Operation op = client.terminateInstanceAsync(PROJECT_ID, ZONE, instanceId);
       if (waitForCompletion)
-        client.waitForOperationCompletion(projectId, op.getName(), op.getZone(), 3 * 60 * 1000);
+        client.waitForOperationCompletion(PROJECT_ID, op.getName(), op.getZone(), 3 * 60 * 1000);
     } catch (Exception e) {
       log.warning(String.format("Error deleting instance %s: %s", instanceId, e.getMessage()));
     }
