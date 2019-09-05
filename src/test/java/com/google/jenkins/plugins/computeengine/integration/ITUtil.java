@@ -41,6 +41,7 @@ import com.google.api.services.compute.model.Metadata;
 import com.google.api.services.compute.model.NetworkInterface;
 import com.google.api.services.compute.model.Operation;
 import com.google.api.services.compute.model.Tags;
+import com.google.cloud.graphite.platforms.plugin.client.ClientFactory;
 import com.google.cloud.graphite.platforms.plugin.client.ComputeClient;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableMap;
@@ -48,7 +49,7 @@ import com.google.jenkins.plugins.computeengine.AcceleratorConfiguration;
 import com.google.jenkins.plugins.computeengine.AutofilledNetworkConfiguration;
 import com.google.jenkins.plugins.computeengine.ComputeEngineCloud;
 import com.google.jenkins.plugins.computeengine.InstanceConfiguration;
-import com.google.jenkins.plugins.computeengine.client.ClientFactory;
+import com.google.jenkins.plugins.computeengine.client.ClientUtil;
 import com.google.jenkins.plugins.computeengine.ssh.GoogleKeyPair;
 import com.google.jenkins.plugins.credentials.oauth.GoogleRobotPrivateKeyCredentials;
 import com.google.jenkins.plugins.credentials.oauth.JsonServiceAccountConfig;
@@ -57,7 +58,6 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.logging.Logger;
@@ -166,9 +166,8 @@ class ITUtil {
   // Get a compute client for out-of-band calls to GCE
   static ComputeClient initClient(JenkinsRule jenkinsRule, Map<String, String> label, Logger log)
       throws IOException {
-    ClientFactory clientFactory =
-        new ClientFactory(jenkinsRule.jenkins, new ArrayList<>(), PROJECT_ID);
-    ComputeClient client = clientFactory.compute();
+    ClientFactory clientFactory = ClientUtil.getClientFactory(jenkinsRule.jenkins, PROJECT_ID);
+    ComputeClient client = clientFactory.computeClient();
     assertNotNull("ComputeClient can not be null", client);
     deleteIntegrationInstances(true, client, label, log);
     return client;

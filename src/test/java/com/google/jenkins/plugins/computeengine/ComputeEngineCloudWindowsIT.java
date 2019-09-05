@@ -29,9 +29,10 @@ import com.google.api.services.compute.model.Image;
 import com.google.api.services.compute.model.Instance;
 import com.google.api.services.compute.model.Operation;
 import com.google.api.services.compute.model.Snapshot;
+import com.google.cloud.graphite.platforms.plugin.client.ClientFactory;
 import com.google.cloud.graphite.platforms.plugin.client.ComputeClient;
 import com.google.common.collect.ImmutableList;
-import com.google.jenkins.plugins.computeengine.client.ClientFactory;
+import com.google.jenkins.plugins.computeengine.client.ClientUtil;
 import com.google.jenkins.plugins.computeengine.ssh.GoogleKeyPair;
 import com.google.jenkins.plugins.credentials.oauth.GoogleRobotPrivateKeyCredentials;
 import com.google.jenkins.plugins.credentials.oauth.JsonServiceAccountConfig;
@@ -186,8 +187,8 @@ public class ComputeEngineCloudWindowsIT {
     assertEquals(1, r.jenkins.clouds.size());
 
     // Get a compute client for out-of-band calls to GCE
-    ClientFactory clientFactory = new ClientFactory(r.jenkins, new ArrayList<>(), projectId);
-    client = clientFactory.compute();
+    ClientFactory clientFactory = ClientUtil.getClientFactory(r.jenkins, projectId);
+    client = clientFactory.computeClient();
     assertNotNull("ComputeClient can not be null", client);
 
     // Other logging

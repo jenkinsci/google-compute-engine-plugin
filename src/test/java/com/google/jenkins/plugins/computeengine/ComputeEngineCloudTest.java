@@ -16,8 +16,6 @@ package com.google.jenkins.plugins.computeengine;
 
 import static com.google.jenkins.plugins.computeengine.InstanceConfigurationTest.A_LABEL;
 import static com.google.jenkins.plugins.computeengine.InstanceConfigurationTest.instanceConfigurationBuilder;
-import static com.google.jenkins.plugins.computeengine.client.ClientFactoryTest.ACCOUNT_ID;
-import static com.google.jenkins.plugins.computeengine.client.ClientFactoryTest.PRIVATE_KEY;
 import static org.hamcrest.Matchers.isEmptyOrNullString;
 import static org.hamcrest.Matchers.not;
 import static org.junit.Assert.assertEquals;
@@ -34,6 +32,7 @@ import hudson.model.Label;
 import hudson.model.labels.LabelAtom;
 import hudson.util.FormValidation;
 import hudson.util.ListBoxModel;
+import java.security.PrivateKey;
 import java.util.ArrayList;
 import java.util.List;
 import org.junit.Assert;
@@ -48,6 +47,32 @@ import org.mockito.junit.MockitoJUnitRunner;
 
 @RunWith(MockitoJUnitRunner.class)
 public class ComputeEngineCloudTest {
+
+  public static final PrivateKey PRIVATE_KEY;
+  public static final String ACCOUNT_ID = "test-account-id";
+  public static final String PK_ALGO = "test";
+  public static final String PK_FORMAT = "test";
+  public static final byte[] PK_BYTES = new byte[0];
+
+  static {
+    PRIVATE_KEY =
+        new PrivateKey() {
+          @Override
+          public String getAlgorithm() {
+            return PK_ALGO;
+          }
+
+          @Override
+          public String getFormat() {
+            return PK_FORMAT;
+          }
+
+          @Override
+          public byte[] getEncoded() {
+            return PK_BYTES;
+          }
+        };
+  }
 
   private static final String INSTANCE_ID = "213123";
   private static final String CLOUD_NAME = "test-cloud";
