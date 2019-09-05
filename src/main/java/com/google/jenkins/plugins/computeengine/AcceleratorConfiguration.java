@@ -68,8 +68,8 @@ public class AcceleratorConfiguration implements Describable<AcceleratorConfigur
       computeClient = client;
     }
 
-    private static com.google.cloud.graphite.platforms.plugin.client.ComputeClient computeClient(
-        Jenkins context, String credentialsId) throws IOException {
+    private static ComputeClient computeClient(Jenkins context, String credentialsId)
+        throws IOException {
       if (computeClient != null) {
         return computeClient;
       }
