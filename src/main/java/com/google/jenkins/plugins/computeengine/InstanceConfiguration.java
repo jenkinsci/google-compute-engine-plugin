@@ -16,7 +16,7 @@
 
 package com.google.jenkins.plugins.computeengine;
 
-import static com.google.graphite.platforms.plugin.client.util.ClientUtil.nameFromSelfLink;
+import static com.google.cloud.graphite.platforms.plugin.client.util.ClientUtil.nameFromSelfLink;
 
 import com.cloudbees.plugins.credentials.domains.DomainRequirement;
 import com.google.api.services.compute.model.AcceleratorConfig;
@@ -36,8 +36,8 @@ import com.google.api.services.compute.model.Scheduling;
 import com.google.api.services.compute.model.ServiceAccount;
 import com.google.api.services.compute.model.Tags;
 import com.google.api.services.compute.model.Zone;
+import com.google.cloud.graphite.platforms.plugin.client.ComputeClient;
 import com.google.common.base.Strings;
-import com.google.graphite.platforms.plugin.client.ComputeClient;
 import com.google.jenkins.plugins.computeengine.client.ClientFactory;
 import com.google.jenkins.plugins.computeengine.ssh.GoogleKeyPair;
 import edu.umd.cs.findbugs.annotations.Nullable;

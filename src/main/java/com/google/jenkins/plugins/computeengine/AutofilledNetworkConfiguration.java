@@ -16,8 +16,8 @@ package com.google.jenkins.plugins.computeengine;
 
 import com.google.api.services.compute.model.Network;
 import com.google.api.services.compute.model.Subnetwork;
+import com.google.cloud.graphite.platforms.plugin.client.ComputeClient;
 import com.google.common.base.Strings;
-import com.google.graphite.platforms.plugin.client.ComputeClient;
 import hudson.Extension;
 import hudson.RelativePath;
 import hudson.util.FormValidation;

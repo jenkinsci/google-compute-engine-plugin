@@ -17,7 +17,7 @@
 package com.google.jenkins.plugins.computeengine;
 
 import com.google.api.services.compute.model.AcceleratorType;
-import com.google.graphite.platforms.plugin.client.ComputeClient;
+import com.google.cloud.graphite.platforms.plugin.client.ComputeClient;
 import com.google.jenkins.plugins.computeengine.client.ClientFactory;
 import hudson.Extension;
 import hudson.RelativePath;
@@ -68,7 +68,7 @@ public class AcceleratorConfiguration implements Describable<AcceleratorConfigur
       computeClient = client;
     }
 
-    private static com.google.graphite.platforms.plugin.client.ComputeClient computeClient(
+    private static com.google.cloud.graphite.platforms.plugin.client.ComputeClient computeClient(
         Jenkins context, String credentialsId) throws IOException {
       if (computeClient != null) {
         return computeClient;

@@ -21,6 +21,7 @@ import com.cloudbees.jenkins.plugins.sshcredentials.impl.BasicSSHUserPrivateKey;
 import com.cloudbees.plugins.credentials.Credentials;
 import com.cloudbees.plugins.credentials.CredentialsScope;
 import com.cloudbees.plugins.credentials.CredentialsStore;
+import com.cloudbees.plugins.credentials.SecretBytes;
 import com.cloudbees.plugins.credentials.SystemCredentialsProvider;
 import com.cloudbees.plugins.credentials.common.StandardUsernameCredentials;
 import com.cloudbees.plugins.credentials.domains.Domain;
@@ -28,12 +29,12 @@ import com.google.api.services.compute.model.Image;
 import com.google.api.services.compute.model.Instance;
 import com.google.api.services.compute.model.Operation;
 import com.google.api.services.compute.model.Snapshot;
+import com.google.cloud.graphite.platforms.plugin.client.ComputeClient;
 import com.google.common.collect.ImmutableList;
-import com.google.graphite.platforms.plugin.client.ComputeClient;
 import com.google.jenkins.plugins.computeengine.client.ClientFactory;
 import com.google.jenkins.plugins.computeengine.ssh.GoogleKeyPair;
 import com.google.jenkins.plugins.credentials.oauth.GoogleRobotPrivateKeyCredentials;
-import com.google.jenkins.plugins.credentials.oauth.ServiceAccountConfig;
+import com.google.jenkins.plugins.credentials.oauth.JsonServiceAccountConfig;
 import hudson.model.FreeStyleBuild;
 import hudson.model.FreeStyleProject;
 import hudson.model.Node;
@@ -44,6 +45,7 @@ import hudson.tasks.BatchFile;
 import hudson.tasks.Builder;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -143,7 +145,11 @@ public class ComputeEngineCloudWindowsIT {
     bootDiskImageName = System.getenv("GOOGLE_BOOT_DISK_IMAGE_NAME");
     assertNotNull("GOOGLE_BOOT_DISK_IMAGE_NAME env var must be set", bootDiskImageName);
 
-    ServiceAccountConfig sac = new StringJsonServiceAccountConfig(serviceAccountKeyJson);
+    SecretBytes bytes =
+        SecretBytes.fromBytes(serviceAccountKeyJson.getBytes(StandardCharsets.UTF_8));
+    JsonServiceAccountConfig sac = new JsonServiceAccountConfig();
+    sac.setSecretJsonKey(bytes);
+    assertNotNull(sac.getAccountId());
     Credentials c = (Credentials) new GoogleRobotPrivateKeyCredentials(projectId, sac, null);
 
     CredentialsStore store = new SystemCredentialsProvider.ProviderImpl().getStore(r.jenkins);

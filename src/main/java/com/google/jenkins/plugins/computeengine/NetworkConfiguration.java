@@ -16,7 +16,7 @@
 
 package com.google.jenkins.plugins.computeengine;
 
-import com.google.graphite.platforms.plugin.client.ComputeClient;
+import com.google.cloud.graphite.platforms.plugin.client.ComputeClient;
 import com.google.jenkins.plugins.computeengine.client.ClientFactory;
 import hudson.model.Describable;
 import hudson.model.Descriptor;

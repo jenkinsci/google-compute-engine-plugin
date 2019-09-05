@@ -23,7 +23,7 @@ import static org.mockito.Mockito.verifyZeroInteractions;
 import static org.mockito.Mockito.when;
 
 import com.google.api.services.compute.model.Instance;
-import com.google.graphite.platforms.plugin.client.ComputeClient;
+import com.google.cloud.graphite.platforms.plugin.client.ComputeClient;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;

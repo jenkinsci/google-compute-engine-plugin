@@ -17,7 +17,7 @@
 package com.google.jenkins.plugins.computeengine;
 
 import com.google.api.services.compute.model.Operation;
-import com.google.graphite.platforms.plugin.client.ComputeClient.OperationException;
+import com.google.cloud.graphite.platforms.plugin.client.ComputeClient.OperationException;
 import com.trilead.ssh2.Connection;
 import com.trilead.ssh2.SCPClient;
 import com.trilead.ssh2.Session;

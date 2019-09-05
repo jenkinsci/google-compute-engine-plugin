@@ -20,7 +20,7 @@ import com.cloudbees.plugins.credentials.domains.DomainRequirement;
 import com.google.api.client.auth.oauth2.Credential;
 import com.google.api.client.googleapis.javanet.GoogleNetHttpTransport;
 import com.google.api.client.http.HttpTransport;
-import com.google.graphite.platforms.plugin.client.ComputeClient;
+import com.google.cloud.graphite.platforms.plugin.client.ComputeClient;
 import com.google.jenkins.plugins.computeengine.ComputeEngineScopeRequirement;
 import com.google.jenkins.plugins.credentials.oauth.GoogleRobotCredentials;
 import hudson.AbortException;
@@ -37,7 +37,7 @@ public class ClientFactory {
 
   private static HttpTransport DEFAULT_TRANSPORT;
 
-  private final com.google.graphite.platforms.plugin.client.ClientFactory clientFactory;
+  private final com.google.cloud.graphite.platforms.plugin.client.ClientFactory clientFactory;
 
   /**
    * @param itemGroup A handle to the Jenkins instance
@@ -81,7 +81,7 @@ public class ClientFactory {
     }
     try {
       this.clientFactory =
-          new com.google.graphite.platforms.plugin.client.ClientFactory(
+          new com.google.cloud.graphite.platforms.plugin.client.ClientFactory(
               Optional.of(transport), gcred, APPLICATION_NAME);
     } catch (GeneralSecurityException e) {
       throw new AbortException(

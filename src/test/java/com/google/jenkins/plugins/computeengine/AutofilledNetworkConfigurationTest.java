@@ -20,8 +20,8 @@ import static org.mockito.ArgumentMatchers.anyString;
 
 import com.google.api.services.compute.model.Network;
 import com.google.api.services.compute.model.Subnetwork;
+import com.google.cloud.graphite.platforms.plugin.client.ComputeClient;
 import com.google.common.collect.ImmutableList;
-import com.google.graphite.platforms.plugin.client.ComputeClient;
 import com.google.jenkins.plugins.computeengine.AutofilledNetworkConfiguration.DescriptorImpl;
 import hudson.util.FormValidation;
 import hudson.util.FormValidation.Kind;

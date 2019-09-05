@@ -33,8 +33,8 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
 import com.google.api.services.compute.model.Snapshot;
+import com.google.cloud.graphite.platforms.plugin.client.ComputeClient;
 import com.google.common.collect.ImmutableList;
-import com.google.graphite.platforms.plugin.client.ComputeClient;
 import com.google.jenkins.plugins.computeengine.ComputeEngineCloud;
 import com.google.jenkins.plugins.computeengine.InstanceConfiguration;
 import hudson.model.FreeStyleBuild;

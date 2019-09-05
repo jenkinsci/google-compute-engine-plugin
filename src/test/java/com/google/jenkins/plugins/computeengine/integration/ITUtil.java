@@ -16,8 +16,8 @@
 
 package com.google.jenkins.plugins.computeengine.integration;
 
+import static com.google.cloud.graphite.platforms.plugin.client.util.ClientUtil.nameFromSelfLink;
 import static com.google.common.collect.ImmutableList.of;
-import static com.google.graphite.platforms.plugin.client.util.ClientUtil.nameFromSelfLink;
 import static com.google.jenkins.plugins.computeengine.InstanceConfiguration.METADATA_LINUX_STARTUP_SCRIPT_KEY;
 import static com.google.jenkins.plugins.computeengine.InstanceConfiguration.NAT_NAME;
 import static com.google.jenkins.plugins.computeengine.InstanceConfiguration.NAT_TYPE;
@@ -28,6 +28,7 @@ import static org.junit.Assert.fail;
 
 import com.cloudbees.plugins.credentials.Credentials;
 import com.cloudbees.plugins.credentials.CredentialsStore;
+import com.cloudbees.plugins.credentials.SecretBytes;
 import com.cloudbees.plugins.credentials.SystemCredentialsProvider;
 import com.cloudbees.plugins.credentials.domains.Domain;
 import com.google.api.services.compute.model.AccessConfig;
@@ -40,20 +41,20 @@ import com.google.api.services.compute.model.Metadata;
 import com.google.api.services.compute.model.NetworkInterface;
 import com.google.api.services.compute.model.Operation;
 import com.google.api.services.compute.model.Tags;
+import com.google.cloud.graphite.platforms.plugin.client.ComputeClient;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableMap;
-import com.google.graphite.platforms.plugin.client.ComputeClient;
 import com.google.jenkins.plugins.computeengine.AcceleratorConfiguration;
 import com.google.jenkins.plugins.computeengine.AutofilledNetworkConfiguration;
 import com.google.jenkins.plugins.computeengine.ComputeEngineCloud;
 import com.google.jenkins.plugins.computeengine.InstanceConfiguration;
-import com.google.jenkins.plugins.computeengine.StringJsonServiceAccountConfig;
 import com.google.jenkins.plugins.computeengine.client.ClientFactory;
 import com.google.jenkins.plugins.computeengine.ssh.GoogleKeyPair;
 import com.google.jenkins.plugins.credentials.oauth.GoogleRobotPrivateKeyCredentials;
-import com.google.jenkins.plugins.credentials.oauth.ServiceAccountConfig;
+import com.google.jenkins.plugins.credentials.oauth.JsonServiceAccountConfig;
 import hudson.model.Node;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.ArrayList;
@@ -141,7 +142,10 @@ class ITUtil {
   }
 
   static Credentials initCredentials(JenkinsRule r) throws Exception {
-    ServiceAccountConfig sac = new StringJsonServiceAccountConfig(CREDENTIALS);
+    SecretBytes bytes = SecretBytes.fromBytes(CREDENTIALS.getBytes(StandardCharsets.UTF_8));
+    JsonServiceAccountConfig sac = new JsonServiceAccountConfig();
+    sac.setSecretJsonKey(bytes);
+    assertNotNull(sac.getAccountId());
     Credentials credentials = new GoogleRobotPrivateKeyCredentials(PROJECT_ID, sac, null);
 
     CredentialsStore store = new SystemCredentialsProvider.ProviderImpl().getStore(r.jenkins);

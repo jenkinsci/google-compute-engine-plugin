@@ -32,8 +32,8 @@ import static com.google.jenkins.plugins.computeengine.integration.ITUtil.teardo
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 
+import com.google.cloud.graphite.platforms.plugin.client.ComputeClient;
 import com.google.common.collect.ImmutableList;
-import com.google.graphite.platforms.plugin.client.ComputeClient;
 import com.google.jenkins.plugins.computeengine.ComputeEngineCloud;
 import hudson.model.Node;
 import hudson.model.labels.LabelAtom;

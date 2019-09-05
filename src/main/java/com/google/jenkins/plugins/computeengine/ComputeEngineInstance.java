@@ -16,8 +16,8 @@
 
 package com.google.jenkins.plugins.computeengine;
 
+import com.google.cloud.graphite.platforms.plugin.client.ComputeClient.OperationException;
 import com.google.common.base.Strings;
-import com.google.graphite.platforms.plugin.client.ComputeClient.OperationException;
 import com.google.jenkins.plugins.computeengine.ssh.GoogleKeyPair;
 import hudson.Extension;
 import hudson.model.Computer;

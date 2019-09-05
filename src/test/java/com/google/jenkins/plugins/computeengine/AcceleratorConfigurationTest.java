@@ -21,8 +21,8 @@ import static com.google.jenkins.plugins.computeengine.InstanceConfigurationTest
 import static org.mockito.ArgumentMatchers.anyString;
 
 import com.google.api.services.compute.model.AcceleratorType;
+import com.google.cloud.graphite.platforms.plugin.client.ComputeClient;
 import com.google.common.collect.ImmutableList;
-import com.google.graphite.platforms.plugin.client.ComputeClient;
 import hudson.util.ListBoxModel;
 import java.util.ArrayList;
 import java.util.List;
