@@ -22,14 +22,13 @@ import java.util.Optional;
 
 /** Utilities for using the gcp-plugin-core clients. */
 public class ClientUtil {
-
   private static final String APPLICATION_NAME = "jenkins-google-compute-plugin";
 
   /**
-   * Creates a {@link ClientFactory} for generating the GCP api clients.
+   * Creates a {@link ClientFactory} for generating the GCP API clients.
    *
    * @param itemGroup The Jenkins context to use for retrieving the credentials.
-   * @param domainRequirements A list of domain requirements. Must be non-null.
+   * @param domainRequirements A list of domain requirements.
    * @param credentialsId The ID of the credentials to use for generating clients.
    * @param transport An {@link Optional} parameter that specifies the {@link HttpTransport} to use.
    *     A default will be used if unspecified.
@@ -59,7 +58,7 @@ public class ClientUtil {
   }
 
   /**
-   * Creates a {@link ClientFactory} for generating the GCP api clients.
+   * Creates a {@link ClientFactory} for generating the GCP API clients.
    *
    * @param itemGroup The Jenkins context to use for retrieving the credentials.
    * @param credentialsId The ID of the credentials to use for generating clients.

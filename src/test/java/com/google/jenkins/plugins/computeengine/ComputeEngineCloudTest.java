@@ -47,12 +47,11 @@ import org.mockito.junit.MockitoJUnitRunner;
 
 @RunWith(MockitoJUnitRunner.class)
 public class ComputeEngineCloudTest {
-
-  public static final PrivateKey PRIVATE_KEY;
-  public static final String ACCOUNT_ID = "test-account-id";
-  public static final String PK_ALGO = "test";
-  public static final String PK_FORMAT = "test";
-  public static final byte[] PK_BYTES = new byte[0];
+  private static final PrivateKey PRIVATE_KEY;
+  private static final String ACCOUNT_ID = "test-account-id";
+  private static final String PK_ALGO = "test";
+  private static final String PK_FORMAT = "test";
+  private static final byte[] PK_BYTES = new byte[0];
 
   static {
     PRIVATE_KEY =
