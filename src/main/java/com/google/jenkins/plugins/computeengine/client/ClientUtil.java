@@ -44,6 +44,7 @@ public class ClientUtil {
     Preconditions.checkNotNull(itemGroup);
     Preconditions.checkNotNull(domainRequirements);
     Preconditions.checkArgument(!Strings.isNullOrEmpty(credentialsId));
+    Preconditions.checkNotNull(transport);
 
     ClientFactory clientFactory;
     try {
