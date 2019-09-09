@@ -16,6 +16,7 @@
 
 package com.google.jenkins.plugins.computeengine;
 
+import com.google.cloud.graphite.platforms.plugin.client.ComputeClient.OperationException;
 import com.google.common.base.Strings;
 import com.google.jenkins.plugins.computeengine.ssh.GoogleKeyPair;
 import hudson.Extension;
@@ -40,6 +41,7 @@ import lombok.Getter;
 public class ComputeEngineInstance extends AbstractCloudSlave {
   private static final long serialVersionUID = 1;
   private static final Logger LOGGER = Logger.getLogger(ComputeEngineInstance.class.getName());
+  private static final long CREATE_SNAPSHOT_TIMEOUT = 120000;
 
   // TODO: https://issues.jenkins-ci.org/browse/JENKINS-55518
   private final String zone;
@@ -112,14 +114,19 @@ public class ComputeEngineInstance extends AbstractCloudSlave {
           && computer != null
           && !computer.getBuilds().failureOnly().isEmpty()) {
         LOGGER.log(Level.INFO, "Creating snapshot for node ... " + this.getNodeName());
-        cloud.getClient().createSnapshot(cloud.getProjectId(), this.zone, this.getNodeName());
+        cloud
+            .getClient()
+            .createSnapshotSync(
+                cloud.getProjectId(), this.zone, this.getNodeName(), CREATE_SNAPSHOT_TIMEOUT);
       }
 
       // If the instance is running, attempt to terminate it. This is an asynch call and we
       // return immediately, hoping for the best.
-      cloud.getClient().terminateInstance(cloud.getProjectId(), zone, name);
+      cloud.getClient().terminateInstanceAsync(cloud.getProjectId(), zone, name);
     } catch (CloudNotFoundException cnfe) {
       listener.error(cnfe.getMessage());
+    } catch (OperationException oe) {
+      listener.error(oe.getError().toPrettyString());
     }
   }
 

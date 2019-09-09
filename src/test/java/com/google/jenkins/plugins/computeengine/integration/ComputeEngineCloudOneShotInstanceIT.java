@@ -31,9 +31,9 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNotNull;
 
+import com.google.cloud.graphite.platforms.plugin.client.ComputeClient;
 import com.google.common.collect.ImmutableList;
 import com.google.jenkins.plugins.computeengine.ComputeEngineCloud;
-import com.google.jenkins.plugins.computeengine.client.ComputeClient;
 import hudson.model.FreeStyleBuild;
 import hudson.model.FreeStyleProject;
 import hudson.model.Node;
@@ -131,7 +131,7 @@ public class ComputeEngineCloudOneShotInstanceIT {
     Awaitility.await()
         .timeout(3, TimeUnit.MINUTES)
         .pollInterval(10, TimeUnit.SECONDS)
-        .until(() -> client.getInstancesWithLabel(PROJECT_ID, label).isEmpty());
+        .until(() -> client.listInstancesWithLabel(PROJECT_ID, label).isEmpty());
   }
 
   @Test

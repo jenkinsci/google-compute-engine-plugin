@@ -29,13 +29,12 @@ import static com.google.jenkins.plugins.computeengine.integration.ITUtil.initCl
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.initCredentials;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.teardownResources;
 import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
+import com.google.cloud.graphite.platforms.plugin.client.ComputeClient;
 import com.google.common.collect.ImmutableList;
 import com.google.jenkins.plugins.computeengine.ComputeEngineCloud;
 import com.google.jenkins.plugins.computeengine.InstanceConfiguration;
-import com.google.jenkins.plugins.computeengine.client.ComputeClient;
 import hudson.model.FreeStyleBuild;
 import hudson.model.FreeStyleProject;
 import hudson.model.Node;
@@ -115,20 +114,20 @@ public class ComputeEngineCloudNoSnapshotCreatedIT {
 
   /** Makes sure that the instance is being stopped after completing the job. */
   @Test
-  public void testNoSnapshotCreatedInstanceStopping() throws IOException {
+  public void testNoSnapshotCreatedInstanceStopping() {
     Awaitility.await()
         .timeout(1, TimeUnit.MINUTES)
         .until(() -> "STOPPING".equals(client.getInstance(PROJECT_ID, ZONE, name).getStatus()));
   }
 
   /** Tests that no snapshot is created when we only have successful builds for given node. */
-  @Test
+  @Test(expected = IOException.class)
   public void testNoSnapshotCreatedSnapshotNull() throws Exception {
     // Wait for one-shot instance to terminate and create the snapshot
     Awaitility.await()
         .timeout(2, TimeUnit.MINUTES)
         .pollInterval(10, TimeUnit.SECONDS)
         .until(() -> jenkinsRule.jenkins.getNode(name) == null);
-    assertNull(client.getSnapshot(PROJECT_ID, name));
+    client.getSnapshot(PROJECT_ID, name);
   }
 }

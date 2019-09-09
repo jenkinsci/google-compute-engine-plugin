@@ -27,6 +27,11 @@ Please see the [Google Compute Engine Plugin](docs/Home.md) docs for complete do
 ## Feature requests and bug reports
 Please file feature requests and bug reports under [issues](https://github.com/jenkinsci/google-compute-engine-plugin/issues).
 
+**NOTE**: Starting with version 4.0, you will be required to use version 0.9 or higher of the
+[Google OAuth Credentials plugin](https://github.com/jenkinsci/google-oauth-plugin). Version 0.9 of
+the OAuth plugin is still compatible with older versions of this plugin. Please verify you are
+using the correct versions before filing a bug request.
+
 ## Community
 
 The GCP Jenkins community uses the **#gcp-jenkins** slack channel on

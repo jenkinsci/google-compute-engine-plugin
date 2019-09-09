@@ -16,13 +16,12 @@
 
 package com.google.jenkins.plugins.computeengine;
 
-import com.cloudbees.plugins.credentials.domains.DomainRequirement;
-import com.google.jenkins.plugins.computeengine.client.ClientFactory;
-import com.google.jenkins.plugins.computeengine.client.ComputeClient;
+import com.google.cloud.graphite.platforms.plugin.client.ClientFactory;
+import com.google.cloud.graphite.platforms.plugin.client.ComputeClient;
+import com.google.jenkins.plugins.computeengine.client.ClientUtil;
 import hudson.model.Describable;
 import hudson.model.Descriptor;
 import java.io.IOException;
-import java.util.ArrayList;
 import jenkins.model.Jenkins;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
@@ -61,9 +60,8 @@ public abstract class NetworkConfiguration implements Describable<NetworkConfigu
       if (computeClient != null) {
         return computeClient;
       }
-      ClientFactory clientFactory =
-          new ClientFactory(context, new ArrayList<DomainRequirement>(), credentialsId);
-      return clientFactory.compute();
+      ClientFactory clientFactory = ClientUtil.getClientFactory(context, credentialsId);
+      return clientFactory.computeClient();
     }
 
     public abstract String getDisplayName();

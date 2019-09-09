@@ -16,8 +16,8 @@ package com.google.jenkins.plugins.computeengine;
 
 import com.google.api.services.compute.model.Network;
 import com.google.api.services.compute.model.Subnetwork;
+import com.google.cloud.graphite.platforms.plugin.client.ComputeClient;
 import com.google.common.base.Strings;
-import com.google.jenkins.plugins.computeengine.client.ComputeClient;
 import hudson.Extension;
 import hudson.RelativePath;
 import hudson.util.FormValidation;
@@ -59,7 +59,7 @@ public class AutofilledNetworkConfiguration extends NetworkConfiguration {
 
       try {
         ComputeClient compute = computeClient(context, credentialsId);
-        List<Network> networks = compute.getNetworks(projectId);
+        List<Network> networks = compute.listNetworks(projectId);
 
         for (Network n : networks) {
           items.add(n.getName(), n.getSelfLink());
@@ -95,7 +95,7 @@ public class AutofilledNetworkConfiguration extends NetworkConfiguration {
 
       try {
         ComputeClient compute = computeClient(context, credentialsId);
-        List<Subnetwork> subnetworks = compute.getSubnetworks(projectId, network, region);
+        List<Subnetwork> subnetworks = compute.listSubnetworks(projectId, network, region);
 
         if (subnetworks.size() == 0) {
           items.add(new ListBoxModel.Option("default", "default", true));

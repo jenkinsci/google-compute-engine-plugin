@@ -16,9 +16,8 @@
 
 package com.google.jenkins.plugins.computeengine;
 
-import static com.google.jenkins.plugins.computeengine.client.ComputeClient.nameFromSelfLink;
+import static com.google.cloud.graphite.platforms.plugin.client.util.ClientUtil.nameFromSelfLink;
 
-import com.cloudbees.plugins.credentials.domains.DomainRequirement;
 import com.google.api.services.compute.model.AcceleratorConfig;
 import com.google.api.services.compute.model.AccessConfig;
 import com.google.api.services.compute.model.AttachedDisk;
@@ -36,9 +35,10 @@ import com.google.api.services.compute.model.Scheduling;
 import com.google.api.services.compute.model.ServiceAccount;
 import com.google.api.services.compute.model.Tags;
 import com.google.api.services.compute.model.Zone;
+import com.google.cloud.graphite.platforms.plugin.client.ClientFactory;
+import com.google.cloud.graphite.platforms.plugin.client.ComputeClient;
 import com.google.common.base.Strings;
-import com.google.jenkins.plugins.computeengine.client.ClientFactory;
-import com.google.jenkins.plugins.computeengine.client.ComputeClient;
+import com.google.jenkins.plugins.computeengine.client.ClientUtil;
 import com.google.jenkins.plugins.computeengine.ssh.GoogleKeyPair;
 import edu.umd.cs.findbugs.annotations.Nullable;
 import hudson.Extension;
@@ -59,6 +59,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.logging.Level;
 import jenkins.model.Jenkins;
@@ -296,7 +297,9 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
       Instance instance = instance();
       // TODO: JENKINS-55285
       Operation operation =
-          cloud.getClient().insertInstance(cloud.getProjectId(), template, instance);
+          cloud
+              .getClient()
+              .insertInstance(cloud.getProjectId(), Optional.ofNullable(template), instance);
       log.info("Sent insert request for instance configuration [" + description + "]");
       String targetRemoteFs = this.remoteFs;
       ComputeEngineComputerLauncher launcher;
@@ -564,9 +567,8 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
       if (computeClient != null) {
         return computeClient;
       }
-      ClientFactory clientFactory =
-          new ClientFactory(context, new ArrayList<DomainRequirement>(), credentialsId);
-      return clientFactory.compute();
+      ClientFactory clientFactory = ClientUtil.getClientFactory(context, credentialsId);
+      return clientFactory.computeClient();
     }
 
     @Override
@@ -643,7 +645,7 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
       items.add("");
       try {
         ComputeClient compute = computeClient(context, credentialsId);
-        List<Region> regions = compute.getRegions(projectId);
+        List<Region> regions = compute.listRegions(projectId);
 
         for (Region r : regions) {
           items.add(r.getName(), r.getSelfLink());
@@ -664,7 +666,7 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
       items.add("");
       try {
         ComputeClient compute = computeClient(context, credentialsId);
-        List<InstanceTemplate> instanceTemplates = compute.getTemplates(projectId);
+        List<InstanceTemplate> instanceTemplates = compute.listTemplates(projectId);
 
         for (InstanceTemplate instanceTemplate : instanceTemplates) {
           items.add(instanceTemplate.getName(), instanceTemplate.getSelfLink());
@@ -693,7 +695,7 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
       items.add("");
       try {
         ComputeClient compute = computeClient(context, credentialsId);
-        List<Zone> zones = compute.getZones(projectId, region);
+        List<Zone> zones = compute.listZones(projectId, region);
 
         for (Zone z : zones) {
           items.add(z.getName(), z.getSelfLink());
@@ -725,7 +727,7 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
       items.add("");
       try {
         ComputeClient compute = computeClient(context, credentialsId);
-        List<MachineType> machineTypes = compute.getMachineTypes(projectId, zone);
+        List<MachineType> machineTypes = compute.listMachineTypes(projectId, zone);
 
         for (MachineType m : machineTypes) {
           items.add(m.getName(), m.getSelfLink());
@@ -757,7 +759,7 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
       items.add("");
       try {
         ComputeClient compute = computeClient(context, credentialsId);
-        List<String> cpuPlatforms = compute.cpuPlatforms(projectId, zone);
+        List<String> cpuPlatforms = compute.listCpuPlatforms(projectId, zone);
 
         for (String cpuPlatform : cpuPlatforms) {
           items.add(cpuPlatform);
@@ -781,7 +783,7 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
       ListBoxModel items = new ListBoxModel();
       try {
         ComputeClient compute = computeClient(context, credentialsId);
-        List<DiskType> diskTypes = compute.getBootDiskTypes(projectId, zone);
+        List<DiskType> diskTypes = compute.listBootDiskTypes(projectId, zone);
 
         for (DiskType dt : diskTypes) {
           items.add(dt.getName(), dt.getSelfLink());
@@ -824,7 +826,7 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
       items.add("");
       try {
         ComputeClient compute = computeClient(context, credentialsId);
-        List<Image> images = compute.getImages(projectId);
+        List<Image> images = compute.listImages(projectId);
 
         for (Image i : images) {
           items.add(i.getName(), i.getSelfLink());

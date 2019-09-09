@@ -16,7 +16,7 @@
 
 package com.google.jenkins.plugins.computeengine.integration;
 
-import static com.google.jenkins.plugins.computeengine.client.ComputeClient.nameFromSelfLink;
+import static com.google.cloud.graphite.platforms.plugin.client.util.ClientUtil.nameFromSelfLink;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.DEB_JAVA_STARTUP_SCRIPT;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.LABEL;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.NUM_EXECUTORS;
@@ -38,11 +38,11 @@ import com.google.api.services.compute.model.AccessConfig;
 import com.google.api.services.compute.model.Instance;
 import com.google.api.services.compute.model.InstanceTemplate;
 import com.google.api.services.compute.model.NetworkInterface;
+import com.google.cloud.graphite.platforms.plugin.client.ComputeClient;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.jenkins.plugins.computeengine.ComputeEngineCloud;
 import com.google.jenkins.plugins.computeengine.InstanceConfiguration;
-import com.google.jenkins.plugins.computeengine.client.ComputeClient;
 import com.trilead.ssh2.Connection;
 import com.trilead.ssh2.ServerHostKeyVerifier;
 import hudson.model.labels.LabelAtom;
@@ -106,11 +106,11 @@ public class ComputeEngineCloudTemplateIT {
         createTemplate(ImmutableMap.of(GOOGLE_LABEL_KEY, GOOGLE_LABEL_VALUE), TEMPLATE);
     // ensure an existing template by the same name doesn't already exist
     try {
-      client.deleteTemplate(cloud.getProjectId(), instanceTemplate.getName());
+      client.deleteTemplateAsync(cloud.getProjectId(), instanceTemplate.getName());
     } catch (IOException ioe) {
       // noop
     }
-    client.insertTemplate(cloud.getProjectId(), instanceTemplate);
+    client.insertTemplateAsync(cloud.getProjectId(), instanceTemplate);
     Collection<PlannedNode> planned = cloud.provision(new LabelAtom(LABEL), 1);
     String name = planned.iterator().next().displayName;
 
@@ -121,7 +121,7 @@ public class ComputeEngineCloudTemplateIT {
   @AfterClass
   public static void teardown() throws IOException {
     try {
-      client.deleteTemplate(cloud.getProjectId(), nameFromSelfLink(TEMPLATE));
+      client.deleteTemplateAsync(cloud.getProjectId(), nameFromSelfLink(TEMPLATE));
     } catch (Exception e) {
       // noop
     }

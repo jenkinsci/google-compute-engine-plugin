@@ -33,10 +33,10 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
 import com.google.api.services.compute.model.Snapshot;
+import com.google.cloud.graphite.platforms.plugin.client.ComputeClient;
 import com.google.common.collect.ImmutableList;
 import com.google.jenkins.plugins.computeengine.ComputeEngineCloud;
 import com.google.jenkins.plugins.computeengine.InstanceConfiguration;
-import com.google.jenkins.plugins.computeengine.client.ComputeClient;
 import hudson.model.FreeStyleBuild;
 import hudson.model.FreeStyleProject;
 import hudson.model.Node;
@@ -120,7 +120,7 @@ public class ComputeEngineCloudSnapshotCreatedIT {
   @AfterClass
   public static void teardown() throws IOException {
     if (createdSnapshot != null) {
-      client.deleteSnapshot(PROJECT_ID, createdSnapshot.getName());
+      client.deleteSnapshotAsync(PROJECT_ID, createdSnapshot.getName());
     }
     teardownResources(client, label, log);
   }
@@ -140,6 +140,6 @@ public class ComputeEngineCloudSnapshotCreatedIT {
   public void testSnapshotCreatedOneShotInstanceDeleted() {
     Awaitility.await()
         .timeout(SNAPSHOT_TEST_TIMEOUT, TimeUnit.SECONDS)
-        .until(() -> client.getInstancesWithLabel(PROJECT_ID, label).isEmpty());
+        .until(() -> client.listInstancesWithLabel(PROJECT_ID, label).isEmpty());
   }
 }

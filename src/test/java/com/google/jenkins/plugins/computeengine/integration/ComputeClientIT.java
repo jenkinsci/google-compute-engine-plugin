@@ -24,7 +24,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 
 import com.google.api.services.compute.model.Image;
-import com.google.jenkins.plugins.computeengine.client.ComputeClient;
+import com.google.cloud.graphite.platforms.plugin.client.ComputeClient;
 import java.io.IOException;
 import java.util.Map;
 import java.util.logging.Logger;

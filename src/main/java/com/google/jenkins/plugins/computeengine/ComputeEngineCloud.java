@@ -24,10 +24,11 @@ import com.cloudbees.plugins.credentials.common.StandardCredentials;
 import com.cloudbees.plugins.credentials.common.StandardListBoxModel;
 import com.cloudbees.plugins.credentials.domains.DomainRequirement;
 import com.google.api.services.compute.model.Instance;
+import com.google.cloud.graphite.platforms.plugin.client.ClientFactory;
+import com.google.cloud.graphite.platforms.plugin.client.ComputeClient;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableMap;
-import com.google.jenkins.plugins.computeengine.client.ClientFactory;
-import com.google.jenkins.plugins.computeengine.client.ComputeClient;
+import com.google.jenkins.plugins.computeengine.client.ClientUtil;
 import com.google.jenkins.plugins.credentials.oauth.GoogleOAuth2Credentials;
 import hudson.Extension;
 import hudson.model.Computer;
@@ -173,9 +174,8 @@ public class ComputeEngineCloud extends AbstractCloudImpl {
 
   private ComputeClient createClient() {
     try {
-      ClientFactory clientFactory =
-          new ClientFactory(Jenkins.get(), new ArrayList<>(), credentialsId);
-      return clientFactory.compute();
+      ClientFactory clientFactory = ClientUtil.getClientFactory(Jenkins.get(), credentialsId);
+      return clientFactory.computeClient();
     } catch (IOException e) {
       log.log(Level.SEVERE, "Exception when creating GCE client", e);
       // TODO: https://github.com/jenkinsci/google-compute-engine-plugin/issues/62
@@ -331,7 +331,7 @@ public class ComputeEngineCloud extends AbstractCloudImpl {
       // We only care about instances that have a label indicating they
       // belong to this cloud
       Map<String, String> filterLabel = ImmutableMap.of(CLOUD_ID_LABEL_KEY, getInstanceId());
-      List<Instance> instances = getClient().getInstancesWithLabel(projectId, filterLabel);
+      List<Instance> instances = getClient().listInstancesWithLabel(projectId, filterLabel);
 
       // Don't count instances that are not running (or starting up)
       Iterator it = instances.iterator();
@@ -464,10 +464,9 @@ public class ComputeEngineCloud extends AbstractCloudImpl {
       if (projectId.isEmpty())
         return FormValidation.error("Project ID required to validate credential");
       try {
-        ClientFactory clientFactory =
-            new ClientFactory(context, new ArrayList<DomainRequirement>(), value);
-        ComputeClient compute = clientFactory.compute();
-        compute.getRegions(projectId);
+        ClientFactory clientFactory = ClientUtil.getClientFactory(context, value);
+        ComputeClient compute = clientFactory.computeClient();
+        compute.listRegions(projectId);
         return FormValidation.ok(
             "The credential successfully made an API request to Google Compute Engine.");
       } catch (IOException ioe) {

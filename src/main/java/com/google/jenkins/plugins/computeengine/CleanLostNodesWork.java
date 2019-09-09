@@ -72,7 +72,9 @@ public class CleanLostNodesWork extends PeriodicWork {
     String instanceName = remote.getName();
     logger.log(Level.INFO, "Remote instance " + instanceName + " not found locally, removing it");
     try {
-      cloud.getClient().terminateInstance(cloud.getProjectId(), remote.getZone(), instanceName);
+      cloud
+          .getClient()
+          .terminateInstanceAsync(cloud.getProjectId(), remote.getZone(), instanceName);
     } catch (IOException ex) {
       logger.log(Level.WARNING, "Error terminating remote instance " + instanceName, ex);
     }
@@ -97,7 +99,7 @@ public class CleanLostNodesWork extends PeriodicWork {
   private List<Instance> findRemoteInstances(ComputeEngineCloud cloud) {
     Map<String, String> filterLabel = of(CLOUD_ID_LABEL_KEY, cloud.getInstanceId());
     try {
-      return cloud.getClient().getInstancesWithLabel(cloud.getProjectId(), filterLabel).stream()
+      return cloud.getClient().listInstancesWithLabel(cloud.getProjectId(), filterLabel).stream()
           .filter(instance -> shouldTerminateStatus(instance.getStatus()))
           .collect(Collectors.toList());
     } catch (IOException ex) {

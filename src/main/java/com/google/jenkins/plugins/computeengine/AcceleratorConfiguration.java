@@ -16,17 +16,16 @@
 
 package com.google.jenkins.plugins.computeengine;
 
-import com.cloudbees.plugins.credentials.domains.DomainRequirement;
 import com.google.api.services.compute.model.AcceleratorType;
-import com.google.jenkins.plugins.computeengine.client.ClientFactory;
-import com.google.jenkins.plugins.computeengine.client.ComputeClient;
+import com.google.cloud.graphite.platforms.plugin.client.ClientFactory;
+import com.google.cloud.graphite.platforms.plugin.client.ComputeClient;
+import com.google.jenkins.plugins.computeengine.client.ClientUtil;
 import hudson.Extension;
 import hudson.RelativePath;
 import hudson.model.Describable;
 import hudson.model.Descriptor;
 import hudson.util.ListBoxModel;
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.List;
 import jenkins.model.Jenkins;
 import lombok.EqualsAndHashCode;
@@ -74,9 +73,8 @@ public class AcceleratorConfiguration implements Describable<AcceleratorConfigur
       if (computeClient != null) {
         return computeClient;
       }
-      ClientFactory clientFactory =
-          new ClientFactory(context, new ArrayList<DomainRequirement>(), credentialsId);
-      return clientFactory.compute();
+      ClientFactory clientFactory = ClientUtil.getClientFactory(context, credentialsId);
+      return clientFactory.computeClient();
     }
 
     public ListBoxModel doFillGpuTypeItems(
@@ -87,7 +85,7 @@ public class AcceleratorConfiguration implements Describable<AcceleratorConfigur
       ListBoxModel items = new ListBoxModel();
       try {
         ComputeClient compute = computeClient(context, credentialsId);
-        List<AcceleratorType> acceleratorTypes = compute.getAcceleratorTypes(projectId, zone);
+        List<AcceleratorType> acceleratorTypes = compute.listAcceleratorTypes(projectId, zone);
 
         for (AcceleratorType a : acceleratorTypes) {
           items.add(a.getName(), a.getSelfLink());

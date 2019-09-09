@@ -16,11 +16,11 @@
 
 package com.google.jenkins.plugins.computeengine.integration;
 
+import static com.google.cloud.graphite.platforms.plugin.client.util.ClientUtil.nameFromSelfLink;
 import static com.google.common.collect.ImmutableList.of;
 import static com.google.jenkins.plugins.computeengine.InstanceConfiguration.METADATA_LINUX_STARTUP_SCRIPT_KEY;
 import static com.google.jenkins.plugins.computeengine.InstanceConfiguration.NAT_NAME;
 import static com.google.jenkins.plugins.computeengine.InstanceConfiguration.NAT_TYPE;
-import static com.google.jenkins.plugins.computeengine.client.ComputeClient.nameFromSelfLink;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
@@ -28,6 +28,7 @@ import static org.junit.Assert.fail;
 
 import com.cloudbees.plugins.credentials.Credentials;
 import com.cloudbees.plugins.credentials.CredentialsStore;
+import com.cloudbees.plugins.credentials.SecretBytes;
 import com.cloudbees.plugins.credentials.SystemCredentialsProvider;
 import com.cloudbees.plugins.credentials.domains.Domain;
 import com.google.api.services.compute.model.AccessConfig;
@@ -40,23 +41,23 @@ import com.google.api.services.compute.model.Metadata;
 import com.google.api.services.compute.model.NetworkInterface;
 import com.google.api.services.compute.model.Operation;
 import com.google.api.services.compute.model.Tags;
+import com.google.cloud.graphite.platforms.plugin.client.ClientFactory;
+import com.google.cloud.graphite.platforms.plugin.client.ComputeClient;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableMap;
 import com.google.jenkins.plugins.computeengine.AcceleratorConfiguration;
 import com.google.jenkins.plugins.computeengine.AutofilledNetworkConfiguration;
 import com.google.jenkins.plugins.computeengine.ComputeEngineCloud;
 import com.google.jenkins.plugins.computeengine.InstanceConfiguration;
-import com.google.jenkins.plugins.computeengine.StringJsonServiceAccountConfig;
-import com.google.jenkins.plugins.computeengine.client.ClientFactory;
-import com.google.jenkins.plugins.computeengine.client.ComputeClient;
+import com.google.jenkins.plugins.computeengine.client.ClientUtil;
 import com.google.jenkins.plugins.computeengine.ssh.GoogleKeyPair;
 import com.google.jenkins.plugins.credentials.oauth.GoogleRobotPrivateKeyCredentials;
-import com.google.jenkins.plugins.credentials.oauth.ServiceAccountConfig;
+import com.google.jenkins.plugins.credentials.oauth.JsonServiceAccountConfig;
 import hudson.model.Node;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.logging.Logger;
@@ -77,7 +78,7 @@ class ITUtil {
 
   static final String PROJECT_ID = System.getenv("GOOGLE_PROJECT_ID");
   private static final String CREDENTIALS = loadCredentialsString();
-  private static final String CLOUD_NAME = "integration";
+  static final String CLOUD_NAME = "integration";
   private static final String NAME_PREFIX = "integration";
   private static final String REGION = format("projects/%s/regions/us-west1");
   static final String ZONE = "us-west1-a";
@@ -141,7 +142,10 @@ class ITUtil {
   }
 
   static Credentials initCredentials(JenkinsRule r) throws Exception {
-    ServiceAccountConfig sac = new StringJsonServiceAccountConfig(CREDENTIALS);
+    SecretBytes bytes = SecretBytes.fromBytes(CREDENTIALS.getBytes(StandardCharsets.UTF_8));
+    JsonServiceAccountConfig sac = new JsonServiceAccountConfig();
+    sac.setSecretJsonKey(bytes);
+    assertNotNull(sac.getAccountId());
     Credentials credentials = new GoogleRobotPrivateKeyCredentials(PROJECT_ID, sac, null);
 
     CredentialsStore store = new SystemCredentialsProvider.ProviderImpl().getStore(r.jenkins);
@@ -162,9 +166,8 @@ class ITUtil {
   // Get a compute client for out-of-band calls to GCE
   static ComputeClient initClient(JenkinsRule jenkinsRule, Map<String, String> label, Logger log)
       throws IOException {
-    ClientFactory clientFactory =
-        new ClientFactory(jenkinsRule.jenkins, new ArrayList<>(), PROJECT_ID);
-    ComputeClient client = clientFactory.compute();
+    ClientFactory clientFactory = ClientUtil.getClientFactory(jenkinsRule.jenkins, PROJECT_ID);
+    ComputeClient client = clientFactory.computeClient();
     assertNotNull("ComputeClient can not be null", client);
     deleteIntegrationInstances(true, client, label, log);
     return client;
@@ -253,7 +256,7 @@ class ITUtil {
   private static void deleteIntegrationInstances(
       boolean waitForCompletion, ComputeClient client, Map<String, String> label, Logger log)
       throws IOException {
-    List<Instance> instances = client.getInstancesWithLabel(PROJECT_ID, label);
+    List<Instance> instances = client.listInstancesWithLabel(PROJECT_ID, label);
     for (Instance i : instances) {
       safeDelete(i.getName(), waitForCompletion, client, log);
     }
@@ -262,7 +265,7 @@ class ITUtil {
   private static void safeDelete(
       String instanceId, boolean waitForCompletion, ComputeClient client, Logger log) {
     try {
-      Operation operation = client.terminateInstance(PROJECT_ID, ZONE, instanceId);
+      Operation operation = client.terminateInstanceAsync(PROJECT_ID, ZONE, instanceId);
       if (waitForCompletion) {
         client.waitForOperationCompletion(
             PROJECT_ID, operation.getName(), operation.getZone(), 3 * 60 * 1000);

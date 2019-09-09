@@ -20,9 +20,9 @@ import static org.mockito.ArgumentMatchers.anyString;
 
 import com.google.api.services.compute.model.Network;
 import com.google.api.services.compute.model.Subnetwork;
+import com.google.cloud.graphite.platforms.plugin.client.ComputeClient;
 import com.google.common.collect.ImmutableList;
 import com.google.jenkins.plugins.computeengine.AutofilledNetworkConfiguration.DescriptorImpl;
-import com.google.jenkins.plugins.computeengine.client.ComputeClient;
 import hudson.util.FormValidation;
 import hudson.util.FormValidation.Kind;
 import hudson.util.ListBoxModel;
@@ -142,7 +142,8 @@ public class AutofilledNetworkConfigurationTest {
     networkNames.forEach(
         network -> networks.add(new Network().setName(network).setSelfLink(network)));
     ComputeClient computeClient = Mockito.mock(ComputeClient.class);
-    Mockito.when(computeClient.getNetworks(anyString())).thenReturn(networks);
+    Mockito.when(computeClient.listNetworks(anyString()))
+        .thenReturn(ImmutableList.copyOf(networks));
     DescriptorImpl.setComputeClient(computeClient);
     return new DescriptorImpl();
   }
@@ -153,8 +154,8 @@ public class AutofilledNetworkConfigurationTest {
     subnetworkNames.forEach(
         subnet -> subnetworks.add(new Subnetwork().setName(subnet).setSelfLink(subnet)));
     ComputeClient computeClient = Mockito.mock(ComputeClient.class);
-    Mockito.when(computeClient.getSubnetworks(anyString(), anyString(), anyString()))
-        .thenReturn(subnetworks);
+    Mockito.when(computeClient.listSubnetworks(anyString(), anyString(), anyString()))
+        .thenReturn(ImmutableList.copyOf(subnetworks));
     DescriptorImpl.setComputeClient(computeClient);
     return new DescriptorImpl();
   }
