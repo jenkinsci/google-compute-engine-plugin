@@ -14,6 +14,31 @@
 # Changelog
 All notable changes to this project will be documented in this file.
 
+## [4.0.0] - 2019-09-??
+### Added
+- Completion goal for maven-release-plugin to format the pom file before creating the final commit.
+- Dependency com.google.cloud.graphite:gcp-client:0.1.2 as a replacement for included client.
+- ClientUtil to handle generating ClientFactory from
+[gcp-plugin-core-java](https://github.com/GoogleCloudPlatform/gcp-plugin-core-java).
+
+### Changed
+- Snapshot creation is now parallelized. The timeout of 120 seconds is unchanged.
+- Parent org.jenkins-ci.plugins:plugin version changed: 3.36 to 3.39
+- Jenkins core version changed: 2.107.1 to 2.138.4
+- io.jenkins:configuration-as-code version changed: 1.9 to 1.14
+- org.jenkins-ci.plugins:google-oauth-plugin version changed: 0.6 to 0.9
+- org.jenkins-ci.plugins:ssh-credentials version changed: 1.13 to 1.17
+- org.jenkins-ci.plugins:credentials version changed: 2.1.16 to 2.2.0
+- com.google.guava version changed: 19.0 to 14.0.1
+- org.awaitility:awaitility version changed: 3.0.0 to 3.1.6
+
+### Removed
+- com.google.apis:google-api-services-compute - The use of this client is now handled by
+gcp-plugin-core-java
+- ComputeClient and ClientFactory plus associated tests, migrated to gcp-plugin-core-java.
+- StringJsonServiceAccountConfig: Use JsonServiceAccountConfig from the google-oauth-plugin directly
+for tests instead.
+
 ## [3.4.0] - 2019-07-26
 ### Added
 - PR #129/Issue #124: Add help text and verification text to discourage users from assigning
