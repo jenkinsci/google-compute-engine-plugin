@@ -246,7 +246,7 @@ public class ComputeEngineCloudWindowsIT {
 
   // Tests snapshot is created when we have failure builds for given node
   // Snapshot creation is longer for windows one-shot vm's.
-  @Test(timeout = 0)
+  @Test(timeout = 800000)
   public void testSnapshotCreated() throws Exception {
     logOutput.reset();
 

@@ -41,7 +41,8 @@ import lombok.Getter;
 public class ComputeEngineInstance extends AbstractCloudSlave {
   private static final long serialVersionUID = 1;
   private static final Logger LOGGER = Logger.getLogger(ComputeEngineInstance.class.getName());
-  private static final long CREATE_SNAPSHOT_TIMEOUT = 120000;
+  private static final long CREATE_SNAPSHOT_TIMEOUT_LINUX = 120000;
+  private static final long CREATE_SNAPSHOT_TIMEOUT_WINDOWS = 600000;
 
   // TODO: https://issues.jenkins-ci.org/browse/JENKINS-55518
   private final String zone;
@@ -117,10 +118,14 @@ public class ComputeEngineInstance extends AbstractCloudSlave {
           && computer != null
           && !computer.getBuilds().failureOnly().isEmpty()) {
         LOGGER.log(Level.INFO, "Creating snapshot for node ... " + this.getNodeName());
+        long createSnapshotTimeout =
+            (windowsConfig != null)
+                ? CREATE_SNAPSHOT_TIMEOUT_WINDOWS
+                : CREATE_SNAPSHOT_TIMEOUT_LINUX;
         cloud
             .getClient()
             .createSnapshotSync(
-                cloud.getProjectId(), this.zone, this.getNodeName(), CREATE_SNAPSHOT_TIMEOUT);
+                cloud.getProjectId(), this.zone, this.getNodeName(), createSnapshotTimeout);
       }
 
       // If the instance is running, attempt to terminate it. This is an asynch call and we

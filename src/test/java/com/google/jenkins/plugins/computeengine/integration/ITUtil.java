@@ -105,7 +105,7 @@ class ITUtil {
   private static final String NETWORK_NAME = format("projects/%s/global/networks/default");
   private static final String SUBNETWORK_NAME = "default";
   private static final boolean EXTERNAL_ADDR = true;
-  private static final String NETWORK_TAGS = "ssh";
+  private static final String NETWORK_TAGS = "jenkins-agent ssh";
   private static final String SERVICE_ACCOUNT_EMAIL = "";
   private static final String RETENTION_TIME_MINUTES_STR = "";
   private static final String LAUNCH_TIMEOUT_SECONDS_STR = "";
