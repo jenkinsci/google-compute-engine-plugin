@@ -44,6 +44,7 @@ import com.google.jenkins.plugins.computeengine.InstanceConfiguration;
 import com.google.jenkins.plugins.computeengine.WindowsConfiguration;
 import com.google.jenkins.plugins.computeengine.client.ClientUtil;
 import com.google.jenkins.plugins.computeengine.ssh.GoogleKeyPair;
+import hudson.ProxyConfiguration;
 import hudson.model.FreeStyleBuild;
 import hudson.model.FreeStyleProject;
 import hudson.model.Node;
@@ -59,17 +60,22 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.logging.LogManager;
 import java.util.logging.Logger;
 import java.util.logging.SimpleFormatter;
 import java.util.logging.StreamHandler;
+import jenkins.model.Jenkins;
 import org.awaitility.Awaitility;
+import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Test;
+import org.junit.rules.Timeout;
 import org.jvnet.hudson.test.JenkinsRule;
 
 /** Integration test for launching windows VM. Tests that agents can be created properly. */
@@ -102,6 +108,7 @@ public class ComputeEngineCloudWindowsIT {
   private static String windowsPrivateKeyCredentialId;
 
   @ClassRule public static JenkinsRule r = new JenkinsRule();
+  @ClassRule public static Timeout timeout = new Timeout(20, TimeUnit.MINUTES);
 
   @BeforeClass
   public static void init() throws Exception {
@@ -174,6 +181,13 @@ public class ComputeEngineCloudWindowsIT {
   public void before() {
     ComputeEngineCloud cloud = (ComputeEngineCloud) r.jenkins.clouds.get(0);
     cloud.setConfigurations(new ArrayList<>());
+  }
+
+  @After
+  public void after() throws IOException {
+    Jenkins jenkins = r.getInstance();
+    jenkins.proxy = null;
+    jenkins.save();
   }
 
   @Test
@@ -268,6 +282,39 @@ public class ComputeEngineCloudWindowsIT {
     }
   }
 
+  @Test(timeout = 500000)
+  public void testIgnoreProxy() throws Exception {
+    logOutput.reset();
+
+    ComputeEngineCloud cloud = (ComputeEngineCloud) r.jenkins.clouds.get(0);
+    Jenkins jenkins = r.getInstance();
+    jenkins.proxy = new ProxyConfiguration("127.0.0.1", 8080);
+    jenkins.proxy.save();
+    jenkins.save();
+    InstanceConfiguration instanceConfiguration = validInstanceConfiguration1(LABEL, false, true);
+    instanceConfiguration.setIgnoreProxy(true);
+    cloud.setConfigurations(ImmutableList.of(instanceConfiguration));
+
+    FreeStyleProject project = r.createFreeStyleProject();
+    Builder step = new BatchFile("echo works");
+    project.getBuildersList().add(step);
+    project.setAssignedLabel(new LabelAtom(LABEL));
+
+    r.buildAndAssertSuccess(project);
+
+    cloud.getConfigurations().get(0).setIgnoreProxy(false);
+    Future<FreeStyleBuild> buildFuture = project.scheduleBuild2(0);
+    FreeStyleBuild build;
+    try {
+      build = buildFuture.get(120, TimeUnit.SECONDS);
+    } catch (TimeoutException e) {
+      e.printStackTrace();
+      return;
+    }
+    assertNotNull(build);
+    assertEquals(Result.FAILURE, build.getResult());
+  }
+
   /**
    * Creates an instance configuration for a node that will get a snapshot created upon deletion if
    * there is a build failure.
@@ -300,7 +347,7 @@ public class ComputeEngineCloudWindowsIT {
             + "# We are in the second phase of startup where we need to set up authorized_keys for the specified user.\n"
             + "# Create the .ssh folder and authorized_keys file.\n"
             + "Set-Content -Path $env:PROGRAMDATA\\ssh\\administrators_authorized_keys -Value $ConfiguredPublicKey\n"
-            + "icacls $env:PROGRAMDATA\\ssh\\administrators_authorized_keys /inheritance:jenkinsRule\n"
+            + "icacls $env:PROGRAMDATA\\ssh\\administrators_authorized_keys /inheritance:r\n"
             + "icacls $env:PROGRAMDATA\\ssh\\administrators_authorized_keys /grant SYSTEM:`(F`)\n"
             + "icacls $env:PROGRAMDATA\\ssh\\administrators_authorized_keys /grant BUILTIN\\Administrators:`(F`)\n"
             + "Restart-Service sshd";
