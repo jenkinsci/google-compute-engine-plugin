@@ -331,7 +331,8 @@ public class ComputeEngineCloud extends AbstractCloudImpl {
       // We only care about instances that have a label indicating they
       // belong to this cloud
       Map<String, String> filterLabel = ImmutableMap.of(CLOUD_ID_LABEL_KEY, getInstanceId());
-      List<Instance> instances = getClient().listInstancesWithLabel(projectId, filterLabel);
+      List<Instance> instances =
+          new ArrayList<>(getClient().listInstancesWithLabel(projectId, filterLabel));
 
       // Don't count instances that are not running (or starting up)
       Iterator it = instances.iterator();
