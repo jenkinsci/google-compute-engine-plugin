@@ -50,8 +50,9 @@ public abstract class ComputeEngineComputerLauncher extends ComputerLauncher {
   private static final String AGENT_JAR = "agent.jar";
 
   // TODO(google-compute-engine-plugin/issues/134): make this configurable
-  public static final Integer SSH_PORT = 22;
-  public static final Integer SSH_TIMEOUT = 10000;
+  private static final int SSH_PORT = 22;
+  private static final int SSH_TIMEOUT_MILLIS = 10000;
+  private static final int SSH_SLEEP_MILLIS = 5000;
 
   private final String insertOperationId;
   private final String zone;
@@ -370,7 +371,13 @@ public abstract class ComputeEngineComputerLauncher extends ComputerLauncher {
         logInfo(
             computer,
             listener,
-            "Connecting to " + host + " on port " + port + ", with timeout " + SSH_TIMEOUT + ".");
+            "Connecting to "
+                + host
+                + " on port "
+                + port
+                + ", with timeout "
+                + SSH_TIMEOUT_MILLIS
+                + ".");
         Connection conn = new Connection(host, port);
         ProxyConfiguration proxyConfig = Jenkins.get().proxy;
         Proxy proxy = proxyConfig == null ? Proxy.NO_PROXY : proxyConfig.createProxy(host);
@@ -401,15 +408,15 @@ public abstract class ComputeEngineComputerLauncher extends ComputerLauncher {
                 return true;
               }
             },
-            SSH_TIMEOUT,
-            SSH_TIMEOUT);
+            SSH_TIMEOUT_MILLIS,
+            SSH_TIMEOUT_MILLIS);
         logInfo(computer, listener, "Connected via SSH.");
         return conn;
       } catch (IOException e) {
         // keep retrying until SSH comes up
         logInfo(computer, listener, "Failed to connect via ssh: " + e.getMessage());
         logInfo(computer, listener, "Waiting for SSH to come up. Sleeping 5.");
-        Thread.sleep(5000);
+        Thread.sleep(SSH_SLEEP_MILLIS);
       }
     }
   }
