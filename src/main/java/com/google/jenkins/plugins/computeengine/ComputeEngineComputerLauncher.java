@@ -24,7 +24,6 @@ import com.google.cloud.graphite.platforms.plugin.client.ComputeClient.Operation
 import com.trilead.ssh2.Connection;
 import com.trilead.ssh2.HTTPProxyData;
 import com.trilead.ssh2.SCPClient;
-import com.trilead.ssh2.ServerHostKeyVerifier;
 import com.trilead.ssh2.Session;
 import hudson.ProxyConfiguration;
 import hudson.model.TaskListener;
@@ -401,13 +400,7 @@ public abstract class ComputeEngineComputerLauncher extends ComputerLauncher {
         }
         // TODO(google-compute-engine-plugin/issues/137): verify host key
         conn.connect(
-            new ServerHostKeyVerifier() {
-              public boolean verifyServerHostKey(
-                  String hostname, int port, String serverHostKeyAlgorithm, byte[] serverHostKey)
-                  throws Exception {
-                return true;
-              }
-            },
+            (hostname, portNum, serverHostKeyAlgorithm, serverHostKey) -> true,
             SSH_TIMEOUT_MILLIS,
             SSH_TIMEOUT_MILLIS);
         logInfo(computer, listener, "Connected via SSH.");
