@@ -385,7 +385,7 @@ public abstract class ComputeEngineComputerLauncher extends ComputerLauncher {
             && proxy.address() instanceof InetSocketAddress) {
           InetSocketAddress address = (InetSocketAddress) proxy.address();
           HTTPProxyData proxyData = null;
-          if (proxyConfig.getUserName() != null) {
+          if (proxyConfig.getUserName() != null && proxyConfig.getPassword() != null) {
             proxyData =
                 new HTTPProxyData(
                     address.getHostName(),
