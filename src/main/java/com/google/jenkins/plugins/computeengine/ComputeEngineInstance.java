@@ -41,7 +41,8 @@ import lombok.Getter;
 public class ComputeEngineInstance extends AbstractCloudSlave {
   private static final long serialVersionUID = 1;
   private static final Logger LOGGER = Logger.getLogger(ComputeEngineInstance.class.getName());
-  private static final long CREATE_SNAPSHOT_TIMEOUT = 120000;
+  private static final long CREATE_SNAPSHOT_TIMEOUT_LINUX = 120000;
+  private static final long CREATE_SNAPSHOT_TIMEOUT_WINDOWS = 600000;
 
   // TODO: https://issues.jenkins-ci.org/browse/JENKINS-55518
   private final String zone;
@@ -50,6 +51,7 @@ public class ComputeEngineInstance extends AbstractCloudSlave {
   private final WindowsConfiguration windowsConfig;
   private final boolean createSnapshot;
   private final boolean oneShot;
+  private final boolean ignoreProxy;
   private final String javaExecPath;
   private final GoogleKeyPair sshKeyPair;
   private Integer launchTimeout; // Seconds
@@ -67,6 +69,7 @@ public class ComputeEngineInstance extends AbstractCloudSlave {
       @Nullable WindowsConfiguration windowsConfig,
       boolean createSnapshot,
       boolean oneShot,
+      boolean ignoreProxy,
       int numExecutors,
       Mode mode,
       String labelString,
@@ -94,6 +97,7 @@ public class ComputeEngineInstance extends AbstractCloudSlave {
     this.windowsConfig = windowsConfig;
     this.createSnapshot = createSnapshot;
     this.oneShot = oneShot;
+    this.ignoreProxy = ignoreProxy;
     this.javaExecPath = javaExecPath;
     this.sshKeyPair = sshKeyPair;
   }
@@ -114,10 +118,14 @@ public class ComputeEngineInstance extends AbstractCloudSlave {
           && computer != null
           && !computer.getBuilds().failureOnly().isEmpty()) {
         LOGGER.log(Level.INFO, "Creating snapshot for node ... " + this.getNodeName());
+        long createSnapshotTimeout =
+            (windowsConfig != null)
+                ? CREATE_SNAPSHOT_TIMEOUT_WINDOWS
+                : CREATE_SNAPSHOT_TIMEOUT_LINUX;
         cloud
             .getClient()
             .createSnapshotSync(
-                cloud.getProjectId(), this.zone, this.getNodeName(), CREATE_SNAPSHOT_TIMEOUT);
+                cloud.getProjectId(), this.zone, this.getNodeName(), createSnapshotTimeout);
       }
 
       // If the instance is running, attempt to terminate it. This is an asynch call and we

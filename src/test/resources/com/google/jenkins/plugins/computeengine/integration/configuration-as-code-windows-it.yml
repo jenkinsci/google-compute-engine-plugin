@@ -26,7 +26,7 @@ jenkins:
             machineType:        "https://www.googleapis.com/compute/v1/projects/${env.GOOGLE_PROJECT_ID}/zones/us-west1-a/machineTypes/n1-standard-1"
             preemptible:        false
             minCpuPlatform:     '' # tried not setting, added when 'saved' in UI
-            startupScript:      "Stop-Service sshd\n$ConfiguredPublicKey = \":${env.GOOGLE_PUBLIC_KEY}\"\nWrite-Output \"Second phase\"\nSet-Content -Path $env:PROGRAMDATA\\ssh\\administrators_authorized_keys -Value $ConfiguredPublicKey\nicacls $env:PROGRAMDATA\\ssh\\administrators_authorized_keys /inheritance:jenkinsRule\nicacls $env:PROGRAMDATA\\ssh\\administrators_authorized_keys /grant SYSTEM:`(F`)\nicacls $env:PROGRAMDATA\\ssh\\administrators_authorized_keys /grant BUILTIN\\Administrators:`(F`)\nRestart-Service sshd"
+            startupScript:      "Stop-Service sshd\n$ConfiguredPublicKey = \":${env.GOOGLE_PUBLIC_KEY}\"\nWrite-Output \"Second phase\"\nSet-Content -Path $env:PROGRAMDATA\\ssh\\administrators_authorized_keys -Value $ConfiguredPublicKey\nicacls $env:PROGRAMDATA\\ssh\\administrators_authorized_keys /inheritance:r\nicacls $env:PROGRAMDATA\\ssh\\administrators_authorized_keys /grant SYSTEM:`(F`)\nicacls $env:PROGRAMDATA\\ssh\\administrators_authorized_keys /grant BUILTIN\\Administrators:`(F`)\nRestart-Service sshd"
             networkConfiguration:
               autofilled:
                 network:        default

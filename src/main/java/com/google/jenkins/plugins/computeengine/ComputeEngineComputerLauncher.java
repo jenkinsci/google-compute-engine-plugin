@@ -16,23 +16,31 @@
 
 package com.google.jenkins.plugins.computeengine;
 
+import com.google.api.services.compute.model.AccessConfig;
+import com.google.api.services.compute.model.Instance;
+import com.google.api.services.compute.model.NetworkInterface;
 import com.google.api.services.compute.model.Operation;
 import com.google.cloud.graphite.platforms.plugin.client.ComputeClient.OperationException;
 import com.trilead.ssh2.Connection;
+import com.trilead.ssh2.HTTPProxyData;
 import com.trilead.ssh2.SCPClient;
 import com.trilead.ssh2.Session;
+import hudson.ProxyConfiguration;
 import hudson.model.TaskListener;
 import hudson.remoting.Channel;
 import hudson.slaves.ComputerLauncher;
 import hudson.slaves.SlaveComputer;
 import java.io.IOException;
 import java.io.PrintStream;
+import java.net.InetSocketAddress;
+import java.net.Proxy;
 import java.util.Optional;
 import java.util.logging.Level;
 import java.util.logging.LogRecord;
 import java.util.logging.Logger;
 import java.util.logging.SimpleFormatter;
 import jenkins.model.Jenkins;
+import lombok.Getter;
 
 public abstract class ComputeEngineComputerLauncher extends ComputerLauncher {
   private static final Logger LOGGER =
@@ -40,15 +48,23 @@ public abstract class ComputeEngineComputerLauncher extends ComputerLauncher {
   private static final SimpleFormatter sf = new SimpleFormatter();
   private static final String AGENT_JAR = "agent.jar";
 
+  // TODO(google-compute-engine-plugin/issues/134): make this configurable
+  private static final int SSH_PORT = 22;
+  private static final int SSH_TIMEOUT_MILLIS = 10000;
+  private static final int SSH_SLEEP_MILLIS = 5000;
+
   private final String insertOperationId;
   private final String zone;
   private final String cloudName;
+  @Getter protected final boolean useInternalAddress;
 
-  public ComputeEngineComputerLauncher(String cloudName, String insertOperationId, String zone) {
+  public ComputeEngineComputerLauncher(
+      String cloudName, String insertOperationId, String zone, boolean useInternalAddress) {
     super();
     this.cloudName = cloudName;
     this.insertOperationId = insertOperationId;
     this.zone = zone;
+    this.useInternalAddress = useInternalAddress;
   }
 
   public static void log(Logger logger, Level level, TaskListener listener, String message) {
@@ -302,6 +318,101 @@ public abstract class ComputeEngineComputerLauncher extends ComputerLauncher {
           });
     } catch (Exception e) {
       logException(computer, listener, "Error: ", e);
+    }
+  }
+
+  protected Connection connectToSsh(ComputeEngineComputer computer, TaskListener listener)
+      throws Exception {
+    ComputeEngineInstance node = computer.getNode();
+    if (node == null) {
+      throw new IllegalArgumentException("A ComputeEngineComputer with no node was provided");
+    }
+
+    final long timeout = node.getLaunchTimeoutMillis();
+    final long startTime = System.currentTimeMillis();
+    while (true) {
+      try {
+        long waitTime = System.currentTimeMillis() - startTime;
+        if (timeout > 0 && waitTime > timeout) {
+          // TODO(google-compute-engine-plugin/issues/135): better exception
+          throw new Exception(
+              "Timed out after "
+                  + (waitTime / 1000)
+                  + " seconds of waiting for ssh to become available. (maximum timeout configured is "
+                  + (timeout / 1000)
+                  + ")");
+        }
+        Instance instance = computer.refreshInstance();
+
+        String host = "";
+
+        // TODO(google-compute-engine-plugin/issues/136): handle multiple NICs
+        NetworkInterface nic = instance.getNetworkInterfaces().get(0);
+
+        if (this.useInternalAddress) {
+          host = nic.getNetworkIP();
+        } else {
+          // Look for a public IP address
+          if (nic.getAccessConfigs() != null) {
+            for (AccessConfig ac : nic.getAccessConfigs()) {
+              if (ac.getType().equals(InstanceConfiguration.NAT_TYPE)) {
+                host = ac.getNatIP();
+              }
+            }
+          }
+          // No public address found. Fall back to internal address
+          if (host.isEmpty()) {
+            host = nic.getNetworkIP();
+          }
+        }
+
+        int port = SSH_PORT;
+        logInfo(
+            computer,
+            listener,
+            "Connecting to "
+                + host
+                + " on port "
+                + port
+                + ", with timeout "
+                + SSH_TIMEOUT_MILLIS
+                + ".");
+        Connection conn = new Connection(host, port);
+        ProxyConfiguration proxyConfig = Jenkins.get().proxy;
+        Proxy proxy = proxyConfig == null ? Proxy.NO_PROXY : proxyConfig.createProxy(host);
+        if (!node.isIgnoreProxy()
+            && !proxy.equals(Proxy.NO_PROXY)
+            && proxy.address() instanceof InetSocketAddress) {
+          InetSocketAddress address = (InetSocketAddress) proxy.address();
+          HTTPProxyData proxyData = null;
+          if (proxyConfig.getUserName() != null && proxyConfig.getPassword() != null) {
+            proxyData =
+                new HTTPProxyData(
+                    address.getHostName(),
+                    address.getPort(),
+                    proxyConfig.getUserName(),
+                    proxyConfig.getPassword());
+          } else {
+            proxyData = new HTTPProxyData(address.getHostName(), address.getPort());
+          }
+          conn.setProxyData(proxyData);
+          logInfo(computer, listener, "Using HTTP Proxy Configuration");
+        }
+        /* TODO(google-compute-engine-plugin/issues/137): Verify host key by checking that the key
+         *   fingerprint is known.
+         */
+        conn.connect(
+            (hostname, portNum, serverHostKeyAlgorithm, serverHostKey) -> true,
+            SSH_TIMEOUT_MILLIS,
+            SSH_TIMEOUT_MILLIS);
+        logInfo(computer, listener, "Connected via SSH.");
+        return conn;
+      } catch (IOException e) {
+        // keep retrying until SSH comes up
+        logInfo(computer, listener, "Failed to connect via ssh: " + e.getMessage());
+        logInfo(computer, listener, "Waiting for SSH to come up. Sleeping 5.");
+        Thread.sleep(SSH_SLEEP_MILLIS);
+      }
     }
   }
 }

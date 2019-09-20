@@ -269,6 +269,7 @@
             <exclude>**/ITUtil.java</exclude>
           </excludes>
           <argLine>-Djenkins.test.timeout=${jenkinsRuleTimeout}</argLine>
+          <runOrder>balanced</runOrder>
         </configuration>
       </plugin>
       <plugin>
@@ -276,6 +277,7 @@
         <version>2.20.1</version>
         <configuration>
           <skipTests>${skip.surefire.tests}</skipTests>
+          <runOrder>balanced</runOrder>
         </configuration>
       </plugin>
       <plugin>

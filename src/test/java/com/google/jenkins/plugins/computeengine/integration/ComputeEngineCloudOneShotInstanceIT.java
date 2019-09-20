@@ -135,17 +135,17 @@ public class ComputeEngineCloudOneShotInstanceIT {
   }
 
   @Test
-  public void testOtherInstanceRanOnDifferentNode() throws Exception {
-    Node node = otherBuildFuture.get().getBuiltOn();
-    assertNotNull(node);
-    assertNotEquals(nodeName, node.getNodeName());
-  }
-
-  @Test
   public void testOtherInstanceSuccessful() throws Exception {
     FreeStyleBuild otherBuild = otherBuildFuture.get();
     assertNotNull(otherBuild);
     assertEquals(Result.SUCCESS, otherBuild.getResult());
     jenkinsRule.assertLogContains("also works", otherBuild);
+  }
+
+  @Test
+  public void testOtherInstanceRanOnDifferentNode() throws Exception {
+    Node node = otherBuildFuture.get().getBuiltOn();
+    assertNotNull(node);
+    assertNotEquals(nodeName, node.getNodeName());
   }
 }

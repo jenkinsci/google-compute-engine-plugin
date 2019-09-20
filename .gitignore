@@ -2,6 +2,7 @@
 *.iml
 target
 work
+.surefire-*
 
 ### Emacs ###
 *~

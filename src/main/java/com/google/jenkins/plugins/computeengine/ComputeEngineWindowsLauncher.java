@@ -15,22 +15,12 @@
 package com.google.jenkins.plugins.computeengine;
 
 import com.cloudbees.jenkins.plugins.sshcredentials.SSHAuthenticator;
-import com.google.api.services.compute.model.AccessConfig;
-import com.google.api.services.compute.model.Instance;
-import com.google.api.services.compute.model.NetworkInterface;
 import com.google.api.services.compute.model.Operation;
 import com.trilead.ssh2.Connection;
-import com.trilead.ssh2.HTTPProxyData;
-import com.trilead.ssh2.ServerHostKeyVerifier;
-import hudson.ProxyConfiguration;
 import hudson.model.TaskListener;
 import java.io.IOException;
-import java.net.InetSocketAddress;
-import java.net.Proxy;
 import java.util.Optional;
 import java.util.logging.Logger;
-import jenkins.model.Jenkins;
-import lombok.Getter;
 
 /**
  * Launcher for Windows agents
@@ -40,18 +30,13 @@ import lombok.Getter;
 public class ComputeEngineWindowsLauncher extends ComputeEngineComputerLauncher {
   private static final Logger LOGGER =
       Logger.getLogger(ComputeEngineWindowsLauncher.class.getName());
-  @Getter private final boolean useInternalAddress;
 
-  // TODO: make this configurable
-  public static final Integer SSH_PORT = 22;
-  public static final Integer SSH_TIMEOUT = 10000;
   private static int bootstrapAuthTries = 30;
   private static int bootstrapAuthSleepMs = 15000;
 
   public ComputeEngineWindowsLauncher(
       String cloudName, Operation insertOperation, boolean useInternalAddress) {
-    super(cloudName, insertOperation.getName(), insertOperation.getZone());
-    this.useInternalAddress = useInternalAddress;
+    super(cloudName, insertOperation.getName(), insertOperation.getZone(), useInternalAddress);
   }
 
   protected Logger getLogger() {
@@ -148,97 +133,6 @@ public class ComputeEngineWindowsLauncher extends ComputeEngineComputerLauncher 
       }
     }
     return true;
-  }
-
-  private Connection connectToSsh(ComputeEngineComputer computer, TaskListener listener)
-      throws Exception {
-    ComputeEngineInstance node = computer.getNode();
-    if (node == null) {
-      throw new IllegalArgumentException("A ComputeEngineComputer with no node was provided");
-    }
-
-    final long timeout = node.getLaunchTimeoutMillis();
-    final long startTime = System.currentTimeMillis();
-    while (true) {
-      try {
-        long waitTime = System.currentTimeMillis() - startTime;
-        if (timeout > 0 && waitTime > timeout) {
-          // TODO: better exception
-          throw new Exception(
-              "Timed out after "
-                  + (waitTime / 1000)
-                  + " seconds of waiting for ssh to become available. (maximum timeout configured is "
-                  + (timeout / 1000)
-                  + ")");
-        }
-        Instance instance = computer.refreshInstance();
-
-        String host = "";
-
-        // TODO: handle multiple NICs
-        NetworkInterface nic = instance.getNetworkInterfaces().get(0);
-
-        if (this.useInternalAddress) {
-          host = nic.getNetworkIP();
-        } else {
-          // Look for a public IP address
-          if (nic.getAccessConfigs() != null) {
-            for (AccessConfig ac : nic.getAccessConfigs()) {
-              if (ac.getType().equals(InstanceConfiguration.NAT_TYPE)) {
-                host = ac.getNatIP();
-              }
-            }
-          }
-          // No public address found. Fall back to internal address
-          if (host.isEmpty()) {
-            host = nic.getNetworkIP();
-          }
-        }
-
-        int port = SSH_PORT;
-        logInfo(
-            computer,
-            listener,
-            "Connecting to " + host + " on port " + port + ", with timeout " + SSH_TIMEOUT + ".");
-        Connection conn = new Connection(host, port);
-        ProxyConfiguration proxyConfig = Jenkins.get().proxy;
-        Proxy proxy = proxyConfig == null ? Proxy.NO_PROXY : proxyConfig.createProxy(host);
-        if (!proxy.equals(Proxy.NO_PROXY) && proxy.address() instanceof InetSocketAddress) {
-          InetSocketAddress address = (InetSocketAddress) proxy.address();
-          HTTPProxyData proxyData = null;
-          if (proxyConfig.getUserName() != null) {
-            proxyData =
-                new HTTPProxyData(
-                    address.getHostName(),
-                    address.getPort(),
-                    proxyConfig.getUserName(),
-                    proxyConfig.getPassword());
-          } else {
-            proxyData = new HTTPProxyData(address.getHostName(), address.getPort());
-          }
-          conn.setProxyData(proxyData);
-          logInfo(computer, listener, "Using HTTP Proxy Configuration");
-        }
-        // TODO: verify host key
-        conn.connect(
-            new ServerHostKeyVerifier() {
-              public boolean verifyServerHostKey(
-                  String hostname, int port, String serverHostKeyAlgorithm, byte[] serverHostKey)
-                  throws Exception {
-                return true;
-              }
-            },
-            SSH_TIMEOUT,
-            SSH_TIMEOUT);
-        logInfo(computer, listener, "Connected via SSH.");
-        return conn;
-      } catch (IOException e) {
-        // keep retrying until SSH comes up
-        logInfo(computer, listener, "Failed to connect via ssh: " + e.getMessage());
-        logInfo(computer, listener, "Waiting for SSH to come up. Sleeping 5.");
-        Thread.sleep(5000);
-      }
-    }
   }
 
   @Override

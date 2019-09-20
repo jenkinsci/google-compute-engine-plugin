@@ -41,6 +41,9 @@
             <f:entry title="${%Use Internal IP?}" field="useInternalAddress">
                 <f:checkbox/>
             </f:entry>
+            <f:entry title="${%Ignore Jenkins Proxy?}" field="ignoreProxy">
+                <f:checkbox/>
+            </f:entry>
             <f:entry title="${%Run as user}" field="runAsUser">
                 <f:textbox default="${descriptor.defaultRunAsUser()}"/>
             </f:entry>
@@ -51,7 +54,7 @@
                 <f:textbox default="java"/>
             </f:entry>
             <f:optionalProperty field="windowsConfiguration" title="${%Windows?}">
-                  <st:include page="config.jelly" class="${descriptor.clazz}"/>
+                <st:include page="config.jelly" class="${descriptor.clazz}"/>
             </f:optionalProperty>
         </f:section>
 
