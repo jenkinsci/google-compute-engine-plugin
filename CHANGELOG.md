@@ -14,7 +14,7 @@
 # Changelog
 All notable changes to this project will be documented in this file.
 
-## [4.0.0] - 2019-09-20
+## [4.0.0] - 2019-09-23
 ### Added
 - Completion goal for maven-release-plugin to format the pom file before creating the final commit.
 - Dependency com.google.cloud.graphite:gcp-client:0.1.2 as a replacement for included client.
