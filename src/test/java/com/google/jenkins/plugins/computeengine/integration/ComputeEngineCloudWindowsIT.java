@@ -282,6 +282,7 @@ public class ComputeEngineCloudWindowsIT {
     }
   }
 
+  // TODO(google-compute-engine-plugin/issues/49): Remove this test when refactoring windows tests.
   @Test(timeout = 500000)
   public void testIgnoreProxy() throws Exception {
     logOutput.reset();

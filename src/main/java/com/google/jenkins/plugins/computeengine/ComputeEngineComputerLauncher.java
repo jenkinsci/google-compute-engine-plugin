@@ -398,7 +398,9 @@ public abstract class ComputeEngineComputerLauncher extends ComputerLauncher {
           conn.setProxyData(proxyData);
           logInfo(computer, listener, "Using HTTP Proxy Configuration");
         }
-        // TODO(google-compute-engine-plugin/issues/137): verify host key
+        /* TODO(google-compute-engine-plugin/issues/137): Verify host key by checking that the key
+         *   fingerprint is known.
+         */
         conn.connect(
             (hostname, portNum, serverHostKeyAlgorithm, serverHostKey) -> true,
             SSH_TIMEOUT_MILLIS,
