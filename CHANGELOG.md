@@ -14,12 +14,13 @@
 # Changelog
 All notable changes to this project will be documented in this file.
 
-## [4.0.0] - 2019-09-??
+## [4.0.0] - 2019-09-20
 ### Added
 - Completion goal for maven-release-plugin to format the pom file before creating the final commit.
 - Dependency com.google.cloud.graphite:gcp-client:0.1.2 as a replacement for included client.
 - ClientUtil to handle generating ClientFactory from
 [gcp-plugin-core-java](https://github.com/GoogleCloudPlatform/gcp-plugin-core-java).
+- Ability to ignore the Jenkins level proxy for connecting to agents, `isIgnoreProxy` field.
 
 ### Changed
 - Snapshot creation is now parallelized. The timeout of 120 seconds is unchanged.
