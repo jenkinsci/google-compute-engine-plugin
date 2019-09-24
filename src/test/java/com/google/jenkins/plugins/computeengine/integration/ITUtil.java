@@ -17,6 +17,7 @@
 package com.google.jenkins.plugins.computeengine.integration;
 
 import static com.google.cloud.graphite.platforms.plugin.client.util.ClientUtil.nameFromSelfLink;
+import static com.google.common.collect.ImmutableList.copyOf;
 import static com.google.common.collect.ImmutableList.of;
 import static com.google.jenkins.plugins.computeengine.InstanceConfiguration.METADATA_LINUX_STARTUP_SCRIPT_KEY;
 import static com.google.jenkins.plugins.computeengine.InstanceConfiguration.NAT_NAME;
@@ -197,7 +198,7 @@ class ITUtil {
             .setDiskType(nameFromSelfLink(BOOT_DISK_TYPE))
             .setSourceImage(BOOT_DISK_IMAGE_NAME));
     instanceProperties.setDisks(of(boot));
-    instanceProperties.setTags(new Tags().setItems(of(NETWORK_TAGS)));
+    instanceProperties.setTags(new Tags().setItems(copyOf(NETWORK_TAGS.split(" "))));
     instanceProperties.setMetadata(
         new Metadata()
             .setItems(
