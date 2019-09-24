@@ -16,7 +16,6 @@
 
 package com.google.jenkins.plugins.computeengine.integration;
 
-import static com.google.jenkins.plugins.computeengine.integration.ITUtil.DEB_JAVA_STARTUP_SCRIPT;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.LABEL;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.NULL_TEMPLATE;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.PROJECT_ID;
@@ -79,7 +78,6 @@ public class ComputeEngineCloud1WorkerCreatedFor2ExecutorsIT {
     cloud.setConfigurations(
         ImmutableList.of(
             instanceConfigurationBuilder()
-                .startupScript(DEB_JAVA_STARTUP_SCRIPT)
                 .numExecutorsStr(MULTIPLE_NUM_EXECUTORS)
                 .labels(LABEL)
                 .oneShot(false)

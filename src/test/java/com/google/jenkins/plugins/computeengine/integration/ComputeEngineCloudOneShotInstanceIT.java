@@ -16,11 +16,11 @@
 
 package com.google.jenkins.plugins.computeengine.integration;
 
-import static com.google.jenkins.plugins.computeengine.integration.ITUtil.DEB_JAVA_STARTUP_SCRIPT;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.LABEL;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.NULL_TEMPLATE;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.NUM_EXECUTORS;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.PROJECT_ID;
+import static com.google.jenkins.plugins.computeengine.integration.ITUtil.execute;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.getLabel;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.initClient;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.initCloud;
@@ -40,7 +40,6 @@ import hudson.model.Node;
 import hudson.model.Result;
 import hudson.model.labels.LabelAtom;
 import hudson.tasks.Builder;
-import hudson.tasks.Shell;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.Map;
@@ -81,7 +80,6 @@ public class ComputeEngineCloudOneShotInstanceIT {
     cloud.setConfigurations(
         ImmutableList.of(
             instanceConfigurationBuilder()
-                .startupScript(DEB_JAVA_STARTUP_SCRIPT)
                 .numExecutorsStr(NUM_EXECUTORS)
                 .labels(LABEL)
                 .oneShot(true)
@@ -92,13 +90,13 @@ public class ComputeEngineCloudOneShotInstanceIT {
     jenkinsRule.jenkins.getNodesObject().setNodes(Collections.emptyList());
 
     FreeStyleProject project = jenkinsRule.createFreeStyleProject();
-    Builder step = new Shell("echo works");
+    Builder step = execute("echo works");
     project.getBuildersList().add(step);
     project.setAssignedLabel(new LabelAtom(LABEL));
     Future<FreeStyleBuild> buildFuture = project.scheduleBuild2(0);
 
     FreeStyleProject otherProject = jenkinsRule.createFreeStyleProject();
-    Builder otherStep = new Shell("echo \"also works\"");
+    Builder otherStep = execute("echo \"also works\"");
     otherProject.getBuildersList().add(otherStep);
     otherProject.setAssignedLabel(new LabelAtom(LABEL));
     otherBuildFuture = otherProject.scheduleBuild2(0);

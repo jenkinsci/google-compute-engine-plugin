@@ -6,12 +6,12 @@ jenkins:
         instanceCapStr: 10
         credentialsId: ${env.GOOGLE_PROJECT_ID}
         configurations:
-          - namePrefix:         integration-windows
-            description:        integration-windows
+          - namePrefix:         integration
+            description:        integration
             launchTimeoutSecondsStr: 3000
             retentionTimeMinutesStr: 600
             mode:               EXCLUSIVE
-            labelString:        integration-windows
+            labelString:        integration
             numExecutorsStr:    1
             runAsUser:          jenkins
             remoteFs:           ''

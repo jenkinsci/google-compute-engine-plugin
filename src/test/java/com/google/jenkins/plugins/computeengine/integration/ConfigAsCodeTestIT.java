@@ -1,5 +1,6 @@
 package com.google.jenkins.plugins.computeengine.integration;
 
+import static com.google.jenkins.plugins.computeengine.integration.ITUtil.CONFIG_AS_CODE_PATH;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.PROJECT_ID;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.TEST_TIMEOUT_MULTIPLIER;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.ZONE;
@@ -53,7 +54,7 @@ public class ConfigAsCodeTestIT {
   @Test
   public void testWorkerCreated() throws Exception {
     ConfigurationAsCode.get()
-        .configure(this.getClass().getResource("configuration-as-code-it.yml").toString());
+        .configure(this.getClass().getResource(CONFIG_AS_CODE_PATH).toString());
     ComputeEngineCloud cloud =
         (ComputeEngineCloud) jenkinsRule.jenkins.clouds.getByName("gce-integration");
 
