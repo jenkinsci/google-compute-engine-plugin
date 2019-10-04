@@ -27,7 +27,7 @@ pipeline {
         GOOGLE_REGION = "${GCE_IT_REGION}"
         GOOGLE_ZONE = "${GCE_IT_ZONE}"
         FAILED_ARTIFACTS_BUCKET = "${GCE_IT_BUCKET}"
-        FAILED_ARTIFACTS = "target-failed-${BUILD_ID}.tar.gz"
+        FAILED_ARTIFACTS = "failed-${BRANCH_NAME}-${BUILD_ID}.tar.gz"
     }
 
     stages {
@@ -40,16 +40,10 @@ pipeline {
 
                         // run tests
                         sh "mvn verify -ntp"
-
-                        // TODO(google-compute-engine-plugin/pull/143)
-                        // Now do it again, with windows agents. Because this will significantly
-                        // increase build time and expense, maybe gate behind flag/env var
-                        // sh "mvn verify -Dit.windows=true -ntp"
                     }
                 }
             }
         }
-
     }
     post {
         failure {
@@ -57,11 +51,9 @@ pipeline {
                 dir('target') {
                     // TODO: Further limit the scope of this upload by getting the failed test
                     // names and uploading those specific failsafe/surefire reports
-                    sh "mkdir result"
-                    sh "cp failsafe-reports result/failsafe-reports"
-                    sh "cp surefire-reports result/surefire-reports"
-                    sh "tar -zcvf ${FAILED_ARTIFACTS} result"
-                    step([$class: 'ClassicUploadStep', credentialsId: env.GCE_IT_CRED_ID, bucket: "gs://${FAILED_ARTIFACTS_BUCKET}", pattern: env.FAILED_ARTIFACTS])
+                    sh "../jenkins/saveAndCompress.sh"
+
+                    step([$class: 'ClassicUploadStep', credentialsId: env.GCE_BUCKET_CRED_ID, bucket: "gs://${FAILED_ARTIFACTS_BUCKET}", pattern: env.FAILED_ARTIFACTS])
                 }
             }
         }
