@@ -81,8 +81,8 @@ class ITUtil {
   private static final String CREDENTIALS = loadCredentialsString();
   static final String CLOUD_NAME = "integration";
   private static final String NAME_PREFIX = "integration";
-  private static final String REGION = format("projects/%s/regions/us-west1");
-  static final String ZONE = "us-west1-a";
+  private static final String REGION = System.getenv("GOOGLE_REGION");
+  static final String ZONE = System.getenv("GOOGLE_ZONE");
   private static final String ZONE_BASE = format("projects/%s/zones/" + ZONE);
   static final String LABEL = "integration";
   static final String SNAPSHOT_LABEL = "snapshot";
