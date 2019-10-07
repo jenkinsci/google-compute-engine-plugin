@@ -27,8 +27,8 @@ pipeline {
         GOOGLE_REGION = "${GCE_IT_REGION}"
         GOOGLE_ZONE = "${GCE_IT_ZONE}"
         GOOGLE_SA_NAME = "${GCE_IT_SA}"
-        FAILED_ARTIFACTS_BUCKET = "${GCE_IT_BUCKET}"
-        FAILED_ARTIFACTS = "failed-${BRANCH_NAME}-${BUILD_ID}.tar.gz"
+        BUILD_ARTIFACTS_BUCKET = "${GCE_IT_BUCKET}"
+        BUILDD_ARTIFACTS = "build-${BRANCH_NAME}-${BUILD_ID}.tar.gz"
     }
 
     stages {
@@ -41,11 +41,11 @@ pipeline {
                             sh "mvn clean package -ntp"
 
                             // run tests
-                            sh "mvn verify -ntp"
+                            sh "mvn verify -ntp -Dit.test=ConfigAsCodeIT"
                         }
 
                         sh "jenkins/saveAndCompress.sh"
-                        step([$class: 'ClassicUploadStep', credentialsId: env.GCE_BUCKET_CRED_ID, bucket: "gs://${FAILED_ARTIFACTS_BUCKET}", pattern: env.FAILED_ARTIFACTS])
+                        step([$class: 'ClassicUploadStep', credentialsId: env.GCE_BUCKET_CRED_ID, bucket: "gs://${BUILD_ARTIFACTS_BUCKET}", pattern: env.BUILD_ARTIFACTS])
                     }
                 }
             }

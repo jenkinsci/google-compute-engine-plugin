@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 # Copyright 2019 Google Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,18 +13,18 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-#!/usr/bin/env bash
 mkdir result
 
 # The files will only exist if maven reaches the corresponding phase of the build
 function cpe() {
-  if [[ -e $1 ]]; then
+  if [[ -e target/$1 ]]; then
      cp -r target/$1 result
   fi
 }
+
 cpe google-compute-engine.hpi
 cpe failsafe-reports
 cpe surefire-reports
 
 # Compress the artifacts for upload
-tar -zcvf ${FAILED_ARTIFACTS} result
+tar -zcvf ${BUILD_ARTIFACTS} result
