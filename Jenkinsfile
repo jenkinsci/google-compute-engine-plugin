@@ -41,20 +41,11 @@ pipeline {
 
                         // run tests
                         sh "mvn verify -ntp"
+
+                        sh "jenkins/saveAndCompress.sh"
+                        step([$class: 'ClassicUploadStep', credentialsId: env.GCE_BUCKET_CRED_ID, bucket: "gs://${FAILED_ARTIFACTS_BUCKET}", pattern: env.FAILED_ARTIFACTS])
                     }
                 }
-            }
-        }
-    }
-    post {
-        failure {
-            container('maven') {
-                // TODO: Further limit the scope of this upload by getting the failed test
-                // names and uploading those specific failsafe/surefire reports
-                sh "jenkins/saveAndCompress.sh"
-
-                step([$class: 'ClassicUploadStep', credentialsId: env.GCE_BUCKET_CRED_ID, bucket: "gs://${FAILED_ARTIFACTS_BUCKET}", pattern: env.FAILED_ARTIFACTS])
-
             }
         }
     }
