@@ -38,10 +38,10 @@ pipeline {
                     withCredentials([[$class: 'StringBinding', credentialsId: env.GCE_IT_CRED_ID, variable: 'GOOGLE_CREDENTIALS']]) {
                         catchError {
                             // build
-                            sh "mvn clean package -ntp"
+                            // sh "mvn clean package -ntp"
 
                             // run tests
-                            sh "mvn verify -ntp"
+                            sh "mvn verify -ntp -Dit.test=ConfigAsCodeTestIT"
                         }
 
                         sh "jenkins/saveAndCompress.sh"
