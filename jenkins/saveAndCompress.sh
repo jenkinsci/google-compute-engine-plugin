@@ -16,7 +16,11 @@
 mkdir result
 
 # The files will only exist if maven reaches the corresponding phase of the build
-cpe() { [[ ! -e $1 ]] || cp -r -t result $1; }
+function cpe() {
+  if [[ -e $1 ]]; then
+     cp -r target/$1 result
+  fi
+}
 cpe google-compute-engine.hpi
 cpe failsafe-reports
 cpe surefire-reports
