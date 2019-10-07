@@ -36,4 +36,4 @@ jenkins:
             bootDiskType:       "https://www.googleapis.com/compute/v1/projects/${env.GOOGLE_PROJECT_ID}/zones/${env.GOOGLE_ZONE}/diskTypes/pd-ssd"
             bootDiskSizeGbStr:  10
             bootDiskAutoDelete: true
-            serviceAccountEmail: ''
+            serviceAccountEmail: "${env.GOOGLE_SA_NAME}@${env.GOOGLE_PROJECT_ID}.iam.gserviceaccount.com"

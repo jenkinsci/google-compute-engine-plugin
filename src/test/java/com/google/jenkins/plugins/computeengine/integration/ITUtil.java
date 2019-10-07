@@ -41,6 +41,7 @@ import com.google.api.services.compute.model.InstanceTemplate;
 import com.google.api.services.compute.model.Metadata;
 import com.google.api.services.compute.model.NetworkInterface;
 import com.google.api.services.compute.model.Operation;
+import com.google.api.services.compute.model.ServiceAccount;
 import com.google.api.services.compute.model.Tags;
 import com.google.cloud.graphite.platforms.plugin.client.ClientFactory;
 import com.google.cloud.graphite.platforms.plugin.client.ComputeClient;
@@ -107,7 +108,8 @@ class ITUtil {
   private static final String SUBNETWORK_NAME = "default";
   private static final boolean EXTERNAL_ADDR = true;
   private static final String NETWORK_TAGS = "jenkins-agent ssh";
-  private static final String SERVICE_ACCOUNT_EMAIL = "";
+  private static final String SERVICE_ACCOUNT_EMAIL =
+      String.format("%s@%s.iam.gserviceaccount.com", System.getenv("GOOGLE_SA_NAME"), PROJECT_ID);
   private static final String RETENTION_TIME_MINUTES_STR = "";
   private static final String LAUNCH_TIMEOUT_SECONDS_STR = "";
   static final String SSH_USER = "test-user";
@@ -214,6 +216,7 @@ class ITUtil {
             new NetworkInterface()
                 .setName(NETWORK_NAME)
                 .setAccessConfigs(of(new AccessConfig().setType(NAT_TYPE).setName(NAT_NAME)))));
+    instanceProperties.setServiceAccounts(of(new ServiceAccount().setEmail(SERVICE_ACCOUNT_EMAIL)));
     instanceTemplate.setProperties(instanceProperties);
     return instanceTemplate;
   }

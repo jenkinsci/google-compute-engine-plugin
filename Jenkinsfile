@@ -26,6 +26,7 @@ pipeline {
         GOOGLE_PROJECT_ID = "${GCE_IT_PROJECT_ID}"
         GOOGLE_REGION = "${GCE_IT_REGION}"
         GOOGLE_ZONE = "${GCE_IT_ZONE}"
+        GOOGLE_SA_NAME = "${GCE_IT_SA}"
         FAILED_ARTIFACTS_BUCKET = "${GCE_IT_BUCKET}"
         FAILED_ARTIFACTS = "failed-${BRANCH_NAME}-${BUILD_ID}.tar.gz"
     }
