@@ -36,11 +36,13 @@ pipeline {
             steps {
                 container('maven') {
                     withCredentials([[$class: 'StringBinding', credentialsId: env.GCE_IT_CRED_ID, variable: 'GOOGLE_CREDENTIALS']]) {
-                        // build
-                        sh "mvn clean package -ntp"
+                        catchError {
+                            // build
+                            sh "mvn clean package -ntp"
 
-                        // run tests
-                        sh "mvn verify -ntp"
+                            // run tests
+                            sh "mvn verify -ntp"
+                        }
 
                         sh "jenkins/saveAndCompress.sh"
                         step([$class: 'ClassicUploadStep', credentialsId: env.GCE_BUCKET_CRED_ID, bucket: "gs://${FAILED_ARTIFACTS_BUCKET}", pattern: env.FAILED_ARTIFACTS])
