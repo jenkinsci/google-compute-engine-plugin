@@ -26,6 +26,7 @@ pipeline {
         GOOGLE_PROJECT_ID = "${GCE_IT_PROJECT_ID}"
         GOOGLE_REGION = "${GCE_IT_REGION}"
         GOOGLE_ZONE = "${GCE_IT_ZONE}"
+        GOOGLE_SA_NAME = "${GCE_IT_SA}"
         FAILED_ARTIFACTS_BUCKET = "${GCE_IT_BUCKET}"
         FAILED_ARTIFACTS = "failed-${BRANCH_NAME}-${BUILD_ID}.tar.gz"
     }
@@ -35,25 +36,17 @@ pipeline {
             steps {
                 container('maven') {
                     withCredentials([[$class: 'StringBinding', credentialsId: env.GCE_IT_CRED_ID, variable: 'GOOGLE_CREDENTIALS']]) {
-                        // build
-                        sh "mvn clean package -ntp"
+                        catchError {
+                            // build
+                            sh "mvn clean package -ntp"
 
-                        // run tests
-                        sh "mvn verify -ntp"
+                            // run tests
+                            sh "mvn verify -ntp"
+                        }
+
+                        sh "jenkins/saveAndCompress.sh"
+                        step([$class: 'ClassicUploadStep', credentialsId: env.GCE_BUCKET_CRED_ID, bucket: "gs://${FAILED_ARTIFACTS_BUCKET}", pattern: env.FAILED_ARTIFACTS])
                     }
-                }
-            }
-        }
-    }
-    post {
-        failure {
-            container('maven') {
-                dir('target') {
-                    // TODO: Further limit the scope of this upload by getting the failed test
-                    // names and uploading those specific failsafe/surefire reports
-                    sh "../jenkins/saveAndCompress.sh"
-
-                    step([$class: 'ClassicUploadStep', credentialsId: env.GCE_BUCKET_CRED_ID, bucket: "gs://${FAILED_ARTIFACTS_BUCKET}", pattern: env.FAILED_ARTIFACTS])
                 }
             }
         }
