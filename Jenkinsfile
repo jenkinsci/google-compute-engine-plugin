@@ -28,7 +28,7 @@ pipeline {
         GOOGLE_ZONE = "${GCE_IT_ZONE}"
         GOOGLE_SA_NAME = "${GCE_IT_SA}"
         BUILD_ARTIFACTS_BUCKET = "${GCE_IT_BUCKET}"
-        BUILDD_ARTIFACTS = "build-${BRANCH_NAME}-${BUILD_ID}.tar.gz"
+        BUILD_ARTIFACTS = "build-${BRANCH_NAME}-${BUILD_ID}.tar.gz"
     }
 
     stages {
@@ -41,7 +41,7 @@ pipeline {
                             sh "mvn clean package -ntp"
 
                             // run tests
-                            sh "mvn verify -ntp -Dit.test=ComputeEngineCloudWorkerCreatedIT"
+                            sh "mvn verify -ntp"
                         }
 
                         sh "jenkins/saveAndCompress.sh"

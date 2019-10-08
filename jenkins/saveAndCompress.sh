@@ -18,16 +18,16 @@ mkdir result
 # The files will only exist if maven reaches the corresponding phase of the build
 function cpe() {
   if [[ -e target/$1 ]]; then
-     cp -r target/$1 result
+     cp -rv target/$1 result
+  else
+     echo "target/$1 not copied, check the completed build phases."
   fi
 }
 
+# Copy over the important artifacts
 cpe google-compute-engine.hpi
-ls result
 cpe failsafe-reports
-ls result
 cpe surefire-reports
-ls result
 
 # Compress the artifacts for upload
 tar -zcvf ${BUILD_ARTIFACTS} result
