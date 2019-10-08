@@ -41,7 +41,7 @@ pipeline {
                             sh "mvn clean package -ntp"
 
                             // run tests
-                            sh "mvn verify -ntp -Dit.test=ConfigAsCodeIT"
+                            sh "mvn verify -ntp -Dit.test=ConfigAsCodeTestIT"
                         }
 
                         sh "jenkins/saveAndCompress.sh"
