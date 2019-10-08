@@ -14,6 +14,8 @@
 
 package com.google.jenkins.plugins.computeengine;
 
+import static com.google.jenkins.plugins.computeengine.ComputeEngineCloud.checkPermissions;
+
 import com.cloudbees.jenkins.plugins.sshcredentials.impl.BasicSSHUserPrivateKey;
 import com.cloudbees.plugins.credentials.CredentialsMatchers;
 import com.cloudbees.plugins.credentials.CredentialsProvider;
@@ -109,6 +111,7 @@ public class WindowsConfiguration implements Describable<WindowsConfiguration>, 
   @Extension
   public static final class DescriptorImpl extends Descriptor<WindowsConfiguration> {
     public ListBoxModel doFillPasswordCredentialsIdItems(@AncestorInPath Jenkins context) {
+      checkPermissions();
       if (context == null || !context.hasPermission(Item.CONFIGURE)) {
         return new StandardListBoxModel();
       }
@@ -124,6 +127,7 @@ public class WindowsConfiguration implements Describable<WindowsConfiguration>, 
     }
 
     public ListBoxModel doFillPrivateKeyCredentialsIdItems(@AncestorInPath Jenkins context) {
+      checkPermissions();
       if (context == null || !context.hasPermission(Item.CONFIGURE)) {
         return new StandardUsernameListBoxModel();
       }
@@ -138,6 +142,7 @@ public class WindowsConfiguration implements Describable<WindowsConfiguration>, 
     public FormValidation doCheckPrivateKeyCredentialsId(
         @QueryParameter String value,
         @QueryParameter("passwordCredentialsId") String passwordCredentialsId) {
+      checkPermissions();
       if (Strings.isNullOrEmpty(value) && Strings.isNullOrEmpty(passwordCredentialsId)) {
         return FormValidation.error("A password or private key credential is required");
       }
