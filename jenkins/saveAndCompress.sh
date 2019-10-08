@@ -12,7 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
+pwd
 mkdir result
 
 # The files will only exist if maven reaches the corresponding phase of the build
@@ -23,8 +23,11 @@ function cpe() {
 }
 
 cpe google-compute-engine.hpi
+ls result
 cpe failsafe-reports
+ls result
 cpe surefire-reports
+ls result
 
 # Compress the artifacts for upload
 tar -zcvf ${BUILD_ARTIFACTS} result
