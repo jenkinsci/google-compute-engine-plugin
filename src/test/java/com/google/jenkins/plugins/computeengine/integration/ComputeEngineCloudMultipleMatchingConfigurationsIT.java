@@ -53,9 +53,9 @@ import org.jvnet.hudson.test.JenkinsRule;
  * with multiple matching {@link InstanceConfiguration} and that these instances are properly
  * provisioned.
  */
-public class ComputeEngineCloudMultipeMatchingConfigurationsIT {
+public class ComputeEngineCloudMultipleMatchingConfigurationsIT {
   private static Logger log =
-      Logger.getLogger(ComputeEngineCloudMultipeMatchingConfigurationsIT.class.getName());
+      Logger.getLogger(ComputeEngineCloudMultipleMatchingConfigurationsIT.class.getName());
 
   private static final String DESC_1 = "type_1";
   private static final String DESC_2 = "type_2";
@@ -67,7 +67,7 @@ public class ComputeEngineCloudMultipeMatchingConfigurationsIT {
 
   private static ComputeClient client;
   private static Map<String, String> label =
-      getLabel(ComputeEngineCloudMultipeMatchingConfigurationsIT.class);
+      getLabel(ComputeEngineCloudMultipleMatchingConfigurationsIT.class);
   private static Collection<PlannedNode> planned;
 
   @BeforeClass
