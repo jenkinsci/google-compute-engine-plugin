@@ -72,6 +72,7 @@ import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.DataBoundSetter;
 import org.kohsuke.stapler.HttpResponse;
 import org.kohsuke.stapler.QueryParameter;
+import org.kohsuke.stapler.interceptor.RequirePOST;
 
 @Getter
 @Log
@@ -409,6 +410,7 @@ public class ComputeEngineCloud extends AbstractCloudImpl {
     return null;
   }
 
+  @RequirePOST
   public HttpResponse doProvision(@QueryParameter String configuration)
       throws ServletException, IOException {
     checkPermissions(PROVISION);
@@ -479,6 +481,7 @@ public class ComputeEngineCloud extends AbstractCloudImpl {
                   StandardCredentials.class, context, ACL.SYSTEM, domainRequirements));
     }
 
+    @RequirePOST
     public FormValidation doCheckCredentialsId(
         @AncestorInPath Jenkins context,
         @QueryParameter("projectId") String projectId,
