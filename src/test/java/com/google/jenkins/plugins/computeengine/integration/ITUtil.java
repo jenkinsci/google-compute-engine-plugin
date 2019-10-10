@@ -229,11 +229,11 @@ class ITUtil {
     return client;
   }
 
-  static Builder execute(String command) {
+  static Builder execute(Commands command, String argument) {
     if (windows) {
-      return new BatchFile(command);
+      return new BatchFile(String.format(command.getWindows(), argument));
     }
-    return new Shell(command);
+    return new Shell(String.format(command.getLinux(), argument));
   }
 
   static void teardownResources(ComputeClient client, Map<String, String> label, Logger log)

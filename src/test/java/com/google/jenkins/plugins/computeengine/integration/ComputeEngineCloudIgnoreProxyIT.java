@@ -100,7 +100,7 @@ public class ComputeEngineCloudIgnoreProxyIT {
             .isIgnoreProxy());
 
     project = jenkinsRule.createFreeStyleProject();
-    Builder step = execute("echo works");
+    Builder step = execute(Commands.ECHO, "works");
     project.getBuildersList().add(step);
     project.setAssignedLabel(new LabelAtom(LABEL));
 

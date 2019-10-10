@@ -97,7 +97,7 @@ public class ComputeEngineCloudSnapshotCreatedIT {
             .isCreateSnapshot());
 
     FreeStyleProject project = jenkinsRule.createFreeStyleProject();
-    Builder step = execute("exit 1");
+    Builder step = execute(Commands.EXIT, "1");
     project.getBuildersList().add(step);
     project.setAssignedLabel(new LabelAtom(SNAPSHOT_LABEL));
 

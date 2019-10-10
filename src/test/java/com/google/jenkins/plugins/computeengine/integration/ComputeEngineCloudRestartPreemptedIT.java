@@ -113,7 +113,7 @@ public class ComputeEngineCloudRestartPreemptedIT {
     assertTrue("Configuration was set as preemptible but saw as not", computer.getPreemptible());
 
     FreeStyleProject project = jenkinsRule.createFreeStyleProject();
-    Builder step = execute("sleep 60");
+    Builder step = execute(Commands.SLEEP, "60");
     project.getBuildersList().add(step);
     project.setAssignedLabel(new LabelAtom(LABEL));
     QueueTaskFuture<FreeStyleBuild> taskFuture = project.scheduleBuild2(0);

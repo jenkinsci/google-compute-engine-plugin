@@ -90,13 +90,13 @@ public class ComputeEngineCloudOneShotInstanceIT {
     jenkinsRule.jenkins.getNodesObject().setNodes(Collections.emptyList());
 
     FreeStyleProject project = jenkinsRule.createFreeStyleProject();
-    Builder step = execute("echo works");
+    Builder step = execute(Commands.ECHO, "works");
     project.getBuildersList().add(step);
     project.setAssignedLabel(new LabelAtom(LABEL));
     Future<FreeStyleBuild> buildFuture = project.scheduleBuild2(0);
 
     FreeStyleProject otherProject = jenkinsRule.createFreeStyleProject();
-    Builder otherStep = execute("echo \"also works\"");
+    Builder otherStep = execute(Commands.ECHO, "\"also works\"");
     otherProject.getBuildersList().add(otherStep);
     otherProject.setAssignedLabel(new LabelAtom(LABEL));
     otherBuildFuture = otherProject.scheduleBuild2(0);
