@@ -119,7 +119,6 @@ public class ComputeEngineCloudMultipleMatchingConfigurationsIT {
   private void checkOneNode(PlannedNode plannedNode, String desc)
       throws InterruptedException, java.util.concurrent.ExecutionException {
     String name = plannedNode.displayName;
-    plannedNode.future.get();
     Node node = jenkinsRule.jenkins.getNode(name);
     assertEquals(desc, node.getNodeDescription());
   }

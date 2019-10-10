@@ -22,6 +22,7 @@ import java.util.Collection;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
+import org.awaitility.Awaitility;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
@@ -67,7 +68,7 @@ public class ConfigAsCodeTestIT {
         cloud.provision(new LabelAtom("integration"), 1);
 
     // There should be a planned node
-    assertEquals(1, planned.size());
+    Awaitility.await().timeout(2, TimeUnit.MINUTES).until(() -> planned.size() == 1);
     String name = planned.iterator().next().displayName;
 
     // Wait for the node creation to finish
