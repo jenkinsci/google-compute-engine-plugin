@@ -76,6 +76,7 @@
     <it.windows>false</it.windows>
     <configuration-as-code.version>1.14</configuration-as-code.version>
     <concurrency>10</concurrency>
+    <it.runOrder>balanced</it.runOrder>
   </properties>
 
   <dependencies>
@@ -279,7 +280,7 @@
         <version>2.20.1</version>
         <configuration>
           <skipTests>${skip.surefire.tests}</skipTests>
-          <runOrder>balanced</runOrder>
+          <runOrder>${it.runOrder}</runOrder>
         </configuration>
       </plugin>
       <plugin>
@@ -332,6 +333,19 @@
       </activation>
       <properties>
         <concurrency>4</concurrency>
+      </properties>
+    </profile>
+    <profile>
+      <id>windows-agents</id>
+      <activation>
+        <property>
+          <name>it.windows</name>
+          <value>true</value>
+        </property>
+      </activation>
+      <properties>
+        <concurrency>4</concurrency>
+        <it.runOrder>reversealphabetical</it.runOrder>
       </properties>
     </profile>
   </profiles>
