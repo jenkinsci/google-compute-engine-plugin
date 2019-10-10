@@ -111,13 +111,15 @@ class ITUtil {
       windows ? System.getenv("GOOGLE_BOOT_DISK_PROJECT_ID") : "debian-cloud";
   private static final String BOOT_DISK_IMAGE_NAME =
       windows
-          ? System.getenv("GOOGLE_BOOT_DISK_IMAGE_NAME")
+          ? String.format(
+              "projects/%s/global/images/%s",
+              BOOT_DISK_PROJECT_ID, System.getenv("GOOGLE_BOOT_DISK_IMAGE_NAME"))
           : "projects/debian-cloud/global/images/family/debian-9";
   private static final String BOOT_DISK_SIZE_GB_STR = windows ? "50" : "10";
   private static final Node.Mode NODE_MODE = Node.Mode.EXCLUSIVE;
   private static final String ACCELERATOR_NAME = "";
   private static final String ACCELERATOR_COUNT = "";
-  private static final String RUN_AS_USER = "jenkins";
+  static final String RUN_AS_USER = "jenkins";
   static final String NULL_TEMPLATE = null;
   private static final String NETWORK_NAME = format("projects/%s/global/networks/default");
   private static final String SUBNETWORK_NAME = "default";
@@ -128,15 +130,13 @@ class ITUtil {
   private static final String RETENTION_TIME_MINUTES_STR = "";
   private static final String LAUNCH_TIMEOUT_SECONDS_STR = "";
   static final int SNAPSHOT_TIMEOUT = windows ? 300 : 120;
-  static final String SSH_USER = "test-user";
-  private static final GoogleKeyPair SSH_KEY = GoogleKeyPair.generate(SSH_USER);
-  private static final GoogleKeyPair WINDOWS_SSH_KEY = GoogleKeyPair.generate("");
+  private static final GoogleKeyPair SSH_KEY = GoogleKeyPair.generate(RUN_AS_USER);
   static final String SSH_PRIVATE_KEY = SSH_KEY.getPrivateKey();
   private static final String WINDOWS_STARTUP_SCRIPT =
       "Stop-Service sshd\n"
           + "$ConfiguredPublicKey = "
           + "\""
-          + WINDOWS_SSH_KEY.getPublicKey().trim().substring(1)
+          + SSH_KEY.getPublicKey().trim().substring(RUN_AS_USER.length() + 1)
           + "\"\n"
           + "Write-Output \"Second phase\"\n"
           + "# We are in the second phase of startup where we need to set up authorized_keys for the specified user.\n"
@@ -203,7 +203,7 @@ class ITUtil {
             CredentialsScope.GLOBAL,
             null,
             RUN_AS_USER,
-            new BasicSSHUserPrivateKey.DirectEntryPrivateKeySource(WINDOWS_SSH_KEY.getPrivateKey()),
+            new BasicSSHUserPrivateKey.DirectEntryPrivateKeySource(SSH_KEY.getPrivateKey()),
             null,
             "integration test private key for windows");
     store.addCredentials(Domain.global(), windowsPrivateKeyCredentials);
