@@ -3,6 +3,7 @@ package com.google.jenkins.plugins.computeengine.integration;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.PROJECT_ID;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.TEST_TIMEOUT_MULTIPLIER;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.ZONE;
+import static com.google.jenkins.plugins.computeengine.integration.ITUtil.execute;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.getLabel;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.initClient;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.initCredentials;
@@ -15,8 +16,11 @@ import static org.junit.Assume.assumeFalse;
 import com.google.api.services.compute.model.Instance;
 import com.google.cloud.graphite.platforms.plugin.client.ComputeClient;
 import com.google.jenkins.plugins.computeengine.ComputeEngineCloud;
+import hudson.model.FreeStyleBuild;
+import hudson.model.FreeStyleProject;
 import hudson.model.labels.LabelAtom;
 import hudson.slaves.NodeProvisioner.PlannedNode;
+import hudson.tasks.Builder;
 import io.jenkins.plugins.casc.ConfigurationAsCode;
 import java.io.IOException;
 import java.util.Collection;
@@ -30,6 +34,10 @@ import org.junit.Test;
 import org.junit.rules.Timeout;
 import org.jvnet.hudson.test.JenkinsRule;
 
+/**
+ * Integration tests for Jenkins agents configured with Configuration as Code with a non-standard
+ * java path.
+ */
 public class ConfigAsCodeNonStandardJavaIT {
   private static Logger log = Logger.getLogger(ConfigAsCodeNonStandardJavaIT.class.getName());
   @ClassRule public static JenkinsRule jenkinsRule = new JenkinsRule();
@@ -80,5 +88,10 @@ public class ConfigAsCodeNonStandardJavaIT {
     planned.iterator().next().future.get();
     Instance instance = client.getInstance(PROJECT_ID, ZONE, name);
     assertNotNull(instance);
+
+    FreeStyleProject project = jenkinsRule.createFreeStyleProject();
+    Builder step = execute(Commands.ECHO, "works");
+    project.getBuildersList().add(step);
+    jenkinsRule.buildAndAssertSuccess(project);
   }
 }

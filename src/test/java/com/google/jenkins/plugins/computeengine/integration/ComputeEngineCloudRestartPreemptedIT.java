@@ -129,9 +129,9 @@ public class ComputeEngineCloudRestartPreemptedIT {
     assertEquals(FAILURE, freeStyleBuild.getResult());
 
     Awaitility.await()
-        .timeout(5, TimeUnit.MINUTES)
+        .timeout(10, TimeUnit.MINUTES)
         .until(() -> freeStyleBuild.getNextBuild() != null);
     FreeStyleBuild nextBuild = freeStyleBuild.getNextBuild();
-    Awaitility.await().timeout(5, TimeUnit.MINUTES).until(() -> nextBuild.getResult() == SUCCESS);
+    Awaitility.await().timeout(10, TimeUnit.MINUTES).until(() -> nextBuild.getResult() == SUCCESS);
   }
 }
