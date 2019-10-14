@@ -31,7 +31,6 @@ pipeline {
         GOOGLE_SA_NAME = "${GCE_IT_SA}"
         GOOGLE_BOOT_DISK_PROJECT_ID = "${GCE_WINDOWS_IT_IMAGE_PROJECT}"
         GOOGLE_BOOT_DISK_IMAGE_NAME = "${GCE_WINDOWS_IT_IMAGE_NAME}"
-        GOOGLE_JENKINS_PASSWORD = "${GCE_WINDOWS_IT_JENKINS_PASSWORD}"
         BUILD_ARTIFACTS_BUCKET = "${GCE_IT_BUCKET}"
         CLEAN_BRANCH_NAME = "${BRANCH_NAME}".replaceAll("[/&;<>|\\]]", "_")
         BUILD_ARTIFACTS = "windows-${CLEAN_BRANCH_NAME}-${BUILD_ID}.tar.gz"
@@ -41,7 +40,8 @@ pipeline {
         stage("Build and test") {
             steps {
                 container('maven') {
-                    withCredentials([[$class: 'StringBinding', credentialsId: env.GCE_IT_CRED_ID, variable: 'GOOGLE_CREDENTIALS']]) {
+                    withCredentials([[$class: 'StringBinding', credentialsId: env.GCE_IT_CRED_ID, variable: 'GOOGLE_CREDENTIALS'],
+                                     [$class: 'StringBinding', credentialsId: env.GCE_WINDOWS_IT_JENKINS_PASSWORD, variable: 'GOOGLE_JENKINS_PASSWORD']]) {
                         catchError {
                             // build
                             sh "mvn clean package -ntp"
