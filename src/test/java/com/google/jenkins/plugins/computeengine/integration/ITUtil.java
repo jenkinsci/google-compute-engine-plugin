@@ -129,7 +129,7 @@ class ITUtil {
       String.format("%s@%s.iam.gserviceaccount.com", System.getenv("GOOGLE_SA_NAME"), PROJECT_ID);
   private static final String RETENTION_TIME_MINUTES_STR = "";
   private static final String LAUNCH_TIMEOUT_SECONDS_STR = "";
-  static final int SNAPSHOT_TIMEOUT = windows ? 600 : 120;
+  static final int SNAPSHOT_TIMEOUT = windows ? 600 : 300;
   private static final GoogleKeyPair SSH_KEY = GoogleKeyPair.generate(RUN_AS_USER);
   static final String SSH_PRIVATE_KEY = SSH_KEY.getPrivateKey();
   private static final String WINDOWS_STARTUP_SCRIPT =

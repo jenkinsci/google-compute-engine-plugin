@@ -16,7 +16,6 @@ import static org.junit.Assume.assumeFalse;
 import com.google.api.services.compute.model.Instance;
 import com.google.cloud.graphite.platforms.plugin.client.ComputeClient;
 import com.google.jenkins.plugins.computeengine.ComputeEngineCloud;
-import hudson.model.FreeStyleBuild;
 import hudson.model.FreeStyleProject;
 import hudson.model.labels.LabelAtom;
 import hudson.slaves.NodeProvisioner.PlannedNode;
