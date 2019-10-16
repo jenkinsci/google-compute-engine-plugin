@@ -16,6 +16,7 @@ package com.google.jenkins.plugins.computeengine;
 
 import com.cloudbees.jenkins.plugins.sshcredentials.SSHAuthenticator;
 import com.google.api.services.compute.model.Operation;
+import com.google.common.base.Preconditions;
 import com.trilead.ssh2.Connection;
 import hudson.model.TaskListener;
 import java.io.IOException;
@@ -79,9 +80,7 @@ public class ComputeEngineWindowsLauncher extends ComputeEngineComputerLauncher 
   }
 
   private Optional<Connection> bootstrap(ComputeEngineComputer computer, TaskListener listener) {
-    if (computer == null) {
-      throw new IllegalArgumentException("A null ComputeEngineComputer was provided");
-    }
+    Preconditions.checkNotNull(computer, "A null ComputeEngineComputer was provided");
     logInfo(computer, listener, "bootstrap");
 
     ComputeEngineInstance node = computer.getNode();
@@ -118,6 +117,7 @@ public class ComputeEngineWindowsLauncher extends ComputeEngineComputerLauncher 
         return Optional.empty();
       }
     } catch (Exception e) {
+      logException(computer, listener, "Failed to authenticate with exception: ", e);
       if (bootstrapConn != null) {
         bootstrapConn.close();
       }

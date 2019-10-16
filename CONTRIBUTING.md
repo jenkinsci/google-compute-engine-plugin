@@ -41,9 +41,12 @@ An essential part of getting your change through is to make sure all existing te
 
 #### Prerequisites
 * Maven to build and run tests.
-* A GCP project to test on with the compute engine API enabled with all relevant permissions enabled, especially billing. Running integration tests will also incur billing.
+* A GCP project to test on with the compute engine API enabled with all relevant permissions
+  enabled, especially billing. Running integration tests will also incur billing.
 * For development, IntelliJ is recommended.
-* **For Windows Images/VM's**, have Java and OpenSSH pre-installed. We have suggested startup-scripts for installing both if you do not want to pre-install, but pre-installing is advised.
+* **For Windows Images/VM's**, have Java and OpenSSH pre-installed. We have suggested
+  startup-scripts for installing both if you do not want to pre-install,
+  but pre-installing is advised.
 
 
 #### Running the tests
@@ -58,12 +61,16 @@ mvn test
 ```
 
 ##### Integration Tests
-* The following environment variables are required to run the integration tests. 3. and 4. are only required when running a windows integration test.
+* The following environment variables are required to run the integration tests. 5, 6, and 7 are
+  only required when running a windows integration test.
 
 1. GOOGLE_PROJECT_ID
 1. GOOGLE_CREDENTIALS
+1. GOOGLE_REGION
+1. GOOGLE_ZONE
 1. GOOGLE_BOOT_DISK_PROJECT_ID
 1. GOOGLE_BOOT_DISK_IMAGE_NAME
+1. GOOGLE_JENKINS_PASSWORD
 
 * Run the following:
 ```
@@ -71,23 +78,18 @@ mvn verify
 ```
 
 ###### Windows Integration Test
-* By default, in the pom.xml file, exclude running the Windows Integration test unless a windows-related change was made since it will require a windows image built with Packer.
-* Exclusion is in these couple of lines between the excludes tags:
-```
-<configuration>
-    <disableXmlReport>true</disableXmlReport>
-    <useFile>false</useFile>
-    ...
-    <excludes>
-        <exclude>**/ComputeEngineCloudWindowsIT.java</exclude>
-        <exclude>**/ConfigAsCodeWindowsIT.java</exclude>
-        ...
-    </excludes>
-</configuration>
+* By default, the integration tests only use linux based agents for testing. If you make a
+  windows-related change, or otherwise want to test that a change still works for windows agents,
+  run the tests with the flag `-Dit.windows=true` like this:
+```bash
+mvn verify -Dit.windows=true
 ```
 
-* If you do make a **windows-related change**, remove the windows exclusions temporarily and run the
-integration test with mvn verify,
+Make sure you have these extra environment variables configured:
   * GOOGLE_BOOT_DISK_PROJECT_ID will be the same as your project id.
-  * GOOGLE_BOOT_DISK_IMAGE_NAME will be the name of the image you created using packer in google cloud console.
-  * More information on building your baseline windows image can be found [here](WINDOWS.md) and an example file can be found [here](windows-it-install.ps1).
+  * GOOGLE_BOOT_DISK_IMAGE_NAME will be the name of the image you created using packer in Google
+    cloud console.
+  * GOOGLE_JENKINS_PASSWORD will be the password you set when creating the image with packer, used
+    for password based ssh authentication.
+  * More information on building your baseline windows image can be found [here](WINDOWS.md) 
+    and an example powershell script for setup can be found [here](windows-it-install.ps1).

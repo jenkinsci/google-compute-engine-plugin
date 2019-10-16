@@ -99,6 +99,7 @@ public class ComputeEngineLinuxLauncher extends ComputeEngineComputerLauncher {
         return Optional.empty();
       }
     } catch (Exception e) {
+      logException(computer, listener, "Failed to authenticate with exception: ", e);
       if (bootstrapConn != null) {
         bootstrapConn.close();
       }

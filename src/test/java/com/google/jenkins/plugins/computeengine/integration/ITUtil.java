@@ -61,7 +61,7 @@ import com.google.jenkins.plugins.computeengine.ssh.GoogleKeyPair;
 import com.google.jenkins.plugins.credentials.oauth.GoogleRobotPrivateKeyCredentials;
 import com.google.jenkins.plugins.credentials.oauth.JsonServiceAccountConfig;
 import hudson.model.Node;
-import hudson.tasks.BatchFile;
+import hudson.plugins.powershell.PowerShell;
 import hudson.tasks.Builder;
 import hudson.tasks.Shell;
 import java.io.IOException;
@@ -231,7 +231,7 @@ class ITUtil {
 
   static Builder execute(Commands command, String argument) {
     if (windows) {
-      return new BatchFile(String.format(command.getWindows(), argument));
+      return new PowerShell(String.format(command.getWindows(), argument));
     }
     return new Shell(String.format(command.getLinux(), argument));
   }

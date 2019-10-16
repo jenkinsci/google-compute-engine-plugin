@@ -75,6 +75,7 @@
     <skip.surefire.tests>${skipTests}</skip.surefire.tests>
     <it.windows>false</it.windows>
     <configuration-as-code.version>1.14</configuration-as-code.version>
+    <powershell.version>1.3</powershell.version>
     <concurrency>10</concurrency>
     <it.runOrder>balanced</it.runOrder>
   </properties>
@@ -174,6 +175,12 @@
       <version>${configuration-as-code.version}</version>
       <scope>test</scope>
     </dependency>
+    <dependency>
+      <groupId>org.jenkins-ci.plugins</groupId>
+      <artifactId>powershell</artifactId>
+      <version>${powershell.version}</version>
+      <scope>test</scope>
+    </dependency>
   </dependencies>
 
   <repositories>
@@ -267,8 +274,6 @@
             <com.google.jenkins.plugins.computeengine.integration.ITUtil.windows>${it.windows}</com.google.jenkins.plugins.computeengine.integration.ITUtil.windows>
           </systemPropertyVariables>
           <excludes>
-            <exclude>**/ComputeEngineCloudWindowsIT.java</exclude>
-            <exclude>**/ConfigAsCodeWindowsIT.java</exclude>
             <exclude>**/ITUtil.java</exclude>
           </excludes>
           <argLine>-Djenkins.test.timeout=${jenkinsRuleTimeout}</argLine>
@@ -344,7 +349,7 @@
         </property>
       </activation>
       <properties>
-        <concurrency>10</concurrency>
+        <concurrency>8</concurrency>
         <it.runOrder>reversealphabetical</it.runOrder>
       </properties>
     </profile>
