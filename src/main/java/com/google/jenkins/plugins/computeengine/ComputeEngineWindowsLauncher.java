@@ -57,16 +57,6 @@ public class ComputeEngineWindowsLauncher extends ComputeEngineComputerLauncher 
       return Optional.empty();
     }
     return bootstrapConn;
-
-    // // connect fresh as ROOT
-    // logInfo(computer, listener, "connect fresh as root");
-    // Connection cleanupConn = connectToSsh(computer, listener);
-    // if (!authenticateSSH(node.getSshUser(), node.getWindowsConfig(), cleanupConn, listener)) {
-    //   logWarning(computer, listener, "Authentication failed");
-    //   return Optional.empty(); // failed to connect
-    // }
-    //
-    // return Optional.of(cleanupConn);
   }
 
   private boolean authenticateSSH(

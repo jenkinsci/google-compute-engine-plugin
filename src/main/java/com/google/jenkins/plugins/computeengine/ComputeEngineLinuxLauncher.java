@@ -54,16 +54,6 @@ public class ComputeEngineLinuxLauncher extends ComputeEngineComputerLauncher {
     GoogleKeyPair kp = node.getSSHKeyPair().get();
     Optional<Connection> bootstrapConn = bootstrap(kp, computer, listener);
     if (!bootstrapConn.isPresent()) {
-      //
-      //   // connect fresh as ROOT
-      //   logInfo(computer, listener, "connect fresh as root");
-      //   cleanupConn = connectToSsh(computer, listener);
-      //   if (!cleanupConn.authenticateWithPublicKey(
-      //       node.getSshUser(), kp.getPrivateKey().toCharArray(), "")) {
-      //     logWarning(computer, listener, "Authentication failed");
-      //     return Optional.empty(); // failed to connect
-      //   }
-      // } else {
       logWarning(computer, listener, "bootstrapresult failed");
       return Optional.empty();
     }
