@@ -33,7 +33,7 @@ import org.apache.commons.io.IOUtils;
  */
 final class PreemptedCheckCallable extends MasterToSlaveCallable<Boolean, IOException> {
   private static final String METADATA_SERVER_URL =
-      "http://metadata.google.internal/computeMetadata/v1/instance/preempted?wait_for_change=true";
+      "http://metadata.google.internal/computeMetadata/v1/instance/preempted?wait_for_change=%s";
 
   private final TaskListener listener;
 
@@ -58,7 +58,18 @@ final class PreemptedCheckCallable extends MasterToSlaveCallable<Boolean, IOExce
    */
   @Override
   public Boolean call() throws IOException {
-    HttpRequest request = createMetadataRequest();
+    HttpRequest initialRequest = createMetadataRequest(false);
+    HttpResponse initialResponse = initialRequest.execute();
+    final String initialResult = IOUtils.toString(initialResponse.getContent(), Charsets.UTF_8);
+    initialResponse.disconnect();
+    if ("TRUE".equals(initialResult)) {
+      listener
+          .getLogger()
+          .println("Instance was already preempted before monitoring metadata changes.");
+      return true;
+    }
+
+    HttpRequest request = createMetadataRequest(true);
     listener.getLogger().println("Preemptive instance, listening to metadata for preemption event");
     HttpResponse response = request.execute();
     final String result = IOUtils.toString(response.getContent(), Charsets.UTF_8);
@@ -67,12 +78,16 @@ final class PreemptedCheckCallable extends MasterToSlaveCallable<Boolean, IOExce
     return "TRUE".equals(result);
   }
 
-  private HttpRequest createMetadataRequest() throws IOException {
+  private HttpRequest createMetadataRequest(boolean waitForChange) throws IOException {
     HttpTransport transport = new NetHttpTransport();
-    GenericUrl metadata = new GenericUrl(METADATA_SERVER_URL);
+    GenericUrl metadata = new GenericUrl(getMetadataServerUrl(waitForChange));
     HttpRequest request = transport.createRequestFactory().buildGetRequest(metadata);
     request.setHeaders(new HttpHeaders().set("Metadata-Flavor", "Google"));
     request.setReadTimeout(Integer.MAX_VALUE);
     return request;
+  }
+
+  private static String getMetadataServerUrl(boolean waitForChange) {
+    return String.format(METADATA_SERVER_URL, waitForChange);
   }
 }

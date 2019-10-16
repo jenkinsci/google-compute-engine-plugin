@@ -51,27 +51,28 @@ public class ComputeEngineLinuxLauncher extends ComputeEngineComputerLauncher {
       return Optional.empty();
     }
 
-    Connection cleanupConn;
     GoogleKeyPair kp = node.getSSHKeyPair().get();
-    boolean isBootstrapped = bootstrap(kp, computer, listener);
-    if (isBootstrapped) {
-      // connect fresh as ROOT
-      logInfo(computer, listener, "connect fresh as root");
-      cleanupConn = connectToSsh(computer, listener);
-      if (!cleanupConn.authenticateWithPublicKey(
-          node.getSshUser(), kp.getPrivateKey().toCharArray(), "")) {
-        logWarning(computer, listener, "Authentication failed");
-        return Optional.empty(); // failed to connect
-      }
-    } else {
+    Optional<Connection> bootstrapConn = bootstrap(kp, computer, listener);
+    if (!bootstrapConn.isPresent()) {
+      //
+      //   // connect fresh as ROOT
+      //   logInfo(computer, listener, "connect fresh as root");
+      //   cleanupConn = connectToSsh(computer, listener);
+      //   if (!cleanupConn.authenticateWithPublicKey(
+      //       node.getSshUser(), kp.getPrivateKey().toCharArray(), "")) {
+      //     logWarning(computer, listener, "Authentication failed");
+      //     return Optional.empty(); // failed to connect
+      //   }
+      // } else {
       logWarning(computer, listener, "bootstrapresult failed");
       return Optional.empty();
     }
 
-    return Optional.of(cleanupConn);
+    return bootstrapConn;
   }
 
-  private boolean bootstrap(GoogleKeyPair kp, ComputeEngineComputer computer, TaskListener listener)
+  private Optional<Connection> bootstrap(
+      GoogleKeyPair kp, ComputeEngineComputer computer, TaskListener listener)
       throws IOException, Exception { // TODO: better exceptions
     logInfo(computer, listener, "bootstrap");
     ComputeEngineInstance node = computer.getNode();
@@ -105,14 +106,15 @@ public class ComputeEngineLinuxLauncher extends ComputeEngineComputerLauncher {
       }
       if (!isAuthenticated) {
         logWarning(computer, listener, "Authentication failed");
-        return false;
+        return Optional.empty();
       }
-    } finally {
+    } catch (Exception e) {
       if (bootstrapConn != null) {
         bootstrapConn.close();
       }
+      return Optional.empty();
     }
-    return true;
+    return Optional.of(bootstrapConn);
   }
 
   @Override

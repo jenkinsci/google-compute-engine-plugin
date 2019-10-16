@@ -344,7 +344,7 @@
         </property>
       </activation>
       <properties>
-        <concurrency>4</concurrency>
+        <concurrency>10</concurrency>
         <it.runOrder>reversealphabetical</it.runOrder>
       </properties>
     </profile>

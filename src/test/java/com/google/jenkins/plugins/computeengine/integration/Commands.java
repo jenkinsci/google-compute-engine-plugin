@@ -10,7 +10,7 @@ import lombok.Getter;
 public enum Commands {
   ECHO("echo %s", "echo %s"),
   EXIT("exit /b %s", "exit %s"),
-  SLEEP("timeout /t %s", "sleep %s");
+  SLEEP("ping /n %s /l 1024 google.com ", "sleep %s");
 
   private String windows;
   private String linux;

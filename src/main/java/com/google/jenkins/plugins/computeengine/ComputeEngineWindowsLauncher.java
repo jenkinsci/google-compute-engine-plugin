@@ -51,21 +51,22 @@ public class ComputeEngineWindowsLauncher extends ComputeEngineComputerLauncher 
       logWarning(computer, listener, "Non-windows node provided");
       return Optional.empty();
     }
-    boolean isBootstrapped = bootstrap(computer, listener);
-    if (!isBootstrapped) {
+    Optional<Connection> bootstrapConn = bootstrap(computer, listener);
+    if (!bootstrapConn.isPresent()) {
       logWarning(computer, listener, "bootstrapresult failed");
       return Optional.empty();
     }
+    return bootstrapConn;
 
-    // connect fresh as ROOT
-    logInfo(computer, listener, "connect fresh as root");
-    Connection cleanupConn = connectToSsh(computer, listener);
-    if (!authenticateSSH(node.getSshUser(), node.getWindowsConfig(), cleanupConn, listener)) {
-      logWarning(computer, listener, "Authentication failed");
-      return Optional.empty(); // failed to connect
-    }
-
-    return Optional.of(cleanupConn);
+    // // connect fresh as ROOT
+    // logInfo(computer, listener, "connect fresh as root");
+    // Connection cleanupConn = connectToSsh(computer, listener);
+    // if (!authenticateSSH(node.getSshUser(), node.getWindowsConfig(), cleanupConn, listener)) {
+    //   logWarning(computer, listener, "Authentication failed");
+    //   return Optional.empty(); // failed to connect
+    // }
+    //
+    // return Optional.of(cleanupConn);
   }
 
   private boolean authenticateSSH(
@@ -87,8 +88,7 @@ public class ComputeEngineWindowsLauncher extends ComputeEngineComputerLauncher 
     return isAuthenticated;
   }
 
-  private boolean bootstrap(ComputeEngineComputer computer, TaskListener listener)
-      throws IOException, Exception { // TODO(evanbrown): better exceptions
+  private Optional<Connection> bootstrap(ComputeEngineComputer computer, TaskListener listener) {
     if (computer == null) {
       throw new IllegalArgumentException("A null ComputeEngineComputer was provided");
     }
@@ -125,14 +125,15 @@ public class ComputeEngineWindowsLauncher extends ComputeEngineComputerLauncher 
       }
       if (!isAuthenticated) {
         logWarning(computer, listener, "Authentication failed");
-        return false;
+        return Optional.empty();
       }
-    } finally {
+    } catch (Exception e) {
       if (bootstrapConn != null) {
         bootstrapConn.close();
       }
+      return Optional.empty();
     }
-    return true;
+    return Optional.ofNullable(bootstrapConn);
   }
 
   @Override
