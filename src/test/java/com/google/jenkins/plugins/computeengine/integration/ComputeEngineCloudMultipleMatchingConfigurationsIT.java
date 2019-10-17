@@ -27,6 +27,8 @@ import static com.google.jenkins.plugins.computeengine.integration.ITUtil.initCr
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.instanceConfigurationBuilder;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.teardownResources;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import com.google.cloud.graphite.platforms.plugin.client.ComputeClient;
 import com.google.common.collect.Lists;
@@ -106,20 +108,24 @@ public class ComputeEngineCloudMultipleMatchingConfigurationsIT {
   }
 
   @Test
-  public void testMultipleLabelsProvisionedWithLabels() throws Exception {
+  public void testMultipleLabelsProvisionedWithLabels() {
     assertEquals(2, planned.size());
 
     final Iterator<PlannedNode> iterator = planned.iterator();
-    PlannedNode plannedNode = iterator.next();
-    checkOneNode(plannedNode, DESC_1);
-    plannedNode = iterator.next();
-    checkOneNode(plannedNode, DESC_2);
+    PlannedNode firstNode = iterator.next();
+    PlannedNode secondNode = iterator.next();
+    if (checkOneNode(firstNode, DESC_1)) {
+      assertTrue(checkOneNode(secondNode, DESC_2));
+    } else if (checkOneNode(secondNode, DESC_1)) {
+      assertTrue(checkOneNode(firstNode, DESC_2));
+    } else {
+      fail("Nodes did not have expected values");
+    }
   }
 
-  private void checkOneNode(PlannedNode plannedNode, String desc)
-      throws InterruptedException, java.util.concurrent.ExecutionException {
+  private boolean checkOneNode(PlannedNode plannedNode, String desc) {
     String name = plannedNode.displayName;
     Node node = jenkinsRule.jenkins.getNode(name);
-    assertEquals(desc, node.getNodeDescription());
+    return desc.equals(node.getNodeDescription());
   }
 }

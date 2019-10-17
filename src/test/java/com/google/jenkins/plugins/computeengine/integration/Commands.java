@@ -9,7 +9,7 @@ import lombok.Getter;
 @Getter
 public enum Commands {
   ECHO("echo %s", "echo %s"),
-  EXIT("exit /b %s", "exit %s"),
+  EXIT("exit %s", "exit %s"),
   SLEEP("sleep -s %s", "sleep %s");
 
   private String windows;
