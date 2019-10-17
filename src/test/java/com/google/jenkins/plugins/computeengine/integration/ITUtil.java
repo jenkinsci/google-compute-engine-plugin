@@ -20,6 +20,7 @@ import static com.google.cloud.graphite.platforms.plugin.client.util.ClientUtil.
 import static com.google.common.collect.ImmutableList.copyOf;
 import static com.google.common.collect.ImmutableList.of;
 import static com.google.jenkins.plugins.computeengine.InstanceConfiguration.METADATA_LINUX_STARTUP_SCRIPT_KEY;
+import static com.google.jenkins.plugins.computeengine.InstanceConfiguration.METADATA_WINDOWS_STARTUP_SCRIPT_KEY;
 import static com.google.jenkins.plugins.computeengine.InstanceConfiguration.NAT_NAME;
 import static com.google.jenkins.plugins.computeengine.InstanceConfiguration.NAT_TYPE;
 import static org.junit.Assert.assertEquals;
@@ -27,10 +28,13 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.fail;
 
+import com.cloudbees.jenkins.plugins.sshcredentials.impl.BasicSSHUserPrivateKey;
 import com.cloudbees.plugins.credentials.Credentials;
+import com.cloudbees.plugins.credentials.CredentialsScope;
 import com.cloudbees.plugins.credentials.CredentialsStore;
 import com.cloudbees.plugins.credentials.SecretBytes;
 import com.cloudbees.plugins.credentials.SystemCredentialsProvider;
+import com.cloudbees.plugins.credentials.common.StandardUsernameCredentials;
 import com.cloudbees.plugins.credentials.domains.Domain;
 import com.google.api.services.compute.model.AccessConfig;
 import com.google.api.services.compute.model.AttachedDisk;
@@ -51,11 +55,15 @@ import com.google.jenkins.plugins.computeengine.AcceleratorConfiguration;
 import com.google.jenkins.plugins.computeengine.AutofilledNetworkConfiguration;
 import com.google.jenkins.plugins.computeengine.ComputeEngineCloud;
 import com.google.jenkins.plugins.computeengine.InstanceConfiguration;
+import com.google.jenkins.plugins.computeengine.WindowsConfiguration;
 import com.google.jenkins.plugins.computeengine.client.ClientUtil;
 import com.google.jenkins.plugins.computeengine.ssh.GoogleKeyPair;
 import com.google.jenkins.plugins.credentials.oauth.GoogleRobotPrivateKeyCredentials;
 import com.google.jenkins.plugins.credentials.oauth.JsonServiceAccountConfig;
 import hudson.model.Node;
+import hudson.plugins.powershell.PowerShell;
+import hudson.tasks.Builder;
+import hudson.tasks.Shell;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -63,12 +71,16 @@ import java.nio.file.Paths;
 import java.util.List;
 import java.util.Map;
 import java.util.logging.Logger;
+import jenkins.util.SystemProperties;
 import org.apache.commons.lang.SystemUtils;
 import org.jvnet.hudson.test.JenkinsRule;
 
 /** Common logic and constants used throughout the integration tests. */
 class ITUtil {
-  static final String DEB_JAVA_STARTUP_SCRIPT =
+  static final boolean windows =
+      Boolean.parseBoolean(
+          SystemProperties.getString(ITUtil.class.getName() + ".windows", "false"));
+  private static final String DEB_JAVA_STARTUP_SCRIPT =
       "#!/bin/bash\n"
           + "/etc/init.d/ssh stop\n"
           + "echo \"deb http://http.debian.net/debian stretch-backports main\" | \\\n"
@@ -95,14 +107,19 @@ class ITUtil {
   private static final String CONFIG_DESC = "integration";
   private static final String BOOT_DISK_TYPE = ZONE_BASE + "/diskTypes/pd-ssd";
   private static final boolean BOOT_DISK_AUTODELETE = true;
-  private static final String BOOT_DISK_PROJECT_ID = "debian-cloud";
+  private static final String BOOT_DISK_PROJECT_ID =
+      windows ? System.getenv("GOOGLE_BOOT_DISK_PROJECT_ID") : "debian-cloud";
   private static final String BOOT_DISK_IMAGE_NAME =
-      "projects/debian-cloud/global/images/family/debian-9";
-  private static final String BOOT_DISK_SIZE_GB_STR = "10";
+      windows
+          ? String.format(
+              "projects/%s/global/images/%s",
+              BOOT_DISK_PROJECT_ID, System.getenv("GOOGLE_BOOT_DISK_IMAGE_NAME"))
+          : "projects/debian-cloud/global/images/family/debian-9";
+  private static final String BOOT_DISK_SIZE_GB_STR = windows ? "50" : "10";
   private static final Node.Mode NODE_MODE = Node.Mode.EXCLUSIVE;
   private static final String ACCELERATOR_NAME = "";
   private static final String ACCELERATOR_COUNT = "";
-  private static final String RUN_AS_USER = "jenkins";
+  static final String RUN_AS_USER = "jenkins";
   static final String NULL_TEMPLATE = null;
   private static final String NETWORK_NAME = format("projects/%s/global/networks/default");
   private static final String SUBNETWORK_NAME = "default";
@@ -112,10 +129,30 @@ class ITUtil {
       String.format("%s@%s.iam.gserviceaccount.com", System.getenv("GOOGLE_SA_NAME"), PROJECT_ID);
   private static final String RETENTION_TIME_MINUTES_STR = "";
   private static final String LAUNCH_TIMEOUT_SECONDS_STR = "";
-  static final String SSH_USER = "test-user";
-  private static final GoogleKeyPair SSH_KEY = GoogleKeyPair.generate(SSH_USER);
+  static final int SNAPSHOT_TIMEOUT = windows ? 600 : 300;
+  private static final GoogleKeyPair SSH_KEY = GoogleKeyPair.generate(RUN_AS_USER);
   static final String SSH_PRIVATE_KEY = SSH_KEY.getPrivateKey();
+  private static final String WINDOWS_STARTUP_SCRIPT =
+      "Stop-Service sshd\n"
+          + "$ConfiguredPublicKey = "
+          + "\""
+          + SSH_KEY.getPublicKey().trim().substring(RUN_AS_USER.length() + 1)
+          + "\"\n"
+          + "Write-Output \"Second phase\"\n"
+          + "# We are in the second phase of startup where we need to set up authorized_keys for the specified user.\n"
+          + "# Create the .ssh folder and authorized_keys file.\n"
+          + "Set-Content -Path $env:PROGRAMDATA\\ssh\\administrators_authorized_keys -Value $ConfiguredPublicKey\n"
+          + "icacls $env:PROGRAMDATA\\ssh\\administrators_authorized_keys /inheritance:r\n"
+          + "icacls $env:PROGRAMDATA\\ssh\\administrators_authorized_keys /grant SYSTEM:`(F`)\n"
+          + "icacls $env:PROGRAMDATA\\ssh\\administrators_authorized_keys /grant BUILTIN\\Administrators:`(F`)\n"
+          + "Restart-Service sshd";
+  private static final String STARTUP_SCRIPT =
+      windows ? WINDOWS_STARTUP_SCRIPT : DEB_JAVA_STARTUP_SCRIPT;
   static final int TEST_TIMEOUT_MULTIPLIER = SystemUtils.IS_OS_WINDOWS ? 3 : 1;
+  static final String CONFIG_AS_CODE_PATH =
+      windows ? "configuration-as-code-windows-it.yml" : "configuration-as-code-it.yml";
+
+  private static String windowsPrivateKeyCredentialsId;
 
   static String format(String s) {
     assertNotNull("GOOGLE_PROJECT_ID env var must be set", PROJECT_ID);
@@ -154,7 +191,23 @@ class ITUtil {
     CredentialsStore store = new SystemCredentialsProvider.ProviderImpl().getStore(r.jenkins);
     assertNotNull("Credentials store can not be null", store);
     store.addCredentials(Domain.global(), credentials);
+    if (windows) {
+      windowsPrivateKeyCredentialsId = initWindowsSshCredentials(store);
+    }
     return credentials;
+  }
+
+  private static String initWindowsSshCredentials(CredentialsStore store) throws IOException {
+    StandardUsernameCredentials windowsPrivateKeyCredentials =
+        new BasicSSHUserPrivateKey(
+            CredentialsScope.GLOBAL,
+            null,
+            RUN_AS_USER,
+            new BasicSSHUserPrivateKey.DirectEntryPrivateKeySource(SSH_KEY.getPrivateKey()),
+            null,
+            "integration test private key for windows");
+    store.addCredentials(Domain.global(), windowsPrivateKeyCredentials);
+    return windowsPrivateKeyCredentials.getId();
   }
 
   // Add Cloud plugin
@@ -174,6 +227,13 @@ class ITUtil {
     assertNotNull("ComputeClient can not be null", client);
     deleteIntegrationInstances(true, client, label, log);
     return client;
+  }
+
+  static Builder execute(Commands command, String argument) {
+    if (windows) {
+      return new PowerShell(String.format(command.getWindows(), argument));
+    }
+    return new Shell(String.format(command.getLinux(), argument));
   }
 
   static void teardownResources(ComputeClient client, Map<String, String> label, Logger log)
@@ -206,8 +266,11 @@ class ITUtil {
             .setItems(
                 of(
                     new Metadata.Items()
-                        .setKey(METADATA_LINUX_STARTUP_SCRIPT_KEY)
-                        .setValue(DEB_JAVA_STARTUP_SCRIPT),
+                        .setKey(
+                            windows
+                                ? METADATA_WINDOWS_STARTUP_SCRIPT_KEY
+                                : METADATA_LINUX_STARTUP_SCRIPT_KEY)
+                        .setValue(STARTUP_SCRIPT),
                     new Metadata.Items()
                         .setKey(InstanceConfiguration.SSH_METADATA_KEY)
                         .setValue(SSH_KEY.getPublicKey()))));
@@ -235,7 +298,13 @@ class ITUtil {
         .bootDiskSourceImageName(BOOT_DISK_IMAGE_NAME)
         .bootDiskSourceImageProject(BOOT_DISK_PROJECT_ID)
         .bootDiskSizeGbStr(BOOT_DISK_SIZE_GB_STR)
-        .windowsConfiguration(null)
+        .windowsConfiguration(
+            windows
+                ? WindowsConfiguration.builder()
+                    .passwordCredentialsId("")
+                    .privateKeyCredentialsId(windowsPrivateKeyCredentialsId)
+                    .build()
+                : null)
         .remoteFs(null)
         .networkConfiguration(new AutofilledNetworkConfiguration(NETWORK_NAME, SUBNETWORK_NAME))
         .externalAddress(EXTERNAL_ADDR)
@@ -247,7 +316,8 @@ class ITUtil {
         .launchTimeoutSecondsStr(LAUNCH_TIMEOUT_SECONDS_STR)
         .mode(NODE_MODE)
         .acceleratorConfiguration(new AcceleratorConfiguration(ACCELERATOR_NAME, ACCELERATOR_COUNT))
-        .runAsUser(RUN_AS_USER);
+        .runAsUser(RUN_AS_USER)
+        .startupScript(STARTUP_SCRIPT);
   }
 
   /*

@@ -16,12 +16,13 @@
 
 package com.google.jenkins.plugins.computeengine.integration;
 
-import static com.google.jenkins.plugins.computeengine.integration.ITUtil.DEB_JAVA_STARTUP_SCRIPT;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.NULL_TEMPLATE;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.NUM_EXECUTORS;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.PROJECT_ID;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.SNAPSHOT_LABEL;
+import static com.google.jenkins.plugins.computeengine.integration.ITUtil.SNAPSHOT_TIMEOUT;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.TEST_TIMEOUT_MULTIPLIER;
+import static com.google.jenkins.plugins.computeengine.integration.ITUtil.execute;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.getLabel;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.initClient;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.initCloud;
@@ -43,7 +44,6 @@ import hudson.model.Node;
 import hudson.model.Result;
 import hudson.model.labels.LabelAtom;
 import hudson.tasks.Builder;
-import hudson.tasks.Shell;
 import java.io.IOException;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
@@ -64,10 +64,8 @@ import org.jvnet.hudson.test.JenkinsRule;
 public class ComputeEngineCloudSnapshotCreatedIT {
   private static Logger log = Logger.getLogger(ComputeEngineCloudSnapshotCreatedIT.class.getName());
 
-  private static final int SNAPSHOT_TEST_TIMEOUT = 120;
-
   @ClassRule
-  public static Timeout timeout = new Timeout(10 * TEST_TIMEOUT_MULTIPLIER, TimeUnit.MINUTES);
+  public static Timeout timeout = new Timeout(15 * TEST_TIMEOUT_MULTIPLIER, TimeUnit.MINUTES);
 
   @ClassRule public static JenkinsRule jenkinsRule = new JenkinsRule();
 
@@ -84,7 +82,6 @@ public class ComputeEngineCloudSnapshotCreatedIT {
 
     InstanceConfiguration instanceConfiguration =
         instanceConfigurationBuilder()
-            .startupScript(DEB_JAVA_STARTUP_SCRIPT)
             .numExecutorsStr(NUM_EXECUTORS)
             .labels(SNAPSHOT_LABEL)
             .oneShot(true)
@@ -100,7 +97,7 @@ public class ComputeEngineCloudSnapshotCreatedIT {
             .isCreateSnapshot());
 
     FreeStyleProject project = jenkinsRule.createFreeStyleProject();
-    Builder step = new Shell("exit 1");
+    Builder step = execute(Commands.EXIT, "1");
     project.getBuildersList().add(step);
     project.setAssignedLabel(new LabelAtom(SNAPSHOT_LABEL));
 
@@ -110,7 +107,7 @@ public class ComputeEngineCloudSnapshotCreatedIT {
 
     // Need time for one-shot instance to terminate and create the snapshot
     Awaitility.await()
-        .timeout(SNAPSHOT_TEST_TIMEOUT, TimeUnit.SECONDS)
+        .timeout(SNAPSHOT_TIMEOUT, TimeUnit.SECONDS)
         .pollInterval(10, TimeUnit.SECONDS)
         .until(() -> jenkinsRule.jenkins.getNode(worker.getNodeName()) == null);
 
@@ -139,7 +136,7 @@ public class ComputeEngineCloudSnapshotCreatedIT {
   @Test
   public void testSnapshotCreatedOneShotInstanceDeleted() {
     Awaitility.await()
-        .timeout(SNAPSHOT_TEST_TIMEOUT, TimeUnit.SECONDS)
+        .timeout(SNAPSHOT_TIMEOUT, TimeUnit.SECONDS)
         .until(() -> client.listInstancesWithLabel(PROJECT_ID, label).isEmpty());
   }
 }

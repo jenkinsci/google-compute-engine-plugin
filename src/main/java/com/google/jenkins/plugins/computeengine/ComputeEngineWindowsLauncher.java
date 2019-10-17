@@ -16,6 +16,7 @@ package com.google.jenkins.plugins.computeengine;
 
 import com.cloudbees.jenkins.plugins.sshcredentials.SSHAuthenticator;
 import com.google.api.services.compute.model.Operation;
+import com.google.common.base.Preconditions;
 import com.trilead.ssh2.Connection;
 import hudson.model.TaskListener;
 import java.io.IOException;
@@ -51,21 +52,12 @@ public class ComputeEngineWindowsLauncher extends ComputeEngineComputerLauncher 
       logWarning(computer, listener, "Non-windows node provided");
       return Optional.empty();
     }
-    boolean isBootstrapped = bootstrap(computer, listener);
-    if (!isBootstrapped) {
+    Optional<Connection> bootstrapConn = bootstrap(computer, listener);
+    if (!bootstrapConn.isPresent()) {
       logWarning(computer, listener, "bootstrapresult failed");
       return Optional.empty();
     }
-
-    // connect fresh as ROOT
-    logInfo(computer, listener, "connect fresh as root");
-    Connection cleanupConn = connectToSsh(computer, listener);
-    if (!authenticateSSH(node.getSshUser(), node.getWindowsConfig(), cleanupConn, listener)) {
-      logWarning(computer, listener, "Authentication failed");
-      return Optional.empty(); // failed to connect
-    }
-
-    return Optional.of(cleanupConn);
+    return bootstrapConn;
   }
 
   private boolean authenticateSSH(
@@ -87,11 +79,8 @@ public class ComputeEngineWindowsLauncher extends ComputeEngineComputerLauncher 
     return isAuthenticated;
   }
 
-  private boolean bootstrap(ComputeEngineComputer computer, TaskListener listener)
-      throws IOException, Exception { // TODO(evanbrown): better exceptions
-    if (computer == null) {
-      throw new IllegalArgumentException("A null ComputeEngineComputer was provided");
-    }
+  private Optional<Connection> bootstrap(ComputeEngineComputer computer, TaskListener listener) {
+    Preconditions.checkNotNull(computer, "A null ComputeEngineComputer was provided");
     logInfo(computer, listener, "bootstrap");
 
     ComputeEngineInstance node = computer.getNode();
@@ -125,14 +114,16 @@ public class ComputeEngineWindowsLauncher extends ComputeEngineComputerLauncher 
       }
       if (!isAuthenticated) {
         logWarning(computer, listener, "Authentication failed");
-        return false;
+        return Optional.empty();
       }
-    } finally {
+    } catch (Exception e) {
+      logException(computer, listener, "Failed to authenticate with exception: ", e);
       if (bootstrapConn != null) {
         bootstrapConn.close();
       }
+      return Optional.empty();
     }
-    return true;
+    return Optional.ofNullable(bootstrapConn);
   }
 
   @Override

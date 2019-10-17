@@ -16,13 +16,13 @@
 
 package com.google.jenkins.plugins.computeengine.integration;
 
-import static com.google.jenkins.plugins.computeengine.integration.ITUtil.DEB_JAVA_STARTUP_SCRIPT;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.LABEL;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.NULL_TEMPLATE;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.NUM_EXECUTORS;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.PROJECT_ID;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.TEST_TIMEOUT_MULTIPLIER;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.ZONE;
+import static com.google.jenkins.plugins.computeengine.integration.ITUtil.execute;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.getLabel;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.initClient;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.initCloud;
@@ -46,7 +46,6 @@ import hudson.model.labels.LabelAtom;
 import hudson.model.queue.QueueTaskFuture;
 import hudson.slaves.NodeProvisioner.PlannedNode;
 import hudson.tasks.Builder;
-import hudson.tasks.Shell;
 import java.io.IOException;
 import java.util.Collection;
 import java.util.Iterator;
@@ -85,7 +84,6 @@ public class ComputeEngineCloudRestartPreemptedIT {
 
     InstanceConfiguration configuration =
         instanceConfigurationBuilder()
-            .startupScript(DEB_JAVA_STARTUP_SCRIPT)
             .numExecutorsStr(NUM_EXECUTORS)
             .labels(LABEL)
             .template(NULL_TEMPLATE)
@@ -115,7 +113,7 @@ public class ComputeEngineCloudRestartPreemptedIT {
     assertTrue("Configuration was set as preemptible but saw as not", computer.getPreemptible());
 
     FreeStyleProject project = jenkinsRule.createFreeStyleProject();
-    Builder step = new Shell("sleep 60");
+    Builder step = execute(Commands.SLEEP, "60");
     project.getBuildersList().add(step);
     project.setAssignedLabel(new LabelAtom(LABEL));
     QueueTaskFuture<FreeStyleBuild> taskFuture = project.scheduleBuild2(0);
@@ -131,10 +129,10 @@ public class ComputeEngineCloudRestartPreemptedIT {
     assertEquals(FAILURE, freeStyleBuild.getResult());
 
     Awaitility.await()
-        .timeout(9, TimeUnit.MINUTES)
-        .until(
-            () ->
-                freeStyleBuild.getNextBuild() != null
-                    && freeStyleBuild.getNextBuild().getResult() == SUCCESS);
+        .timeout(5, TimeUnit.MINUTES)
+        .until(() -> freeStyleBuild.getNextBuild() != null);
+    FreeStyleBuild nextBuild = freeStyleBuild.getNextBuild();
+    Awaitility.await().timeout(5, TimeUnit.MINUTES).until(() -> nextBuild.getResult() != null);
+    assertEquals(SUCCESS, nextBuild.getResult());
   }
 }

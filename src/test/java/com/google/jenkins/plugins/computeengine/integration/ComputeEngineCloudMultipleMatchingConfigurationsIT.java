@@ -16,7 +16,6 @@
 
 package com.google.jenkins.plugins.computeengine.integration;
 
-import static com.google.jenkins.plugins.computeengine.integration.ITUtil.DEB_JAVA_STARTUP_SCRIPT;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.LABEL;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.NULL_TEMPLATE;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.NUM_EXECUTORS;
@@ -28,6 +27,8 @@ import static com.google.jenkins.plugins.computeengine.integration.ITUtil.initCr
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.instanceConfigurationBuilder;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.teardownResources;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import com.google.cloud.graphite.platforms.plugin.client.ComputeClient;
 import com.google.common.collect.Lists;
@@ -54,9 +55,9 @@ import org.jvnet.hudson.test.JenkinsRule;
  * with multiple matching {@link InstanceConfiguration} and that these instances are properly
  * provisioned.
  */
-public class ComputeEngineCloudMultipeMatchingConfigurationsIT {
+public class ComputeEngineCloudMultipleMatchingConfigurationsIT {
   private static Logger log =
-      Logger.getLogger(ComputeEngineCloudMultipeMatchingConfigurationsIT.class.getName());
+      Logger.getLogger(ComputeEngineCloudMultipleMatchingConfigurationsIT.class.getName());
 
   private static final String DESC_1 = "type_1";
   private static final String DESC_2 = "type_2";
@@ -68,7 +69,7 @@ public class ComputeEngineCloudMultipeMatchingConfigurationsIT {
 
   private static ComputeClient client;
   private static Map<String, String> label =
-      getLabel(ComputeEngineCloudMultipeMatchingConfigurationsIT.class);
+      getLabel(ComputeEngineCloudMultipleMatchingConfigurationsIT.class);
   private static Collection<PlannedNode> planned;
 
   @BeforeClass
@@ -80,7 +81,6 @@ public class ComputeEngineCloudMultipeMatchingConfigurationsIT {
 
     InstanceConfiguration configuration1 =
         instanceConfigurationBuilder()
-            .startupScript(DEB_JAVA_STARTUP_SCRIPT)
             .numExecutorsStr(NUM_EXECUTORS)
             .labels(LABEL)
             .template(NULL_TEMPLATE)
@@ -90,7 +90,6 @@ public class ComputeEngineCloudMultipeMatchingConfigurationsIT {
 
     InstanceConfiguration configuration2 =
         instanceConfigurationBuilder()
-            .startupScript(DEB_JAVA_STARTUP_SCRIPT)
             .numExecutorsStr(NUM_EXECUTORS)
             .labels(LABEL)
             .template(NULL_TEMPLATE)
@@ -109,21 +108,24 @@ public class ComputeEngineCloudMultipeMatchingConfigurationsIT {
   }
 
   @Test
-  public void testMultipleLabelsProvisionedWithLabels() throws Exception {
+  public void testMultipleLabelsProvisionedWithLabels() {
     assertEquals(2, planned.size());
 
     final Iterator<PlannedNode> iterator = planned.iterator();
-    PlannedNode plannedNode = iterator.next();
-    checkOneNode(plannedNode, DESC_1);
-    plannedNode = iterator.next();
-    checkOneNode(plannedNode, DESC_2);
+    PlannedNode firstNode = iterator.next();
+    PlannedNode secondNode = iterator.next();
+    if (checkOneNode(firstNode, DESC_1)) {
+      assertTrue(checkOneNode(secondNode, DESC_2));
+    } else if (checkOneNode(secondNode, DESC_1)) {
+      assertTrue(checkOneNode(firstNode, DESC_2));
+    } else {
+      fail("Nodes did not have expected values");
+    }
   }
 
-  private void checkOneNode(PlannedNode plannedNode, String desc)
-      throws InterruptedException, java.util.concurrent.ExecutionException {
+  private boolean checkOneNode(PlannedNode plannedNode, String desc) {
     String name = plannedNode.displayName;
-    plannedNode.future.get();
     Node node = jenkinsRule.jenkins.getNode(name);
-    assertEquals(desc, node.getNodeDescription());
+    return desc.equals(node.getNodeDescription());
   }
 }

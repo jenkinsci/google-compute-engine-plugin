@@ -13,6 +13,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
+// Windows Agent IT pipeline, run manually.
 pipeline {
     agent {
         kubernetes {
@@ -27,21 +29,25 @@ pipeline {
         GOOGLE_REGION = "${GCE_IT_REGION}"
         GOOGLE_ZONE = "${GCE_IT_ZONE}"
         GOOGLE_SA_NAME = "${GCE_IT_SA}"
+        GOOGLE_BOOT_DISK_PROJECT_ID = "${GCE_WINDOWS_IT_IMAGE_PROJECT}"
+        GOOGLE_BOOT_DISK_IMAGE_NAME = "${GCE_WINDOWS_IT_IMAGE_NAME}"
         BUILD_ARTIFACTS_BUCKET = "${GCE_IT_BUCKET}"
-        BUILD_ARTIFACTS = "build-${BRANCH_NAME}-${BUILD_ID}.tar.gz"
+        CLEAN_BRANCH_NAME = "${BRANCH_NAME}".replaceAll("[/&;<>|\\]]", "_")
+        BUILD_ARTIFACTS = "windows-${CLEAN_BRANCH_NAME}-${BUILD_ID}.tar.gz"
     }
 
     stages {
         stage("Build and test") {
             steps {
                 container('maven') {
-                    withCredentials([[$class: 'StringBinding', credentialsId: env.GCE_IT_CRED_ID, variable: 'GOOGLE_CREDENTIALS']]) {
+                    withCredentials([[$class: 'StringBinding', credentialsId: env.GCE_IT_CRED_ID, variable: 'GOOGLE_CREDENTIALS'],
+                                     [$class: 'StringBinding', credentialsId: env.GCE_WINDOWS_IT_JENKINS_PASSWORD, variable: 'GOOGLE_JENKINS_PASSWORD']]) {
                         catchError {
                             // build
                             sh "mvn clean package -ntp"
 
                             // run tests
-                            sh "mvn verify -ntp"
+                            sh "mvn verify -ntp -Dit.windows=true"
                         }
 
                         sh "jenkins/saveAndCompress.sh"

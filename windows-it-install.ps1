@@ -35,7 +35,7 @@ choco install -y jre8
 # Following Step is needed for the startup script in the integration test to work, even if you already configured your own user.
 Write-Output "Adding build user..."
 $username = "jenkins"
-$password = ConvertTo-SecureString "P4ssword1" -AsPlainText -Force
+$password = ConvertTo-SecureString $env:WINDOWS_PASSWORD -AsPlainText -Force
 New-LocalUser -Name $username -Password $password
 Add-LocalGroupMember -Group "Administrators" -Member "$username"
 
@@ -43,3 +43,6 @@ Add-LocalGroupMember -Group "Administrators" -Member "$username"
 Write-Output "Simulating login to register user..."
 $cred = New-Object System.Management.Automation.PSCredential -ArgumentList $username,$password
 Start-Process cmd /c -WindowStyle Hidden -Credential $cred -ErrorAction SilentlyContinue
+
+# Close the door on the way out
+choco install undo-winrmconfig-during-shutdown --confirm

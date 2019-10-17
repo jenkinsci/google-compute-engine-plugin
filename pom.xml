@@ -73,8 +73,11 @@
     <maven.compiler.source>1.8</maven.compiler.source>
     <maven.compiler.target>1.8</maven.compiler.target>
     <skip.surefire.tests>${skipTests}</skip.surefire.tests>
+    <it.windows>false</it.windows>
     <configuration-as-code.version>1.14</configuration-as-code.version>
+    <powershell.version>1.3</powershell.version>
     <concurrency>10</concurrency>
+    <it.runOrder>balanced</it.runOrder>
   </properties>
 
   <dependencies>
@@ -172,6 +175,12 @@
       <version>${configuration-as-code.version}</version>
       <scope>test</scope>
     </dependency>
+    <dependency>
+      <groupId>org.jenkins-ci.plugins</groupId>
+      <artifactId>powershell</artifactId>
+      <version>${powershell.version}</version>
+      <scope>test</scope>
+    </dependency>
   </dependencies>
 
   <repositories>
@@ -262,14 +271,13 @@
             <hudson.model.LoadStatistics.decay>0.5</hudson.model.LoadStatistics.decay>
             <hudson.agents.NodeProvisioner.MARGIN>100</hudson.agents.NodeProvisioner.MARGIN>
             <hudson.agents.NodeProvisioner.MARGIN0>1.0</hudson.agents.NodeProvisioner.MARGIN0>
+            <com.google.jenkins.plugins.computeengine.integration.ITUtil.windows>${it.windows}</com.google.jenkins.plugins.computeengine.integration.ITUtil.windows>
           </systemPropertyVariables>
           <excludes>
-            <exclude>**/ComputeEngineCloudWindowsIT.java</exclude>
-            <exclude>**/ConfigAsCodeWindowsIT.java</exclude>
             <exclude>**/ITUtil.java</exclude>
           </excludes>
           <argLine>-Djenkins.test.timeout=${jenkinsRuleTimeout}</argLine>
-          <runOrder>balanced</runOrder>
+          <runOrder>${it.runOrder}</runOrder>
         </configuration>
       </plugin>
       <plugin>
@@ -330,6 +338,19 @@
       </activation>
       <properties>
         <concurrency>4</concurrency>
+      </properties>
+    </profile>
+    <profile>
+      <id>windows-agents</id>
+      <activation>
+        <property>
+          <name>it.windows</name>
+          <value>true</value>
+        </property>
+      </activation>
+      <properties>
+        <concurrency>8</concurrency>
+        <it.runOrder>reversealphabetical</it.runOrder>
       </properties>
     </profile>
   </profiles>

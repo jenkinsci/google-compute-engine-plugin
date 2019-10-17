@@ -17,10 +17,11 @@
 package com.google.jenkins.plugins.computeengine.integration;
 
 import static com.google.cloud.graphite.platforms.plugin.client.util.ClientUtil.nameFromSelfLink;
-import static com.google.jenkins.plugins.computeengine.integration.ITUtil.DEB_JAVA_STARTUP_SCRIPT;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.LABEL;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.NUM_EXECUTORS;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.PROJECT_ID;
+import static com.google.jenkins.plugins.computeengine.integration.ITUtil.RUN_AS_USER;
+import static com.google.jenkins.plugins.computeengine.integration.ITUtil.SSH_PRIVATE_KEY;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.TEST_TIMEOUT_MULTIPLIER;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.ZONE;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.createTemplate;
@@ -44,7 +45,6 @@ import com.google.common.collect.ImmutableMap;
 import com.google.jenkins.plugins.computeengine.ComputeEngineCloud;
 import com.google.jenkins.plugins.computeengine.InstanceConfiguration;
 import com.trilead.ssh2.Connection;
-import com.trilead.ssh2.ServerHostKeyVerifier;
 import hudson.model.labels.LabelAtom;
 import hudson.slaves.NodeProvisioner.PlannedNode;
 import java.io.IOException;
@@ -93,7 +93,6 @@ public class ComputeEngineCloudTemplateIT {
     cloud.setConfigurations(
         ImmutableList.of(
             instanceConfigurationBuilder()
-                .startupScript(DEB_JAVA_STARTUP_SCRIPT)
                 .numExecutorsStr(NUM_EXECUTORS)
                 .labels(LABEL)
                 .oneShot(false)
@@ -156,18 +155,11 @@ public class ComputeEngineCloudTemplateIT {
       int port = SSH_PORT;
       conn = new Connection(host, port);
       conn.connect(
-          new ServerHostKeyVerifier() {
-            public boolean verifyServerHostKey(
-                String hostname, int port, String serverHostKeyAlgorithm, byte[] serverHostKey)
-                throws Exception {
-              return true;
-            }
-          },
+          (hostname, portnum, serverHostKeyAlgorithm, serverHostKey) -> true,
           SSH_TIMEOUT,
           SSH_TIMEOUT);
-      assertTrue(
-          conn.authenticateWithPublicKey(
-              ITUtil.SSH_USER, ITUtil.SSH_PRIVATE_KEY.toCharArray(), ""));
+      log.info(String.format("Connected to SSH. Authenticating as user %s", RUN_AS_USER));
+      assertTrue(conn.authenticateWithPublicKey(RUN_AS_USER, SSH_PRIVATE_KEY.toCharArray(), ""));
     } finally {
       if (conn != null) {
         conn.close();

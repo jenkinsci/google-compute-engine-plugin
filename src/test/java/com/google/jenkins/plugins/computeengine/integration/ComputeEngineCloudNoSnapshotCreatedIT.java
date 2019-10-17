@@ -16,13 +16,14 @@
 
 package com.google.jenkins.plugins.computeengine.integration;
 
-import static com.google.jenkins.plugins.computeengine.integration.ITUtil.DEB_JAVA_STARTUP_SCRIPT;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.NULL_TEMPLATE;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.NUM_EXECUTORS;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.PROJECT_ID;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.SNAPSHOT_LABEL;
+import static com.google.jenkins.plugins.computeengine.integration.ITUtil.SNAPSHOT_TIMEOUT;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.TEST_TIMEOUT_MULTIPLIER;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.ZONE;
+import static com.google.jenkins.plugins.computeengine.integration.ITUtil.execute;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.getLabel;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.initClient;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.initCloud;
@@ -40,7 +41,6 @@ import hudson.model.FreeStyleProject;
 import hudson.model.Node;
 import hudson.model.labels.LabelAtom;
 import hudson.tasks.Builder;
-import hudson.tasks.Shell;
 import java.io.IOException;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
@@ -80,7 +80,6 @@ public class ComputeEngineCloudNoSnapshotCreatedIT {
 
     InstanceConfiguration instanceConfiguration =
         ITUtil.instanceConfigurationBuilder()
-            .startupScript(DEB_JAVA_STARTUP_SCRIPT)
             .numExecutorsStr(NUM_EXECUTORS)
             .labels(SNAPSHOT_LABEL)
             .oneShot(true)
@@ -96,7 +95,7 @@ public class ComputeEngineCloudNoSnapshotCreatedIT {
             .isCreateSnapshot());
 
     FreeStyleProject project = jenkinsRule.createFreeStyleProject();
-    Builder step = new Shell("echo works");
+    Builder step = execute(Commands.ECHO, "works");
     project.getBuildersList().add(step);
     project.setAssignedLabel(new LabelAtom(SNAPSHOT_LABEL));
 
@@ -125,7 +124,7 @@ public class ComputeEngineCloudNoSnapshotCreatedIT {
   public void testNoSnapshotCreatedSnapshotNull() throws Exception {
     // Wait for one-shot instance to terminate and create the snapshot
     Awaitility.await()
-        .timeout(2, TimeUnit.MINUTES)
+        .timeout(SNAPSHOT_TIMEOUT, TimeUnit.SECONDS)
         .pollInterval(10, TimeUnit.SECONDS)
         .until(() -> jenkinsRule.jenkins.getNode(name) == null);
     client.getSnapshot(PROJECT_ID, name);

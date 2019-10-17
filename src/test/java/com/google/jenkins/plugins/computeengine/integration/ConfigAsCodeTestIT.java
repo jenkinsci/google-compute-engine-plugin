@@ -1,5 +1,6 @@
 package com.google.jenkins.plugins.computeengine.integration;
 
+import static com.google.jenkins.plugins.computeengine.integration.ITUtil.CONFIG_AS_CODE_PATH;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.PROJECT_ID;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.TEST_TIMEOUT_MULTIPLIER;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.ZONE;
@@ -21,6 +22,7 @@ import java.util.Collection;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
+import org.awaitility.Awaitility;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
@@ -41,6 +43,8 @@ public class ConfigAsCodeTestIT {
   @BeforeClass
   public static void init() throws Exception {
     log.info("init");
+    ConfigurationAsCode.get()
+        .configure(ConfigAsCodeTestIT.class.getResource(CONFIG_AS_CODE_PATH).toString());
     initCredentials(jenkinsRule);
     client = initClient(jenkinsRule, label, log);
   }
@@ -52,8 +56,6 @@ public class ConfigAsCodeTestIT {
 
   @Test
   public void testWorkerCreated() throws Exception {
-    ConfigurationAsCode.get()
-        .configure(this.getClass().getResource("configuration-as-code-it.yml").toString());
     ComputeEngineCloud cloud =
         (ComputeEngineCloud) jenkinsRule.jenkins.clouds.getByName("gce-integration");
 
@@ -66,35 +68,7 @@ public class ConfigAsCodeTestIT {
         cloud.provision(new LabelAtom("integration"), 1);
 
     // There should be a planned node
-    assertEquals(1, planned.size());
-    String name = planned.iterator().next().displayName;
-
-    // Wait for the node creation to finish
-    planned.iterator().next().future.get();
-    Instance instance = client.getInstance(PROJECT_ID, ZONE, name);
-    assertNotNull(instance);
-  }
-
-  @Test
-  public void testNonStandardJavaWorkerCreated() throws Exception {
-    ConfigurationAsCode.get()
-        .configure(
-            this.getClass()
-                .getResource("configuration-as-code-non-standard-java-it.yml")
-                .toString());
-    ComputeEngineCloud cloud =
-        (ComputeEngineCloud) jenkinsRule.jenkins.clouds.getByName("gce-integration");
-
-    // Should be 1 configuration
-    assertEquals(1, cloud.getConfigurations().size());
-    cloud.getConfigurations().get(0).setGoogleLabels(label);
-
-    // Add a new node
-    Collection<NodeProvisioner.PlannedNode> planned =
-        cloud.provision(new LabelAtom("integration-non-standard-java"), 1);
-
-    // There should be a planned node
-    assertEquals(1, planned.size());
+    Awaitility.await().timeout(2, TimeUnit.MINUTES).until(() -> planned.size() == 1);
     String name = planned.iterator().next().displayName;
 
     // Wait for the node creation to finish

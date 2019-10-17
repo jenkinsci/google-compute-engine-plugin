@@ -16,11 +16,11 @@
 
 package com.google.jenkins.plugins.computeengine.integration;
 
-import static com.google.jenkins.plugins.computeengine.integration.ITUtil.DEB_JAVA_STARTUP_SCRIPT;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.LABEL;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.NULL_TEMPLATE;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.NUM_EXECUTORS;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.TEST_TIMEOUT_MULTIPLIER;
+import static com.google.jenkins.plugins.computeengine.integration.ITUtil.execute;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.getLabel;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.initClient;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.initCloud;
@@ -41,7 +41,6 @@ import hudson.model.FreeStyleProject;
 import hudson.model.Node;
 import hudson.model.labels.LabelAtom;
 import hudson.tasks.Builder;
-import hudson.tasks.Shell;
 import java.io.IOException;
 import java.util.Map;
 import java.util.concurrent.Future;
@@ -82,7 +81,6 @@ public class ComputeEngineCloudIgnoreProxyIT {
 
     InstanceConfiguration instanceConfiguration =
         instanceConfigurationBuilder()
-            .startupScript(DEB_JAVA_STARTUP_SCRIPT)
             .numExecutorsStr(NUM_EXECUTORS)
             .labels(LABEL)
             .template(NULL_TEMPLATE)
@@ -102,7 +100,7 @@ public class ComputeEngineCloudIgnoreProxyIT {
             .isIgnoreProxy());
 
     project = jenkinsRule.createFreeStyleProject();
-    Builder step = new Shell("echo works");
+    Builder step = execute(Commands.ECHO, "works");
     project.getBuildersList().add(step);
     project.setAssignedLabel(new LabelAtom(LABEL));
 
