@@ -7,8 +7,8 @@ import static org.mockito.ArgumentMatchers.any;
 import com.cloudbees.plugins.credentials.CredentialsStore;
 import com.cloudbees.plugins.credentials.SystemCredentialsProvider;
 import com.cloudbees.plugins.credentials.domains.Domain;
-import com.google.api.client.googleapis.auth.oauth2.GoogleCredential;
-import com.google.jenkins.plugins.credentials.oauth.GoogleRobotPrivateKeyCredentials;
+import com.google.api.client.auth.oauth2.Credential;
+import com.google.jenkins.plugins.credentials.oauth.GoogleRobotCredentials;
 import hudson.model.Node;
 import io.jenkins.plugins.casc.misc.ConfiguredWithCode;
 import io.jenkins.plugins.casc.misc.JenkinsConfiguredWithCodeRule;
@@ -59,11 +59,9 @@ public class ConfigAsCodeTest {
   @Test
   @ConfiguredWithCode("configuration-as-code.yml")
   public void shouldCreateGCEClientFromCode() throws Exception {
-    GoogleRobotPrivateKeyCredentials credentials =
-        Mockito.mock(GoogleRobotPrivateKeyCredentials.class);
+    GoogleRobotCredentials credentials = Mockito.mock(GoogleRobotCredentials.class);
     Mockito.when(credentials.getId()).thenReturn("gce-jenkins");
-    Mockito.when(credentials.getGoogleCredential(any()))
-        .thenReturn(Mockito.mock(GoogleCredential.class));
+    Mockito.when(credentials.getGoogleCredential(any())).thenReturn(Mockito.mock(Credential.class));
 
     CredentialsStore store =
         new SystemCredentialsProvider.ProviderImpl().getStore(jenkinsRule.jenkins);

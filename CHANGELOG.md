@@ -14,6 +14,23 @@
 # Changelog
 All notable changes to this project will be documented in this file.
 
+## [4.1.0] - 2019-10-30
+### Added
+- Onboarded into team CI server
+- Flag "-Dit.windows=true" added to run integration tests on windows VMs.
+
+### Changed
+- org.jenkinsci.plugins:google-oauth-plugin version changed: 0.9 to 1.0.0
+- com.google.cloud.graphite:gcp-client version changed: 0.1.2 to 0.2.0
+- com.google.guava:guava version changed: 14.0.1 to 20.0
+- com.google.oauth-client:google-oauth-client version changed: 1.24.1 to 1.25.0
+- com.google.http-client:google-http-client version changed: 1.24.1 to 1.21.0
+- com.google.http-client:google-http-client-jackson2 version changed: 1.24.1 to 1.25.0
+- com.google.apis:google-api-services-compute version changed: v1-rev213-1.24.1 to v1-rev214-1.25.0
+
+### Removed
+- com.google.api-client:google-api-client direct references removed.
+
 ## [4.0.0] - 2019-09-23
 ### Added
 - Completion goal for maven-release-plugin to format the pom file before creating the final commit.
