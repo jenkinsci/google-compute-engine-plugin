@@ -76,12 +76,12 @@
     <it.windows>false</it.windows>
     <configuration-as-code.version>1.14</configuration-as-code.version>
     <powershell.version>1.3</powershell.version>
-    <google-oauth.version>1.0.0-SNAPSHOT</google-oauth.version>
+    <google-oauth.version>1.0.0</google-oauth.version>
     <google.guava.version>20.0</google.guava.version>
     <google.http.version>1.21.0</google.http.version>
     <google.api.version>1.25.0</google.api.version>
     <compute.revision>214</compute.revision>
-    <gcp-plugin-core.version>0.2.0-SNAPSHOT</gcp-plugin-core.version>
+    <gcp-plugin-core.version>0.2.0</gcp-plugin-core.version>
     <hpi.compatibleSinceVersion>4.1.0</hpi.compatibleSinceVersion>
     <concurrency>10</concurrency>
     <it.runOrder>balanced</it.runOrder>
