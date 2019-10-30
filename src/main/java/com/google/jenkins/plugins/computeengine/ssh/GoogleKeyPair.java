@@ -18,7 +18,6 @@ package com.google.jenkins.plugins.computeengine.ssh;
 
 import java.io.Serializable;
 import java.util.Map;
-import org.jclouds.ssh.SshKeys;
 
 public class GoogleKeyPair implements Serializable {
   private final String privateKey;
@@ -32,7 +31,7 @@ public class GoogleKeyPair implements Serializable {
   }
 
   public static GoogleKeyPair generate(String user) {
-    Map<String, String> keys = SshKeys.generate();
+    Map<String, String> keys = SshKeysHelper.generate();
     return new GoogleKeyPair(keys.get("public"), keys.get("private"), user);
   }
 
