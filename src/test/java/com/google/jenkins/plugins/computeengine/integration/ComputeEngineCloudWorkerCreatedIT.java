@@ -30,6 +30,7 @@ import static com.google.jenkins.plugins.computeengine.integration.ITUtil.initCr
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.instanceConfigurationBuilder;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.teardownResources;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 import com.google.api.services.compute.model.Instance;
 import com.google.cloud.graphite.platforms.plugin.client.ComputeClient;
@@ -41,6 +42,7 @@ import hudson.slaves.NodeProvisioner.PlannedNode;
 import java.io.IOException;
 import java.util.Collection;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
 import org.junit.AfterClass;
@@ -86,6 +88,7 @@ public class ComputeEngineCloudWorkerCreatedIT {
             .createSnapshot(false)
             .template(NULL_TEMPLATE)
             .googleLabels(label)
+            .cloud(cloud)
             .build();
 
     cloud.setConfigurations(ImmutableList.of(instanceConfiguration));
@@ -128,5 +131,17 @@ public class ComputeEngineCloudWorkerCreatedIT {
   @Test
   public void testWorkerCreatedStatusRunning() {
     assertEquals("RUNNING", instance.getStatus());
+  }
+
+  @Test
+  public void testGuestAttributesEnabled() {
+    Optional<String> guestAttributes =
+        instance.getMetadata().getItems().stream()
+            .filter(
+                item -> item.getKey().equals(InstanceConfiguration.GUEST_ATTRIBUTES_METADATA_KEY))
+            .map(item -> item.getValue())
+            .findFirst();
+    assertTrue(guestAttributes.isPresent());
+    assertEquals(guestAttributes.get(), "TRUE");
   }
 }

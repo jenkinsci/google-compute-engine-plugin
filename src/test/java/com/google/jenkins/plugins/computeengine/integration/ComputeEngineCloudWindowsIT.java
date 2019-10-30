@@ -24,6 +24,7 @@ import static com.google.jenkins.plugins.computeengine.integration.ITUtil.ZONE;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.initCredentials;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
 
 import com.cloudbees.jenkins.plugins.sshcredentials.impl.BasicSSHUserPrivateKey;
 import com.cloudbees.plugins.credentials.Credentials;
@@ -60,6 +61,7 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
@@ -230,18 +232,29 @@ public class ComputeEngineCloudWindowsIT {
     // There should be no warning logs
     assertEquals(logs(), false, logs().contains("WARNING"));
 
-    Instance i = cloud.getClient().getInstance(PROJECT_ID, ZONE, name);
+    Instance instance = cloud.getClient().getInstance(PROJECT_ID, ZONE, name);
 
     // The created instance should have 3 labels
-    assertEquals(logs(), 3, i.getLabels().size());
+    assertEquals(logs(), 3, instance.getLabels().size());
 
     // Instance should have a label with key CONFIG_LABEL_KEY and value equal to the config's name
     // prefix
     assertEquals(
-        logs(), ic.getNamePrefix(), i.getLabels().get(ComputeEngineCloud.CONFIG_LABEL_KEY));
+        logs(), ic.getNamePrefix(), instance.getLabels().get(ComputeEngineCloud.CONFIG_LABEL_KEY));
     // proper id label to properly count instances
     assertEquals(
-        logs(), cloud.getInstanceId(), i.getLabels().get(ComputeEngineCloud.CLOUD_ID_LABEL_KEY));
+        logs(),
+        cloud.getInstanceId(),
+        instance.getLabels().get(ComputeEngineCloud.CLOUD_ID_LABEL_KEY));
+
+    Optional<String> guestAttributes =
+        instance.getMetadata().getItems().stream()
+            .filter(
+                item -> item.getKey().equals(InstanceConfiguration.GUEST_ATTRIBUTES_METADATA_KEY))
+            .map(item -> item.getValue())
+            .findFirst();
+    assertTrue(guestAttributes.isPresent());
+    assertEquals(guestAttributes.get(), "TRUE");
   }
 
   // Tests snapshot is created when we have failure builds for given node
