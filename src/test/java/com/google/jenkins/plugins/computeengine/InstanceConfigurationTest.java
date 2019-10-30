@@ -252,6 +252,15 @@ public class InstanceConfigurationTest {
     assertTrue(sshKey.isPresent());
     assertFalse(sshKey.get().isEmpty());
 
+    Optional<String> guestAttributes =
+        instance.getMetadata().getItems().stream()
+            .filter(
+                item -> item.getKey().equals(InstanceConfiguration.GUEST_ATTRIBUTES_METADATA_KEY))
+            .map(item -> item.getValue())
+            .findFirst();
+    assertTrue(guestAttributes.isPresent());
+    assertEquals(guestAttributes.get(), "TRUE");
+
     // Network
     assertEquals(SUBNETWORK_NAME, instance.getNetworkInterfaces().get(0).getSubnetwork());
     assertEquals(

@@ -85,6 +85,7 @@ import org.kohsuke.stapler.QueryParameter;
 @AllArgsConstructor
 @Log
 public class InstanceConfiguration implements Describable<InstanceConfiguration> {
+  public static final String GUEST_ATTRIBUTES_METADATA_KEY = "enable-guest-attributes";
   public static final String SSH_METADATA_KEY = "ssh-keys";
   public static final Long DEFAULT_BOOT_DISK_SIZE_GB = 10L;
   public static final Integer DEFAULT_NUM_EXECUTORS = 1;
@@ -112,6 +113,7 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
               add("windows-sql-cloud");
             }
           });
+
   private String description;
   private String namePrefix;
   private String region;
@@ -320,6 +322,7 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
         }
       }
       return ComputeEngineInstance.builder()
+          .cloud(cloud)
           .cloudName(cloud.name)
           .name(instance.getName())
           .zone(instance.getZone())
@@ -423,6 +426,9 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
   private Metadata newMetadata() {
     Metadata metadata = new Metadata();
     metadata.setItems(new ArrayList<>());
+    metadata
+        .getItems()
+        .add(new Metadata.Items().setKey(GUEST_ATTRIBUTES_METADATA_KEY).setValue("TRUE"));
     return metadata;
   }
 
@@ -947,6 +953,7 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
       instanceConfiguration.setCreateSnapshot(this.createSnapshot);
       instanceConfiguration.setRemoteFs(this.remoteFs);
       instanceConfiguration.setJavaExecPath(this.javaExecPath);
+      instanceConfiguration.setCloud(this.cloud);
       if (googleLabels != null) {
         instanceConfiguration.appendLabels(this.googleLabels);
       }
@@ -971,10 +978,6 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
     }
 
     private Builder labelSet(Set<LabelAtom> labelSet) {
-      throw new NotImplementedException();
-    }
-
-    private Builder cloud(ComputeEngineCloud cloud) {
       throw new NotImplementedException();
     }
   }
