@@ -14,6 +14,16 @@
 # Changelog
 All notable changes to this project will be documented in this file.
 
+## [4.1.1] - 2019-10-31
+### Fixed
+- Dependency awaitility was marked as a test scoped dependency. Revert this change to be able to use
+  it in the provision step.
+- Dependency jclouds made use of the guava BaseEncodings class, which is not available when running
+  on the Jenkins master server. Replaced with [JSch](http://www.jcraft.com/jsch/).
+
+### Added
+- Dependency com.jcraft:jsch:0.1.55 for ssh key generation.
+
 ## [4.1.0] - 2019-10-30
 ### Added
 - Onboarded into team CI server
