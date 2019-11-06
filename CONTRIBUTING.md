@@ -61,6 +61,8 @@ mvn test
 ```
 
 ##### Integration Tests
+* By default, the integration tests are not executed. In case you are interested in executing 
+  them, disable the `skipITs` property.
 * The following environment variables are required to run the integration tests. 5, 6, and 7 are
   only required when running a windows integration test.
 
@@ -74,7 +76,7 @@ mvn test
 
 * Run the following:
 ```
-mvn verify
+mvn verify -DskipITs=false
 ```
 
 ###### Windows Integration Test
