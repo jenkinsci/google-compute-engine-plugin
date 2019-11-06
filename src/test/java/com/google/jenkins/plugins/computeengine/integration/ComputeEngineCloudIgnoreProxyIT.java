@@ -62,7 +62,7 @@ import org.jvnet.hudson.test.JenkinsRule;
 @Log
 public class ComputeEngineCloudIgnoreProxyIT {
   @ClassRule
-  public static Timeout timeout = new Timeout(5 * TEST_TIMEOUT_MULTIPLIER, TimeUnit.MINUTES);
+  public static Timeout timeout = new Timeout(7 * TEST_TIMEOUT_MULTIPLIER, TimeUnit.MINUTES);
 
   @ClassRule public static JenkinsRule jenkinsRule = new JenkinsRule();
 
