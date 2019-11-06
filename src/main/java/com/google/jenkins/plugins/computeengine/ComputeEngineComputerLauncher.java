@@ -20,15 +20,18 @@ import com.google.api.services.compute.model.AccessConfig;
 import com.google.api.services.compute.model.Instance;
 import com.google.api.services.compute.model.NetworkInterface;
 import com.google.api.services.compute.model.Operation;
-import com.google.cloud.graphite.platforms.plugin.client.ComputeClient.GuestAttribute;
-import com.google.cloud.graphite.platforms.plugin.client.ComputeClient.InstanceResourceData;
+import com.google.cloud.graphite.platforms.plugin.client.ComputeClient;
 import com.google.cloud.graphite.platforms.plugin.client.ComputeClient.OperationException;
+import com.google.cloud.graphite.platforms.plugin.client.model.GuestAttribute;
+import com.google.cloud.graphite.platforms.plugin.client.model.InstanceResourceData;
+import com.google.cloud.graphite.platforms.plugin.client.util.ClientUtil;
 import com.google.common.collect.ImmutableList;
 import com.trilead.ssh2.Connection;
 import com.trilead.ssh2.HTTPProxyData;
 import com.trilead.ssh2.SCPClient;
 import com.trilead.ssh2.Session;
 import hudson.ProxyConfiguration;
+import hudson.Util;
 import hudson.model.TaskListener;
 import hudson.remoting.Channel;
 import hudson.slaves.ComputerLauncher;
@@ -37,7 +40,7 @@ import java.io.IOException;
 import java.io.PrintStream;
 import java.net.InetSocketAddress;
 import java.net.Proxy;
-import java.nio.charset.StandardCharsets;
+import java.util.Base64;
 import java.util.Optional;
 import java.util.logging.Level;
 import java.util.logging.LogRecord;
@@ -335,6 +338,7 @@ public abstract class ComputeEngineComputerLauncher extends ComputerLauncher {
 
     final long timeout = node.getLaunchTimeoutMillis();
     final long startTime = System.currentTimeMillis();
+    Connection conn = null;
     while (true) {
       try {
         long waitTime = System.currentTimeMillis() - startTime;
@@ -382,7 +386,7 @@ public abstract class ComputeEngineComputerLauncher extends ComputerLauncher {
                 + ", with timeout "
                 + SSH_TIMEOUT_MILLIS
                 + ".");
-        Connection conn = new Connection(host, port);
+        conn = new Connection(host, port);
         ProxyConfiguration proxyConfig = Jenkins.get().proxy;
         Proxy proxy = proxyConfig == null ? Proxy.NO_PROXY : proxyConfig.createProxy(host);
         if (!node.isIgnoreProxy()
@@ -403,17 +407,14 @@ public abstract class ComputeEngineComputerLauncher extends ComputerLauncher {
           conn.setProxyData(proxyData);
           logInfo(computer, listener, "Using HTTP Proxy Configuration");
         }
-        /* TODO(google-compute-engine-plugin/issues/137): Verify host key by checking that the key
-         *   fingerprint is known.
-         */
+
         conn.connect(
-            // (hostname, portNum, serverHostKeyAlgorithm, serverHostKey) -> true,
             (hostname, portNum, serverHostKeyAlgorithm, serverHostKey) ->
                 verifyServerHostKey(
-                    node.getCloud(),
+                    node.getCloud().getClient(),
+                    computer,
+                    listener,
                     instance,
-                    hostname,
-                    portNum,
                     serverHostKeyAlgorithm,
                     serverHostKey),
             SSH_TIMEOUT_MILLIS,
@@ -430,15 +431,15 @@ public abstract class ComputeEngineComputerLauncher extends ComputerLauncher {
   }
 
   private boolean verifyServerHostKey(
-      ComputeEngineCloud cloud,
+      ComputeClient client,
+      ComputeEngineComputer computer,
+      TaskListener listener,
       Instance instance,
-      String hostname,
-      int port,
       String serverHostKeyAlgorithm,
       byte[] serverHostKey)
       throws IOException {
     Optional<InstanceResourceData> instanceResourceData =
-        cloud.getClient().parseInstanceResourceData(instance.getSelfLink());
+        ClientUtil.parseInstanceResourceData(instance.getSelfLink());
     if (!instanceResourceData.isPresent()) {
       throw new IOException(
           String.format(
@@ -446,13 +447,24 @@ public abstract class ComputeEngineComputerLauncher extends ComputerLauncher {
               instance.getSelfLink()));
     }
 
-    ImmutableList<GuestAttribute> guestAttrList =
-        cloud
-            .getClient()
-            .getGuestAttributesSync(
-                instanceResourceData.get().getProjectId(),
-                instanceResourceData.get().getZone(),
-                instanceResourceData.get().getName());
+    ImmutableList<GuestAttribute> guestAttrList;
+    try {
+      guestAttrList =
+          client.getGuestAttributesSync(
+              instanceResourceData.get().getProjectId(),
+              instanceResourceData.get().getZone(),
+              instanceResourceData.get().getName(),
+              Util.rawEncode(GUEST_ATTRIBUTE_HOST_KEY_NAMESPACE + "/"));
+    } catch (IOException e) {
+      logWarning(
+          computer,
+          listener,
+          String.format(
+              "Failed to verify server host key because no host key metadata was available: %s",
+              e.getMessage()));
+      return true;
+    }
+
     Optional<GuestAttribute> hostKeyAttr =
         guestAttrList.stream()
             .filter(
@@ -462,17 +474,19 @@ public abstract class ComputeEngineComputerLauncher extends ComputerLauncher {
             .findFirst();
 
     if (!hostKeyAttr.isPresent()) {
-      LOGGER.log(
-          Level.WARNING,
+      logWarning(
+          computer,
+          listener,
           String.format(
-              "Failed to verify server host key: hostkey guest attribute doesn't exist for instance: %s",
+              "Failed to verify server host key: host key guest attribute doesn't exist for instance: %s",
               instance.getSelfLink()));
-      return false;
+      return true;
     }
 
-    if (!hostKeyAttr.get().getValue().equals(new String(serverHostKey, StandardCharsets.UTF_8))) {
-      LOGGER.log(
-          Level.WARNING,
+    if (!hostKeyAttr.get().getValue().equals(Base64.getEncoder().encodeToString(serverHostKey))) {
+      logWarning(
+          computer,
+          listener,
           String.format(
               "Failed to verify server host key: server host key didn't match for instance: %s",
               instance.getSelfLink()));
