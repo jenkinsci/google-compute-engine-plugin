@@ -81,7 +81,7 @@
     <google.http.version>1.21.0</google.http.version>
     <google.api.version>1.25.0</google.api.version>
     <compute.revision>214</compute.revision>
-    <gcp-plugin-core.version>0.2.1-SNAPSHOT</gcp-plugin-core.version>
+    <gcp-plugin-core.version>0.2.1</gcp-plugin-core.version>
     <jsch.version>0.1.55</jsch.version>
     <hpi.compatibleSinceVersion>4.1.0</hpi.compatibleSinceVersion>
     <concurrency>10</concurrency>
