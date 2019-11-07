@@ -42,7 +42,7 @@ pipeline {
                             sh "mvn clean package -ntp"
 
                             // run tests
-                            sh "mvn verify -ntp -DskipITs=false"
+                            sh "mvn verify -ntp -DskipITs=false -Dit.cicd"
                         }
 
                         sh "jenkins/saveAndCompress.sh"

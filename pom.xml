@@ -380,8 +380,20 @@
         </property>
       </activation>
       <properties>
-        <concurrency>8</concurrency>
+        <concurrency>4</concurrency>
         <it.runOrder>reversealphabetical</it.runOrder>
+      </properties>
+    </profile>
+    <profile>
+      <id>ci-cd</id>
+      <activation>
+        <property>
+          <name>it.cicd</name>
+          <value>true</value>
+        </property>
+      </activation>
+      <properties>
+        <concurrency>6</concurrency>
       </properties>
     </profile>
   </profiles>
