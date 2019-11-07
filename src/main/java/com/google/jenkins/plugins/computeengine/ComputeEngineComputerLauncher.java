@@ -20,12 +20,18 @@ import com.google.api.services.compute.model.AccessConfig;
 import com.google.api.services.compute.model.Instance;
 import com.google.api.services.compute.model.NetworkInterface;
 import com.google.api.services.compute.model.Operation;
+import com.google.cloud.graphite.platforms.plugin.client.ComputeClient;
 import com.google.cloud.graphite.platforms.plugin.client.ComputeClient.OperationException;
+import com.google.cloud.graphite.platforms.plugin.client.model.GuestAttribute;
+import com.google.cloud.graphite.platforms.plugin.client.model.InstanceResourceData;
+import com.google.cloud.graphite.platforms.plugin.client.util.ClientUtil;
+import com.google.common.collect.ImmutableList;
 import com.trilead.ssh2.Connection;
 import com.trilead.ssh2.HTTPProxyData;
 import com.trilead.ssh2.SCPClient;
 import com.trilead.ssh2.Session;
 import hudson.ProxyConfiguration;
+import hudson.Util;
 import hudson.model.TaskListener;
 import hudson.remoting.Channel;
 import hudson.slaves.ComputerLauncher;
@@ -34,6 +40,7 @@ import java.io.IOException;
 import java.io.PrintStream;
 import java.net.InetSocketAddress;
 import java.net.Proxy;
+import java.util.Base64;
 import java.util.Optional;
 import java.util.logging.Level;
 import java.util.logging.LogRecord;
@@ -47,6 +54,7 @@ public abstract class ComputeEngineComputerLauncher extends ComputerLauncher {
       Logger.getLogger(ComputeEngineComputerLauncher.class.getName());
   private static final SimpleFormatter sf = new SimpleFormatter();
   private static final String AGENT_JAR = "agent.jar";
+  private static final String GUEST_ATTRIBUTE_HOST_KEY_NAMESPACE = "hostkeys";
 
   // TODO(google-compute-engine-plugin/issues/134): make this configurable
   private static final int SSH_PORT = 22;
@@ -330,6 +338,7 @@ public abstract class ComputeEngineComputerLauncher extends ComputerLauncher {
 
     final long timeout = node.getLaunchTimeoutMillis();
     final long startTime = System.currentTimeMillis();
+    Connection conn = null;
     while (true) {
       try {
         long waitTime = System.currentTimeMillis() - startTime;
@@ -377,7 +386,7 @@ public abstract class ComputeEngineComputerLauncher extends ComputerLauncher {
                 + ", with timeout "
                 + SSH_TIMEOUT_MILLIS
                 + ".");
-        Connection conn = new Connection(host, port);
+        conn = new Connection(host, port);
         ProxyConfiguration proxyConfig = Jenkins.get().proxy;
         Proxy proxy = proxyConfig == null ? Proxy.NO_PROXY : proxyConfig.createProxy(host);
         if (!node.isIgnoreProxy()
@@ -398,11 +407,16 @@ public abstract class ComputeEngineComputerLauncher extends ComputerLauncher {
           conn.setProxyData(proxyData);
           logInfo(computer, listener, "Using HTTP Proxy Configuration");
         }
-        /* TODO(google-compute-engine-plugin/issues/137): Verify host key by checking that the key
-         *   fingerprint is known.
-         */
+
         conn.connect(
-            (hostname, portNum, serverHostKeyAlgorithm, serverHostKey) -> true,
+            (hostname, portNum, serverHostKeyAlgorithm, serverHostKey) ->
+                verifyServerHostKey(
+                    node.getCloud().getClient(),
+                    computer,
+                    listener,
+                    instance,
+                    serverHostKeyAlgorithm,
+                    serverHostKey),
             SSH_TIMEOUT_MILLIS,
             SSH_TIMEOUT_MILLIS);
         logInfo(computer, listener, "Connected via SSH.");
@@ -414,5 +428,71 @@ public abstract class ComputeEngineComputerLauncher extends ComputerLauncher {
         Thread.sleep(SSH_SLEEP_MILLIS);
       }
     }
+  }
+
+  private boolean verifyServerHostKey(
+      ComputeClient client,
+      ComputeEngineComputer computer,
+      TaskListener listener,
+      Instance instance,
+      String serverHostKeyAlgorithm,
+      byte[] serverHostKey)
+      throws IOException {
+    Optional<InstanceResourceData> instanceResourceData =
+        ClientUtil.parseInstanceResourceData(instance.getSelfLink());
+    if (!instanceResourceData.isPresent()) {
+      throw new IOException(
+          String.format(
+              "Failed to retrieve instance resource data for instance: %s",
+              instance.getSelfLink()));
+    }
+
+    ImmutableList<GuestAttribute> guestAttrList;
+    try {
+      guestAttrList =
+          client.getGuestAttributesSync(
+              instanceResourceData.get().getProjectId(),
+              instanceResourceData.get().getZone(),
+              instanceResourceData.get().getName(),
+              Util.rawEncode(GUEST_ATTRIBUTE_HOST_KEY_NAMESPACE + "/"));
+    } catch (IOException e) {
+      logWarning(
+          computer,
+          listener,
+          String.format(
+              "Failed to verify server host key because no host key metadata was available: %s",
+              e.getMessage()));
+      return true;
+    }
+
+    Optional<GuestAttribute> hostKeyAttr =
+        guestAttrList.stream()
+            .filter(
+                attr ->
+                    attr.getNamespace().equals(GUEST_ATTRIBUTE_HOST_KEY_NAMESPACE)
+                        && attr.getKey().equals(serverHostKeyAlgorithm.toLowerCase()))
+            .findFirst();
+
+    if (!hostKeyAttr.isPresent()) {
+      logWarning(
+          computer,
+          listener,
+          String.format(
+              "Failed to verify server host key: host key guest attribute doesn't exist for instance: %s",
+              instance.getSelfLink()));
+      return true;
+    }
+
+    if (!hostKeyAttr.get().getValue().equals(Base64.getEncoder().encodeToString(serverHostKey))) {
+      logWarning(
+          computer,
+          listener,
+          String.format(
+              "Failed to verify server host key: server host key didn't match for instance: %s",
+              instance.getSelfLink()));
+      return false;
+    }
+
+    return true;
   }
 }
