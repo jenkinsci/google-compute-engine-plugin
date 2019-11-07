@@ -14,6 +14,16 @@
 # Changelog
 All notable changes to this project will be documented in this file.
 
+## [4.2.0] - 2019-11-07
+### Changed
+- Don't run integration tests by default when running maven commands which invoke the integration
+test goal. Must provide flag `-DskipITs=false`.
+
+### Security
+- Issue #37: Verify server host key when connecting to agents with SSH.
+- Add missing permissions checks for form validation methods.
+- Require post for form validation.
+
 ## [4.1.1] - 2019-10-31
 ### Fixed
 - Dependency awaitility was marked as a test scoped dependency. Revert this change to be able to use
