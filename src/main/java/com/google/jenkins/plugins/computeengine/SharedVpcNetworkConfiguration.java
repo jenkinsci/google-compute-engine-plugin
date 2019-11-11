@@ -14,6 +14,8 @@
 
 package com.google.jenkins.plugins.computeengine;
 
+import static com.google.jenkins.plugins.computeengine.ComputeEngineCloud.checkPermissions;
+
 import com.google.common.base.Strings;
 import hudson.Extension;
 import hudson.RelativePath;
@@ -45,6 +47,7 @@ public class SharedVpcNetworkConfiguration extends NetworkConfiguration {
     }
 
     public FormValidation doCheckProjectId(@QueryParameter String value) {
+      checkPermissions();
       if (Strings.isNullOrEmpty(value)) {
         return FormValidation.error("Project ID required");
       }
@@ -52,6 +55,7 @@ public class SharedVpcNetworkConfiguration extends NetworkConfiguration {
     }
 
     public FormValidation doCheckSubnetworkName(@QueryParameter String value) {
+      checkPermissions();
       if (Strings.isNullOrEmpty(value)) {
         return FormValidation.error("Subnetwork name required");
       }
@@ -65,6 +69,7 @@ public class SharedVpcNetworkConfiguration extends NetworkConfiguration {
     public FormValidation doCheckRegion(
         @QueryParameter String value,
         @QueryParameter("region") @RelativePath("..") final String region) {
+      checkPermissions();
       if (Strings.isNullOrEmpty(region)
           || Strings.isNullOrEmpty(value)
           || !region.endsWith(value)) {

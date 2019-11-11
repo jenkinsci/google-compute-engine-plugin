@@ -34,10 +34,12 @@ import hudson.Extension;
 import hudson.model.Computer;
 import hudson.model.Descriptor;
 import hudson.model.Item;
+import hudson.model.Job;
 import hudson.model.Label;
 import hudson.model.Node;
 import hudson.model.TaskListener;
 import hudson.security.ACL;
+import hudson.security.Permission;
 import hudson.slaves.AbstractCloudImpl;
 import hudson.slaves.Cloud;
 import hudson.slaves.NodeProvisioner.PlannedNode;
@@ -70,6 +72,7 @@ import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.DataBoundSetter;
 import org.kohsuke.stapler.HttpResponse;
 import org.kohsuke.stapler.QueryParameter;
+import org.kohsuke.stapler.interceptor.RequirePOST;
 
 @Getter
 @Log
@@ -407,9 +410,10 @@ public class ComputeEngineCloud extends AbstractCloudImpl {
     return null;
   }
 
+  @RequirePOST
   public HttpResponse doProvision(@QueryParameter String configuration)
       throws ServletException, IOException {
-    checkPermission(PROVISION);
+    checkPermissions(PROVISION);
     if (configuration == null) {
       throw HttpResponses.error(SC_BAD_REQUEST, "The 'configuration' query parameter is missing");
     }
@@ -425,6 +429,25 @@ public class ComputeEngineCloud extends AbstractCloudImpl {
     return HttpResponses.redirectViaContextPath("/computer/" + node.getNodeName());
   }
 
+  /**
+   * Ensures the executing user has the specified permissions.
+   *
+   * @param permissions The list of permissions to be checked. If empty, defaults to Job.CONFIGURE.
+   * @throws AccessDeniedException If the user lacks the proper permissions.
+   */
+  static void checkPermissions(Permission... permissions) {
+    Jenkins jenkins = Jenkins.getInstanceOrNull();
+    if (jenkins != null) {
+      if (permissions.length > 0) {
+        for (Permission permission : permissions) {
+          jenkins.checkPermission(permission);
+        }
+      } else {
+        jenkins.checkPermission(Job.CONFIGURE);
+      }
+    }
+  }
+
   @Extension
   public static class GoogleCloudDescriptor extends Descriptor<Cloud> {
 
@@ -435,6 +458,7 @@ public class ComputeEngineCloud extends AbstractCloudImpl {
     }
 
     public FormValidation doCheckProjectId(@QueryParameter String value) {
+      checkPermissions();
       if (value == null || value.isEmpty()) {
         return FormValidation.error("Project ID is required");
       }
@@ -443,6 +467,7 @@ public class ComputeEngineCloud extends AbstractCloudImpl {
 
     public ListBoxModel doFillCredentialsIdItems(
         @AncestorInPath Jenkins context, @QueryParameter String value) {
+      checkPermissions();
       if (context == null || !context.hasPermission(Item.CONFIGURE)) {
         return new StandardListBoxModel();
       }
@@ -456,10 +481,12 @@ public class ComputeEngineCloud extends AbstractCloudImpl {
                   StandardCredentials.class, context, ACL.SYSTEM, domainRequirements));
     }
 
+    @RequirePOST
     public FormValidation doCheckCredentialsId(
         @AncestorInPath Jenkins context,
         @QueryParameter("projectId") String projectId,
         @QueryParameter String value) {
+      checkPermissions();
       if (value.isEmpty()) return FormValidation.error("No credential selected");
 
       if (projectId.isEmpty())

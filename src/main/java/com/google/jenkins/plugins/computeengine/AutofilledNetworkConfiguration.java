@@ -14,6 +14,8 @@
 
 package com.google.jenkins.plugins.computeengine;
 
+import static com.google.jenkins.plugins.computeengine.ComputeEngineCloud.checkPermissions;
+
 import com.google.api.services.compute.model.Network;
 import com.google.api.services.compute.model.Subnetwork;
 import com.google.cloud.graphite.platforms.plugin.client.ComputeClient;
@@ -54,6 +56,7 @@ public class AutofilledNetworkConfiguration extends NetworkConfiguration {
         @AncestorInPath Jenkins context,
         @QueryParameter("projectId") @RelativePath("../..") final String projectId,
         @QueryParameter("credentialsId") @RelativePath("../..") final String credentialsId) {
+      checkPermissions();
       ListBoxModel items = new ListBoxModel();
       items.add("");
 
@@ -75,6 +78,7 @@ public class AutofilledNetworkConfiguration extends NetworkConfiguration {
     }
 
     public FormValidation doCheckNetwork(@QueryParameter String value) {
+      checkPermissions();
       if (value.equals("")) {
         return FormValidation.error("Please select a network...");
       }
@@ -88,6 +92,7 @@ public class AutofilledNetworkConfiguration extends NetworkConfiguration {
         @QueryParameter("projectId") @RelativePath("../..") final String projectId,
         @QueryParameter("credentialsId") @RelativePath("../..") final String credentialsId) {
       ListBoxModel items = new ListBoxModel();
+      checkPermissions();
 
       if (Strings.isNullOrEmpty(region)) {
         return items;
@@ -116,6 +121,7 @@ public class AutofilledNetworkConfiguration extends NetworkConfiguration {
     }
 
     public FormValidation doCheckSubnetwork(@QueryParameter String value) {
+      checkPermissions();
       if (value.isEmpty()) {
         return FormValidation.error("Please select a subnetwork...");
       }
