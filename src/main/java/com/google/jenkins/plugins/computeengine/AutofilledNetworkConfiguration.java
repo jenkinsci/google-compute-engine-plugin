@@ -102,6 +102,9 @@ public class AutofilledNetworkConfiguration extends NetworkConfiguration {
         ComputeClient compute = computeClient(context, credentialsId);
         List<Subnetwork> subnetworks = compute.listSubnetworks(projectId, network, region);
 
+        if (subnetworks.size() <= 1) {
+          items.add(new ListBoxModel.Option("", "", false));
+        }
         if (subnetworks.size() == 0) {
           items.add(new ListBoxModel.Option("default", "default", true));
           return items;
