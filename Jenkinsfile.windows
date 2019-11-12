@@ -19,7 +19,7 @@ pipeline {
     agent {
         kubernetes {
             cloud 'kubernetes'
-            label 'maven-pod'
+            label 'windows-pod'
             yamlFile 'jenkins/maven-pod.yaml'
         }
     }

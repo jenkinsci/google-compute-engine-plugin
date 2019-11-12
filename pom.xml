@@ -402,7 +402,7 @@
       </activation>
       <properties>
         <concurrency>2</concurrency>
-        <it.runOrder>reversealphabetical</it.runOrder>
+        <it.runOrder>alphabetical</it.runOrder>
       </properties>
     </profile>
     <profile>
