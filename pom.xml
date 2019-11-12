@@ -401,7 +401,7 @@
         </property>
       </activation>
       <properties>
-        <concurrency>4</concurrency>
+        <concurrency>2</concurrency>
         <it.runOrder>reversealphabetical</it.runOrder>
       </properties>
     </profile>
