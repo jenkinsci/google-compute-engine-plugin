@@ -32,6 +32,7 @@ import static com.google.jenkins.plugins.computeengine.integration.ITUtil.initCl
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.initCredentials;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.instanceConfigurationBuilder;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.teardownResources;
+import static com.google.jenkins.plugins.computeengine.integration.ITUtil.windows;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
@@ -43,14 +44,17 @@ import com.google.cloud.graphite.platforms.plugin.client.ComputeClient;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.jenkins.plugins.computeengine.ComputeEngineCloud;
+import com.google.jenkins.plugins.computeengine.ComputeEngineWindowsLauncher;
 import com.google.jenkins.plugins.computeengine.InstanceConfiguration;
 import com.trilead.ssh2.Connection;
 import hudson.model.labels.LabelAtom;
 import hudson.slaves.NodeProvisioner.PlannedNode;
+import hudson.util.LogTaskListener;
 import java.io.IOException;
 import java.util.Collection;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -80,6 +84,7 @@ public class ComputeEngineCloudTemplateIT {
 
   private static ComputeClient client;
   private static Map<String, String> label = getLabel(ComputeEngineCloudTemplateIT.class);
+  private static InstanceConfiguration instanceConfiguration;
   private static ComputeEngineCloud cloud;
   private static Instance instance;
 
@@ -89,17 +94,17 @@ public class ComputeEngineCloudTemplateIT {
     initCredentials(jenkinsRule);
     cloud = initCloud(jenkinsRule);
     client = initClient(jenkinsRule, label, log);
+    instanceConfiguration =
+        instanceConfigurationBuilder()
+            .numExecutorsStr(NUM_EXECUTORS)
+            .labels(LABEL)
+            .oneShot(false)
+            .createSnapshot(false)
+            .template(TEMPLATE)
+            .googleLabels(label)
+            .build();
 
-    cloud.setConfigurations(
-        ImmutableList.of(
-            instanceConfigurationBuilder()
-                .numExecutorsStr(NUM_EXECUTORS)
-                .labels(LABEL)
-                .oneShot(false)
-                .createSnapshot(false)
-                .template(TEMPLATE)
-                .googleLabels(label)
-                .build()));
+    cloud.setConfigurations(ImmutableList.of(instanceConfiguration));
 
     InstanceTemplate instanceTemplate =
         createTemplate(ImmutableMap.of(GOOGLE_LABEL_KEY, GOOGLE_LABEL_VALUE), TEMPLATE);
@@ -159,7 +164,15 @@ public class ComputeEngineCloudTemplateIT {
           SSH_TIMEOUT,
           SSH_TIMEOUT);
       log.info(String.format("Connected to SSH. Authenticating as user %s", RUN_AS_USER));
-      assertTrue(conn.authenticateWithPublicKey(RUN_AS_USER, SSH_PRIVATE_KEY.toCharArray(), ""));
+      if (windows) {
+        ComputeEngineWindowsLauncher.authenticateSSH(
+            RUN_AS_USER,
+            instanceConfiguration.getWindowsConfiguration(),
+            conn,
+            new LogTaskListener(log, Level.INFO));
+      } else {
+        assertTrue(conn.authenticateWithPublicKey(RUN_AS_USER, SSH_PRIVATE_KEY.toCharArray(), ""));
+      }
     } finally {
       if (conn != null) {
         conn.close();

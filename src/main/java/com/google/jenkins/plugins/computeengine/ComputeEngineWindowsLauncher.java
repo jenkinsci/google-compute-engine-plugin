@@ -16,6 +16,7 @@ package com.google.jenkins.plugins.computeengine;
 
 import com.cloudbees.jenkins.plugins.sshcredentials.SSHAuthenticator;
 import com.google.api.services.compute.model.Operation;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.trilead.ssh2.Connection;
 import hudson.model.TaskListener;
@@ -60,7 +61,8 @@ public class ComputeEngineWindowsLauncher extends ComputeEngineComputerLauncher 
     return bootstrapConn;
   }
 
-  private boolean authenticateSSH(
+  @VisibleForTesting
+  public static boolean authenticateSSH(
       String windowsUsername,
       WindowsConfiguration windowsConfig,
       Connection sshConnection,

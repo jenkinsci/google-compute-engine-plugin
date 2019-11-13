@@ -62,7 +62,9 @@ import org.jvnet.hudson.test.JenkinsRule;
 public class ComputeEngineCloudOneShotInstanceIT {
   private static Logger log = Logger.getLogger(ComputeEngineCloudOneShotInstanceIT.class.getName());
 
-  @ClassRule public static Timeout timeout = new Timeout(10 * TEST_TIMEOUT_MULTIPLIER, TimeUnit.MINUTES);
+  @ClassRule
+  public static Timeout timeout = new Timeout(10 * TEST_TIMEOUT_MULTIPLIER, TimeUnit.MINUTES);
+
   @ClassRule public static JenkinsRule jenkinsRule = new JenkinsRule();
 
   private static ComputeClient client;
@@ -70,6 +72,7 @@ public class ComputeEngineCloudOneShotInstanceIT {
   private static FreeStyleBuild build;
   private static String nodeName;
   private static Future<FreeStyleBuild> otherBuildFuture;
+  private static Node otherNode;
 
   @BeforeClass
   public static void init() throws Exception {
@@ -138,13 +141,13 @@ public class ComputeEngineCloudOneShotInstanceIT {
     FreeStyleBuild otherBuild = otherBuildFuture.get();
     assertNotNull(otherBuild);
     assertEquals(Result.SUCCESS, otherBuild.getResult());
+    otherNode = otherBuild.getBuiltOn();
     jenkinsRule.assertLogContains("also works", otherBuild);
   }
 
   @Test
   public void testOtherInstanceRanOnDifferentNode() throws Exception {
-    Node node = otherBuildFuture.get().getBuiltOn();
-    assertNotNull(node);
-    assertNotEquals(nodeName, node.getNodeName());
+    assertNotNull(otherNode);
+    assertNotEquals(nodeName, otherNode.getNodeName());
   }
 }
