@@ -103,7 +103,7 @@ public class ComputeEngineCloudOneShotInstanceIT {
     Builder otherStep = execute(Commands.ECHO, "\"also works\"");
     otherProject.getBuildersList().add(otherStep);
     otherProject.setAssignedLabel(new LabelAtom(LABEL));
-    otherBuildFuture = otherProject.scheduleBuild2(0);
+    otherBuildFuture = otherProject.scheduleBuild2(30);
 
     build = buildFuture.get();
     assertNotNull(build);

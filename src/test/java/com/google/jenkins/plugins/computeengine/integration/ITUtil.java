@@ -317,7 +317,8 @@ class ITUtil {
         .mode(NODE_MODE)
         .acceleratorConfiguration(new AcceleratorConfiguration(ACCELERATOR_NAME, ACCELERATOR_COUNT))
         .runAsUser(RUN_AS_USER)
-        .startupScript(STARTUP_SCRIPT);
+        .startupScript(STARTUP_SCRIPT)
+        .javaExecPath("java -Dhudson.remoting.Launcher.pingIntervalSec=-1");
   }
 
   /*

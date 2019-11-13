@@ -302,6 +302,7 @@
             <hudson.model.LoadStatistics.decay>0.5</hudson.model.LoadStatistics.decay>
             <hudson.agents.NodeProvisioner.MARGIN>100</hudson.agents.NodeProvisioner.MARGIN>
             <hudson.agents.NodeProvisioner.MARGIN0>1.0</hudson.agents.NodeProvisioner.MARGIN0>
+            <hudson.remoting.Launcher.pingIntervalSec>-1</hudson.remoting.Launcher.pingIntervalSec>
             <com.google.jenkins.plugins.computeengine.integration.ITUtil.windows>${it.windows}</com.google.jenkins.plugins.computeengine.integration.ITUtil.windows>
           </systemPropertyVariables>
           <excludes>
@@ -309,6 +310,7 @@
           </excludes>
           <argLine>-Djenkins.test.timeout=${jenkinsRuleTimeout}</argLine>
           <runOrder>${it.runOrder}</runOrder>
+          <reuseForks>false</reuseForks>
         </configuration>
       </plugin>
       <plugin>
@@ -401,7 +403,7 @@
         </property>
       </activation>
       <properties>
-        <concurrency>2</concurrency>
+        <concurrency>4</concurrency>
         <it.runOrder>alphabetical</it.runOrder>
       </properties>
     </profile>
