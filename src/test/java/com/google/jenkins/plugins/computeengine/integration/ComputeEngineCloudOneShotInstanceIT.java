@@ -61,6 +61,7 @@ import org.jvnet.hudson.test.JenkinsRule;
  */
 public class ComputeEngineCloudOneShotInstanceIT {
   private static Logger log = Logger.getLogger(ComputeEngineCloudOneShotInstanceIT.class.getName());
+  private static final int QUIET_PERIOD_SECS = 30;
 
   @ClassRule
   public static Timeout timeout = new Timeout(10 * TEST_TIMEOUT_MULTIPLIER, TimeUnit.MINUTES);
@@ -103,7 +104,8 @@ public class ComputeEngineCloudOneShotInstanceIT {
     Builder otherStep = execute(Commands.ECHO, "\"also works\"");
     otherProject.getBuildersList().add(otherStep);
     otherProject.setAssignedLabel(new LabelAtom(LABEL));
-    otherBuildFuture = otherProject.scheduleBuild2(30);
+    // Wait for a bit to make sure that this build finishes second.
+    otherBuildFuture = otherProject.scheduleBuild2(QUIET_PERIOD_SECS);
 
     build = buildFuture.get();
     assertNotNull(build);
