@@ -148,7 +148,7 @@ class ITUtil {
           + "Restart-Service sshd";
   private static final String STARTUP_SCRIPT =
       windows ? WINDOWS_STARTUP_SCRIPT : DEB_JAVA_STARTUP_SCRIPT;
-  static final int TEST_TIMEOUT_MULTIPLIER = SystemUtils.IS_OS_WINDOWS ? 3 : 1;
+  static final int TEST_TIMEOUT_MULTIPLIER = (SystemUtils.IS_OS_WINDOWS || windows) ? 3 : 1;
   static final String CONFIG_AS_CODE_PATH =
       windows ? "configuration-as-code-windows-it.yml" : "configuration-as-code-it.yml";
 
@@ -317,7 +317,8 @@ class ITUtil {
         .mode(NODE_MODE)
         .acceleratorConfiguration(new AcceleratorConfiguration(ACCELERATOR_NAME, ACCELERATOR_COUNT))
         .runAsUser(RUN_AS_USER)
-        .startupScript(STARTUP_SCRIPT);
+        .startupScript(STARTUP_SCRIPT)
+        .javaExecPath("java -Dhudson.remoting.Launcher.pingIntervalSec=-1");
   }
 
   /*

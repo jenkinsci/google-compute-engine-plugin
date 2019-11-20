@@ -23,7 +23,7 @@
   </parent>
 
   <artifactId>google-compute-engine</artifactId>
-  <version>4.1.2-SNAPSHOT</version>
+  <version>4.2.1-SNAPSHOT</version>
   <packaging>hpi</packaging>
 
   <name>Google Compute Engine Plugin</name>
@@ -302,6 +302,7 @@
             <hudson.model.LoadStatistics.decay>0.5</hudson.model.LoadStatistics.decay>
             <hudson.agents.NodeProvisioner.MARGIN>100</hudson.agents.NodeProvisioner.MARGIN>
             <hudson.agents.NodeProvisioner.MARGIN0>1.0</hudson.agents.NodeProvisioner.MARGIN0>
+            <hudson.remoting.Launcher.pingIntervalSec>-1</hudson.remoting.Launcher.pingIntervalSec>
             <com.google.jenkins.plugins.computeengine.integration.ITUtil.windows>${it.windows}</com.google.jenkins.plugins.computeengine.integration.ITUtil.windows>
           </systemPropertyVariables>
           <excludes>
@@ -309,6 +310,7 @@
           </excludes>
           <argLine>-Djenkins.test.timeout=${jenkinsRuleTimeout}</argLine>
           <runOrder>${it.runOrder}</runOrder>
+          <reuseForks>false</reuseForks>
         </configuration>
       </plugin>
       <plugin>
@@ -356,6 +358,27 @@
           </execution>
         </executions>
       </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-shade-plugin</artifactId>
+        <version>3.2.1</version>
+        <executions>
+          <execution>
+            <phase>package</phase>
+            <goals>
+              <goal>shade</goal>
+            </goals>
+            <configuration>
+              <shadedGroupFilter>com.google.cloud.graphite</shadedGroupFilter>
+              <promoteTransitiveDependencies>true</promoteTransitiveDependencies>
+              <createDependencyReducedPom>false</createDependencyReducedPom>
+              <transformers>
+                <transformer implementation="org.apache.maven.plugins.shade.resource.ApacheLicenseResourceTransformer"/>
+              </transformers>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
     </plugins>
   </build>
 
@@ -380,8 +403,20 @@
         </property>
       </activation>
       <properties>
-        <concurrency>8</concurrency>
-        <it.runOrder>reversealphabetical</it.runOrder>
+        <concurrency>4</concurrency>
+        <it.runOrder>alphabetical</it.runOrder>
+      </properties>
+    </profile>
+    <profile>
+      <id>ci-cd</id>
+      <activation>
+        <property>
+          <name>it.cicd</name>
+          <value>true</value>
+        </property>
+      </activation>
+      <properties>
+        <concurrency>6</concurrency>
       </properties>
     </profile>
   </profiles>

@@ -20,6 +20,7 @@ import static com.google.jenkins.plugins.computeengine.integration.ITUtil.LABEL;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.NULL_TEMPLATE;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.NUM_EXECUTORS;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.PROJECT_ID;
+import static com.google.jenkins.plugins.computeengine.integration.ITUtil.TEST_TIMEOUT_MULTIPLIER;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.execute;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.getLabel;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.initClient;
@@ -60,8 +61,11 @@ import org.jvnet.hudson.test.JenkinsRule;
  */
 public class ComputeEngineCloudOneShotInstanceIT {
   private static Logger log = Logger.getLogger(ComputeEngineCloudOneShotInstanceIT.class.getName());
+  private static final int QUIET_PERIOD_SECS = 30;
 
-  @ClassRule public static Timeout timeout = new Timeout(10, TimeUnit.MINUTES);
+  @ClassRule
+  public static Timeout timeout = new Timeout(10 * TEST_TIMEOUT_MULTIPLIER, TimeUnit.MINUTES);
+
   @ClassRule public static JenkinsRule jenkinsRule = new JenkinsRule();
 
   private static ComputeClient client;
@@ -69,6 +73,7 @@ public class ComputeEngineCloudOneShotInstanceIT {
   private static FreeStyleBuild build;
   private static String nodeName;
   private static Future<FreeStyleBuild> otherBuildFuture;
+  private static Node otherNode;
 
   @BeforeClass
   public static void init() throws Exception {
@@ -99,7 +104,8 @@ public class ComputeEngineCloudOneShotInstanceIT {
     Builder otherStep = execute(Commands.ECHO, "\"also works\"");
     otherProject.getBuildersList().add(otherStep);
     otherProject.setAssignedLabel(new LabelAtom(LABEL));
-    otherBuildFuture = otherProject.scheduleBuild2(0);
+    // Wait for a bit to make sure that this build finishes second.
+    otherBuildFuture = otherProject.scheduleBuild2(QUIET_PERIOD_SECS);
 
     build = buildFuture.get();
     assertNotNull(build);
@@ -137,13 +143,13 @@ public class ComputeEngineCloudOneShotInstanceIT {
     FreeStyleBuild otherBuild = otherBuildFuture.get();
     assertNotNull(otherBuild);
     assertEquals(Result.SUCCESS, otherBuild.getResult());
+    otherNode = otherBuild.getBuiltOn();
     jenkinsRule.assertLogContains("also works", otherBuild);
   }
 
   @Test
   public void testOtherInstanceRanOnDifferentNode() throws Exception {
-    Node node = otherBuildFuture.get().getBuiltOn();
-    assertNotNull(node);
-    assertNotEquals(nodeName, node.getNodeName());
+    assertNotNull(otherNode);
+    assertNotEquals(nodeName, otherNode.getNodeName());
   }
 }

@@ -116,8 +116,9 @@ public class AutofilledNetworkConfigurationTest {
     ListBoxModel got =
         descriptorImpl.doFillSubnetworkItems(
             r.jenkins, "default", REGION, PROJECT_ID, CREDENTIALS_ID);
-    Assert.assertEquals(1, got.size());
-    Assert.assertEquals("default", got.get(0).name);
+    Assert.assertEquals(2, got.size());
+    Assert.assertEquals("", got.get(0).name);
+    Assert.assertEquals("default", got.get(1).name);
   }
 
   @Test
