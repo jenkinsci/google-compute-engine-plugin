@@ -39,7 +39,7 @@ by Joshua Bloch in his book Effective Java -->
 
              The (?&lt;!TODO\(.{0,100}) makes the regex ignore any secondary TODO's on the line
              so that things like //TODO(bob): remove this TODO on 1/1/2020 don't trigger a warning
-             because of the second TODO.  (The {0,100} is because java doesn't recoginize arbitrary
+             because of the second TODO.  (The {0,100} is because java doesn't recognize arbitrary
              length look backs, but we know each java line should be < 100 chars.)
         -->
         <property name="format" value="((//.*)|(\*.*))(?&lt;!TODO\(.{0,100})(TODO[^(])|(TODO\([^)]*$)"/>
