@@ -47,7 +47,7 @@ public class ComputeEngineLinuxLauncher extends ComputeEngineComputerLauncher {
       logSevere(
           computer,
           listener,
-          String.format("Failed to retreieve SSH keypair for instance: %s", node.getNodeName()));
+          String.format("Failed to retrieve SSH keypair for instance: %s", node.getNodeName()));
       return Optional.empty();
     }
 

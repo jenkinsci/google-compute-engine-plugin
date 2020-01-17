@@ -12,7 +12,7 @@
 #
 # Following script works with the Windows 2016 image provided by GCE.
 # Script may not work for other images/versions of Powershell.
-# We are in the first phase where we need to configure PowerShell, install Chocolately, install the OpenSSH Server and the restart the VM.
+# We are in the first phase where we need to configure PowerShell, install Chocolatey, install the OpenSSH Server and the restart the VM.
 
 Write-Output "Setting execution policy for PowerShell scripts...";
 Set-ExecutionPolicy Bypass -Scope Process -Force;

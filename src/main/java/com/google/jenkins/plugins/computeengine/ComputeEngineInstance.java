@@ -131,7 +131,7 @@ public class ComputeEngineInstance extends AbstractCloudSlave {
                 cloud.getProjectId(), this.zone, this.getNodeName(), createSnapshotTimeout);
       }
 
-      // If the instance is running, attempt to terminate it. This is an asynch call and we
+      // If the instance is running, attempt to terminate it. This is an async call and we
       // return immediately, hoping for the best.
       cloud.getClient().terminateInstanceAsync(cloud.getProjectId(), zone, name);
     } catch (CloudNotFoundException cnfe) {
