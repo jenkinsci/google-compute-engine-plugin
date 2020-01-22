@@ -12,10 +12,10 @@
  License.
 -->
 
-[![Build Status](https://ci.jenkins.io/job/Plugins/job/google-compute-engine-plugin/job/master/badge/icon)](https://ci.jenkins.io/job/Plugins/job/google-compute-engine-plugin/job/master/)
+[![Build Status](https://ci.jenkins.io/job/Plugins/job/google-compute-engine-plugin/job/master/badge/icon)](https://ci.jenkins.io/job/Plugins/job/google-compute-engine-plugin/job/develop/)
 [![Contributors](https://img.shields.io/github/contributors/jenkinsci/google-compute-engine-plugin.svg)](https://github.com/jenkinsci/google-compute-engine-plugin/graphs/contributors)
 [![Jenkins Plugin](https://img.shields.io/jenkins/plugin/v/google-compute-engine.svg)](https://plugins.jenkins.io/google-compute-engine)
-[![GitHub release](https://img.shields.io/github/release/jenkinsci/google-compute-engine-plugin.svg?label=changelog)](https://github.com/jenkinsci/google-compute-engine-plugin/releases/latest)
+[![GitHub release](https://img.shields.io/github/v/tag/jenkinsci/google-compute-engine-plugin?label=changelog)](https://github.com/jenkinsci/google-compute-engine-plugin/blob/develop/CHANGELOG.md)
 [![Jenkins Plugin Installs](https://img.shields.io/jenkins/plugin/i/google-compute-engine.svg?color=blue)](https://plugins.jenkins.io/google-compute-engine)
 
 # Google Compute Engine Plugin for Jenkins
