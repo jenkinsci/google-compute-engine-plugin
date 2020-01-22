@@ -24,6 +24,13 @@ Please see the [Google Compute Engine Plugin](docs/Home.md) docs for complete do
 1. Choose the Jenkins plugin file downloaded in Step 1.
 1. Click the **Upload** button.
 
+## Configuration as Code Support
+Support for [Jenkins Configuration as Code](https://jenkins.io/projects/jcasc/). See the below examples that are already automatically tested:
+
+* [A configuration example](./src/test/resources/com/google/jenkins/plugins/computeengine/configuration-as-code.yml)
+* [Another configuration example with Windows workers](./src/test/resources/com/google/jenkins/plugins/computeengine/integration/configuration-as-code-windows-it.yml)
+
+
 ## Feature requests and bug reports
 Please file feature requests and bug reports under [issues](https://github.com/jenkinsci/google-compute-engine-plugin/issues).
 
