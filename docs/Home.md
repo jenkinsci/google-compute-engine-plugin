@@ -110,3 +110,10 @@ Instance configurations have many options that were not listed above. A few of t
   access from metadata. For more info, review the service account documentation.
 
 
+# No delay provisioning
+
+By default Jenkins do estimate load to avoid over-provisioning of cloud nodes.
+This plugin will use its own provisioning strategy by default, with this strategy, a new node is created on GCP as soon as NodeProvisioner detects need for more agents.
+In worse scenarios, this will results in some extra nodes provisioned on Kubernetes, which will be shortly terminated.
+
+If you want to turn off this Strategy you can set SystemProperty `com.google.jenkins.plugins.computeengine.disableNoDelayProvisioning=true`

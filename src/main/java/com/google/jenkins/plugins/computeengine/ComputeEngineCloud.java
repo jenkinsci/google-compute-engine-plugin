@@ -91,6 +91,7 @@ public class ComputeEngineCloud extends AbstractCloudImpl {
   private List<InstanceConfiguration> configurations;
 
   private transient volatile ComputeClient client;
+  private boolean noDelayProvisioning;
 
   @DataBoundConstructor
   public ComputeEngineCloud(
@@ -141,6 +142,15 @@ public class ComputeEngineCloud extends AbstractCloudImpl {
   @Override
   public String getDisplayName() {
     return getCloudName();
+  }
+
+  public boolean isNoDelayProvisioning() {
+    return noDelayProvisioning;
+  }
+
+  @DataBoundSetter
+  public void setNoDelayProvisioning(boolean noDelayProvisioning) {
+    this.noDelayProvisioning = noDelayProvisioning;
   }
 
   protected Object readResolve() {
