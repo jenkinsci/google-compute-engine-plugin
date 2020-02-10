@@ -169,7 +169,7 @@
       <artifactId>trilead-api</artifactId>
       <!-- Version can be removed when bumping the version for the BOM and
         https://github.com/jenkinsci/bom/pull/110/files get merged -->
-      <version>1.0.5</version>
+      <version>1.0.3</version>
     </dependency>
     <dependency>
       <groupId>net.i2p.crypto</groupId>
