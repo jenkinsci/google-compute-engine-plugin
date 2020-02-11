@@ -50,6 +50,9 @@ import jenkins.model.Jenkins;
 import lombok.Getter;
 
 public abstract class ComputeEngineComputerLauncher extends ComputerLauncher {
+  private static final boolean ENABLE_JAVA_INSTALLATION = Boolean.valueOf(
+    System.getProperty("com.google.jenkins.plugins.computeengine.enableJavaInstallation"));
+
   private static final Logger LOGGER =
       Logger.getLogger(ComputeEngineComputerLauncher.class.getName());
   private static final SimpleFormatter sf = new SimpleFormatter();
@@ -274,6 +277,24 @@ public abstract class ComputeEngineComputerLauncher extends ComputerLauncher {
     return false;
   }
 
+  private boolean installJava(
+      ComputeEngineComputer computer,
+      Connection conn,
+      PrintStream logger,
+      TaskListener listener,
+      String command) {
+    try {
+      if (testCommand(computer, conn, command, logger, listener)) {
+        return true;
+      }
+    } catch (IOException | InterruptedException ex) {
+      logException(computer, listener, "Failed to install java: ", ex);
+      return false;
+    }
+    logWarning(computer, listener, "Java was not installed");
+    return false;
+  }
+
   private void copyAgentJar(
       ComputeEngineComputer computer, Connection conn, TaskListener listener, String jenkinsDir)
       throws IOException {
@@ -305,7 +326,16 @@ public abstract class ComputeEngineComputerLauncher extends ComputerLauncher {
       conn = cleanupConn.get();
       String javaExecPath = node.getJavaExecPathOrDefault();
       if (!checkJavaInstalled(computer, conn, logger, listener, javaExecPath)) {
-        return;
+        if (ENABLE_JAVA_INSTALLATION) {
+          logInfo(computer, listener, "Let's install java for some *nix flavours");
+          if (!installJava(computer, conn, logger, listener, "sudo yum install -y java-1.8.0-openjdk.x86_64")) {
+            if (!installJava(computer, conn, logger, listener, "sudo apt install openjdk-8-jdk")) {
+              return;
+            }
+          }
+        } else {
+          return;
+        }
       }
       String jenkinsDir = node.getRemoteFS();
       copyAgentJar(computer, conn, listener, jenkinsDir);

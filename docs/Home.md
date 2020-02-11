@@ -110,3 +110,8 @@ Instance configurations have many options that were not listed above. A few of t
   access from metadata. For more info, review the service account documentation.
 
 
+# Install java if not found
+
+By default the agents do require to have java installed, this particular flag feature will enable to install java before the provisioning happens.
+
+If you want to turn on this installation strategy then you set SystemProperty `com.google.jenkins.plugins.computeengine.enableJavaInstallation=true`
