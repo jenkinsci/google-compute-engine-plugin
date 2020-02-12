@@ -6,12 +6,12 @@ jenkins:
         instanceCapStr: 10
         credentialsId: ${env.GOOGLE_PROJECT_ID}
         configurations:
-          - namePrefix:         integration
-            description:        integration
+          - namePrefix:         integration-install-java
+            description:        integration-install-java
             launchTimeoutSecondsStr: ''
             retentionTimeMinutesStr: ''
             mode:               EXCLUSIVE
-            labelString:        integration
+            labelString:        integration-install-java
             numExecutorsStr:    1
             runAsUser:          jenkins
             remoteFs:           ''
@@ -23,7 +23,6 @@ jenkins:
             machineType:        "https://www.googleapis.com/compute/v1/projects/${env.GOOGLE_PROJECT_ID}/zones/${env.GOOGLE_ZONE}/machineTypes/n1-standard-1"
             preemptible:        false
             minCpuPlatform:     '' # tried not setting, added when 'saved' in UI
-            startupScript:      "#!/bin/bash\n/etc/init.d/ssh stop\necho \"deb http://http.debian.net/debian stretch-backports main\" | \\\n      sudo tee --append /etc/apt/sources.list > /dev/null\napt-get -y update\napt-get -y install -t stretch-backports openjdk-8-jdk\nupdate-java-alternatives -s java-1.8.0-openjdk-amd64\n/etc/init.d/ssh start" 
             networkConfiguration:
               autofilled:
                 network:        default 
@@ -37,4 +36,4 @@ jenkins:
             bootDiskSizeGbStr:  10
             bootDiskAutoDelete: true
             serviceAccountEmail: "${env.GOOGLE_SA_NAME}@${env.GOOGLE_PROJECT_ID}.iam.gserviceaccount.com"
-            installJava:        false
+            installJava:        true
