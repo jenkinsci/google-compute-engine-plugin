@@ -50,8 +50,9 @@ import jenkins.model.Jenkins;
 import lombok.Getter;
 
 public abstract class ComputeEngineComputerLauncher extends ComputerLauncher {
-  private static final boolean ENABLE_JAVA_INSTALLATION = Boolean.valueOf(
-    System.getProperty("com.google.jenkins.plugins.computeengine.enableJavaInstallation"));
+  private static final boolean ENABLE_JAVA_INSTALLATION =
+      Boolean.valueOf(
+          System.getProperty("com.google.jenkins.plugins.computeengine.enableJavaInstallation"));
 
   private static final Logger LOGGER =
       Logger.getLogger(ComputeEngineComputerLauncher.class.getName());
@@ -328,7 +329,8 @@ public abstract class ComputeEngineComputerLauncher extends ComputerLauncher {
       if (!checkJavaInstalled(computer, conn, logger, listener, javaExecPath)) {
         if (ENABLE_JAVA_INSTALLATION) {
           logInfo(computer, listener, "Let's install java for some *nix flavours");
-          if (!installJava(computer, conn, logger, listener, "sudo yum install -y java-1.8.0-openjdk.x86_64")) {
+          if (!installJava(
+              computer, conn, logger, listener, "sudo yum install -y java-1.8.0-openjdk.x86_64")) {
             if (!installJava(computer, conn, logger, listener, "sudo apt install openjdk-8-jdk")) {
               return;
             }
