@@ -51,7 +51,7 @@ using the correct versions before filing a bug request.
 The GCP Jenkins community uses the **#gcp-jenkins** slack channel on
 [https://googlecloud-community.slack.com](https://googlecloud-community.slack.com)
 to ask questions and share feedback. Invitation link available here:
-[http://bit.ly/gcp-slack](http://bit.ly/gcp-slack).
+[gcp-slack](https://cloud.google.com/community#home-support).
 
 ## Contributing
 See [CONTRIBUTING.md](CONTRIBUTING.md)
