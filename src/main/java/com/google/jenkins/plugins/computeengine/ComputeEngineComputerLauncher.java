@@ -327,7 +327,8 @@ public abstract class ComputeEngineComputerLauncher extends ComputerLauncher {
           logInfo(computer, listener, "Let's install java for some *nix flavours");
           if (!installJava(
               computer, conn, logger, listener, "sudo yum install -y java-1.8.0-openjdk.x86_64")) {
-            if (!installJava(computer, conn, logger, listener, "sudo apt install openjdk-8-jdk")) {
+            if (!installJava(
+                computer, conn, logger, listener, "sudo apt install -y openjdk-8-jdk")) {
               return;
             }
           }
