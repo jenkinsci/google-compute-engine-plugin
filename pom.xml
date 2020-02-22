@@ -170,6 +170,12 @@
       <!-- Version can be removed when bumping the version for the BOM and
         https://github.com/jenkinsci/bom/pull/110/files get merged -->
       <version>1.0.3</version>
+      <exclusions>
+        <exclusion>
+          <groupId>net.i2p.crypto</groupId>
+          <artifactId>eddsa</artifactId>
+        </exclusion>
+      </exclusions>
     </dependency>
     <dependency>
       <groupId>net.i2p.crypto</groupId>
