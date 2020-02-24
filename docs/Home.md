@@ -112,8 +112,20 @@ Instance configurations have many options that were not listed above. A few of t
 
 # No delay provisioning
 
-By default Jenkins do estimate load to avoid over-provisioning of cloud nodes.
+By default Jenkins estimates load to avoid over-provisioning of cloud nodes.
 This plugin will use its own provisioning strategy by default, with this strategy, a new node is created on GCP as soon as NodeProvisioner detects need for more agents.
-In worse scenarios, this will results in some extra nodes provisioned on Kubernetes, which will be shortly terminated.
+In worst case scenarios, this will results in some extra nodes provisioned on GCP, which will be shortly terminated.
 
-If you want to turn off this Strategy you can set SystemProperty `com.google.jenkins.plugins.computeengine.disableNoDelayProvisioning=true`
+## How to configure
+
+### Using a system property
+
+If you want to turn off this Strategy globally then you can set a SystemProperty `com.google.jenkins.plugins.computeengine.disableNoDelayProvisioning=true`
+
+### Using the the UI
+
+Follow the steps below to configure it:
+
+ 1. Go to Manage Jenkins, then Configure System
+ 2. At the bottom of the page there will be a Cloud Section
+ 3. Select the cloud project and look for the `No delay provisioning` checkbox, and click on to enable it. 
