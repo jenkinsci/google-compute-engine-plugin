@@ -22,14 +22,12 @@ import hudson.model.LoadStatistics;
 import hudson.slaves.Cloud;
 import hudson.slaves.CloudProvisioningListener;
 import hudson.slaves.NodeProvisioner;
-
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-
 import jenkins.model.Jenkins;
 
 /**
@@ -38,7 +36,6 @@ import jenkins.model.Jenkins;
  */
 @Extension(ordinal = 100)
 public class NoDelayProvisionerStrategy extends NodeProvisioner.Strategy {
-
   private static final Logger LOGGER = Logger.getLogger(NoDelayProvisionerStrategy.class.getName());
 
   private static final boolean DISABLE_NODELAY_PROVISING =
@@ -46,6 +43,7 @@ public class NoDelayProvisionerStrategy extends NodeProvisioner.Strategy {
           System.getProperty(
               "com.google.jenkins.plugins.computeengine.disableNoDelayProvisioning"));
 
+  /** {@inheritDoc} */
   @Override
   public NodeProvisioner.StrategyDecision apply(NodeProvisioner.StrategyState strategyState) {
     if (DISABLE_NODELAY_PROVISING) {
@@ -56,10 +54,14 @@ public class NoDelayProvisionerStrategy extends NodeProvisioner.Strategy {
 
     LoadStatistics.LoadStatisticsSnapshot snapshot = strategyState.getSnapshot();
     int availableCapacity =
-    snapshot.getAvailableExecutors()   // live executors
-            + snapshot.getConnectingExecutors()  // executors present but not yet connected
-            + strategyState.getPlannedCapacitySnapshot()     // capacity added by previous strategies from previous rounds
-            + strategyState.getAdditionalPlannedCapacity();  // capacity added by previous strategies _this round_
+        snapshot.getAvailableExecutors() // live executors
+            + snapshot.getConnectingExecutors() // executors present but not yet connected
+            + strategyState
+                .getPlannedCapacitySnapshot() // capacity added by previous strategies from previous
+                                              // rounds
+            + strategyState
+                .getAdditionalPlannedCapacity(); // capacity added by previous strategies _this
+                                                 // round_
     int currentDemand = snapshot.getQueueLength();
     LOGGER.log(
         Level.FINE,
