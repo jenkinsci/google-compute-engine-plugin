@@ -39,6 +39,8 @@ public class ConfigAsCodeTestIT {
 
   private static ComputeClient client;
   private static Map<String, String> label = getLabel(ConfigAsCodeTestIT.class);
+  private static String DISABLE_NO_DELAY_SYSTEM_PROPERTY =
+      "com.google.jenkins.plugins.computeengine.disableNoDelayProvisioning";
 
   @BeforeClass
   public static void init() throws Exception {
@@ -55,7 +57,20 @@ public class ConfigAsCodeTestIT {
   }
 
   @Test
-  public void testWorkerCreated() throws Exception {
+  public void testWorkerCreatedWithoutNoDelayProvision() throws Exception {
+    // Disable NoDelayProvision with the environment variable flag
+    System.setProperty(DISABLE_NO_DELAY_SYSTEM_PROPERTY, "true");
+    testWorkerCreated();
+  }
+
+  @Test
+  public void testWorkerCreatedWithNoDelayProvision() throws Exception {
+    // Enable NoDelayProvision with the environment variable flag
+    System.setProperty(DISABLE_NO_DELAY_SYSTEM_PROPERTY, "false");
+    testWorkerCreated();
+  }
+
+  private void testWorkerCreated() {
     ComputeEngineCloud cloud =
         (ComputeEngineCloud) jenkinsRule.jenkins.clouds.getByName("gce-integration");
 
