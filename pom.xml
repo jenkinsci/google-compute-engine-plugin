@@ -79,7 +79,7 @@
     <powershell.version>1.3</powershell.version>
     <google-oauth.version>1.0.0</google-oauth.version>
     <google.guava.version>20.0</google.guava.version>
-    <google.http.version>1.21.0</google.http.version>
+    <google.http.version>1.34.2</google.http.version>
     <google.api.version>1.25.0</google.api.version>
     <compute.revision>214</compute.revision>
     <gcp-plugin-core.version>0.2.1</gcp-plugin-core.version>
