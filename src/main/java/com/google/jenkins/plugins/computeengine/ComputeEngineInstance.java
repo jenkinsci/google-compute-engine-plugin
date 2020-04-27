@@ -52,6 +52,7 @@ public class ComputeEngineInstance extends AbstractCloudSlave {
   private final boolean createSnapshot;
   private final boolean oneShot;
   private final boolean ignoreProxy;
+  private final boolean installJava;
   private final String javaExecPath;
   private final GoogleKeyPair sshKeyPair;
   private Integer launchTimeout; // Seconds
@@ -80,7 +81,8 @@ public class ComputeEngineInstance extends AbstractCloudSlave {
       // NOTE(craigatgoogle): Could not use Optional due to serialization req.
       @Nullable String javaExecPath,
       @Nullable GoogleKeyPair sshKeyPair,
-      @Nullable ComputeEngineCloud cloud)
+      @Nullable ComputeEngineCloud cloud,
+      boolean installJava)
       throws Descriptor.FormException, IOException {
     super(
         name,
@@ -103,6 +105,7 @@ public class ComputeEngineInstance extends AbstractCloudSlave {
     this.javaExecPath = javaExecPath;
     this.sshKeyPair = sshKeyPair;
     this.cloud = cloud;
+    this.installJava = installJava;
   }
 
   @Override

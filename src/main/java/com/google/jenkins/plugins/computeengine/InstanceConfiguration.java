@@ -134,6 +134,7 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
   private boolean externalAddress;
   private boolean useInternalAddress;
   private boolean ignoreProxy;
+  private boolean installJava;
   private String networkTags;
   private String serviceAccountEmail;
   private Node.Mode mode;
@@ -217,6 +218,11 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
   public void setBootDiskSizeGbStr(String bootDiskSizeGbStr) {
     this.bootDiskSizeGb = longOrDefault(bootDiskSizeGbStr, DEFAULT_BOOT_DISK_SIZE_GB);
     this.bootDiskSizeGbStr = this.bootDiskSizeGb.toString();
+  }
+
+  @DataBoundSetter
+  public void setInstallJava(boolean installJava) {
+    this.installJava = installJava;
   }
 
   @DataBoundSetter
@@ -334,6 +340,7 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
           .createSnapshot(createSnapshot)
           .oneShot(oneShot)
           .ignoreProxy(ignoreProxy)
+          .installJava(installJava)
           .numExecutors(numExecutors)
           .mode(mode)
           .labelString(labels)
@@ -962,6 +969,7 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
       instanceConfiguration.setExternalAddress(this.externalAddress);
       instanceConfiguration.setUseInternalAddress(this.useInternalAddress);
       instanceConfiguration.setIgnoreProxy(this.ignoreProxy);
+      instanceConfiguration.setInstallJava(this.installJava);
       instanceConfiguration.setNetworkTags(this.networkTags);
       instanceConfiguration.setServiceAccountEmail(this.serviceAccountEmail);
       instanceConfiguration.setMode(this.mode);

@@ -50,6 +50,9 @@
             <f:entry title="${%Remote Location}" field="remoteFs">
                 <f:textbox default=""/>
             </f:entry>
+            <f:entry field="installJava" title="${%Install Java}">
+                <f:checkbox/>
+            </f:entry>
             <f:entry title="${%Java Exec Path}" field="javaExecPath">
                 <f:textbox default="java"/>
             </f:entry>

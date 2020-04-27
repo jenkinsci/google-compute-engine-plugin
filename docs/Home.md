@@ -108,5 +108,5 @@ Instance configurations have many options that were not listed above. A few of t
 * GPUs - attach 1 or more GPUs to the instance. For more info, visit the GCE GPU docs.
 * Service Account E-mail - sets the service account that the instance will be able to
   access from metadata. For more info, review the service account documentation.
-
-
+* Install Java - Java is required to be installed in the instances to be provisioned. This
+  feature will install Java before the provisioning happen if Java was not found at first.
