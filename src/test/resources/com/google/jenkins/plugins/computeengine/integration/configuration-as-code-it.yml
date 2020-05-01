@@ -5,6 +5,7 @@ jenkins:
         projectId: ${env.GOOGLE_PROJECT_ID}
         instanceCapStr: 10
         credentialsId: ${env.GOOGLE_PROJECT_ID}
+        noDelayProvisioning: true
         configurations:
           - namePrefix:         integration
             description:        integration
@@ -37,4 +38,3 @@ jenkins:
             bootDiskSizeGbStr:  10
             bootDiskAutoDelete: true
             serviceAccountEmail: "${env.GOOGLE_SA_NAME}@${env.GOOGLE_PROJECT_ID}.iam.gserviceaccount.com"
-            noDelayProvisioning: true

@@ -5,6 +5,7 @@ jenkins:
         projectId: gce-jenkins
         instanceCapStr: 53
         credentialsId: gce-jenkins
+        noDelayProvisioning: false
         configurations:
           - namePrefix:         jenkins-agent-image
             description:        Jenkins agent
@@ -39,4 +40,3 @@ jenkins:
             bootDiskSizeGbStr:  50
             bootDiskAutoDelete: true
             serviceAccountEmail: 'jenkins-test@gce-jenkins-ops.iam.gserviceaccount.com'
-            noDelayProvisioning: false
