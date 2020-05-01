@@ -70,7 +70,7 @@ public class ConfigAsCodeTestIT {
     testWorkerCreated();
   }
 
-  private void testWorkerCreated() {
+  private void testWorkerCreated() throws Exception {
     ComputeEngineCloud cloud =
         (ComputeEngineCloud) jenkinsRule.jenkins.clouds.getByName("gce-integration");
 
