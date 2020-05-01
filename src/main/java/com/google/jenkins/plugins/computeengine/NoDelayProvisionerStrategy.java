@@ -58,10 +58,10 @@ public class NoDelayProvisionerStrategy extends NodeProvisioner.Strategy {
             + snapshot.getConnectingExecutors() // executors present but not yet connected
             + strategyState
                 .getPlannedCapacitySnapshot() // capacity added by previous strategies from previous
-                                              // rounds
+            // rounds
             + strategyState
                 .getAdditionalPlannedCapacity(); // capacity added by previous strategies _this
-                                                 // round_
+    // round_
     int currentDemand = snapshot.getQueueLength();
     LOGGER.log(
         Level.FINE,
