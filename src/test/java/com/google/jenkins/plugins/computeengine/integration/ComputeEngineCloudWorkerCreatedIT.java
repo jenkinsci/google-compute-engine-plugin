@@ -148,7 +148,8 @@ public class ComputeEngineCloudWorkerCreatedIT {
     Optional<String> blockProjectSSHKeys =
         instance.getMetadata().getItems().stream()
             .filter(
-                item -> item.getKey().equals(InstanceConfiguration.BLOCK_PROJECT_SSH_KEYS_METADATA_KEY))
+                item ->
+                    item.getKey().equals(InstanceConfiguration.BLOCK_PROJECT_SSH_KEYS_METADATA_KEY))
             .map(item -> item.getValue())
             .findFirst();
     assertTrue(blockProjectSSHKeys.isPresent());

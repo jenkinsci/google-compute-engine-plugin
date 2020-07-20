@@ -437,8 +437,13 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
     metadata.setItems(new ArrayList<>());
     metadata
         .getItems()
-        .add(new Metadata.Items().setKey(GUEST_ATTRIBUTES_METADATA_KEY).setValue("TRUE"))
-        .add(new Metadata.Items().setKey(BLOCK_PROJECT_SSH_KEYS_METADATA_KEY).setValue(blockProjectSSHKeys));
+        .add(new Metadata.Items().setKey(GUEST_ATTRIBUTES_METADATA_KEY).setValue("TRUE"));
+    metadata
+        .getItems()
+        .add(
+            new Metadata.Items()
+                .setKey(BLOCK_PROJECT_SSH_KEYS_METADATA_KEY)
+                .setValue(String.valueOf(blockProjectSSHKeys)));
     return metadata;
   }
 
