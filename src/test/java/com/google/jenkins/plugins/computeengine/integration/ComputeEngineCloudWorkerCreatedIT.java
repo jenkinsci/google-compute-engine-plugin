@@ -83,6 +83,7 @@ public class ComputeEngineCloudWorkerCreatedIT {
             .numExecutorsStr(NUM_EXECUTORS)
             .labels(LABEL)
             .oneShot(false)
+            .blockProjectSSHKeys(true)
             .createSnapshot(false)
             .template(NULL_TEMPLATE)
             .googleLabels(label)
@@ -144,7 +145,7 @@ public class ComputeEngineCloudWorkerCreatedIT {
   }
 
   @Test
-  public void testBlockProjectSSHKeysDisabled() {
+  public void testBlockProjectSSHKeysEnabled() {
     Optional<String> blockProjectSSHKeys =
         instance.getMetadata().getItems().stream()
             .filter(
@@ -153,6 +154,6 @@ public class ComputeEngineCloudWorkerCreatedIT {
             .map(item -> item.getValue())
             .findFirst();
     assertTrue(blockProjectSSHKeys.isPresent());
-    assertEquals(blockProjectSSHKeys.get(), "FALSE");
+    assertEquals("true", blockProjectSSHKeys.get());
   }
 }
