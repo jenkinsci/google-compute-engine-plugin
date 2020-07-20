@@ -87,6 +87,7 @@ import org.kohsuke.stapler.QueryParameter;
 @Log
 public class InstanceConfiguration implements Describable<InstanceConfiguration> {
   public static final String GUEST_ATTRIBUTES_METADATA_KEY = "enable-guest-attributes";
+  public static final String BLOCK_PROJECT_SSH_KEYS_METADATA_KEY = "block-project-ssh-keys";
   public static final String SSH_METADATA_KEY = "ssh-keys";
   public static final Long DEFAULT_BOOT_DISK_SIZE_GB = 10L;
   public static final Integer DEFAULT_NUM_EXECUTORS = 1;
@@ -143,6 +144,7 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
   private String bootDiskSizeGbStr;
   private boolean oneShot;
   private String template;
+  private boolean blockProjectSSHKeys;
   // Optional not possible due to serialization requirement
   @Nullable private WindowsConfiguration windowsConfiguration;
   private boolean createSnapshot;
@@ -228,6 +230,11 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
   @DataBoundSetter
   public void setCreateSnapshot(boolean createSnapshot) {
     this.createSnapshot = createSnapshot && this.oneShot;
+  }
+
+  @DataBoundSetter
+  public void setBlockProjectSSHKeys(boolean blockProjectSSHKeys) {
+    this.blockProjectSSHKeys = blockProjectSSHKeys;
   }
 
   public static Integer intOrDefault(String toParse, Integer defaultTo) {
@@ -342,6 +349,7 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
           .launchTimeout(getLaunchTimeoutMillis())
           .javaExecPath(javaExecPath)
           .sshKeyPair(sshKeyPair)
+          .blockProjectSSHKeys(blockProjectSSHKeys)
           .build();
     } catch (Descriptor.FormException fe) {
       log.log(Level.WARNING, "Error provisioning instance: " + fe.getMessage(), fe);
@@ -429,7 +437,8 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
     metadata.setItems(new ArrayList<>());
     metadata
         .getItems()
-        .add(new Metadata.Items().setKey(GUEST_ATTRIBUTES_METADATA_KEY).setValue("TRUE"));
+        .add(new Metadata.Items().setKey(GUEST_ATTRIBUTES_METADATA_KEY).setValue("TRUE"))
+        .add(new Metadata.Items().setKey(BLOCK_PROJECT_SSH_KEYS_METADATA_KEY).setValue(blockProjectSSHKeys));
     return metadata;
   }
 
@@ -975,6 +984,7 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
       instanceConfiguration.setRemoteFs(this.remoteFs);
       instanceConfiguration.setJavaExecPath(this.javaExecPath);
       instanceConfiguration.setCloud(this.cloud);
+      instanceConfiguration.setBlockProjectSSHKeys(this.blockProjectSSHKeys);
       if (googleLabels != null) {
         instanceConfiguration.appendLabels(this.googleLabels);
       }

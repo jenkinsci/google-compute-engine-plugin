@@ -142,4 +142,16 @@ public class ComputeEngineCloudWorkerCreatedIT {
     assertTrue(guestAttributes.isPresent());
     assertEquals(guestAttributes.get(), "TRUE");
   }
+
+  @Test
+  public void testBlockProjectSSHKeysDisabled() {
+    Optional<String> blockProjectSSHKeys =
+        instance.getMetadata().getItems().stream()
+            .filter(
+                item -> item.getKey().equals(InstanceConfiguration.BLOCK_PROJECT_SSH_KEYS_METADATA_KEY))
+            .map(item -> item.getValue())
+            .findFirst();
+    assertTrue(blockProjectSSHKeys.isPresent());
+    assertEquals(blockProjectSSHKeys.get(), "FALSE");
+  }
 }
