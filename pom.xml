@@ -78,9 +78,10 @@
     <configuration-as-code.version>1.35</configuration-as-code.version>
     <powershell.version>1.3</powershell.version>
     <google-oauth.version>1.0.0</google-oauth.version>
-    <google.guava.version>20.0</google.guava.version>
+    <google.guava.version>24.1.1-jre</google.guava.version>
     <google.http.version>1.34.2</google.http.version>
     <google.api.version>1.25.0</google.api.version>
+    <google.j2objc.version>1.3</google.j2objc.version>
     <compute.revision>214</compute.revision>
     <gcp-plugin-core.version>0.2.1</gcp-plugin-core.version>
     <hpi.compatibleSinceVersion>4.1.0</hpi.compatibleSinceVersion>
@@ -148,6 +149,11 @@
       <groupId>com.google.guava</groupId>
       <artifactId>guava</artifactId>
       <version>${google.guava.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>com.google.j2objc</groupId>
+      <artifactId>j2objc-annotations</artifactId>
+      <version>${google.j2objc.version}</version>
     </dependency>
     <dependency>
       <groupId>com.google.http-client</groupId>
