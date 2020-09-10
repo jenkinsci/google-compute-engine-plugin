@@ -31,6 +31,10 @@ Please see the [Google Compute Engine Plugin](docs/Home.md) docs for complete do
 1. Choose the Jenkins plugin file downloaded in Step 1.
 1. Click the **Upload** button.
 
+## Plugin Source Build Installation
+See [Plugin Source Build Installation](docs/source_build_installation.md) to build and install from
+source.
+
 ## Configuration as Code Support
 Support for [Jenkins Configuration as Code](https://jenkins.io/projects/jcasc/). See the below examples that are already automatically tested:
 
