@@ -78,8 +78,8 @@
     <configuration-as-code.version>1.35</configuration-as-code.version>
     <powershell.version>1.3</powershell.version>
     <google-oauth.version>1.0.0</google-oauth.version>
-    <google.guava.version>24.1.1-jre</google.guava.version>
-    <google.http.version>1.34.2</google.http.version>
+    <google.guava.version>30.1-jre</google.guava.version>
+    <google.http.version>1.38.1</google.http.version>
     <google.api.version>1.25.0</google.api.version>
     <google.j2objc.version>1.3</google.j2objc.version>
     <compute.revision>214</compute.revision>
