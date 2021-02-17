@@ -13,8 +13,8 @@
 -->
 <?jelly escape-by-default='true'?>
 <j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler"
-         xmlns:f="/lib/form" xmlns:c="/lib/credentials">
-    <table width="100%">
+         xmlns:f="/lib/form" xmlns:c="/lib/credentials" xmlns:g="/lib/googlecomputeengine">
+    <g:blockWrapper>
         <f:section title="General">
             <f:entry title="${%Name Prefix}" field="namePrefix">
                 <f:textbox/>
@@ -143,5 +143,5 @@
             </div>
         </f:entry>
 
-    </table>
+    </g:blockWrapper>
 </j:jelly>
