@@ -81,7 +81,7 @@
     <google.http.version>1.38.1</google.http.version>
     <google.api.version>1.25.0</google.api.version>
     <google.j2objc.version>1.3</google.j2objc.version>
-    <compute.revision>214</compute.revision>
+    <compute.revision>v1-rev20210129-1.31.0</compute.revision>
     <gcp-plugin-core.version>0.2.1</gcp-plugin-core.version>
     <hpi.compatibleSinceVersion>4.1.0</hpi.compatibleSinceVersion>
     <concurrency>10</concurrency>
@@ -151,7 +151,7 @@
     <dependency>
       <groupId>com.google.apis</groupId>
       <artifactId>google-api-services-compute</artifactId>
-      <version>v1-rev${compute.revision}-${google.api.version}</version>
+      <version>v1-rev${compute.revision}</version>
     </dependency>
     <dependency>
       <groupId>io.opencensus</groupId>
