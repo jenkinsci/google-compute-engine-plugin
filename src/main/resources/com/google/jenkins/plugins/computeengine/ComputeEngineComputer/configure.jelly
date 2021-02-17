@@ -13,11 +13,11 @@
 -->
 <!--We want to override the form in configuring the node-->
 <?jelly escape-by-default='true'?>
-<j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:d="jelly:define" xmlns:l="/lib/layout" xmlns:t="/lib/hudson" xmlns:f="/lib/form">
+<j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:d="jelly:define" xmlns:l="/lib/layout" xmlns:t="/lib/hudson" xmlns:f="/lib/form" xmlns:g="/lib/googlecomputeengine">
     <l:layout norefresh="true" permission="${app.ADMINISTER}" title="${it.name} Configuration">
         <st:include page="sidepanel.jelly"/>
         <l:main-panel>
-            <table width="100%">
+            <g:blockWrapper>
 
                 <!--These variables need to be set since we are reconfiguring rather than a newly added instance-->
                 <j:set var="instance" value="${it.node}" />
@@ -53,7 +53,7 @@
                     </f:entry>
                 </f:section>
 
-            </table>
+            </g:blockWrapper>
         </l:main-panel>
     </l:layout>
 </j:jelly>
