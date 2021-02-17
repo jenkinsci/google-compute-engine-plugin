@@ -16,11 +16,11 @@
 
 package com.google.jenkins.plugins.computeengine;
 
-import static com.google.common.collect.ImmutableMap.of;
 import static com.google.jenkins.plugins.computeengine.ComputeEngineCloud.CLOUD_ID_LABEL_KEY;
 import static java.util.Collections.emptyList;
 
 import com.google.api.services.compute.model.Instance;
+import com.google.common.collect.ImmutableMap;
 import hudson.Extension;
 import hudson.model.PeriodicWork;
 import hudson.model.Slave;
@@ -97,7 +97,7 @@ public class CleanLostNodesWork extends PeriodicWork {
   }
 
   private List<Instance> findRemoteInstances(ComputeEngineCloud cloud) {
-    Map<String, String> filterLabel = of(CLOUD_ID_LABEL_KEY, cloud.getInstanceId());
+    Map<String, String> filterLabel = ImmutableMap.of(CLOUD_ID_LABEL_KEY, cloud.getInstanceId());
     try {
       return cloud.getClient().listInstancesWithLabel(cloud.getProjectId(), filterLabel).stream()
           .filter(instance -> shouldTerminateStatus(instance.getStatus()))
