@@ -231,7 +231,7 @@ class ITUtil {
 
   static Builder execute(Commands command, String argument) {
     if (windows) {
-      return new PowerShell(String.format(command.getWindows(), argument));
+      return new PowerShell(String.format(command.getWindows(), argument), true, false);
     }
     return new Shell(String.format(command.getLinux(), argument));
   }
