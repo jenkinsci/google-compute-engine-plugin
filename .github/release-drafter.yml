@@ -1,2 +1,2 @@
 _extends: .github
-tag-template: google-metadata-plugin-$NEXT_MINOR_VERSION
+tag-template: google-compute-engine-$NEXT_MINOR_VERSION
