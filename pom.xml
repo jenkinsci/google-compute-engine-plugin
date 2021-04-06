@@ -90,7 +90,7 @@
       <dependency>
         <groupId>io.jenkins.tools.bom</groupId>
         <artifactId>bom-2.249.x</artifactId>
-        <version>24</version>
+        <version>27</version>
         <type>pom</type>
         <scope>import</scope>
       </dependency>
