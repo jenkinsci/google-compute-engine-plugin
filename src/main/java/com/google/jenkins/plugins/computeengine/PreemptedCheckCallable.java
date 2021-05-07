@@ -28,7 +28,7 @@ import org.apache.commons.io.Charsets;
 import org.apache.commons.io.IOUtils;
 
 /**
- * Slave callback class checking if instance was preempted. All of code here is serialized and
+ * Agent callback class checking if instance was preempted. All of code here is serialized and
  * executed on node.
  */
 final class PreemptedCheckCallable extends MasterToSlaveCallable<Boolean, IOException> {
@@ -40,7 +40,7 @@ final class PreemptedCheckCallable extends MasterToSlaveCallable<Boolean, IOExce
   /**
    * Callback constructor.
    *
-   * @param listener Node listener on which we can add extra information from slave side.
+   * @param listener Node listener on which we can add extra information from agent side.
    */
   PreemptedCheckCallable(TaskListener listener) {
     this.listener = listener;

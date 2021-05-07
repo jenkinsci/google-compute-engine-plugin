@@ -98,7 +98,7 @@ Instance configurations have many options that were not listed above. A few of t
 * Disk Type and Size - dictates the performance of the filesystem that your agents are
  running on. Note that in GCE, larger disks get higher IOPS and throughput.
 * Network tags - these tags will be applied to the instances provisioned by Jenkins.
- These should be set to allow the Jenkins master to access port 22 on the Jenkins agents.
+ These should be set to allow the Jenkins controller to access port 22 on the Jenkins agents.
   More info on firewall rules in GCE is available here.
 * External IP - dictates whether the instance should receive an external routable IP
   address. In GCE, you will need to have either an external IP or a NAT gateway setup in 

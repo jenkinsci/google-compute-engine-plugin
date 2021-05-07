@@ -45,7 +45,7 @@ public class ComputeEngineRetentionStrategy extends RetentionStrategy<ComputeEng
   /**
    * Creates the retention strategy.
    *
-   * @param retentionTimeMinutes Number of minutes of idleness after which to kill the slave; serves
+   * @param retentionTimeMinutes Number of minutes of idleness after which to kill the agent; serves
    *     a backup in case the strategy fails to detect the end of a task.
    * @param oneShot Create one shot instance strategy.
    */
