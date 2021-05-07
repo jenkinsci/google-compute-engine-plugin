@@ -271,6 +271,7 @@ public class ComputeEngineCloud extends AbstractCloudImpl {
       }
     } catch (IOException ioe) {
       log.log(Level.WARNING, "Error provisioning node", ioe);
+      throw ioe;
     } catch (NoConfigurationException nce) {
       log.log(
           Level.WARNING,
