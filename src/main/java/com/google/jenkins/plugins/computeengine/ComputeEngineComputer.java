@@ -171,7 +171,7 @@ public class ComputeEngineComputer extends AbstractCloudComputer<ComputeEngineIn
     return node.getCloud();
   }
 
-  /** When the slave is deleted, terminate the instance. */
+  /** When the agent is deleted, terminate the instance. */
   @Override
   public HttpResponse doDoDelete() throws IOException {
     checkPermission(DELETE);
