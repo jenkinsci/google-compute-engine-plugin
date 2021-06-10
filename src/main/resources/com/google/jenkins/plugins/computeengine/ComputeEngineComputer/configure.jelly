@@ -25,7 +25,7 @@
                 <j:set var="APIInstance" value="${it.instance}" />
                 <j:set var="cloud" value="${instance.cloud}" />
 
-                <h3>This is a read-only view. Click <a href="${rootURL}/configure"> here</a> to configure your instances.</h3>
+                <h3>This is a read-only view. Click <a href="${rootURL}/configureClouds/"> here</a> to configure your instances.</h3>
                 <br/>
                 <f:section title="General">
 
