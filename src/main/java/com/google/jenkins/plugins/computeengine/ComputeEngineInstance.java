@@ -51,6 +51,7 @@ public class ComputeEngineInstance extends AbstractCloudSlave {
   private final WindowsConfiguration windowsConfig;
   private final boolean createSnapshot;
   private final boolean oneShot;
+  private final boolean blockProjectSSHKeys;
   private final boolean ignoreProxy;
   private final String javaExecPath;
   private final GoogleKeyPair sshKeyPair;
@@ -70,6 +71,7 @@ public class ComputeEngineInstance extends AbstractCloudSlave {
       @Nullable WindowsConfiguration windowsConfig,
       boolean createSnapshot,
       boolean oneShot,
+      boolean blockProjectSSHKeys,
       boolean ignoreProxy,
       int numExecutors,
       Mode mode,
@@ -99,6 +101,7 @@ public class ComputeEngineInstance extends AbstractCloudSlave {
     this.windowsConfig = windowsConfig;
     this.createSnapshot = createSnapshot;
     this.oneShot = oneShot;
+    this.blockProjectSSHKeys = blockProjectSSHKeys;
     this.ignoreProxy = ignoreProxy;
     this.javaExecPath = javaExecPath;
     this.sshKeyPair = sshKeyPair;
