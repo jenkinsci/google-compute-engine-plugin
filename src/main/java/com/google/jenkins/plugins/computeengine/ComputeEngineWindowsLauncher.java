@@ -69,7 +69,7 @@ public class ComputeEngineWindowsLauncher extends ComputeEngineComputerLauncher 
       TaskListener listener)
       throws Exception {
     boolean isAuthenticated;
-    if (!windowsConfig.getPrivateKeyCredentialsId().isEmpty()) {
+    if (!Strings.isNullOrEmpty(windowsConfig.getPrivateKeyCredentialsId())) {
       isAuthenticated =
           SSHAuthenticator.newInstance(
                   sshConnection, windowsConfig.getPrivateKeyCredentials(), windowsUsername)
