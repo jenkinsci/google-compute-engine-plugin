@@ -18,6 +18,7 @@ import com.cloudbees.jenkins.plugins.sshcredentials.SSHAuthenticator;
 import com.google.api.services.compute.model.Operation;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
+import com.google.common.base.Strings;
 import com.trilead.ssh2.Connection;
 import hudson.model.TaskListener;
 import java.io.IOException;
