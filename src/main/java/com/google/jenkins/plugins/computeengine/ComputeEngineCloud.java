@@ -92,6 +92,7 @@ public class ComputeEngineCloud extends AbstractCloudImpl {
 
   private transient volatile ComputeClient client;
   private boolean noDelayProvisioning;
+  private boolean jnlpSupport;
 
   @DataBoundConstructor
   public ComputeEngineCloud(
@@ -151,6 +152,15 @@ public class ComputeEngineCloud extends AbstractCloudImpl {
   @DataBoundSetter
   public void setNoDelayProvisioning(boolean noDelayProvisioning) {
     this.noDelayProvisioning = noDelayProvisioning;
+  }
+
+  public boolean isJnlpSupport() {
+    return jnlpSupport;
+  }
+
+  @DataBoundSetter
+  public void setJnlpSupport(boolean jnlpSupport) {
+    this.jnlpSupport = jnlpSupport;
   }
 
   protected Object readResolve() {
@@ -262,7 +272,7 @@ public class ComputeEngineCloud extends AbstractCloudImpl {
         }
 
         InstanceConfiguration config = chooseConfigFromList(configs);
-
+        config.setJnlpSupport(jnlpSupport);
         final ComputeEngineInstance node = config.provision();
         Jenkins.get().addNode(node);
         result.add(createPlannedNode(config, node));
@@ -431,7 +441,7 @@ public class ComputeEngineCloud extends AbstractCloudImpl {
     if (c == null) {
       throw HttpResponses.error(SC_BAD_REQUEST, "No such Instance Configuration: " + configuration);
     }
-
+    c.setJnlpSupport(jnlpSupport);
     ComputeEngineInstance node = c.provision();
     if (node == null) throw HttpResponses.error(SC_BAD_REQUEST, "Could not provision new node.");
     Jenkins.get().addNode(node);

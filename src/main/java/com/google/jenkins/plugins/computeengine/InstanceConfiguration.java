@@ -50,6 +50,8 @@ import hudson.model.Descriptor;
 import hudson.model.Label;
 import hudson.model.Node;
 import hudson.model.labels.LabelAtom;
+import hudson.slaves.ComputerLauncher;
+import hudson.slaves.JNLPLauncher;
 import hudson.util.FormValidation;
 import hudson.util.ListBoxModel;
 import java.io.IOException;
@@ -95,6 +97,7 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
       (DEFAULT_LAUNCH_TIMEOUT_SECONDS / 60) + 1;
   public static final String DEFAULT_RUN_AS_USER = "jenkins";
   public static final String METADATA_LINUX_STARTUP_SCRIPT_KEY = "startup-script";
+  public static final String METADATA_CONTROLLER_URL = "controller-url";
   public static final String METADATA_WINDOWS_STARTUP_SCRIPT_KEY = "windows-startup-script-ps1";
   public static final String NAT_TYPE = "ONE_TO_ONE_NAT";
   public static final String NAT_NAME = "External NAT";
@@ -159,6 +162,18 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
   @Getter(AccessLevel.PROTECTED)
   @Setter(AccessLevel.PROTECTED)
   protected transient ComputeEngineCloud cloud;
+
+  private Instance instance;
+  private boolean jnlpSupport;
+
+  public boolean isJnlpSupport() {
+    return jnlpSupport;
+  }
+
+  @DataBoundSetter
+  public void setJnlpSupport(boolean jnlpSupport) {
+    this.jnlpSupport = jnlpSupport;
+  }
 
   private static List<Metadata.Items> mergeMetadataItems(
       List<Metadata.Items> winner, List<Metadata.Items> loser) {
@@ -296,9 +311,22 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
     googleLabels.put(key, value);
   }
 
+  private void appendJnlpMetadataIfRequired() {
+    if (jnlpSupport) {
+      log.info(
+          "Adding JNLP Meta Data " + METADATA_CONTROLLER_URL + " = " + Jenkins.get().getRootUrl());
+      List<Metadata.Items> items = instance.getMetadata().getItems();
+      items.add(
+          new Metadata.Items()
+              .setKey(METADATA_CONTROLLER_URL)
+              .setValue(Jenkins.get().getRootUrl()));
+    }
+  }
+
   public ComputeEngineInstance provision() throws IOException {
     try {
-      Instance instance = instance();
+      instance = instance();
+      appendJnlpMetadataIfRequired();
       // TODO: JENKINS-55285
       Operation operation =
           cloud
@@ -306,20 +334,28 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
               .insertInstance(cloud.getProjectId(), Optional.ofNullable(template), instance);
       log.info("Sent insert request for instance configuration [" + description + "]");
       String targetRemoteFs = this.remoteFs;
-      ComputeEngineComputerLauncher launcher;
-      if (this.windowsConfiguration != null) {
-        launcher =
-            new ComputeEngineWindowsLauncher(
-                cloud.getCloudName(), operation, this.useInternalAddress);
-        if (Strings.isNullOrEmpty(targetRemoteFs)) {
-          targetRemoteFs = "C:\\";
-        }
+      ComputerLauncher launcher;
+
+      if (jnlpSupport) {
+        log.info("JNLP Support Enabled for HSBC GCE Plugin");
+        JNLPLauncher jnlpLauncher = new JNLPLauncher(true);
+        jnlpLauncher.setWebSocket(true);
+        launcher = jnlpLauncher;
       } else {
-        launcher =
-            new ComputeEngineLinuxLauncher(
-                cloud.getCloudName(), operation, this.useInternalAddress);
-        if (Strings.isNullOrEmpty(targetRemoteFs)) {
-          targetRemoteFs = "/tmp";
+        if (this.windowsConfiguration != null) {
+          launcher =
+              new ComputeEngineWindowsLauncher(
+                  cloud.getCloudName(), operation, this.useInternalAddress);
+          if (Strings.isNullOrEmpty(targetRemoteFs)) {
+            targetRemoteFs = "C:\\";
+          }
+        } else {
+          launcher =
+              new ComputeEngineLinuxLauncher(
+                  cloud.getCloudName(), operation, this.useInternalAddress);
+          if (Strings.isNullOrEmpty(targetRemoteFs)) {
+            targetRemoteFs = "/tmp";
+          }
         }
       }
       return ComputeEngineInstance.builder()
