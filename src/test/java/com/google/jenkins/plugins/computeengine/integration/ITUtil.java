@@ -64,6 +64,7 @@ import hudson.model.Node;
 import hudson.plugins.powershell.PowerShell;
 import hudson.tasks.Builder;
 import hudson.tasks.Shell;
+import hudson.util.Secret;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -131,7 +132,7 @@ class ITUtil {
   private static final String LAUNCH_TIMEOUT_SECONDS_STR = "";
   static final int SNAPSHOT_TIMEOUT = windows ? 600 : 300;
   private static final GoogleKeyPair SSH_KEY = GoogleKeyPair.generate(RUN_AS_USER);
-  static final String SSH_PRIVATE_KEY = SSH_KEY.getPrivateKey();
+  static final String SSH_PRIVATE_KEY = Secret.toString(SSH_KEY.getPrivateKey());
   private static final String WINDOWS_STARTUP_SCRIPT =
       "Stop-Service sshd\n"
           + "$ConfiguredPublicKey = "
@@ -203,7 +204,8 @@ class ITUtil {
             CredentialsScope.GLOBAL,
             null,
             RUN_AS_USER,
-            new BasicSSHUserPrivateKey.DirectEntryPrivateKeySource(SSH_KEY.getPrivateKey()),
+            new BasicSSHUserPrivateKey.DirectEntryPrivateKeySource(
+                Secret.toString(SSH_KEY.getPrivateKey())),
             null,
             "integration test private key for windows");
     store.addCredentials(Domain.global(), windowsPrivateKeyCredentials);

@@ -20,6 +20,7 @@ import com.google.api.services.compute.model.Operation;
 import com.google.jenkins.plugins.computeengine.ssh.GoogleKeyPair;
 import com.trilead.ssh2.Connection;
 import hudson.model.TaskListener;
+import hudson.util.Secret;
 import java.io.IOException;
 import java.util.Optional;
 import java.util.logging.Logger;
@@ -81,7 +82,7 @@ public class ComputeEngineLinuxLauncher extends ComputeEngineComputerLauncher {
           bootstrapConn = connectToSsh(computer, listener);
           isAuthenticated =
               bootstrapConn.authenticateWithPublicKey(
-                  node.getSshUser(), kp.getPrivateKey().toCharArray(), "");
+                  node.getSshUser(), Secret.toString(kp.getPrivateKey()).toCharArray(), "");
         } catch (IOException e) {
           logException(computer, listener, "Exception trying to authenticate", e);
           if (bootstrapConn != null) {

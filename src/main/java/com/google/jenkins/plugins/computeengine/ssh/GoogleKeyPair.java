@@ -16,15 +16,16 @@
 
 package com.google.jenkins.plugins.computeengine.ssh;
 
+import hudson.util.Secret;
 import java.io.Serializable;
 import java.util.Map;
 
 public class GoogleKeyPair implements Serializable {
-  private final String privateKey;
+  private final Secret privateKey;
   private final String publicKey;
   private final String user;
 
-  private GoogleKeyPair(String publicKey, String privateKey, String user) {
+  private GoogleKeyPair(String publicKey, Secret privateKey, String user) {
     this.publicKey = user + ":" + publicKey + " " + user;
     this.privateKey = privateKey;
     this.user = user;
@@ -32,19 +33,19 @@ public class GoogleKeyPair implements Serializable {
 
   public static GoogleKeyPair generate(String user) {
     Map<String, String> keys = SshKeysHelper.generate();
-    return new GoogleKeyPair(keys.get("public"), keys.get("private"), user);
+    return new GoogleKeyPair(keys.get("public"), Secret.fromString(keys.get("private")), user);
   }
 
   public String getPublicKey() {
     return publicKey;
   }
 
-  public String getPrivateKey() {
+  public Secret getPrivateKey() {
     return privateKey;
   }
 
   @Override
   public String toString() {
-    return "Public key:\n" + publicKey + "\n\nPrivate key:\n" + privateKey;
+    return "Public key:\n" + publicKey + "\n\nPrivate key:\n" + privateKey.getEncryptedValue();
   }
 }
