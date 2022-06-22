@@ -40,7 +40,9 @@ import com.google.cloud.graphite.platforms.plugin.client.ClientFactory;
 import com.google.cloud.graphite.platforms.plugin.client.ComputeClient;
 import com.google.common.base.Strings;
 import com.google.jenkins.plugins.computeengine.client.ClientUtil;
+import com.google.jenkins.plugins.computeengine.ssh.GoogleKeyCredential;
 import com.google.jenkins.plugins.computeengine.ssh.GoogleKeyPair;
+import com.google.jenkins.plugins.computeengine.ssh.GooglePrivateKey;
 import edu.umd.cs.findbugs.annotations.Nullable;
 import hudson.Extension;
 import hudson.RelativePath;
@@ -145,10 +147,11 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
   private String template;
   // Optional not possible due to serialization requirement
   @Nullable private WindowsConfiguration windowsConfiguration;
+  @Nullable private SshConfiguration sshConfiguration;
   private boolean createSnapshot;
   private String remoteFs;
   private String javaExecPath;
-  private GoogleKeyPair sshKeyPair;
+  private GoogleKeyCredential sshKeyCredential;
   private Map<String, String> googleLabels;
   private Integer numExecutors;
   private Integer retentionTimeMinutes;
@@ -331,6 +334,7 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
           .sshUser(runAsUser)
           .remoteFS(targetRemoteFs)
           .windowsConfig(windowsConfiguration)
+          .sshConfig(sshConfiguration)
           .createSnapshot(createSnapshot)
           .oneShot(oneShot)
           .ignoreProxy(ignoreProxy)
@@ -341,7 +345,7 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
           .retentionStrategy(new ComputeEngineRetentionStrategy(retentionTimeMinutes, oneShot))
           .launchTimeout(getLaunchTimeoutMillis())
           .javaExecPath(javaExecPath)
-          .sshKeyPair(sshKeyPair)
+          .sshKeyCredential(sshKeyCredential)
           .build();
     } catch (Descriptor.FormException fe) {
       log.log(Level.WARNING, "Error provisioning instance: " + fe.getMessage(), fe);
@@ -365,7 +369,13 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
     instance.setMetadata(newMetadata());
 
     if (windowsConfiguration == null) {
-      sshKeyPair = configureSSHKeyPair(instance, runAsUser);
+      if (sshConfiguration != null) {
+        log.info("User selected to use a custom private ssh key");
+        sshKeyCredential =
+            configureSSHPrivateKey(sshConfiguration.getCustomPrivateKeyCredentialsId(), runAsUser);
+      } else {
+        sshKeyCredential = configureSSHKeyPair(instance, runAsUser);
+      }
     }
 
     if (StringUtils.isNotEmpty(template)) {
@@ -440,6 +450,11 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
         .getItems()
         .add(new Metadata.Items().setKey(SSH_METADATA_KEY).setValue(sshKeyPair.getPublicKey()));
     return sshKeyPair;
+  }
+
+  private GooglePrivateKey configureSSHPrivateKey(String credentialId, String sshUser) {
+    GooglePrivateKey sshPrivateKey = GooglePrivateKey.generate(credentialId, sshUser);
+    return sshPrivateKey;
   }
 
   private void configureStartupScript(Instance instance) {
@@ -565,6 +580,10 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
           .passwordCredentialsId("")
           .privateKeyCredentialsId("")
           .build();
+    }
+
+    public static SshConfiguration defaultSshConfiguration() {
+      return SshConfiguration.builder().customPrivateKeyCredentialsId("").build();
     }
 
     public static NetworkConfiguration defaultNetworkConfiguration() {
@@ -954,6 +973,7 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
       instanceConfiguration.setLabelString(this.labels);
       instanceConfiguration.setRunAsUser(this.runAsUser);
       instanceConfiguration.setWindowsConfiguration(this.windowsConfiguration);
+      instanceConfiguration.setSshConfiguration(this.sshConfiguration);
       instanceConfiguration.setBootDiskType(this.bootDiskType);
       instanceConfiguration.setBootDiskAutoDelete(this.bootDiskAutoDelete);
       instanceConfiguration.setBootDiskSourceImageName(this.bootDiskSourceImageName);

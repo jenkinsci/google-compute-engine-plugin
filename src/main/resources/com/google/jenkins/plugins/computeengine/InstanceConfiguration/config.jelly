@@ -47,6 +47,9 @@
             <f:entry title="${%Run as user}" field="runAsUser">
                 <f:textbox default="${descriptor.defaultRunAsUser()}"/>
             </f:entry>
+            <f:optionalProperty field="sshConfiguration" title="${%Use Custom SSH Private Key?}">
+                <st:include page="config.jelly" class="${descriptor.clazz}"/>
+            </f:optionalProperty>
             <f:entry title="${%Remote Location}" field="remoteFs">
                 <f:textbox default=""/>
             </f:entry>

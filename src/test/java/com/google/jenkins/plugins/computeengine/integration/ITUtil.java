@@ -57,6 +57,7 @@ import com.google.jenkins.plugins.computeengine.ComputeEngineCloud;
 import com.google.jenkins.plugins.computeengine.InstanceConfiguration;
 import com.google.jenkins.plugins.computeengine.WindowsConfiguration;
 import com.google.jenkins.plugins.computeengine.client.ClientUtil;
+import com.google.jenkins.plugins.computeengine.ssh.GoogleKeyCredential;
 import com.google.jenkins.plugins.computeengine.ssh.GoogleKeyPair;
 import com.google.jenkins.plugins.credentials.oauth.GoogleRobotPrivateKeyCredentials;
 import com.google.jenkins.plugins.credentials.oauth.JsonServiceAccountConfig;
@@ -131,13 +132,13 @@ class ITUtil {
   private static final String RETENTION_TIME_MINUTES_STR = "";
   private static final String LAUNCH_TIMEOUT_SECONDS_STR = "";
   static final int SNAPSHOT_TIMEOUT = windows ? 600 : 300;
-  private static final GoogleKeyPair SSH_KEY = GoogleKeyPair.generate(RUN_AS_USER);
+  private static final GoogleKeyCredential SSH_KEY = GoogleKeyPair.generate(RUN_AS_USER);
   static final String SSH_PRIVATE_KEY = Secret.toString(SSH_KEY.getPrivateKey());
   private static final String WINDOWS_STARTUP_SCRIPT =
       "Stop-Service sshd\n"
           + "$ConfiguredPublicKey = "
           + "\""
-          + SSH_KEY.getPublicKey().trim().substring(RUN_AS_USER.length() + 1)
+          + ((GoogleKeyPair) SSH_KEY).getPublicKey().trim().substring(RUN_AS_USER.length() + 1)
           + "\"\n"
           + "Write-Output \"Second phase\"\n"
           + "# We are in the second phase of startup where we need to set up authorized_keys for the specified user.\n"
@@ -275,7 +276,7 @@ class ITUtil {
                         .setValue(STARTUP_SCRIPT),
                     new Metadata.Items()
                         .setKey(InstanceConfiguration.SSH_METADATA_KEY)
-                        .setValue(SSH_KEY.getPublicKey()))));
+                        .setValue(((GoogleKeyPair) SSH_KEY).getPublicKey()))));
     instanceProperties.setNetworkInterfaces(
         of(
             new NetworkInterface()

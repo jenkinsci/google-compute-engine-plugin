@@ -17,7 +17,7 @@
 package com.google.jenkins.plugins.computeengine;
 
 import com.google.api.services.compute.model.Operation;
-import com.google.jenkins.plugins.computeengine.ssh.GoogleKeyPair;
+import com.google.jenkins.plugins.computeengine.ssh.GoogleKeyCredential;
 import com.trilead.ssh2.Connection;
 import hudson.model.TaskListener;
 import hudson.util.Secret;
@@ -44,7 +44,7 @@ public class ComputeEngineLinuxLauncher extends ComputeEngineComputerLauncher {
   protected Optional<Connection> setupConnection(
       ComputeEngineInstance node, ComputeEngineComputer computer, TaskListener listener)
       throws Exception {
-    if (!node.getSSHKeyPair().isPresent()) {
+    if (!node.getSSHKeyCredential().isPresent()) {
       logSevere(
           computer,
           listener,
@@ -52,7 +52,7 @@ public class ComputeEngineLinuxLauncher extends ComputeEngineComputerLauncher {
       return Optional.empty();
     }
 
-    GoogleKeyPair kp = node.getSSHKeyPair().get();
+    GoogleKeyCredential kp = node.getSSHKeyCredential().get();
     Optional<Connection> bootstrapConn = bootstrap(kp, computer, listener);
     if (!bootstrapConn.isPresent()) {
       logWarning(computer, listener, "bootstrapresult failed");
@@ -63,7 +63,7 @@ public class ComputeEngineLinuxLauncher extends ComputeEngineComputerLauncher {
   }
 
   private Optional<Connection> bootstrap(
-      GoogleKeyPair kp, ComputeEngineComputer computer, TaskListener listener)
+      GoogleKeyCredential kp, ComputeEngineComputer computer, TaskListener listener)
       throws IOException, Exception { // TODO: better exceptions
     logInfo(computer, listener, "bootstrap");
     ComputeEngineInstance node = computer.getNode();
