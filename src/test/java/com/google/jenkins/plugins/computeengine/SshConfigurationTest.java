@@ -34,36 +34,39 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.jvnet.hudson.test.JenkinsRule;
 
+/** Test suite to test functionality of SshConfiguration */
 public class SshConfigurationTest {
 
   @Rule public JenkinsRule r = new JenkinsRule();
 
   @Test
-  public void testSshPrivateKey() throws IOException {
+  public void testCustomSshPrivateKey() throws IOException {
     SshConfiguration.DescriptorImpl descriptor = new SshConfiguration.DescriptorImpl();
     assertNotNull(descriptor);
 
     ListBoxModel m = descriptor.doFillCustomPrivateKeyCredentialsIdItems(Jenkins.get(), "key1");
     assertEquals(m.size(), 1);
-    BasicSSHUserPrivateKey sshKeyCredentials =
+    BasicSSHUserPrivateKey customPrivateKeyCredentials =
         new BasicSSHUserPrivateKey(
             CredentialsScope.SYSTEM,
             "test-key",
             "user1",
             new BasicSSHUserPrivateKey.DirectEntryPrivateKeySource("private key: ssh"),
             "",
-            "");
+            "a key for testing");
     for (CredentialsStore credentialsStore : CredentialsProvider.lookupStores(r.jenkins)) {
       if (credentialsStore instanceof SystemCredentialsProvider.StoreImpl) {
-        credentialsStore.addCredentials(Domain.global(), sshKeyCredentials);
+        credentialsStore.addCredentials(Domain.global(), customPrivateKeyCredentials);
       }
     }
-    // Ensure added credential is displayed
+
+    // Test that new key has been added
     m = descriptor.doFillCustomPrivateKeyCredentialsIdItems(Jenkins.get(), "key2");
     assertEquals(m.size(), 2);
 
+    // Test that new key can be retrieved
     SSHUserPrivateKey privateKey = SshConfiguration.getCustomPrivateKeyCredentials("test-key");
-    assertTrue(privateKey.getPrivateKeys().get(0).startsWith("private key"));
+    assertTrue(privateKey.getPrivateKeys().get(0).startsWith("private key:"));
     assertNotNull(privateKey);
   }
 }

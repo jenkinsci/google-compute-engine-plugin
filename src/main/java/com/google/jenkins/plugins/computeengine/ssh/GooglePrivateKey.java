@@ -20,6 +20,7 @@ import com.google.jenkins.plugins.computeengine.SshConfiguration;
 import hudson.util.Secret;
 import java.io.Serializable;
 
+/** Class to store optional custom private key selected by user */
 public class GooglePrivateKey extends GoogleKeyCredential implements Serializable {
   private final Secret privateKey;
 

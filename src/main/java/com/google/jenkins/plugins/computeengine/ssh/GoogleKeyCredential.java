@@ -19,6 +19,7 @@ package com.google.jenkins.plugins.computeengine.ssh;
 import hudson.util.Secret;
 import java.io.Serializable;
 
+/** Abstract class that is parent of GoogleKeyPair and GooglePrivateKey */
 public abstract class GoogleKeyCredential implements Serializable {
   private final String user;
 
