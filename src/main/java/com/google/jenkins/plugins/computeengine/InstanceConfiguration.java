@@ -373,6 +373,8 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
         log.info("User selected to use a custom private ssh key");
         sshKeyCredential =
             configureSSHPrivateKey(sshConfiguration.getCustomPrivateKeyCredentialsId(), runAsUser);
+        log.info(
+            "User selected credential id: " + sshConfiguration.getCustomPrivateKeyCredentialsId());
       } else {
         sshKeyCredential = configureSSHKeyPair(instance, runAsUser);
       }

@@ -19,7 +19,6 @@ package com.google.jenkins.plugins.computeengine.ssh;
 import com.google.jenkins.plugins.computeengine.SshConfiguration;
 import hudson.util.Secret;
 import java.io.Serializable;
-import jenkins.model.Jenkins;
 
 public class GooglePrivateKey extends GoogleKeyCredential implements Serializable {
   private final Secret privateKey;
@@ -31,8 +30,7 @@ public class GooglePrivateKey extends GoogleKeyCredential implements Serializabl
 
   public static GooglePrivateKey generate(String credentialsId, String user) {
     String privateKeyStr =
-        SshConfiguration.getCustomPrivateKeyCredentials(Jenkins.get(), credentialsId)
-            .getPrivateKey();
+        SshConfiguration.getCustomPrivateKeyCredentials(credentialsId).getPrivateKeys().get(0);
     return new GooglePrivateKey(Secret.fromString(privateKeyStr), user);
   }
 

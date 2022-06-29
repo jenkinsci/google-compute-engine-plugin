@@ -19,11 +19,9 @@ package com.google.jenkins.plugins.computeengine;
 import static com.google.jenkins.plugins.computeengine.ComputeEngineCloud.checkPermissions;
 
 import com.cloudbees.jenkins.plugins.sshcredentials.SSHUserPrivateKey;
-import com.cloudbees.jenkins.plugins.sshcredentials.impl.BasicSSHUserPrivateKey;
 import com.cloudbees.plugins.credentials.CredentialsMatchers;
 import com.cloudbees.plugins.credentials.CredentialsProvider;
-import com.cloudbees.plugins.credentials.common.StandardUsernameCredentials;
-import com.cloudbees.plugins.credentials.common.StandardUsernameListBoxModel;
+import com.cloudbees.plugins.credentials.common.StandardListBoxModel;
 import com.google.common.base.Strings;
 import hudson.Extension;
 import hudson.model.Describable;
@@ -34,6 +32,7 @@ import hudson.util.FormValidation;
 import hudson.util.ListBoxModel;
 import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.Serializable;
 import java.io.StringReader;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -50,6 +49,11 @@ import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.DataBoundSetter;
 import org.kohsuke.stapler.QueryParameter;
 
+/**
+ * Class to contain information needed to configure and access SSH Credential information if custom
+ * private SSH key option is selected. This avoids passing in several parameters between multiple
+ * classes and also isolates logic in accessing credentials.
+ */
 @Getter
 @Setter(onMethod = @__(@DataBoundSetter))
 @Builder(builderClassName = "Builder")
@@ -57,7 +61,7 @@ import org.kohsuke.stapler.QueryParameter;
 @ToString
 @EqualsAndHashCode
 @Log
-public class SshConfiguration implements Describable<SshConfiguration> {
+public class SshConfiguration implements Describable<SshConfiguration>, Serializable {
 
   private String customPrivateKeyCredentialsId;
 
@@ -65,27 +69,18 @@ public class SshConfiguration implements Describable<SshConfiguration> {
   public SshConfiguration() {}
 
   /**
-   * Returns the SSH private key if a SSH credential is provided
+   * Returns the SSH private key if a custom SSH Credential is selected.
    *
+   * @param id private key id from selected credential
    * @return SSH private key in plain text to use for SSH
    */
-  public SSHUserPrivateKey getCustomPrivateKeyCredentials() {
-    if (Strings.isNullOrEmpty(customPrivateKeyCredentialsId)) {
-      return null;
-    }
-    return CredentialsMatchers.firstOrNull(
-        CredentialsProvider.lookupCredentials(
-            SSHUserPrivateKey.class, Jenkins.get(), null, Collections.emptyList()),
-        CredentialsMatchers.withId(customPrivateKeyCredentialsId));
-  }
-
-  public static SSHUserPrivateKey getCustomPrivateKeyCredentials(Jenkins context, String id) {
+  public static SSHUserPrivateKey getCustomPrivateKeyCredentials(String id) {
     if (Strings.isNullOrEmpty(id)) {
       return null;
     }
     return CredentialsMatchers.firstOrNull(
         CredentialsProvider.lookupCredentials(
-            SSHUserPrivateKey.class, context, null, Collections.emptyList()),
+            SSHUserPrivateKey.class, Jenkins.get(), null, Collections.emptyList()),
         CredentialsMatchers.withId(id));
   }
 
@@ -98,17 +93,23 @@ public class SshConfiguration implements Describable<SshConfiguration> {
   @Extension
   public static final class DescriptorImpl extends Descriptor<SshConfiguration> {
 
-    public ListBoxModel doFillCustomPrivateKeyCredentialsIdItems(@AncestorInPath Jenkins context) {
+    public ListBoxModel doFillCustomPrivateKeyCredentialsIdItems(
+        @AncestorInPath Jenkins context, @QueryParameter String customPrivateKeyCredentialsId) {
       checkPermissions();
       if (context == null || !context.hasPermission(Item.CONFIGURE)) {
-        return new StandardUsernameListBoxModel();
+        return new StandardListBoxModel();
       }
-      return new StandardUsernameListBoxModel()
-          .withEmptySelection()
-          .withMatching(
-              CredentialsMatchers.instanceOf(BasicSSHUserPrivateKey.class),
-              CredentialsProvider.lookupCredentials(
-                  StandardUsernameCredentials.class, context, ACL.SYSTEM, new ArrayList<>()));
+
+      StandardListBoxModel result = new StandardListBoxModel();
+
+      return result
+          .includeMatchingAs(
+              ACL.SYSTEM,
+              context,
+              SSHUserPrivateKey.class,
+              new ArrayList<>(),
+              CredentialsMatchers.always())
+          .includeCurrentValue(customPrivateKeyCredentialsId);
     }
 
     public FormValidation doCheckCustomPrivateKeyCredentialsId(
@@ -121,11 +122,11 @@ public class SshConfiguration implements Describable<SshConfiguration> {
         return FormValidation.error("An SSH private key credential is required");
       }
 
-      SSHUserPrivateKey customPrivateKey = getCustomPrivateKeyCredentials(Jenkins.get(), value);
+      SSHUserPrivateKey customPrivateKey = getCustomPrivateKeyCredentials(value);
       String privateKeyString = "";
 
       if (customPrivateKey != null) {
-        privateKeyString = customPrivateKey.getPrivateKey();
+        privateKeyString = customPrivateKey.getPrivateKeys().get(0);
       } else {
         return FormValidation.error(
             "Cannot find credential with name \"" + value + "\" in Global Credentials");

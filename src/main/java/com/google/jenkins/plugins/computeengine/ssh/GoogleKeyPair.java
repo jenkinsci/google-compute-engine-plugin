@@ -20,7 +20,6 @@ import hudson.util.Secret;
 import java.io.Serializable;
 import java.util.Map;
 
-
 public class GoogleKeyPair extends GoogleKeyCredential implements Serializable {
   private final Secret privateKey;
   private final String publicKey;
