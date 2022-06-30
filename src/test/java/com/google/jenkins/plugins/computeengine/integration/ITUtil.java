@@ -55,6 +55,7 @@ import com.google.jenkins.plugins.computeengine.AcceleratorConfiguration;
 import com.google.jenkins.plugins.computeengine.AutofilledNetworkConfiguration;
 import com.google.jenkins.plugins.computeengine.ComputeEngineCloud;
 import com.google.jenkins.plugins.computeengine.InstanceConfiguration;
+import com.google.jenkins.plugins.computeengine.SshConfiguration;
 import com.google.jenkins.plugins.computeengine.WindowsConfiguration;
 import com.google.jenkins.plugins.computeengine.client.ClientUtil;
 import com.google.jenkins.plugins.computeengine.ssh.GoogleKeyCredential;
@@ -82,6 +83,9 @@ class ITUtil {
   static final boolean windows =
       Boolean.parseBoolean(
           SystemProperties.getString(ITUtil.class.getName() + ".windows", "false"));
+  static final boolean customssh =
+      Boolean.parseBoolean(
+          SystemProperties.getString(ITUtil.class.getName() + ".customssh", "false"));
   private static final String DEB_JAVA_STARTUP_SCRIPT =
       "#!/bin/bash\n"
           + "/etc/init.d/ssh stop\n"
@@ -155,6 +159,7 @@ class ITUtil {
       windows ? "configuration-as-code-windows-it.yml" : "configuration-as-code-it.yml";
 
   private static String windowsPrivateKeyCredentialsId;
+  private static String customsshPrivateKeyCredentialsId;
 
   static String format(String s) {
     assertNotNull("GOOGLE_PROJECT_ID env var must be set", PROJECT_ID);
@@ -196,6 +201,9 @@ class ITUtil {
     if (windows) {
       windowsPrivateKeyCredentialsId = initWindowsSshCredentials(store);
     }
+    if (customssh) {
+      customsshPrivateKeyCredentialsId = initCustomsshSshCredentials(store);
+    }
     return credentials;
   }
 
@@ -211,6 +219,20 @@ class ITUtil {
             "integration test private key for windows");
     store.addCredentials(Domain.global(), windowsPrivateKeyCredentials);
     return windowsPrivateKeyCredentials.getId();
+  }
+
+  private static String initCustomsshSshCredentials(CredentialsStore store) throws IOException {
+    StandardUsernameCredentials customsshPrivateKeyCredentials =
+        new BasicSSHUserPrivateKey(
+            CredentialsScope.GLOBAL,
+            null,
+            RUN_AS_USER,
+            new BasicSSHUserPrivateKey.DirectEntryPrivateKeySource(
+                Secret.toString(SSH_KEY.getPrivateKey())),
+            null,
+            "integration test private key for custom ssh");
+    store.addCredentials(Domain.global(), customsshPrivateKeyCredentials);
+    return customsshPrivateKeyCredentials.getId();
   }
 
   // Add Cloud plugin
@@ -306,6 +328,12 @@ class ITUtil {
                 ? WindowsConfiguration.builder()
                     .passwordCredentialsId("")
                     .privateKeyCredentialsId(windowsPrivateKeyCredentialsId)
+                    .build()
+                : null)
+        .sshConfiguration(
+            customssh
+                ? SshConfiguration.builder()
+                    .customPrivateKeyCredentialsId(customsshPrivateKeyCredentialsId)
                     .build()
                 : null)
         .remoteFs(null)
