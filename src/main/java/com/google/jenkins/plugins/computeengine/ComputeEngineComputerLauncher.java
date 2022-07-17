@@ -46,6 +46,8 @@ import java.util.logging.Level;
 import java.util.logging.LogRecord;
 import java.util.logging.Logger;
 import java.util.logging.SimpleFormatter;
+import java.util.stream.IntStream;
+
 import jenkins.model.Jenkins;
 import lombok.Getter;
 
@@ -238,14 +240,26 @@ public abstract class ComputeEngineComputerLauncher extends ComputerLauncher {
   }
 
   private boolean testCommand(
+          ComputeEngineComputer computer,
+          Connection conn,
+          String checkCommand,
+          PrintStream logger,
+          TaskListener listener)
+          throws IOException, InterruptedException {
+    return testCommand(computer, conn, checkCommand, logger, listener, new int[]{0});
+  }
+
+  boolean testCommand(
       ComputeEngineComputer computer,
       Connection conn,
       String checkCommand,
       PrintStream logger,
-      TaskListener listener)
+      TaskListener listener,
+      int[] successfulExitCodes)
       throws IOException, InterruptedException {
     logInfo(computer, listener, "Verifying: " + checkCommand);
-    return conn.exec(checkCommand, logger) == 0;
+    int cmdExitCode = conn.exec(checkCommand, logger);
+    return IntStream.of(successfulExitCodes).anyMatch(code -> code == cmdExitCode);
   }
 
   protected abstract Optional<Connection> setupConnection(
