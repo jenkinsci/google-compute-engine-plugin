@@ -24,6 +24,7 @@ import com.trilead.ssh2.Connection;
 import hudson.model.TaskListener;
 import hudson.util.Secret;
 import java.io.IOException;
+import java.io.PrintStream;
 import java.util.Optional;
 import java.util.logging.Logger;
 
@@ -114,6 +115,49 @@ public class ComputeEngineLinuxLauncher extends ComputeEngineComputerLauncher {
       return Optional.empty();
     }
     return Optional.of(bootstrapConn);
+  }
+
+  /**
+   * Checks if a custom startup script provided by the instance metadata has exited.
+   *
+   * Method 1:
+   * $ systemctl is-active --quiet google-startup-scripts
+   * $ echo $?
+   * 3
+   * $ systemctl is-active google-startup-scripts
+   * inactive
+   *
+   * Method 2:
+   * $ systemctl show -p ActiveState --value google-startup-scripts
+   * inactive
+   */
+  private boolean checkStartupComplete(
+          ComputeEngineComputer computer,
+          Connection conn,
+          PrintStream logger,
+          TaskListener listener) {
+    try {
+      // A successful command indicates service is still running
+      if (!testCommand(
+              computer,
+              conn,
+              "systemctl is-active --quiet google-startup-scripts",
+              logger,
+              listener,
+              // 0 = unit active
+              // 4 = unit doesn't exist
+              // https://www.freedesktop.org/software/systemd/man/systemctl.html#Exit%20status
+              // We should accept both as they are neither failed or in progress.
+              new int[]{0, 4})) {
+        return true;
+      }
+    } catch (IOException | InterruptedException ex) {
+      logException(computer, listener, "Failed to check google-startup-scripts: ", ex);
+      return false;
+    }
+
+    logWarning(computer, listener, "google-startup-scripts has not finished");
+    return false;
   }
 
   @Override
