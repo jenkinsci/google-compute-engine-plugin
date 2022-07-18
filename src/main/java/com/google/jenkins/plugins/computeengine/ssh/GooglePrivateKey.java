@@ -16,28 +16,23 @@
 
 package com.google.jenkins.plugins.computeengine.ssh;
 
+import com.google.jenkins.plugins.computeengine.SshConfiguration;
 import hudson.util.Secret;
 import java.io.Serializable;
-import java.util.Map;
 
-/** Class to store auto generated key pair from SshKeysHelper Utility */
-public class GoogleKeyPair extends GoogleKeyCredential implements Serializable {
+/** Class to store optional custom private key selected by user */
+public class GooglePrivateKey extends GoogleKeyCredential implements Serializable {
   private final Secret privateKey;
-  private final String publicKey;
 
-  private GoogleKeyPair(String publicKey, Secret privateKey, String user) {
+  private GooglePrivateKey(Secret privateKey, String user) {
     super(user);
-    this.publicKey = user + ":" + publicKey + " " + user;
     this.privateKey = privateKey;
   }
 
-  public static GoogleKeyPair generate(String user) {
-    Map<String, String> keys = SshKeysHelper.generate();
-    return new GoogleKeyPair(keys.get("public"), Secret.fromString(keys.get("private")), user);
-  }
-
-  public String getPublicKey() {
-    return publicKey;
+  public static GooglePrivateKey generate(String credentialsId, String user) {
+    String privateKeyStr =
+        SshConfiguration.getCustomPrivateKeyCredentials(credentialsId).getPrivateKeys().get(0);
+    return new GooglePrivateKey(Secret.fromString(privateKeyStr), user);
   }
 
   public Secret getPrivateKey() {
@@ -46,6 +41,6 @@ public class GoogleKeyPair extends GoogleKeyCredential implements Serializable {
 
   @Override
   public String toString() {
-    return "Public key:\n" + publicKey + "\n\nPrivate key:\n" + privateKey.getEncryptedValue();
+    return "Private key:\n" + privateKey.getEncryptedValue();
   }
 }

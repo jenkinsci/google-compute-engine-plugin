@@ -55,8 +55,10 @@ import com.google.jenkins.plugins.computeengine.AcceleratorConfiguration;
 import com.google.jenkins.plugins.computeengine.AutofilledNetworkConfiguration;
 import com.google.jenkins.plugins.computeengine.ComputeEngineCloud;
 import com.google.jenkins.plugins.computeengine.InstanceConfiguration;
+import com.google.jenkins.plugins.computeengine.SshConfiguration;
 import com.google.jenkins.plugins.computeengine.WindowsConfiguration;
 import com.google.jenkins.plugins.computeengine.client.ClientUtil;
+import com.google.jenkins.plugins.computeengine.ssh.GoogleKeyCredential;
 import com.google.jenkins.plugins.computeengine.ssh.GoogleKeyPair;
 import com.google.jenkins.plugins.credentials.oauth.GoogleRobotPrivateKeyCredentials;
 import com.google.jenkins.plugins.credentials.oauth.JsonServiceAccountConfig;
@@ -81,6 +83,9 @@ class ITUtil {
   static final boolean windows =
       Boolean.parseBoolean(
           SystemProperties.getString(ITUtil.class.getName() + ".windows", "false"));
+  static final boolean customssh =
+      Boolean.parseBoolean(
+          SystemProperties.getString(ITUtil.class.getName() + ".customssh", "false"));
   private static final String DEB_JAVA_STARTUP_SCRIPT =
       "#!/bin/bash\n"
           + "/etc/init.d/ssh stop\n"
@@ -131,13 +136,13 @@ class ITUtil {
   private static final String RETENTION_TIME_MINUTES_STR = "";
   private static final String LAUNCH_TIMEOUT_SECONDS_STR = "";
   static final int SNAPSHOT_TIMEOUT = windows ? 600 : 300;
-  private static final GoogleKeyPair SSH_KEY = GoogleKeyPair.generate(RUN_AS_USER);
+  private static final GoogleKeyCredential SSH_KEY = GoogleKeyPair.generate(RUN_AS_USER);
   static final String SSH_PRIVATE_KEY = Secret.toString(SSH_KEY.getPrivateKey());
   private static final String WINDOWS_STARTUP_SCRIPT =
       "Stop-Service sshd\n"
           + "$ConfiguredPublicKey = "
           + "\""
-          + SSH_KEY.getPublicKey().trim().substring(RUN_AS_USER.length() + 1)
+          + ((GoogleKeyPair) SSH_KEY).getPublicKey().trim().substring(RUN_AS_USER.length() + 1)
           + "\"\n"
           + "Write-Output \"Second phase\"\n"
           + "# We are in the second phase of startup where we need to set up authorized_keys for the specified user.\n"
@@ -154,6 +159,7 @@ class ITUtil {
       windows ? "configuration-as-code-windows-it.yml" : "configuration-as-code-it.yml";
 
   private static String windowsPrivateKeyCredentialsId;
+  private static String customsshPrivateKeyCredentialsId;
 
   static String format(String s) {
     assertNotNull("GOOGLE_PROJECT_ID env var must be set", PROJECT_ID);
@@ -195,6 +201,9 @@ class ITUtil {
     if (windows) {
       windowsPrivateKeyCredentialsId = initWindowsSshCredentials(store);
     }
+    if (customssh) {
+      customsshPrivateKeyCredentialsId = initCustomsshSshCredentials(store);
+    }
     return credentials;
   }
 
@@ -210,6 +219,20 @@ class ITUtil {
             "integration test private key for windows");
     store.addCredentials(Domain.global(), windowsPrivateKeyCredentials);
     return windowsPrivateKeyCredentials.getId();
+  }
+
+  private static String initCustomsshSshCredentials(CredentialsStore store) throws IOException {
+    StandardUsernameCredentials customsshPrivateKeyCredentials =
+        new BasicSSHUserPrivateKey(
+            CredentialsScope.GLOBAL,
+            null,
+            RUN_AS_USER,
+            new BasicSSHUserPrivateKey.DirectEntryPrivateKeySource(
+                Secret.toString(SSH_KEY.getPrivateKey())),
+            null,
+            "integration test private key for custom ssh");
+    store.addCredentials(Domain.global(), customsshPrivateKeyCredentials);
+    return customsshPrivateKeyCredentials.getId();
   }
 
   // Add Cloud plugin
@@ -275,7 +298,7 @@ class ITUtil {
                         .setValue(STARTUP_SCRIPT),
                     new Metadata.Items()
                         .setKey(InstanceConfiguration.SSH_METADATA_KEY)
-                        .setValue(SSH_KEY.getPublicKey()))));
+                        .setValue(((GoogleKeyPair) SSH_KEY).getPublicKey()))));
     instanceProperties.setNetworkInterfaces(
         of(
             new NetworkInterface()
@@ -305,6 +328,12 @@ class ITUtil {
                 ? WindowsConfiguration.builder()
                     .passwordCredentialsId("")
                     .privateKeyCredentialsId(windowsPrivateKeyCredentialsId)
+                    .build()
+                : null)
+        .sshConfiguration(
+            customssh
+                ? SshConfiguration.builder()
+                    .customPrivateKeyCredentialsId(customsshPrivateKeyCredentialsId)
                     .build()
                 : null)
         .remoteFs(null)

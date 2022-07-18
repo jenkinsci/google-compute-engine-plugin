@@ -22,15 +22,14 @@ import static org.junit.Assert.assertTrue;
 
 import com.google.jenkins.plugins.computeengine.ssh.GoogleKeyPair;
 import hudson.util.XStream2;
+import java.io.File;
+import java.nio.charset.StandardCharsets;
 import org.apache.commons.io.FileUtils;
 import org.junit.Rule;
 import org.junit.Test;
 import org.jvnet.hudson.test.Issue;
 import org.jvnet.hudson.test.JenkinsRule;
 import org.jvnet.hudson.test.WithoutJenkins;
-
-import java.io.File;
-import java.nio.charset.StandardCharsets;
 
 public class GoogleKeyPairTest {
 

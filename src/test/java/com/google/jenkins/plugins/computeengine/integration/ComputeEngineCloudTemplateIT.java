@@ -25,6 +25,7 @@ import static com.google.jenkins.plugins.computeengine.integration.ITUtil.SSH_PR
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.TEST_TIMEOUT_MULTIPLIER;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.ZONE;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.createTemplate;
+import static com.google.jenkins.plugins.computeengine.integration.ITUtil.customssh;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.format;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.getLabel;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.initClient;
@@ -46,10 +47,12 @@ import com.google.common.collect.ImmutableMap;
 import com.google.jenkins.plugins.computeengine.ComputeEngineCloud;
 import com.google.jenkins.plugins.computeengine.ComputeEngineWindowsLauncher;
 import com.google.jenkins.plugins.computeengine.InstanceConfiguration;
+import com.google.jenkins.plugins.computeengine.ssh.GooglePrivateKey;
 import com.trilead.ssh2.Connection;
 import hudson.model.labels.LabelAtom;
 import hudson.slaves.NodeProvisioner.PlannedNode;
 import hudson.util.LogTaskListener;
+import hudson.util.Secret;
 import java.io.IOException;
 import java.util.Collection;
 import java.util.Map;
@@ -171,7 +174,15 @@ public class ComputeEngineCloudTemplateIT {
             conn,
             new LogTaskListener(log, Level.INFO));
       } else {
-        assertTrue(conn.authenticateWithPublicKey(RUN_AS_USER, SSH_PRIVATE_KEY.toCharArray(), ""));
+        String AUTHENTICATE_SSH = SSH_PRIVATE_KEY;
+        if (customssh) {
+          GooglePrivateKey privateKey =
+              GooglePrivateKey.generate(
+                  instanceConfiguration.getSshConfiguration().getCustomPrivateKeyCredentialsId(),
+                  RUN_AS_USER);
+          AUTHENTICATE_SSH = Secret.toString(privateKey.getPrivateKey());
+        }
+        assertTrue(conn.authenticateWithPublicKey(RUN_AS_USER, AUTHENTICATE_SSH.toCharArray(), ""));
       }
     } finally {
       if (conn != null) {

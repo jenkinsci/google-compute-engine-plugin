@@ -18,7 +18,7 @@ package com.google.jenkins.plugins.computeengine;
 
 import com.google.cloud.graphite.platforms.plugin.client.ComputeClient.OperationException;
 import com.google.common.base.Strings;
-import com.google.jenkins.plugins.computeengine.ssh.GoogleKeyPair;
+import com.google.jenkins.plugins.computeengine.ssh.GoogleKeyCredential;
 import hudson.Extension;
 import hudson.model.Computer;
 import hudson.model.Descriptor;
@@ -49,11 +49,12 @@ public class ComputeEngineInstance extends AbstractCloudSlave {
   private final String cloudName;
   private final String sshUser;
   private final WindowsConfiguration windowsConfig;
+  private final SshConfiguration sshConfig;
   private final boolean createSnapshot;
   private final boolean oneShot;
   private final boolean ignoreProxy;
   private final String javaExecPath;
-  private final GoogleKeyPair sshKeyPair;
+  private final GoogleKeyCredential sshKeyCredential;
   private Integer launchTimeout; // Seconds
   private Boolean connected;
   private transient ComputeEngineCloud cloud;
@@ -68,6 +69,7 @@ public class ComputeEngineInstance extends AbstractCloudSlave {
       String remoteFS,
       // NOTE(stephenashank): Could not use optional due to serialization req.
       @Nullable WindowsConfiguration windowsConfig,
+      @Nullable SshConfiguration sshConfig,
       boolean createSnapshot,
       boolean oneShot,
       boolean ignoreProxy,
@@ -79,7 +81,7 @@ public class ComputeEngineInstance extends AbstractCloudSlave {
       Integer launchTimeout,
       // NOTE(craigatgoogle): Could not use Optional due to serialization req.
       @Nullable String javaExecPath,
-      @Nullable GoogleKeyPair sshKeyPair,
+      @Nullable GoogleKeyCredential sshKeyCredential,
       @Nullable ComputeEngineCloud cloud)
       throws Descriptor.FormException, IOException {
     super(
@@ -97,11 +99,12 @@ public class ComputeEngineInstance extends AbstractCloudSlave {
     this.cloudName = cloudName;
     this.sshUser = sshUser;
     this.windowsConfig = windowsConfig;
+    this.sshConfig = sshConfig;
     this.createSnapshot = createSnapshot;
     this.oneShot = oneShot;
     this.ignoreProxy = ignoreProxy;
     this.javaExecPath = javaExecPath;
-    this.sshKeyPair = sshKeyPair;
+    this.sshKeyCredential = sshKeyCredential;
     this.cloud = cloud;
   }
 
@@ -155,8 +158,8 @@ public class ComputeEngineInstance extends AbstractCloudSlave {
   }
 
   /** @return The configured Linux SSH key pair for this {@link ComputeEngineInstance}. */
-  public Optional<GoogleKeyPair> getSSHKeyPair() {
-    return Optional.ofNullable(sshKeyPair);
+  public Optional<GoogleKeyCredential> getSSHKeyCredential() {
+    return Optional.ofNullable(sshKeyCredential);
   }
 
   public ComputeEngineCloud getCloud() throws CloudNotFoundException {
