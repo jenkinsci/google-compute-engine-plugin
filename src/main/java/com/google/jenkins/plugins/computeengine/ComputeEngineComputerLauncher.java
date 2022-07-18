@@ -48,10 +48,9 @@ import java.util.logging.LogRecord;
 import java.util.logging.Logger;
 import java.util.logging.SimpleFormatter;
 import java.util.stream.IntStream;
+import javax.annotation.Nonnull;
 import jenkins.model.Jenkins;
 import lombok.Getter;
-
-import javax.annotation.Nonnull;
 
 public abstract class ComputeEngineComputerLauncher extends ComputerLauncher {
   private static final Logger LOGGER =
@@ -270,11 +269,9 @@ public abstract class ComputeEngineComputerLauncher extends ComputerLauncher {
 
   protected abstract String getPathSeparator();
 
-  /**
-   * Checks if a custom startup script provided by the instance metadata has exited.
-   */
+  /** Checks if a custom startup script provided by the instance metadata has exited. */
   protected abstract boolean checkStartupScriptFinished(
-          ComputeEngineComputer computer, Connection conn, PrintStream logger, TaskListener listener);
+      ComputeEngineComputer computer, Connection conn, PrintStream logger, TaskListener listener);
 
   /** Waits until user-provided startup script has exited. */
   protected void waitForStartupScriptComplete(
