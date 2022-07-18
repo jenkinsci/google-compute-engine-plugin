@@ -366,6 +366,7 @@ public abstract class ComputeEngineComputerLauncher extends ComputerLauncher {
         return;
       }
       conn = cleanupConn.get();
+      waitForStartupScriptComplete(computer, node, conn, logger, listener);
       String javaExecPath = node.getJavaExecPathOrDefault();
       if (!checkJavaInstalled(computer, conn, logger, listener, javaExecPath)) {
         return;
