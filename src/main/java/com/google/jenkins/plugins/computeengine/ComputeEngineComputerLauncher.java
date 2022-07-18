@@ -40,6 +40,7 @@ import java.io.IOException;
 import java.io.PrintStream;
 import java.net.InetSocketAddress;
 import java.net.Proxy;
+import java.time.Instant;
 import java.util.Base64;
 import java.util.Optional;
 import java.util.logging.Level;
@@ -47,9 +48,10 @@ import java.util.logging.LogRecord;
 import java.util.logging.Logger;
 import java.util.logging.SimpleFormatter;
 import java.util.stream.IntStream;
-
 import jenkins.model.Jenkins;
 import lombok.Getter;
+
+import javax.annotation.Nonnull;
 
 public abstract class ComputeEngineComputerLauncher extends ComputerLauncher {
   private static final Logger LOGGER =
@@ -240,13 +242,13 @@ public abstract class ComputeEngineComputerLauncher extends ComputerLauncher {
   }
 
   private boolean testCommand(
-          ComputeEngineComputer computer,
-          Connection conn,
-          String checkCommand,
-          PrintStream logger,
-          TaskListener listener)
-          throws IOException, InterruptedException {
-    return testCommand(computer, conn, checkCommand, logger, listener, new int[]{0});
+      ComputeEngineComputer computer,
+      Connection conn,
+      String checkCommand,
+      PrintStream logger,
+      TaskListener listener)
+      throws IOException, InterruptedException {
+    return testCommand(computer, conn, checkCommand, logger, listener, new int[] {0});
   }
 
   boolean testCommand(
@@ -267,6 +269,53 @@ public abstract class ComputeEngineComputerLauncher extends ComputerLauncher {
       throws Exception;
 
   protected abstract String getPathSeparator();
+
+  /**
+   * Checks if a custom startup script provided by the instance metadata has exited.
+   */
+  protected abstract boolean checkStartupScriptFinished(
+          ComputeEngineComputer computer, Connection conn, PrintStream logger, TaskListener listener);
+
+  /** Waits until user-provided startup script has exited. */
+  protected void waitForStartupScriptComplete(
+      @Nonnull ComputeEngineComputer computer,
+      @Nonnull ComputeEngineInstance node,
+      @Nonnull Connection conn,
+      @Nonnull PrintStream logger,
+      @Nonnull TaskListener listener)
+      throws Exception {
+    final long startTime = System.currentTimeMillis();
+
+    // How much timeout is left after waiting for instance creation
+    final long timeout =
+        Instant.parse(computer.getInstance().getCreationTimestamp()).toEpochMilli()
+            + node.getLaunchTimeoutMillis()
+            - startTime;
+
+    while (true) {
+      long waitTime = System.currentTimeMillis() - startTime;
+      if (timeout > 0 && waitTime > timeout) {
+        throw new LaunchTimeoutException(
+            "Timed out after "
+                + (waitTime / 1000)
+                + " seconds of waiting for the startup script to finish. (maximum timeout configured is "
+                + (node.getLaunchTimeoutMillis() / 1000)
+                + " seconds, "
+                + (timeout / 1000)
+                + " of which was remaining for the startup script after SSH was available"
+                + ")");
+      }
+
+      if (checkStartupScriptFinished(computer, conn, logger, listener)) {
+        logInfo(computer, listener, "Configured startup script is finished.");
+        return;
+      }
+
+      // retry
+      logInfo(computer, listener, "Waiting for the startup script to finish. Sleeping 5.");
+      Thread.sleep(SSH_SLEEP_MILLIS);
+    }
+  }
 
   private boolean checkJavaInstalled(
       ComputeEngineComputer computer,
