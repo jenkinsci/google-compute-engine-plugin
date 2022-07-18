@@ -21,6 +21,7 @@ import com.google.common.base.Preconditions;
 import com.trilead.ssh2.Connection;
 import hudson.model.TaskListener;
 import java.io.IOException;
+import java.io.PrintStream;
 import java.util.Optional;
 import java.util.logging.Logger;
 
@@ -126,6 +127,13 @@ public class ComputeEngineWindowsLauncher extends ComputeEngineComputerLauncher 
       return Optional.empty();
     }
     return Optional.ofNullable(bootstrapConn);
+  }
+
+  @Override
+  protected boolean checkStartupScriptFinished(
+      ComputeEngineComputer computer, Connection conn, PrintStream logger, TaskListener listener) {
+    // Not implemented
+    return true;
   }
 
   @Override

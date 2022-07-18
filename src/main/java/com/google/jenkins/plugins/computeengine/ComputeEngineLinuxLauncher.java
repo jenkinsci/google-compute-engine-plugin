@@ -117,38 +117,22 @@ public class ComputeEngineLinuxLauncher extends ComputeEngineComputerLauncher {
     return Optional.of(bootstrapConn);
   }
 
-  /**
-   * Checks if a custom startup script provided by the instance metadata has exited.
-   *
-   * Method 1:
-   * $ systemctl is-active --quiet google-startup-scripts
-   * $ echo $?
-   * 3
-   * $ systemctl is-active google-startup-scripts
-   * inactive
-   *
-   * Method 2:
-   * $ systemctl show -p ActiveState --value google-startup-scripts
-   * inactive
-   */
-  private boolean checkStartupComplete(
-          ComputeEngineComputer computer,
-          Connection conn,
-          PrintStream logger,
-          TaskListener listener) {
+  @Override
+  protected boolean checkStartupScriptFinished(
+      ComputeEngineComputer computer, Connection conn, PrintStream logger, TaskListener listener) {
     try {
       // A successful command indicates service is still running
       if (!testCommand(
-              computer,
-              conn,
-              "systemctl is-active --quiet google-startup-scripts",
-              logger,
-              listener,
-              // 0 = unit active
-              // 4 = unit doesn't exist
-              // https://www.freedesktop.org/software/systemd/man/systemctl.html#Exit%20status
-              // We should accept both as they are neither failed or in progress.
-              new int[]{0, 4})) {
+          computer,
+          conn,
+          "systemctl is-active --quiet google-startup-scripts",
+          logger,
+          listener,
+          // 0 = unit active
+          // 4 = unit doesn't exist
+          // https://www.freedesktop.org/software/systemd/man/systemctl.html#Exit%20status
+          // We should accept both as they are neither failed or in progress.
+          new int[] {0, 4})) {
         return true;
       }
     } catch (IOException | InterruptedException ex) {
