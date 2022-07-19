@@ -35,8 +35,16 @@ public class ComputeEngineLinuxLauncher extends ComputeEngineComputerLauncher {
   private static int bootstrapAuthSleepMs = 15000;
 
   public ComputeEngineLinuxLauncher(
-      String cloudName, Operation insertOperation, boolean useInternalAddress) {
-    super(cloudName, insertOperation.getName(), insertOperation.getZone(), useInternalAddress);
+      String cloudName,
+      Operation insertOperation,
+      boolean useInternalAddress,
+      boolean waitForStartupScript) {
+    super(
+        cloudName,
+        insertOperation.getName(),
+        insertOperation.getZone(),
+        useInternalAddress,
+        waitForStartupScript);
   }
 
   protected Logger getLogger() {

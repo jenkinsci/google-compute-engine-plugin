@@ -124,6 +124,7 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
   private String machineType;
   private String numExecutorsStr;
   private String startupScript;
+  private boolean waitForStartupScript;
   private boolean preemptible;
   private String minCpuPlatform;
   private String labels;
@@ -313,14 +314,20 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
       if (this.windowsConfiguration != null) {
         launcher =
             new ComputeEngineWindowsLauncher(
-                cloud.getCloudName(), operation, this.useInternalAddress);
+                cloud.getCloudName(),
+                operation,
+                this.useInternalAddress,
+                this.waitForStartupScript);
         if (Strings.isNullOrEmpty(targetRemoteFs)) {
           targetRemoteFs = "C:\\";
         }
       } else {
         launcher =
             new ComputeEngineLinuxLauncher(
-                cloud.getCloudName(), operation, this.useInternalAddress);
+                cloud.getCloudName(),
+                operation,
+                this.useInternalAddress,
+                this.waitForStartupScript);
         if (Strings.isNullOrEmpty(targetRemoteFs)) {
           targetRemoteFs = "/tmp";
         }
@@ -983,6 +990,7 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
       instanceConfiguration.setMachineType(this.machineType);
       instanceConfiguration.setNumExecutorsStr(this.numExecutorsStr);
       instanceConfiguration.setStartupScript(this.startupScript);
+      instanceConfiguration.setWaitForStartupScript(this.waitForStartupScript);
       instanceConfiguration.setPreemptible(this.preemptible);
       instanceConfiguration.setMinCpuPlatform(this.minCpuPlatform);
       instanceConfiguration.setLabelString(this.labels);

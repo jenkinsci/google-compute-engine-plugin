@@ -68,14 +68,20 @@ public abstract class ComputeEngineComputerLauncher extends ComputerLauncher {
   private final String zone;
   private final String cloudName;
   @Getter protected final boolean useInternalAddress;
+  @Getter protected final boolean waitForStartupScript;
 
   public ComputeEngineComputerLauncher(
-      String cloudName, String insertOperationId, String zone, boolean useInternalAddress) {
+      String cloudName,
+      String insertOperationId,
+      String zone,
+      boolean useInternalAddress,
+      boolean waitForStartupScript) {
     super();
     this.cloudName = cloudName;
     this.insertOperationId = insertOperationId;
     this.zone = zone;
     this.useInternalAddress = useInternalAddress;
+    this.waitForStartupScript = waitForStartupScript;
   }
 
   public static void log(Logger logger, Level level, TaskListener listener, String message) {
@@ -281,6 +287,11 @@ public abstract class ComputeEngineComputerLauncher extends ComputerLauncher {
       @Nonnull PrintStream logger,
       @Nonnull TaskListener listener)
       throws Exception {
+    // If it shouldn't wait for the startup script, just return
+    if (!this.isWaitForStartupScript()) {
+      return;
+    }
+
     final long startTime = System.currentTimeMillis();
 
     // How much timeout is left after waiting for instance creation
