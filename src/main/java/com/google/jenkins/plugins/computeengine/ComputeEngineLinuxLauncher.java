@@ -133,14 +133,12 @@ public class ComputeEngineLinuxLauncher extends ComputeEngineComputerLauncher {
       if (!testCommand(
           computer,
           conn,
-          "systemctl is-active --quiet google-startup-scripts",
+          // default value will be 0 until it finishes
+          "exit $(systemctl show google-startup-scripts --property ExecMainExitTimestampMonotonic | cut -d \"=\" -f 2)",
+          // not "initializing" or "starting" - benefit is doesn't require google-startup-scripts
+          // "[ \"$(systemctl is-system-running)\" != \"starting\" ]",
           logger,
-          listener,
-          // 0 = unit active
-          // 4 = unit doesn't exist
-          // https://www.freedesktop.org/software/systemd/man/systemctl.html#Exit%20status
-          // We should accept both as they are neither failed or in progress.
-          new int[] {0, 4})) {
+          listener)) {
         return true;
       }
     } catch (IOException | InterruptedException ex) {

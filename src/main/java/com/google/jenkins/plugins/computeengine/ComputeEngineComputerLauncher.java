@@ -247,27 +247,15 @@ public abstract class ComputeEngineComputerLauncher extends ComputerLauncher {
     }
   }
 
-  private boolean testCommand(
+  boolean testCommand(
       ComputeEngineComputer computer,
       Connection conn,
       String checkCommand,
       PrintStream logger,
       TaskListener listener)
       throws IOException, InterruptedException {
-    return testCommand(computer, conn, checkCommand, logger, listener, new int[] {0});
-  }
-
-  boolean testCommand(
-      ComputeEngineComputer computer,
-      Connection conn,
-      String checkCommand,
-      PrintStream logger,
-      TaskListener listener,
-      int[] successfulExitCodes)
-      throws IOException, InterruptedException {
     logInfo(computer, listener, "Verifying: " + checkCommand);
-    int cmdExitCode = conn.exec(checkCommand, logger);
-    return IntStream.of(successfulExitCodes).anyMatch(code -> code == cmdExitCode);
+    return conn.exec(checkCommand, logger) == 0;
   }
 
   protected abstract Optional<Connection> setupConnection(
