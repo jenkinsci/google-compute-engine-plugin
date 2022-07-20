@@ -41,6 +41,7 @@ import java.io.PrintStream;
 import java.net.InetSocketAddress;
 import java.net.Proxy;
 import java.time.Instant;
+import java.time.format.DateTimeFormatter;
 import java.util.Base64;
 import java.util.Optional;
 import java.util.logging.Level;
@@ -295,8 +296,11 @@ public abstract class ComputeEngineComputerLauncher extends ComputerLauncher {
     final long startTime = System.currentTimeMillis();
 
     // How much timeout is left after waiting for instance creation
+    // Instant's can't parse timestamps with offsets until Java 12.
     final long timeout =
-        Instant.parse(computer.getInstance().getCreationTimestamp()).toEpochMilli()
+        DateTimeFormatter.ISO_OFFSET_DATE_TIME
+                .parse(computer.getInstance().getCreationTimestamp(), Instant::from)
+                .toEpochMilli()
             + node.getLaunchTimeoutMillis()
             - startTime;
 
