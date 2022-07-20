@@ -48,7 +48,6 @@ import java.util.logging.Level;
 import java.util.logging.LogRecord;
 import java.util.logging.Logger;
 import java.util.logging.SimpleFormatter;
-import java.util.stream.IntStream;
 import javax.annotation.Nonnull;
 import jenkins.model.Jenkins;
 import lombok.Getter;
