@@ -135,8 +135,6 @@ public class ComputeEngineLinuxLauncher extends ComputeEngineComputerLauncher {
           conn,
           // default value will be 0 until it finishes
           "exit $(systemctl show google-startup-scripts --property ExecMainExitTimestampMonotonic | cut -d \"=\" -f 2)",
-          // not "initializing" or "starting" - benefit is doesn't require google-startup-scripts
-          // "[ \"$(systemctl is-system-running)\" != \"starting\" ]",
           logger,
           listener)) {
         return true;
