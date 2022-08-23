@@ -212,7 +212,7 @@ public class InstanceConfigurationTest {
     r.assertEqualBeans(
         want,
         got,
-        "namePrefix,region,zone,machineType,preemptible,windowsConfiguration,minCpuPlatform,startupScript,bootDiskType,bootDiskSourceImageName,bootDiskSourceImageProject,bootDiskSizeGb,acceleratorConfiguration,networkConfiguration,externalAddress,networkTags,serviceAccountEmail");
+        "namePrefix,region,zone,machineType,preemptible,windowsConfiguration,minCpuPlatform,startupScript,bootDiskType,bootDiskSourceImageName,bootDiskSourceImageProject,bootDiskSizeGb,acceleratorConfiguration,networkConfiguration,externalAddress,networkTags,serviceAccountEmail,enableSecureBoot");
   }
 
   @Test
@@ -339,7 +339,8 @@ public class InstanceConfigurationTest {
         .acceleratorConfiguration(new AcceleratorConfiguration(ACCELERATOR_NAME, ACCELERATOR_COUNT))
         .runAsUser(RUN_AS_USER)
         .oneShot(false)
-        .template(null);
+        .template(null)
+        .enableSecureBoot(true);
   }
 
   @Test
