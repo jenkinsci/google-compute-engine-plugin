@@ -40,3 +40,4 @@ jenkins:
             bootDiskSizeGbStr:  50
             bootDiskAutoDelete: true
             serviceAccountEmail: 'jenkins-test@gce-jenkins-ops.iam.gserviceaccount.com'
+            enableSecureBoot: true
