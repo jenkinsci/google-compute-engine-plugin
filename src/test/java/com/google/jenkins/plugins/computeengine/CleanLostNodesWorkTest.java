@@ -19,7 +19,7 @@ import static org.junit.Assert.assertNotNull;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.anyMap;
 import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.verifyZeroInteractions;
+import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 
 import com.google.api.services.compute.model.Instance;
@@ -82,7 +82,7 @@ public class CleanLostNodesWorkTest {
 
     getWorker().doRun();
     verify(client).listInstancesWithLabel(eq(TEST_PROJECT_ID), anyMap());
-    verifyZeroInteractions(client);
+    verifyNoMoreInteractions(client);
   }
 
   @Test
@@ -114,6 +114,6 @@ public class CleanLostNodesWorkTest {
 
     getWorker().doRun();
     verify(client).listInstancesWithLabel(eq(TEST_PROJECT_ID), anyMap());
-    verifyZeroInteractions(client);
+    verifyNoMoreInteractions(client);
   }
 }
