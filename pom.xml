@@ -88,7 +88,7 @@
       <dependency>
         <groupId>io.jenkins.tools.bom</groupId>
         <artifactId>bom-2.346.x</artifactId>
-        <version>1556.vfc6a_f216e3c6</version>
+        <version>1643.v1cffef51df73</version>
         <type>pom</type>
         <scope>import</scope>
       </dependency>
@@ -148,9 +148,8 @@
       <version>0.28.3</version>
     </dependency>
     <dependency>
-      <groupId>org.apache.commons</groupId>
-      <artifactId>commons-text</artifactId>
-      <version>1.9</version>
+      <groupId>io.jenkins.plugins</groupId>
+      <artifactId>commons-text-api</artifactId>
     </dependency>
     <dependency>
       <groupId>commons-io</groupId>
