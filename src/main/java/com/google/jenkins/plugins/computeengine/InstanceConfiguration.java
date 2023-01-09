@@ -355,8 +355,6 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
 
   /** Initializes transient properties */
   protected Object readResolve() {
-    Jenkins.get().checkPermission(Jenkins.RUN_SCRIPTS);
-
     labelSet = Label.parse(labels);
     return this;
   }
