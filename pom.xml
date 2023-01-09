@@ -23,7 +23,7 @@
   </parent>
 
   <artifactId>google-compute-engine</artifactId>
-  <version>4.3.13</version>
+  <version>4.3.14-SNAPSHOT</version>
   <packaging>hpi</packaging>
 
   <name>Google Compute Engine Plugin</name>
@@ -58,7 +58,7 @@
     <connection>scm:git:ssh://git@github.com/jenkinsci/google-compute-engine-plugin.git</connection>
     <developerConnection>scm:git:ssh://git@github.com/jenkinsci/google-compute-engine-plugin.git</developerConnection>
     <url>https://github.com/jenkinsci/google-compute-engine-plugin</url>
-    <tag>google-compute-engine-4.3.13</tag>
+    <tag>HEAD</tag>
   </scm>
 
   <properties>
