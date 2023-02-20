@@ -14,8 +14,8 @@ jenkins:
             mode:               EXCLUSIVE
             labelString:        jenkins-agent
             numExecutorsStr:    1
-            runAsUser:          jenkins
             remoteFs:           agent
+            runAsUser:          jenkins
             javaExecPath:       "java"
             oneShot:            true
             createSnapshot:     false
