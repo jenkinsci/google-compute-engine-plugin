@@ -71,7 +71,7 @@
     <it.windows>false</it.windows>
     <powershell.version>1.3</powershell.version>
     <google-oauth-plugin.version>1.0.8-rc251.d290e26c7b_fb_</google-oauth-plugin.version>
-    <google.http.version>1.38.1</google.http.version>
+    <google.http.version>1.42.2</google.http.version>
     <google.compute.api.version>1.25.0</google.compute.api.version>
     <com.google.oauth-client.version>1.34.1</com.google.oauth-client.version>
     <google.j2objc.version>1.3</google.j2objc.version>
@@ -110,6 +110,10 @@
     </dependency>
     <dependency>
       <groupId>org.jenkins-ci.plugins</groupId>
+      <artifactId>apache-httpcomponents-client-4-api</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.jenkins-ci.plugins</groupId>
       <artifactId>ssh-credentials</artifactId>
     </dependency>
     <dependency>
@@ -145,7 +149,7 @@
     <dependency>
       <groupId>io.opencensus</groupId>
       <artifactId>opencensus-api</artifactId>
-      <version>0.28.3</version>
+      <version>0.31.1</version>
     </dependency>
     <dependency>
       <groupId>io.jenkins.plugins</groupId>
@@ -159,7 +163,7 @@
     <dependency>
       <groupId>joda-time</groupId>
       <artifactId>joda-time</artifactId>
-      <version>2.10.10</version>
+      <version>2.11.1</version>
     </dependency>
     <dependency>
       <groupId>com.google.cloud.graphite</groupId>
@@ -243,6 +247,10 @@
     <repository>
       <id>repo.jenkins-ci.org</id>
       <url>https://repo.jenkins-ci.org/public/</url>
+    </repository>
+    <repository>
+      <id>incrementals.jenkins-ci.org</id>
+      <url>https://repo.jenkins-ci.org/incrementals</url>
     </repository>
   </repositories>
   <pluginRepositories>
