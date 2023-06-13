@@ -198,6 +198,7 @@
       <groupId>org.awaitility</groupId>
       <artifactId>awaitility</artifactId>
       <version>4.0.3</version>
+      <scope>test</scope>
     </dependency>
     <dependency><!-- OnceRetentionStrategy -->
       <groupId>org.jenkins-ci.plugins</groupId>
@@ -217,12 +218,9 @@
     </dependency>
     <dependency>
       <groupId>org.hamcrest</groupId>
-      <artifactId>hamcrest-library</artifactId>
+      <artifactId>hamcrest</artifactId>
       <version>${hamcrest.version}</version>
-    </dependency>
-    <dependency>
-      <groupId>org.hamcrest</groupId>
-      <artifactId>hamcrest-core</artifactId>
+      <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>org.mockito</groupId>
