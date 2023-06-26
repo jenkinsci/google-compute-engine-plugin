@@ -194,12 +194,6 @@
       <artifactId>eddsa</artifactId>
       <version>0.3.0</version>
     </dependency>
-    <dependency>
-      <groupId>org.awaitility</groupId>
-      <artifactId>awaitility</artifactId>
-      <version>4.0.3</version>
-      <scope>test</scope>
-    </dependency>
     <dependency><!-- OnceRetentionStrategy -->
       <groupId>org.jenkins-ci.plugins</groupId>
       <artifactId>durable-task</artifactId>
@@ -210,16 +204,22 @@
       <version>1.18.18</version>
       <scope>provided</scope>
     </dependency>
-    <!-- Test Dependencies -->
+    <!-- gcp-client (abandoned?) actually depends on these libraries in _compile_ scope, so they must be bundled in the plugin. -->
+    <!-- See https://github.com/GoogleCloudPlatform/gcp-plugin-core-java/blob/cce07995cf7f060e71bf11da37d7a1f976ea84ef/gcp-client/src/main/java/com/google/cloud/graphite/platforms/plugin/client/ComputeClient.java#L665 -->
     <dependency>
-      <groupId>junit</groupId>
-      <artifactId>junit</artifactId>
-      <scope>test</scope>
+      <groupId>org.awaitility</groupId>
+      <artifactId>awaitility</artifactId>
+      <version>4.0.3</version>
     </dependency>
     <dependency>
       <groupId>org.hamcrest</groupId>
       <artifactId>hamcrest</artifactId>
       <version>${hamcrest.version}</version>
+    </dependency>
+    <!-- Test Dependencies -->
+    <dependency>
+      <groupId>junit</groupId>
+      <artifactId>junit</artifactId>
       <scope>test</scope>
     </dependency>
     <dependency>
