@@ -18,6 +18,50 @@
 [![GitHub release](https://img.shields.io/github/v/tag/jenkinsci/google-compute-engine-plugin?label=changelog)](https://github.com/jenkinsci/google-compute-engine-plugin/blob/develop/CHANGELOG.md)
 [![Jenkins Plugin Installs](https://img.shields.io/jenkins/plugin/i/google-compute-engine.svg?color=blue)](https://plugins.jenkins.io/google-compute-engine)
 
+
+# Google Compute Engine Plugin for Jenkins
+**Prerequisite:**
+1. Java11 (openjdk 11.0.19 2023-04-18 LTS) download via sdkman
+1. Maven
+
+Create settings.xml file **setting.xml** at path **~/.m2/** and insert the following code in it
+
+```xml
+<settings>
+  <pluginGroups>
+    <pluginGroup>org.jenkins-ci.tools</pluginGroup>
+  </pluginGroups>
+  <profiles>
+    <!-- Give access to Jenkins plugins -->
+    <profile>
+      <id>jenkins</id>
+      <activation>
+        <activeByDefault>true</activeByDefault> <!-- change this to false, if you don't like to have it on per default -->
+      </activation>
+      <repositories>
+        <repository>
+          <id>repo.jenkins-ci.org</id>
+          <url>https://repo.jenkins-ci.org/public/</url>
+        </repository>
+      </repositories>
+      <pluginRepositories>
+        <pluginRepository>
+          <id>repo.jenkins-ci.org</id>
+          <url>https://repo.jenkins-ci.org/public/</url>
+        </pluginRepository>
+      </pluginRepositories>
+    </profile>
+  </profiles>
+  <mirrors>
+    <mirror>
+      <id>repo.jenkins-ci.org</id>
+      <url>https://repo.jenkins-ci.org/public/</url>
+      <mirrorOf>m.g.o-public</mirrorOf>
+    </mirror>
+  </mirrors>
+</settings>
+```
+
 # Google Compute Engine Plugin for Jenkins
 The Google Compute Engine (GCE) Plugin allows you to use GCE virtual machines (VMs) with Jenkins to execute build tasks. GCE VMs provision quickly, are destroyed by Jenkins when idle, and offer Preemptible VMs that run at a much lower price than regular VMs.
 
@@ -25,11 +69,11 @@ The Google Compute Engine (GCE) Plugin allows you to use GCE virtual machines (V
 Please see the [Google Compute Engine Plugin](docs/Home.md) docs for complete documentation.
 
 ## Installation
-1. Download the plugin from [here](https://storage.googleapis.com/jenkins-graphite/google-compute-plugin-latest.hpi).
-1. Go to **Manage Jenkins** then **Manage Plugins**.
-1. In the Plugin Manager, click the **Advanced** tab and then **Choose File** under the **Upload Plugin** section.
-1. Choose the Jenkins plugin file downloaded in Step 1.
-1. Click the **Upload** button.
+2. Download the plugin from [here](https://storage.googleapis.com/jenkins-graphite/google-compute-plugin-latest.hpi).
+2. Go to **Manage Jenkins** then **Manage Plugins**.
+2. In the Plugin Manager, click the **Advanced** tab and then **Choose File** under the **Upload Plugin** section.
+2. Choose the Jenkins plugin file downloaded in Step 1.
+2. Click the **Upload** button.
 
 ## Plugin Source Build Installation
 See [Plugin Source Build Installation](docs/source_build_installation.md) to build and install from

@@ -17,3 +17,12 @@ upload:
 	mvn package
 	gsutil cp -a public-read target/google-compute-plugin.hpi gs://jenkins-graphite/google-compute-plugin-latest.hpi
 	gsutil cp -a public-read target/google-compute-plugin.hpi gs://jenkins-graphite/google-compute-plugin-`git rev-parse --short HEAD`.hpi
+
+# Below Commands will create the Plugin using currently compaitble version of jenkins
+# Run Both commands
+
+package:
+	mvn -Djenkins.version=2.346.1 package -X
+
+package-hpi:
+	mvn -Djenkins.version=2.346.1 hpi:hpi -X
