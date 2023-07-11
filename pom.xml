@@ -62,7 +62,7 @@
   </scm>
 
   <properties>
-    <revision>4.3.16</revision>
+    <revision>4.3.17</revision>
     <changelist>-SNAPSHOT</changelist>
     <gitHubRepo>jenkinsci/${project.artifactId}-plugin</gitHubRepo>
     <jenkins.version>2.361.4</jenkins.version>
