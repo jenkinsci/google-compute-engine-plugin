@@ -2,22 +2,27 @@ package com.google.jenkins.plugins.computeengine;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
-import static org.mockito.ArgumentMatchers.any;
+import static org.junit.Assert.assertThrows;
 
+import com.cloudbees.plugins.credentials.Credentials;
 import com.cloudbees.plugins.credentials.CredentialsStore;
+import com.cloudbees.plugins.credentials.SecretBytes;
 import com.cloudbees.plugins.credentials.SystemCredentialsProvider;
 import com.cloudbees.plugins.credentials.domains.Domain;
-import com.google.api.client.auth.oauth2.Credential;
-import com.google.jenkins.plugins.credentials.oauth.GoogleRobotCredentials;
+import com.google.jenkins.plugins.credentials.oauth.GoogleRobotPrivateKeyCredentials;
+import com.google.jenkins.plugins.credentials.oauth.JsonServiceAccountConfig;
 import hudson.model.Node;
 import io.jenkins.plugins.casc.misc.ConfiguredWithCode;
 import io.jenkins.plugins.casc.misc.JenkinsConfiguredWithCodeRule;
+import java.nio.charset.StandardCharsets;
 import org.junit.Rule;
 import org.junit.Test;
 import org.jvnet.hudson.test.JenkinsRule;
-import org.mockito.Mockito;
 
 public class ConfigAsCodeTest {
+
+  private static final byte[] PK_BYTES =
+      "{\"client_email\": \"example@example.com\"}".getBytes(StandardCharsets.UTF_8);
 
   @Rule public JenkinsRule jenkinsRule = new JenkinsConfiguredWithCodeRule();
 
@@ -59,9 +64,12 @@ public class ConfigAsCodeTest {
   @Test
   @ConfiguredWithCode("configuration-as-code.yml")
   public void shouldCreateGCEClientFromCode() throws Exception {
-    GoogleRobotCredentials credentials = Mockito.mock(GoogleRobotCredentials.class);
-    Mockito.when(credentials.getId()).thenReturn("gce-jenkins");
-    Mockito.when(credentials.getGoogleCredential(any())).thenReturn(Mockito.mock(Credential.class));
+    SecretBytes bytes = SecretBytes.fromBytes(PK_BYTES);
+    JsonServiceAccountConfig serviceAccountConfig = new JsonServiceAccountConfig();
+    serviceAccountConfig.setSecretJsonKey(bytes);
+    assertNotNull(serviceAccountConfig.getAccountId());
+    Credentials credentials =
+        new GoogleRobotPrivateKeyCredentials("gce-jenkins", serviceAccountConfig, null);
 
     CredentialsStore store =
         new SystemCredentialsProvider.ProviderImpl().getStore(jenkinsRule.jenkins);
@@ -70,6 +78,8 @@ public class ConfigAsCodeTest {
     ComputeEngineCloud cloud =
         (ComputeEngineCloud) jenkinsRule.jenkins.clouds.getByName("gce-jenkins-build");
     assertNotNull("Cloud by name not found", cloud);
-    assertNotNull("GCE client not created", cloud.getClient());
+    // Ensure correct exception is thrown
+    assertThrows(
+        GoogleRobotPrivateKeyCredentials.PrivateKeyNotSetException.class, cloud::getClient);
   }
 }

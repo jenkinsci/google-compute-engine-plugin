@@ -20,58 +20,32 @@ import static org.hamcrest.Matchers.isEmptyOrNullString;
 import static org.hamcrest.Matchers.not;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertThrows;
 
 import com.cloudbees.plugins.credentials.Credentials;
 import com.cloudbees.plugins.credentials.CredentialsStore;
+import com.cloudbees.plugins.credentials.SecretBytes;
 import com.cloudbees.plugins.credentials.SystemCredentialsProvider;
 import com.cloudbees.plugins.credentials.domains.Domain;
 import com.google.common.collect.Lists;
 import com.google.jenkins.plugins.credentials.oauth.GoogleRobotPrivateKeyCredentials;
-import com.google.jenkins.plugins.credentials.oauth.ServiceAccountConfig;
+import com.google.jenkins.plugins.credentials.oauth.JsonServiceAccountConfig;
 import hudson.model.Label;
 import hudson.model.labels.LabelAtom;
 import hudson.util.FormValidation;
 import hudson.util.ListBoxModel;
-import java.security.PrivateKey;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import org.junit.Assert;
-import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
-import org.junit.runner.RunWith;
 import org.jvnet.hudson.test.JenkinsRule;
-import org.mockito.Mock;
-import org.mockito.Mockito;
-import org.mockito.junit.MockitoJUnitRunner;
 
-@RunWith(MockitoJUnitRunner.class)
 public class ComputeEngineCloudTest {
-  private static final PrivateKey PRIVATE_KEY;
   private static final String ACCOUNT_ID = "test-account-id";
-  private static final String PK_ALGO = "test";
-  private static final String PK_FORMAT = "test";
-  private static final byte[] PK_BYTES = new byte[0];
-
-  static {
-    PRIVATE_KEY =
-        new PrivateKey() {
-          @Override
-          public String getAlgorithm() {
-            return PK_ALGO;
-          }
-
-          @Override
-          public String getFormat() {
-            return PK_FORMAT;
-          }
-
-          @Override
-          public byte[] getEncoded() {
-            return PK_BYTES;
-          }
-        };
-  }
+  private static final byte[] PK_BYTES =
+      "{\"client_email\": \"example@example.com\"}".getBytes(StandardCharsets.UTF_8);
 
   private static final String INSTANCE_ID = "213123";
   private static final String CLOUD_NAME = "test-cloud";
@@ -80,16 +54,12 @@ public class ComputeEngineCloudTest {
 
   @Rule public JenkinsRule r = new JenkinsRule();
 
-  @Mock public ServiceAccountConfig serviceAccountConfig;
-
-  @Before
-  public void init() {
-    Mockito.when(serviceAccountConfig.getAccountId()).thenReturn(ACCOUNT_ID);
-    Mockito.when(serviceAccountConfig.getPrivateKey()).thenReturn(PRIVATE_KEY);
-  }
-
   @Test
   public void construction() throws Exception {
+    SecretBytes bytes = SecretBytes.fromBytes(PK_BYTES);
+    JsonServiceAccountConfig serviceAccountConfig = new JsonServiceAccountConfig();
+    serviceAccountConfig.setSecretJsonKey(bytes);
+    assertNotNull(serviceAccountConfig.getAccountId());
     // Create a credential
     Credentials c =
         (Credentials) new GoogleRobotPrivateKeyCredentials(ACCOUNT_ID, serviceAccountConfig, null);
@@ -112,8 +82,9 @@ public class ComputeEngineCloudTest {
     assertEquals(CLOUD_NAME, cloud.getDisplayName());
     Assert.assertNotEquals(CLOUD_NAME, cloud.name);
 
-    // Ensure ComputeClient is created
-    assertNotNull("ComputeClient was not initialized", cloud.getClient());
+    // Ensure correct exception is thrown
+    assertThrows(
+        GoogleRobotPrivateKeyCredentials.PrivateKeyNotSetException.class, cloud::getClient);
 
     // Ensure transient properties were initialized
     for (InstanceConfiguration ic : ics) {
@@ -175,6 +146,10 @@ public class ComputeEngineCloudTest {
   @Test
   public void descriptorFillCredentials() throws Exception {
     // Create a credential
+    SecretBytes bytes = SecretBytes.fromBytes(PK_BYTES);
+    JsonServiceAccountConfig serviceAccountConfig = new JsonServiceAccountConfig();
+    serviceAccountConfig.setSecretJsonKey(bytes);
+    assertNotNull(serviceAccountConfig.getAccountId());
     Credentials c =
         (Credentials) new GoogleRobotPrivateKeyCredentials(ACCOUNT_ID, serviceAccountConfig, null);
     CredentialsStore store = new SystemCredentialsProvider.ProviderImpl().getStore(r.jenkins);
