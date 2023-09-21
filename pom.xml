@@ -18,17 +18,17 @@
   <parent>
     <groupId>org.jenkins-ci.plugins</groupId>
     <artifactId>plugin</artifactId>
-    <version>4.45</version>
+    <version>4.72</version>
     <relativePath/>
   </parent>
 
   <artifactId>google-compute-engine</artifactId>
-  <version>4.3.17-SNAPSHOT</version>
+  <version>${revision}${changelist}</version>
   <packaging>hpi</packaging>
 
   <name>Google Compute Engine Plugin</name>
   <description>This plugin allows Jenkins to provision dynamic worker nodes on Google Compute Engine.</description>
-  <url>https://github.com/jenkinsci/google-compute-engine-plugin</url>
+  <url>https://github.com/jenkinsci/${project.artifactId}-plugin</url>
   <organization>
     <name>Google</name>
     <url>https://www.google.com</url>
@@ -62,13 +62,11 @@
   </scm>
 
   <properties>
-    <revision>4.3.14</revision>
+    <revision>4.3.17</revision>
     <changelist>-SNAPSHOT</changelist>
-    <gitHubRepo>jenkinsci/google-compute-engine-plugin</gitHubRepo>
-    <jenkins.version>2.346.1</jenkins.version>
+    <gitHubRepo>jenkinsci/${project.artifactId}-plugin</gitHubRepo>
+    <jenkins.version>2.387.3</jenkins.version>
     <jenkinsRuleTimeout>0</jenkinsRuleTimeout>
-    <maven.compiler.source>1.8</maven.compiler.source>
-    <maven.compiler.target>1.8</maven.compiler.target>
     <skip.surefire.tests>${skipTests}</skip.surefire.tests>
     <skipITs>true</skipITs>
     <it.windows>false</it.windows>
@@ -83,7 +81,6 @@
     <hpi.compatibleSinceVersion>4.1.0</hpi.compatibleSinceVersion>
     <concurrency>10</concurrency>
     <it.runOrder>balanced</it.runOrder>
-    <hamcrest.version>2.2</hamcrest.version>
     <delombok.output>${project.build.directory}/delombok</delombok.output>
   </properties>
 
@@ -91,15 +88,10 @@
     <dependencies>
       <dependency>
         <groupId>io.jenkins.tools.bom</groupId>
-        <artifactId>bom-2.346.x</artifactId>
-        <version>1643.v1cffef51df73</version>
+        <artifactId>bom-2.387.x</artifactId>
+        <version>2378.v3e03930028f2</version>
         <type>pom</type>
         <scope>import</scope>
-      </dependency>
-      <dependency>
-        <groupId>org.hamcrest</groupId>
-        <artifactId>hamcrest</artifactId>
-        <version>2.2</version>
       </dependency>
     </dependencies>
   </dependencyManagement>
@@ -165,11 +157,6 @@
       <artifactId>commons-text-api</artifactId>
     </dependency>
     <dependency>
-      <groupId>commons-io</groupId>
-      <artifactId>commons-io</artifactId>
-      <version>2.8.0</version>
-    </dependency>
-    <dependency>
       <groupId>joda-time</groupId>
       <artifactId>joda-time</artifactId>
       <version>2.11.1</version>
@@ -201,7 +188,7 @@
     <dependency>
       <groupId>org.projectlombok</groupId>
       <artifactId>lombok</artifactId>
-      <version>1.18.18</version>
+      <version>1.18.28</version>
       <scope>provided</scope>
     </dependency>
     <!-- gcp-client (abandoned?) actually depends on these libraries in _compile_ scope, so they must be bundled in the plugin. -->
@@ -214,14 +201,8 @@
     <dependency>
       <groupId>org.hamcrest</groupId>
       <artifactId>hamcrest</artifactId>
-      <version>${hamcrest.version}</version>
     </dependency>
     <!-- Test Dependencies -->
-    <dependency>
-      <groupId>junit</groupId>
-      <artifactId>junit</artifactId>
-      <scope>test</scope>
-    </dependency>
     <dependency>
       <groupId>org.mockito</groupId>
       <artifactId>mockito-core</artifactId>
@@ -288,7 +269,7 @@
       <plugin>
         <groupId>org.projectlombok</groupId>
         <artifactId>lombok-maven-plugin</artifactId>
-        <version>1.18.8.1</version>
+        <version>1.18.20.0</version>
         <configuration>
           <sourceDirectory>${project.basedir}/src/main/java</sourceDirectory>
           <outputDirectory>${delombok.output}</outputDirectory>
@@ -420,7 +401,6 @@
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-shade-plugin</artifactId>
-        <version>3.2.4</version>
         <executions>
           <execution>
             <phase>package</phase>

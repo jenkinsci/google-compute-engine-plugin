@@ -44,6 +44,7 @@ import com.google.jenkins.plugins.computeengine.ssh.GoogleKeyCredential;
 import com.google.jenkins.plugins.computeengine.ssh.GoogleKeyPair;
 import com.google.jenkins.plugins.computeengine.ssh.GooglePrivateKey;
 import edu.umd.cs.findbugs.annotations.Nullable;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import hudson.Extension;
 import hudson.RelativePath;
 import hudson.Util;
@@ -1015,6 +1016,7 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
     }
 
     // Private methods defined to exclude these from the builder and skip Lombok generating them.
+    @SuppressFBWarnings(value = "UPM_UNCALLED_PRIVATE_METHOD", justification = "for Lombok")
     private Builder numExecutors(Integer numExecutors) {
       throw new NotImplementedException();
     }
