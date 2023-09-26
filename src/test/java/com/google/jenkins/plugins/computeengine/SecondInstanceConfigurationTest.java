@@ -13,13 +13,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package com.google.jenkins.plugins.computeengine;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.anyString;
 
 import com.google.api.services.compute.model.AcceleratorType;
@@ -35,15 +31,11 @@ import com.google.api.services.compute.model.Region;
 import com.google.api.services.compute.model.Subnetwork;
 import com.google.api.services.compute.model.Zone;
 import com.google.cloud.graphite.platforms.plugin.client.ComputeClient;
-import com.google.common.collect.ImmutableList;
 import hudson.model.Node;
-import hudson.util.FormValidation;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-import org.htmlunit.html.HtmlPage;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -51,41 +43,76 @@ import org.junit.runner.RunWith;
 import org.jvnet.hudson.test.JenkinsRule;
 import org.mockito.Mock;
 import org.mockito.Mockito;
+import org.mockito.junit.MockitoJUnit;
 import org.mockito.junit.MockitoJUnitRunner;
+import org.mockito.junit.MockitoRule;
+import org.mockito.quality.Strictness;
 
-@RunWith(MockitoJUnitRunner.class)
-public class InstanceConfigurationTest {
+@RunWith(MockitoJUnitRunner.Silent.class)
+public class SecondInstanceConfigurationTest {
+
+  @Rule public MockitoRule experimentRule = MockitoJUnit.rule().strictness(Strictness.LENIENT);
+
   public static final String NAME_PREFIX = "test";
+
   public static final String PROJECT_ID = "test-project";
+
   public static final String REGION = "us-west1";
+
   public static final String ZONE = "us-west1-a";
+
   public static final String LABEL = "LABEL1 LABEL2";
+
   public static final String A_LABEL = "LABEL1";
+
   public static final String MACHINE_TYPE = "n1-standard-1";
+
   public static final String STARTUP_SCRIPT = "#!/bin/bash";
+
   public static final String NUM_EXECUTORS = "1";
+
   public static final boolean PREEMPTIBLE = true;
+
   public static final String MIN_CPU_PLATFORM = "Intel Haswell";
+
   public static final String CONFIG_DESC = "test-config";
+
   public static final String BOOT_DISK_TYPE = "pd-standard";
+
   public static final boolean BOOT_DISK_AUTODELETE = true;
+
   public static final String BOOT_DISK_IMAGE_NAME = "test-image";
+
   public static final String BOOT_DISK_PROJECT_ID = PROJECT_ID;
+
   public static final Long BOOT_DISK_SIZE_GB = 10L;
+
   public static final String TEMPLATE_NAME = "test-template";
+
   public static final Node.Mode NODE_MODE = Node.Mode.EXCLUSIVE;
+
   public static final String ACCELERATOR_NAME = "test-gpu";
+
   public static final String ACCELERATOR_COUNT = "1";
+
   public static final String RUN_AS_USER = "jenkins";
+
   public static final String NETWORK_NAME = "test-network";
+
   public static final String SUBNETWORK_NAME = "test-subnetwork";
+
   public static final boolean EXTERNAL_ADDR = true;
+
   public static final String NETWORK_TAGS = "tag1 tag2";
+
   public static final String SERVICE_ACCOUNT_EMAIL = "test-service-account";
+
   public static final String RETENTION_TIME_MINUTES_STR = "1";
+
   public static final String LAUNCH_TIMEOUT_SECONDS_STR = "100";
 
   @Mock public ComputeEngineCloud cloud;
+
   @Mock public ComputeClient computeClient;
 
   @Rule public JenkinsRule r = new JenkinsRule();
@@ -95,42 +122,33 @@ public class InstanceConfigurationTest {
     List<Region> regions = new ArrayList<Region>();
     regions.add(new Region().setName("").setSelfLink(""));
     regions.add(new Region().setName(REGION).setSelfLink(REGION));
-
     List<Zone> zones = new ArrayList<Zone>();
     zones.add(new Zone().setName("").setSelfLink(""));
     zones.add(new Zone().setName(ZONE).setSelfLink(ZONE));
-
     List<MachineType> machineTypes = new ArrayList<MachineType>();
     machineTypes.add(new MachineType().setName("").setSelfLink(""));
     machineTypes.add(new MachineType().setName(MACHINE_TYPE).setSelfLink(MACHINE_TYPE));
-
     List<String> cpuPlatforms = new ArrayList<>();
     cpuPlatforms.add("");
     cpuPlatforms.add("Intel Skylake");
     cpuPlatforms.add("Intel Haswell");
-
     List<DiskType> diskTypes = new ArrayList<DiskType>();
     diskTypes.add(new DiskType().setName("").setSelfLink(""));
     diskTypes.add(new DiskType().setName(BOOT_DISK_TYPE).setSelfLink(BOOT_DISK_TYPE));
-
     List<Image> imageTypes = new ArrayList<Image>();
     imageTypes.add(new Image().setName("").setSelfLink(""));
     imageTypes.add(new Image().setName(BOOT_DISK_IMAGE_NAME).setSelfLink(BOOT_DISK_IMAGE_NAME));
-
     Image image = new Image();
     image
         .setName(BOOT_DISK_IMAGE_NAME)
         .setSelfLink(BOOT_DISK_IMAGE_NAME)
         .setDiskSizeGb(BOOT_DISK_SIZE_GB);
-
     List<Network> networks = new ArrayList<Network>();
     networks.add(new Network().setName("").setSelfLink(""));
     networks.add(new Network().setName(NETWORK_NAME).setSelfLink(NETWORK_NAME));
-
     List<Subnetwork> subnetworks = new ArrayList<Subnetwork>();
     subnetworks.add(new Subnetwork().setName("").setSelfLink(""));
     subnetworks.add(new Subnetwork().setName(SUBNETWORK_NAME).setSelfLink(SUBNETWORK_NAME));
-
     List<AcceleratorType> acceleratorTypes = new ArrayList<AcceleratorType>();
     acceleratorTypes.add(
         new AcceleratorType().setName("").setSelfLink("").setMaximumCardsPerInstance(0));
@@ -139,7 +157,6 @@ public class InstanceConfigurationTest {
             .setName(ACCELERATOR_NAME)
             .setSelfLink(ACCELERATOR_NAME)
             .setMaximumCardsPerInstance(Integer.parseInt(ACCELERATOR_COUNT)));
-
     InstanceTemplate instanceTemplate =
         new InstanceTemplate()
             .setName(TEMPLATE_NAME)
@@ -153,10 +170,25 @@ public class InstanceConfigurationTest {
                                             .set("key", "ssh-keys")
                                             .set("value", "TEST"))
                                     .collect(Collectors.toList()))));
+    Mockito.when(cloud.getProjectId()).thenReturn(PROJECT_ID);
+    Mockito.when(cloud.getClient()).thenReturn(computeClient);
+    Mockito.when(computeClient.getTemplate(anyString(), anyString())).thenReturn(instanceTemplate);
+  }
 
-    Mockito.when(computeClient.getImage(anyString(), anyString())).thenReturn(image);
-   }
-   
+  @Test
+  public void testInstanceMetadata() throws Exception {
+    InstanceConfiguration instanceConfiguration =
+        instanceConfigurationBuilder().template(TEMPLATE_NAME).build();
+    instanceConfiguration.appendLabel("test", "test");
+    instanceConfiguration.cloud = cloud;
+    Instance instance = instanceConfiguration.instance();
+    Object[] sshKeys =
+        instance.getMetadata().getItems().stream()
+            .filter(item -> item.getKey().equals(InstanceConfiguration.SSH_METADATA_KEY))
+            .map(item -> item.getValue())
+            .toArray();
+    assertEquals(sshKeys.length, 1);
+  }
 
   public static InstanceConfiguration.Builder instanceConfigurationBuilder() {
     return InstanceConfiguration.builder()
@@ -189,31 +221,5 @@ public class InstanceConfigurationTest {
         .runAsUser(RUN_AS_USER)
         .oneShot(false)
         .template(null);
-  }
-
-  @Test
-  public void descriptorBootDiskSizeValidation() throws Exception {
-    InstanceConfiguration.DescriptorImpl.setComputeClient(computeClient);
-    InstanceConfiguration.DescriptorImpl d = new InstanceConfiguration.DescriptorImpl();
-
-    // Empty project, image, and credentials should be OK
-    FormValidation fv =
-        d.doCheckBootDiskSizeGbStr(r.jenkins, String.valueOf(BOOT_DISK_SIZE_GB - 1L), "", "", "");
-    assertEquals(FormValidation.Kind.OK, fv.kind);
-
-    fv =
-        d.doCheckBootDiskSizeGbStr(
-            r.jenkins,
-            String.valueOf(BOOT_DISK_SIZE_GB - 1L),
-            PROJECT_ID,
-            BOOT_DISK_IMAGE_NAME,
-            PROJECT_ID);
-    assertEquals(FormValidation.Kind.ERROR, fv.kind);
-
-    fv = d.doCheckBootDiskSizeGbStr(r.jenkins, String.valueOf(BOOT_DISK_SIZE_GB), "", "", "");
-    assertEquals(FormValidation.Kind.OK, fv.kind);
-
-    fv = d.doCheckBootDiskSizeGbStr(r.jenkins, String.valueOf(BOOT_DISK_SIZE_GB + 1L), "", "", "");
-    assertEquals(FormValidation.Kind.OK, fv.kind);
   }
 }
