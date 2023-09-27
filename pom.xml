@@ -269,7 +269,7 @@
       <plugin>
         <groupId>org.projectlombok</groupId>
         <artifactId>lombok-maven-plugin</artifactId>
-        <version>1.18.30.1-SNAPSHOT</version>
+        <version>1.18.30.0-SNAPSHOT</version>
         <configuration>
           <sourceDirectory>${project.basedir}/src/main/java</sourceDirectory>
           <outputDirectory>${delombok.output}</outputDirectory>
