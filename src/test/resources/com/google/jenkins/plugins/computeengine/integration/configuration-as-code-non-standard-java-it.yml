@@ -38,3 +38,4 @@ jenkins:
             bootDiskSizeGbStr:  10
             bootDiskAutoDelete: true
             serviceAccountEmail: "${env.GOOGLE_SA_NAME}@${env.GOOGLE_PROJECT_ID}.iam.gserviceaccount.com"
+            enableSecureBoot: true

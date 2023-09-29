@@ -137,6 +137,11 @@
                         <f:textbox/>
                     </f:entry>
                 </f:section>
+                <f:section title="Security">
+                    <f:entry field="enableSecureBoot" title="${%Enable Secure Boot}">
+                        <f:checkbox/>
+                    </f:entry>
+                </f:section>
             </f:advanced>
         </f:section>
 

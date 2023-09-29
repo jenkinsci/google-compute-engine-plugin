@@ -34,6 +34,7 @@ import com.google.api.services.compute.model.Operation;
 import com.google.api.services.compute.model.Region;
 import com.google.api.services.compute.model.Scheduling;
 import com.google.api.services.compute.model.ServiceAccount;
+import com.google.api.services.compute.model.ShieldedInstanceConfig;
 import com.google.api.services.compute.model.Tags;
 import com.google.api.services.compute.model.Zone;
 import com.google.cloud.graphite.platforms.plugin.client.ClientFactory;
@@ -159,6 +160,7 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
   private Integer launchTimeoutSeconds;
   private Long bootDiskSizeGb;
   private transient Set<LabelAtom> labelSet;
+  private boolean enableSecureBoot;
 
   @Getter(AccessLevel.PROTECTED)
   @Setter(AccessLevel.PROTECTED)
@@ -410,6 +412,7 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
       instance.setGuestAccelerators(accelerators());
       instance.setNetworkInterfaces(networkInterfaces());
       instance.setServiceAccounts(serviceAccounts());
+      instance.setShieldedInstanceConfig(shieldedInstanceConfig());
 
       // optional
       if (notNullOrEmpty(minCpuPlatform)) {
@@ -559,6 +562,12 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
     } else {
       return null;
     }
+  }
+
+  private ShieldedInstanceConfig shieldedInstanceConfig() {
+    ShieldedInstanceConfig shieldedInstanceConfig = new ShieldedInstanceConfig();
+    shieldedInstanceConfig.setEnableSecureBoot(enableSecureBoot);
+    return shieldedInstanceConfig;
   }
 
   @Extension
@@ -1012,6 +1021,7 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
       if (googleLabels != null) {
         instanceConfiguration.appendLabels(this.googleLabels);
       }
+      instanceConfiguration.setEnableSecureBoot(enableSecureBoot);
       return instanceConfiguration;
     }
 

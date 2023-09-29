@@ -59,6 +59,7 @@ public class ConfigAsCodeTest {
     assertEquals("Wrong configurations runAsUser", "jenkins", configuration.getRunAsUser());
     assertEquals("Wrong configurations remoteFs", "agent", configuration.getRemoteFs());
     assertEquals("Wrong configurations javaExecPath", "java", configuration.getJavaExecPath());
+    assertEquals("Wrong configurations enableSecureBoot", true, configuration.isEnableSecureBoot());
   }
 
   @Test

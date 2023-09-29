@@ -135,6 +135,7 @@ class ITUtil {
       String.format("%s@%s.iam.gserviceaccount.com", System.getenv("GOOGLE_SA_NAME"), PROJECT_ID);
   private static final String RETENTION_TIME_MINUTES_STR = "";
   private static final String LAUNCH_TIMEOUT_SECONDS_STR = "";
+  private static final boolean ENABLE_SECURE_BOOT = true;
   static final int SNAPSHOT_TIMEOUT = windows ? 600 : 300;
   private static final GoogleKeyCredential SSH_KEY = GoogleKeyPair.generate(RUN_AS_USER);
   static final String SSH_PRIVATE_KEY = Secret.toString(SSH_KEY.getPrivateKey());
@@ -349,7 +350,8 @@ class ITUtil {
         .acceleratorConfiguration(new AcceleratorConfiguration(ACCELERATOR_NAME, ACCELERATOR_COUNT))
         .runAsUser(RUN_AS_USER)
         .startupScript(STARTUP_SCRIPT)
-        .javaExecPath("java -Dhudson.remoting.Launcher.pingIntervalSec=-1");
+        .javaExecPath("java -Dhudson.remoting.Launcher.pingIntervalSec=-1")
+        .enableSecureBoot(ENABLE_SECURE_BOOT);
   }
 
   /*

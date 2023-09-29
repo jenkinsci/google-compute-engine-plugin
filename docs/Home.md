@@ -116,6 +116,7 @@ Instance configurations have many options that were not listed above. A few of t
 * GPUs - attach 1 or more GPUs to the instance. For more info, visit the GCE GPU docs.
 * Service Account E-mail - sets the service account that the instance will be able to
   access from metadata. For more info, review the service account documentation.
+* Enable Secure Boot - Enables the Shielded VM Secure Boot option which helps protect against boot-level and kernel-level malware and rootkits.
 
 
 # No delay provisioning
