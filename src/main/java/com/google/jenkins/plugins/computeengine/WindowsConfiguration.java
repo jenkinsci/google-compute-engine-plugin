@@ -28,7 +28,6 @@ import com.google.common.base.Strings;
 import hudson.Extension;
 import hudson.model.Describable;
 import hudson.model.Descriptor;
-import hudson.model.Item;
 import hudson.security.ACL;
 import hudson.util.FormValidation;
 import hudson.util.ListBoxModel;
@@ -111,10 +110,7 @@ public class WindowsConfiguration implements Describable<WindowsConfiguration>, 
   @Extension
   public static final class DescriptorImpl extends Descriptor<WindowsConfiguration> {
     public ListBoxModel doFillPasswordCredentialsIdItems(@AncestorInPath Jenkins context) {
-      checkPermissions();
-      if (context == null || !context.hasPermission(Item.CONFIGURE)) {
-        return new StandardListBoxModel();
-      }
+      checkPermissions(context, Jenkins.ADMINISTER);
       return new StandardListBoxModel()
           .withEmptySelection()
           .withMatching(
@@ -127,10 +123,7 @@ public class WindowsConfiguration implements Describable<WindowsConfiguration>, 
     }
 
     public ListBoxModel doFillPrivateKeyCredentialsIdItems(@AncestorInPath Jenkins context) {
-      checkPermissions();
-      if (context == null || !context.hasPermission(Item.CONFIGURE)) {
-        return new StandardUsernameListBoxModel();
-      }
+      checkPermissions(context, Jenkins.ADMINISTER);
       return new StandardUsernameListBoxModel()
           .withEmptySelection()
           .withMatching(
@@ -142,7 +135,6 @@ public class WindowsConfiguration implements Describable<WindowsConfiguration>, 
     public FormValidation doCheckPrivateKeyCredentialsId(
         @QueryParameter String value,
         @QueryParameter("passwordCredentialsId") String passwordCredentialsId) {
-      checkPermissions();
       if (Strings.isNullOrEmpty(value) && Strings.isNullOrEmpty(passwordCredentialsId)) {
         return FormValidation.error("A password or private key credential is required");
       }

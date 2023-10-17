@@ -640,7 +640,6 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
     }
 
     public FormValidation doCheckNetworkTags(@QueryParameter String value) {
-      checkPermissions();
       if (value == null || value.isEmpty()) {
         return FormValidation.ok();
       }
@@ -657,7 +656,6 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
     }
 
     public FormValidation doCheckNamePrefix(@QueryParameter String value) {
-      checkPermissions();
       if (value == null || value.isEmpty()) {
         return FormValidation.error("A prefix is required");
       }
@@ -675,7 +673,6 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
     }
 
     public FormValidation doCheckDescription(@QueryParameter String value) {
-      checkPermissions();
       if (value == null || value.isEmpty()) {
         return FormValidation.error("A description is required");
       }
@@ -686,7 +683,7 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
         @AncestorInPath Jenkins context,
         @QueryParameter("projectId") @RelativePath("..") final String projectId,
         @QueryParameter("credentialsId") @RelativePath("..") final String credentialsId) {
-      checkPermissions();
+      checkPermissions(Jenkins.get(), Jenkins.ADMINISTER);
       ListBoxModel items = new ListBoxModel();
       items.add("");
       try {
@@ -708,7 +705,7 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
         @AncestorInPath Jenkins context,
         @QueryParameter("projectId") @RelativePath("..") final String projectId,
         @QueryParameter("credentialsId") @RelativePath("..") final String credentialsId) {
-      checkPermissions();
+      checkPermissions(Jenkins.get(), Jenkins.ADMINISTER);
       ListBoxModel items = new ListBoxModel();
       items.add("");
       try {
@@ -727,8 +724,7 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
     }
 
     public FormValidation doCheckRegion(@QueryParameter String value) {
-      checkPermissions();
-      if (value.equals("")) {
+      if (StringUtils.isEmpty(value)) {
         return FormValidation.error("Please select a region...");
       }
       return FormValidation.ok();
@@ -739,7 +735,7 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
         @QueryParameter("projectId") @RelativePath("..") final String projectId,
         @QueryParameter("region") final String region,
         @QueryParameter("credentialsId") @RelativePath("..") final String credentialsId) {
-      checkPermissions();
+      checkPermissions(Jenkins.get(), Jenkins.ADMINISTER);
       ListBoxModel items = new ListBoxModel();
       items.add("");
       try {
@@ -761,8 +757,7 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
     }
 
     public FormValidation doCheckZone(@QueryParameter String value) {
-      checkPermissions();
-      if (value.equals("")) {
+      if (StringUtils.isEmpty(value)) {
         return FormValidation.error("Please select a zone...");
       }
       return FormValidation.ok();
@@ -773,7 +768,7 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
         @QueryParameter("projectId") @RelativePath("..") final String projectId,
         @QueryParameter("zone") final String zone,
         @QueryParameter("credentialsId") @RelativePath("..") final String credentialsId) {
-      checkPermissions();
+      checkPermissions(Jenkins.get(), Jenkins.ADMINISTER);
       ListBoxModel items = new ListBoxModel();
       items.add("");
       try {
@@ -795,8 +790,7 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
     }
 
     public FormValidation doCheckMachineType(@QueryParameter String value) {
-      checkPermissions();
-      if (value.equals("")) {
+      if (StringUtils.isEmpty(value)) {
         return FormValidation.error("Please select a machine type...");
       }
       return FormValidation.ok();
@@ -807,7 +801,7 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
         @QueryParameter("projectId") @RelativePath("..") final String projectId,
         @QueryParameter("zone") final String zone,
         @QueryParameter("credentialsId") @RelativePath("..") final String credentialsId) {
-      checkPermissions();
+      checkPermissions(Jenkins.get(), Jenkins.ADMINISTER);
       ListBoxModel items = new ListBoxModel();
       items.add("");
       try {
@@ -833,7 +827,7 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
         @QueryParameter("projectId") @RelativePath("..") final String projectId,
         @QueryParameter("zone") String zone,
         @QueryParameter("credentialsId") @RelativePath("..") final String credentialsId) {
-      checkPermissions();
+      checkPermissions(Jenkins.get(), Jenkins.ADMINISTER);
       ListBoxModel items = new ListBoxModel();
       try {
         ComputeClient compute = computeClient(context, credentialsId);
@@ -856,7 +850,7 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
     public ListBoxModel doFillBootDiskSourceImageProjectItems(
         @AncestorInPath Jenkins context,
         @QueryParameter("projectId") @RelativePath("..") final String projectId) {
-      checkPermissions();
+      checkPermissions(Jenkins.get(), Jenkins.ADMINISTER);
       ListBoxModel items = new ListBoxModel();
       items.add("");
       items.add(projectId);
@@ -867,8 +861,7 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
     }
 
     public FormValidation doCheckBootDiskSourceImageProject(@QueryParameter String value) {
-      checkPermissions();
-      if (value.equals("")) {
+      if (StringUtils.isEmpty(value)) {
         return FormValidation.warning("Please select source image project...");
       }
       return FormValidation.ok();
@@ -878,7 +871,7 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
         @AncestorInPath Jenkins context,
         @QueryParameter("bootDiskSourceImageProject") final String projectId,
         @QueryParameter("credentialsId") @RelativePath("..") final String credentialsId) {
-      checkPermissions();
+      checkPermissions(Jenkins.get(), Jenkins.ADMINISTER);
       ListBoxModel items = new ListBoxModel();
       items.add("");
       try {
@@ -899,8 +892,7 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
     }
 
     public FormValidation doCheckBootDiskSourceImageName(@QueryParameter String value) {
-      checkPermissions();
-      if (value.equals("")) {
+      if (StringUtils.isEmpty(value)) {
         return FormValidation.warning("Please select source image...");
       }
       return FormValidation.ok();
@@ -912,7 +904,7 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
         @QueryParameter("bootDiskSourceImageProject") final String projectId,
         @QueryParameter("bootDiskSourceImageName") final String imageName,
         @QueryParameter("credentialsId") @RelativePath("..") final String credentialsId) {
-      checkPermissions();
+      checkPermissions(Jenkins.get(), Jenkins.ADMINISTER);
       if (Strings.isNullOrEmpty(credentialsId)
           || Strings.isNullOrEmpty(projectId)
           || Strings.isNullOrEmpty(imageName)) return FormValidation.ok();
@@ -936,7 +928,6 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
 
     public FormValidation doCheckLabelString(
         @QueryParameter String value, @QueryParameter Node.Mode mode) {
-      checkPermissions();
       if (mode == Node.Mode.EXCLUSIVE && (value == null || value.trim().isEmpty())) {
         return FormValidation.warning(
             "You may want to assign labels to this node;"
@@ -949,7 +940,6 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
         @AncestorInPath Jenkins context,
         @QueryParameter boolean value,
         @QueryParameter("oneShot") boolean oneShot) {
-      checkPermissions();
       if (!oneShot && value) {
         return FormValidation.error(Messages.InstanceConfiguration_SnapshotConfigError());
       }
@@ -960,7 +950,6 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
         @AncestorInPath Jenkins context,
         @QueryParameter String value,
         @QueryParameter("oneShot") boolean oneShot) {
-      checkPermissions();
       int numExecutors = intOrDefault(value, DEFAULT_NUM_EXECUTORS);
       if (numExecutors < 1) {
         return FormValidation.error(

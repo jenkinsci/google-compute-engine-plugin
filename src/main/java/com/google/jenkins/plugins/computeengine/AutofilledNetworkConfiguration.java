@@ -29,6 +29,7 @@ import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import jenkins.model.Jenkins;
+import org.apache.commons.lang.StringUtils;
 import org.kohsuke.stapler.AncestorInPath;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.QueryParameter;
@@ -56,7 +57,7 @@ public class AutofilledNetworkConfiguration extends NetworkConfiguration {
         @AncestorInPath Jenkins context,
         @QueryParameter("projectId") @RelativePath("../..") final String projectId,
         @QueryParameter("credentialsId") @RelativePath("../..") final String credentialsId) {
-      checkPermissions();
+      checkPermissions(Jenkins.get(), Jenkins.ADMINISTER);
       ListBoxModel items = new ListBoxModel();
       items.add("");
 
@@ -78,8 +79,7 @@ public class AutofilledNetworkConfiguration extends NetworkConfiguration {
     }
 
     public FormValidation doCheckNetwork(@QueryParameter String value) {
-      checkPermissions();
-      if (value.equals("")) {
+      if (StringUtils.isEmpty(value)) {
         return FormValidation.error("Please select a network...");
       }
       return FormValidation.ok();
@@ -91,8 +91,8 @@ public class AutofilledNetworkConfiguration extends NetworkConfiguration {
         @QueryParameter("region") @RelativePath("..") final String region,
         @QueryParameter("projectId") @RelativePath("../..") final String projectId,
         @QueryParameter("credentialsId") @RelativePath("../..") final String credentialsId) {
+      checkPermissions(Jenkins.get(), Jenkins.ADMINISTER);
       ListBoxModel items = new ListBoxModel();
-      checkPermissions();
 
       if (Strings.isNullOrEmpty(region)) {
         return items;
@@ -105,7 +105,7 @@ public class AutofilledNetworkConfiguration extends NetworkConfiguration {
         if (subnetworks.size() <= 1) {
           items.add(new ListBoxModel.Option("", "", false));
         }
-        if (subnetworks.size() == 0) {
+        if (subnetworks.isEmpty()) {
           items.add(new ListBoxModel.Option("default", "default", true));
           return items;
         }
@@ -124,7 +124,6 @@ public class AutofilledNetworkConfiguration extends NetworkConfiguration {
     }
 
     public FormValidation doCheckSubnetwork(@QueryParameter String value) {
-      checkPermissions();
       if (value.isEmpty()) {
         return FormValidation.error("Please select a subnetwork...");
       }
