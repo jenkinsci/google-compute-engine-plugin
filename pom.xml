@@ -92,6 +92,11 @@
         <type>pom</type>
         <scope>import</scope>
       </dependency>
+      <dependency> <!-- until it is back in the parent -->
+        <groupId>org.jenkins-ci.plugins</groupId>
+        <artifactId>google-oauth-plugin</artifactId>
+        <version>1.1.1</version>
+      </dependency>
     </dependencies>
   </dependencyManagement>
   <dependencies>
@@ -153,11 +158,6 @@
     <dependency>
       <groupId>io.jenkins.plugins</groupId>
       <artifactId>commons-text-api</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>joda-time</groupId>
-      <artifactId>joda-time</artifactId>
-      <version>2.11.1</version>
     </dependency>
     <dependency>
       <groupId>com.google.cloud.graphite</groupId>
