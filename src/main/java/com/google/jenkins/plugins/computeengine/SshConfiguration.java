@@ -26,7 +26,6 @@ import com.google.common.base.Strings;
 import hudson.Extension;
 import hudson.model.Describable;
 import hudson.model.Descriptor;
-import hudson.model.Item;
 import hudson.security.ACL;
 import hudson.util.FormValidation;
 import hudson.util.ListBoxModel;
@@ -95,10 +94,7 @@ public class SshConfiguration implements Describable<SshConfiguration>, Serializ
 
     public ListBoxModel doFillCustomPrivateKeyCredentialsIdItems(
         @AncestorInPath Jenkins context, @QueryParameter String customPrivateKeyCredentialsId) {
-      checkPermissions();
-      if (context == null || !context.hasPermission(Item.CONFIGURE)) {
-        return new StandardListBoxModel();
-      }
+      checkPermissions(context, Jenkins.ADMINISTER);
 
       StandardListBoxModel result = new StandardListBoxModel();
 
@@ -116,7 +112,7 @@ public class SshConfiguration implements Describable<SshConfiguration>, Serializ
         @QueryParameter String value,
         @QueryParameter("customPrivateKeyCredentialsId") String customPrivateKeyCredentialsId)
         throws IOException {
-      checkPermissions();
+      checkPermissions(Jenkins.get(), Jenkins.ADMINISTER);
 
       if (Strings.isNullOrEmpty(value) && Strings.isNullOrEmpty(customPrivateKeyCredentialsId)) {
         return FormValidation.error("An SSH private key credential is required");

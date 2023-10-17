@@ -20,8 +20,12 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertTrue;
 
+import hudson.ExtensionList;
 import hudson.util.FormValidation;
+import org.junit.Rule;
 import org.junit.Test;
+import org.jvnet.hudson.test.JenkinsRule;
+import org.jvnet.hudson.test.WithoutJenkins;
 
 public class SharedVpcNetworkConfigurationTest {
   public final String PROJECT_ID = "test-project";
@@ -29,7 +33,10 @@ public class SharedVpcNetworkConfigurationTest {
   public final String BAD_SUBNETWORK_NAME = "projects/project/subnetworks/test-subnetwork";
   public final String REGION = "test-region";
 
+  @Rule public JenkinsRule r = new JenkinsRule();
+
   @Test
+  @WithoutJenkins
   public void construction() {
     // Empty constructor
     SharedVpcNetworkConfiguration anc =
@@ -44,7 +51,7 @@ public class SharedVpcNetworkConfigurationTest {
   @Test
   public void descriptorSubnetwork() {
     SharedVpcNetworkConfiguration.DescriptorImpl d =
-        new SharedVpcNetworkConfiguration.DescriptorImpl();
+        ExtensionList.lookupSingleton(SharedVpcNetworkConfiguration.DescriptorImpl.class);
 
     // Subnetwork with slash returns an error
     FormValidation fv = d.doCheckSubnetworkName(BAD_SUBNETWORK_NAME);
@@ -66,7 +73,7 @@ public class SharedVpcNetworkConfigurationTest {
   @Test
   public void descriptorProjectId() {
     SharedVpcNetworkConfiguration.DescriptorImpl d =
-        new SharedVpcNetworkConfiguration.DescriptorImpl();
+        ExtensionList.lookupSingleton(SharedVpcNetworkConfiguration.DescriptorImpl.class);
 
     // Empty project returns an error
     FormValidation fv = d.doCheckProjectId("");
@@ -84,7 +91,7 @@ public class SharedVpcNetworkConfigurationTest {
   @Test
   public void descriptorRegion() {
     SharedVpcNetworkConfiguration.DescriptorImpl d =
-        new SharedVpcNetworkConfiguration.DescriptorImpl();
+        ExtensionList.lookupSingleton(SharedVpcNetworkConfiguration.DescriptorImpl.class);
 
     // All empty params returns an error
     FormValidation fv = d.doCheckRegion("region-textbox", "");
