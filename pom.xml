@@ -92,7 +92,8 @@
         <type>pom</type>
         <scope>import</scope>
       </dependency>
-      <dependency> <!-- until it is back in the parent -->
+      <!-- TODO: Remove the version here when it is integrated in the BOM -->
+      <dependency>
         <groupId>org.jenkins-ci.plugins</groupId>
         <artifactId>google-oauth-plugin</artifactId>
         <version>1.1.1</version>
