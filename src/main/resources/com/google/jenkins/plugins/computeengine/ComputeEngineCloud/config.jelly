@@ -32,6 +32,9 @@
     <f:entry title="${%No delay provisioning}" field="noDelayProvisioning">
       <f:checkbox/>
     </f:entry>
+    <f:entry title="${%JNLP Support}" field="jnlpSupport">
+      <f:checkbox/>
+    </f:entry>
     <f:entry title="${%Instance Configurations}"
              description="${%List of instance configurations that can be launched as Jenkins agents}">
         <f:repeatable field="configurations">
