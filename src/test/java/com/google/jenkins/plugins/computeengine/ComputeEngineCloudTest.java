@@ -23,6 +23,7 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertThrows;
 
 import com.cloudbees.plugins.credentials.Credentials;
+import com.cloudbees.plugins.credentials.CredentialsScope;
 import com.cloudbees.plugins.credentials.CredentialsStore;
 import com.cloudbees.plugins.credentials.SecretBytes;
 import com.cloudbees.plugins.credentials.SystemCredentialsProvider;
@@ -61,17 +62,18 @@ public class ComputeEngineCloudTest {
     serviceAccountConfig.setSecretJsonKey(bytes);
     assertNotNull(serviceAccountConfig.getAccountId());
     // Create a credential
-    Credentials c =
-        (Credentials) new GoogleRobotPrivateKeyCredentials(ACCOUNT_ID, serviceAccountConfig, null);
+    final String credentialId = "test-credential-id";
+    GoogleRobotPrivateKeyCredentials c = new GoogleRobotPrivateKeyCredentials(CredentialsScope.GLOBAL, credentialId, ACCOUNT_ID,
+                                                                              serviceAccountConfig, null);
     CredentialsStore store = new SystemCredentialsProvider.ProviderImpl().getStore(r.jenkins);
+    assertNotNull(store);
     store.addCredentials(Domain.global(), c);
 
     // Add a few InstanceConfigurations
     List<InstanceConfiguration> ics = new ArrayList<>();
     ics.add(instanceConfigurationBuilder().build());
     ics.add(instanceConfigurationBuilder().build());
-    ComputeEngineCloud cloud =
-        new ComputeEngineCloud(CLOUD_NAME, PROJECT_ID, PROJECT_ID, INSTANCE_CAP_STR);
+    ComputeEngineCloud cloud = new ComputeEngineCloud(CLOUD_NAME, PROJECT_ID, credentialId, INSTANCE_CAP_STR);
     cloud.setInstanceId(INSTANCE_ID);
     cloud.setConfigurations(ics);
 
