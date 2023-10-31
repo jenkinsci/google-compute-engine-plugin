@@ -23,7 +23,7 @@
   </parent>
 
   <artifactId>google-compute-engine</artifactId>
-  <version>${changelist}</version>
+  <version>${revision}.${changelist}</version>
   <packaging>hpi</packaging>
 
   <name>Google Compute Engine Plugin</name>
