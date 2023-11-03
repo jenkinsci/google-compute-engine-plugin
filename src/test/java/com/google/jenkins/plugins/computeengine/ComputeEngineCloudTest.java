@@ -63,8 +63,9 @@ public class ComputeEngineCloudTest {
     assertNotNull(serviceAccountConfig.getAccountId());
     // Create a credential
     final String credentialId = "test-credential-id";
-    GoogleRobotPrivateKeyCredentials c = new GoogleRobotPrivateKeyCredentials(CredentialsScope.GLOBAL, credentialId, ACCOUNT_ID,
-                                                                              serviceAccountConfig, null);
+    GoogleRobotPrivateKeyCredentials c =
+        new GoogleRobotPrivateKeyCredentials(
+            CredentialsScope.GLOBAL, credentialId, ACCOUNT_ID, serviceAccountConfig, null);
     CredentialsStore store = new SystemCredentialsProvider.ProviderImpl().getStore(r.jenkins);
     assertNotNull(store);
     store.addCredentials(Domain.global(), c);
@@ -73,7 +74,8 @@ public class ComputeEngineCloudTest {
     List<InstanceConfiguration> ics = new ArrayList<>();
     ics.add(instanceConfigurationBuilder().build());
     ics.add(instanceConfigurationBuilder().build());
-    ComputeEngineCloud cloud = new ComputeEngineCloud(CLOUD_NAME, PROJECT_ID, credentialId, INSTANCE_CAP_STR);
+    ComputeEngineCloud cloud =
+        new ComputeEngineCloud(CLOUD_NAME, PROJECT_ID, credentialId, INSTANCE_CAP_STR);
     cloud.setInstanceId(INSTANCE_ID);
     cloud.setConfigurations(ics);
 
