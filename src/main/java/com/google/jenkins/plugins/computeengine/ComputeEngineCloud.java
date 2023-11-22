@@ -442,10 +442,11 @@ public class ComputeEngineCloud extends AbstractCloudImpl {
   /**
    * Ensures the executing user has the specified permissions.
    *
-   * @param context The context on which to check the permissions, if <code>null</code> defaults
-   *     to {@link Jenkins} And if {@link Jenkins} is also <code>null</code> then no permission
-   *     checks will be performed.
-   * @param permissions The list of permissions to be checked. If empty, defaults to Jenkins.ADMINISTER.
+   * @param context The context on which to check the permissions, if <code>null</code> defaults to
+   *     {@link Jenkins} And if {@link Jenkins} is also <code>null</code> then no permission checks
+   *     will be performed.
+   * @param permissions The list of permissions to be checked. If empty, defaults to
+   *     Jenkins.ADMINISTER.
    * @throws AccessDeniedException If the user lacks the proper permissions.
    * @see Jenkins#get()
    */
