@@ -23,7 +23,7 @@
   </parent>
 
   <artifactId>google-compute-engine</artifactId>
-  <version>4.3.17.1</version>
+  <version>4.3.17.2-SNAPSHOT</version>
   <packaging>hpi</packaging>
 
   <name>Google Compute Engine Plugin</name>
