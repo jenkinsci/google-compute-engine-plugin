@@ -80,6 +80,7 @@
     <hpi.compatibleSinceVersion>4.1.0</hpi.compatibleSinceVersion>
     <concurrency>10</concurrency>
     <it.runOrder>balanced</it.runOrder>
+    <lombok.version>1.18.30</lombok.version>
     <delombok.output>${project.build.directory}/delombok</delombok.output>
   </properties>
 
@@ -187,7 +188,7 @@
     <dependency>
       <groupId>org.projectlombok</groupId>
       <artifactId>lombok</artifactId>
-      <version>1.18.30</version>
+      <version>${lombok.version}</version>
       <scope>provided</scope>
     </dependency>
     <!-- gcp-client (abandoned?) actually depends on these libraries in _compile_ scope, so they must be bundled in the plugin. -->
@@ -268,12 +269,22 @@
       <plugin>
         <groupId>org.projectlombok</groupId>
         <artifactId>lombok-maven-plugin</artifactId>
-        <version>1.18.30.0-SNAPSHOT</version>
+        <version>1.18.20.0</version>
         <configuration>
           <sourceDirectory>${project.basedir}/src/main/java</sourceDirectory>
           <outputDirectory>${delombok.output}</outputDirectory>
           <addOutputDirectory>false</addOutputDirectory>
         </configuration>
+        <dependencies>
+          <dependency>
+            <!--
+              TODO: Until https://github.com/awhitford/lombok.maven/pull/180 is merged and release
+            -->
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+            <version>${lombok.version}</version>
+          </dependency>
+        </dependencies>
         <executions>
           <execution>
             <phase>generate-sources</phase>
