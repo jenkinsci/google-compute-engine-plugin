@@ -21,6 +21,7 @@ import com.google.common.base.Preconditions;
 import com.trilead.ssh2.Connection;
 import hudson.model.TaskListener;
 import java.io.IOException;
+import java.io.PrintStream;
 import java.util.Optional;
 import java.util.logging.Logger;
 
@@ -37,8 +38,16 @@ public class ComputeEngineWindowsLauncher extends ComputeEngineComputerLauncher 
   private static int bootstrapAuthSleepMs = 15000;
 
   public ComputeEngineWindowsLauncher(
-      String cloudName, Operation insertOperation, boolean useInternalAddress) {
-    super(cloudName, insertOperation.getName(), insertOperation.getZone(), useInternalAddress);
+      String cloudName,
+      Operation insertOperation,
+      boolean useInternalAddress,
+      boolean waitForStartupScript) {
+    super(
+        cloudName,
+        insertOperation.getName(),
+        insertOperation.getZone(),
+        useInternalAddress,
+        waitForStartupScript);
   }
 
   protected Logger getLogger() {
@@ -126,6 +135,13 @@ public class ComputeEngineWindowsLauncher extends ComputeEngineComputerLauncher 
       return Optional.empty();
     }
     return Optional.ofNullable(bootstrapConn);
+  }
+
+  @Override
+  protected boolean checkStartupScriptFinished(
+      ComputeEngineComputer computer, Connection conn, PrintStream logger, TaskListener listener) {
+    // Not implemented
+    return true;
   }
 
   @Override

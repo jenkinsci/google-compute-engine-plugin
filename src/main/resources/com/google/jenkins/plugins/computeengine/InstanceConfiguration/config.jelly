@@ -98,6 +98,9 @@
                 <f:entry field="startupScript" title="${%Startup script}">
                     <f:textarea/>
                 </f:entry>
+                <f:entry field="waitForStartupScript" title="${%Wait for startup script to finish?}">
+                    <f:checkbox/>
+                </f:entry>
                 <f:optionalProperty field="acceleratorConfiguration" title="GPUs">
                     <st:include page="config.jelly" class="${descriptor.clazz}"/>
                 </f:optionalProperty>

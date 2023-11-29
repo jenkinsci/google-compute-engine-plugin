@@ -25,6 +25,7 @@ jenkins:
             preemptible:        false
             minCpuPlatform:     '' # tried not setting, added when 'saved' in UI
             startupScript:      "#!/bin/bash\n/etc/init.d/ssh stop\necho \"deb http://http.debian.net/debian stretch-backports main\" | \\\n      sudo tee --append /etc/apt/sources.list > /dev/null\napt-get -y update\napt-get -y install -t stretch-backports openjdk-8-jdk\nupdate-java-alternatives -s java-1.8.0-openjdk-amd64\n/etc/init.d/ssh start" 
+            waitForStartupScript: true
             networkConfiguration:
               autofilled:
                 network:        default 

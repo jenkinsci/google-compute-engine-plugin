@@ -26,6 +26,7 @@ jenkins:
             preemptible:        false
             minCpuPlatform:     '' # tried not setting, added when 'saved' in UI
             startupScript:      '' # tried not setting, added when 'saved' in UI
+            waitForStartupScript: false
             networkConfiguration:
               sharedVpc:
                 projectId:      gce-jenkins-cloud-123456

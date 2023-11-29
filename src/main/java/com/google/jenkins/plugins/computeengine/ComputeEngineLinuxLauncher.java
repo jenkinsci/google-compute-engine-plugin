@@ -24,6 +24,7 @@ import com.trilead.ssh2.Connection;
 import hudson.model.TaskListener;
 import hudson.util.Secret;
 import java.io.IOException;
+import java.io.PrintStream;
 import java.util.Optional;
 import java.util.logging.Logger;
 
@@ -34,8 +35,16 @@ public class ComputeEngineLinuxLauncher extends ComputeEngineComputerLauncher {
   private static int bootstrapAuthSleepMs = 15000;
 
   public ComputeEngineLinuxLauncher(
-      String cloudName, Operation insertOperation, boolean useInternalAddress) {
-    super(cloudName, insertOperation.getName(), insertOperation.getZone(), useInternalAddress);
+      String cloudName,
+      Operation insertOperation,
+      boolean useInternalAddress,
+      boolean waitForStartupScript) {
+    super(
+        cloudName,
+        insertOperation.getName(),
+        insertOperation.getZone(),
+        useInternalAddress,
+        waitForStartupScript);
   }
 
   protected Logger getLogger() {
@@ -114,6 +123,29 @@ public class ComputeEngineLinuxLauncher extends ComputeEngineComputerLauncher {
       return Optional.empty();
     }
     return Optional.of(bootstrapConn);
+  }
+
+  @Override
+  protected boolean checkStartupScriptFinished(
+      ComputeEngineComputer computer, Connection conn, PrintStream logger, TaskListener listener) {
+    try {
+      // A successful command indicates service is still running
+      if (!testCommand(
+          computer,
+          conn,
+          // default value will be 0 until it finishes
+          "exit $(systemctl show google-startup-scripts --property ExecMainExitTimestampMonotonic | cut -d \"=\" -f 2)",
+          logger,
+          listener)) {
+        return true;
+      }
+    } catch (IOException | InterruptedException ex) {
+      logException(computer, listener, "Failed to check google-startup-scripts: ", ex);
+      return false;
+    }
+
+    logWarning(computer, listener, "google-startup-scripts has not finished");
+    return false;
   }
 
   @Override
