@@ -94,7 +94,7 @@ public class AutofilledNetworkConfigurationTest {
 
   @Test
   public void testDoFillSubnetworkItemsEmptyRegion() throws IOException {
-    DescriptorImpl descriptor = subnetworkFillDescriptorSetup(ImmutableList.of(SUBNETWORK_NAME));
+    DescriptorImpl descriptor = subnetworkFillDescriptorSetup2(ImmutableList.of(SUBNETWORK_NAME));
     ListBoxModel got =
         descriptor.doFillSubnetworkItems(r.jenkins, "", "", PROJECT_ID, CREDENTIALS_ID);
     Assert.assertEquals(0, got.size());
@@ -157,6 +157,16 @@ public class AutofilledNetworkConfigurationTest {
     ComputeClient computeClient = Mockito.mock(ComputeClient.class);
     Mockito.when(computeClient.listSubnetworks(anyString(), anyString(), anyString()))
         .thenReturn(ImmutableList.copyOf(subnetworks));
+    DescriptorImpl.setComputeClient(computeClient);
+    return new DescriptorImpl();
+  }
+
+  private DescriptorImpl subnetworkFillDescriptorSetup2(List<String> subnetworkNames)
+      throws IOException {
+    List<Subnetwork> subnetworks = new ArrayList<>();
+    subnetworkNames.forEach(
+        subnet -> subnetworks.add(new Subnetwork().setName(subnet).setSelfLink(subnet)));
+    ComputeClient computeClient = Mockito.mock(ComputeClient.class);
     DescriptorImpl.setComputeClient(computeClient);
     return new DescriptorImpl();
   }
