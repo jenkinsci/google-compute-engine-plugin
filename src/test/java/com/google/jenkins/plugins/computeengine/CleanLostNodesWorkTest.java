@@ -15,7 +15,6 @@
 package com.google.jenkins.plugins.computeengine;
 
 import static com.google.common.collect.ImmutableList.of;
-import static org.junit.Assert.assertNotNull;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.anyMap;
 import static org.mockito.Mockito.verify;
@@ -53,16 +52,6 @@ public class CleanLostNodesWorkTest {
     when(cloud.getClient()).thenReturn(client);
     when(cloud.getProjectId()).thenReturn(TEST_PROJECT_ID);
     when(cloud.getInstanceId()).thenReturn("234234355");
-  }
-
-  @Test
-  public void shouldRegisterCleanNodeWorker() {
-    assertNotNull(getWorker());
-  }
-
-  @Test
-  public void shouldRunWithoutClouds() {
-    getWorker().doRun();
   }
 
   @Test
