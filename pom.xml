@@ -143,6 +143,10 @@
       <artifactId>google-http-client</artifactId>
       <version>${google.http.version}</version>
       <exclusions>
+        <exclusion>
+          <groupId>com.google.code.findbugs</groupId>
+          <artifactId>jsr305</artifactId>
+        </exclusion>
         <!-- Provided by Jenkins core -->
         <exclusion>
           <groupId>com.google.guava</groupId>
