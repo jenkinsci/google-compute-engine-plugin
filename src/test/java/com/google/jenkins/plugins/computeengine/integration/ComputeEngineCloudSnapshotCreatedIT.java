@@ -62,81 +62,79 @@ import org.jvnet.hudson.test.JenkinsRule;
  * build fails.
  */
 public class ComputeEngineCloudSnapshotCreatedIT {
-  private static Logger log = Logger.getLogger(ComputeEngineCloudSnapshotCreatedIT.class.getName());
+    private static Logger log = Logger.getLogger(ComputeEngineCloudSnapshotCreatedIT.class.getName());
 
-  @ClassRule
-  public static Timeout timeout = new Timeout(15 * TEST_TIMEOUT_MULTIPLIER, TimeUnit.MINUTES);
+    @ClassRule
+    public static Timeout timeout = new Timeout(15 * TEST_TIMEOUT_MULTIPLIER, TimeUnit.MINUTES);
 
-  @ClassRule public static JenkinsRule jenkinsRule = new JenkinsRule();
+    @ClassRule
+    public static JenkinsRule jenkinsRule = new JenkinsRule();
 
-  private static ComputeClient client;
-  private static Map<String, String> label = getLabel(ComputeEngineCloudSnapshotCreatedIT.class);
-  private static Snapshot createdSnapshot = null;
+    private static ComputeClient client;
+    private static Map<String, String> label = getLabel(ComputeEngineCloudSnapshotCreatedIT.class);
+    private static Snapshot createdSnapshot = null;
 
-  @BeforeClass
-  public static void init() throws Exception {
-    log.info("init");
-    initCredentials(jenkinsRule);
-    ComputeEngineCloud cloud = initCloud(jenkinsRule);
-    client = initClient(jenkinsRule, label, log);
+    @BeforeClass
+    public static void init() throws Exception {
+        log.info("init");
+        initCredentials(jenkinsRule);
+        ComputeEngineCloud cloud = initCloud(jenkinsRule);
+        client = initClient(jenkinsRule, label, log);
 
-    InstanceConfiguration instanceConfiguration =
-        instanceConfigurationBuilder()
-            .numExecutorsStr(NUM_EXECUTORS)
-            .labels(SNAPSHOT_LABEL)
-            .oneShot(true)
-            .createSnapshot(true)
-            .template(NULL_TEMPLATE)
-            .googleLabels(label)
-            .build();
+        InstanceConfiguration instanceConfiguration = instanceConfigurationBuilder()
+                .numExecutorsStr(NUM_EXECUTORS)
+                .labels(SNAPSHOT_LABEL)
+                .oneShot(true)
+                .createSnapshot(true)
+                .template(NULL_TEMPLATE)
+                .googleLabels(label)
+                .build();
 
-    cloud.setConfigurations(ImmutableList.of(instanceConfiguration));
-    assertTrue(
-        cloud
-            .getInstanceConfigurationByDescription(instanceConfiguration.getDescription())
-            .isCreateSnapshot());
+        cloud.setConfigurations(ImmutableList.of(instanceConfiguration));
+        assertTrue(cloud.getInstanceConfigurationByDescription(instanceConfiguration.getDescription())
+                .isCreateSnapshot());
 
-    FreeStyleProject project = jenkinsRule.createFreeStyleProject();
-    Builder step = execute(Commands.EXIT, "1");
-    project.getBuildersList().add(step);
-    project.setAssignedLabel(new LabelAtom(SNAPSHOT_LABEL));
+        FreeStyleProject project = jenkinsRule.createFreeStyleProject();
+        Builder step = execute(Commands.EXIT, "1");
+        project.getBuildersList().add(step);
+        project.setAssignedLabel(new LabelAtom(SNAPSHOT_LABEL));
 
-    FreeStyleBuild build = jenkinsRule.assertBuildStatus(Result.FAILURE, project.scheduleBuild2(0));
-    Node worker = build.getBuiltOn();
-    assertNotNull(worker);
+        FreeStyleBuild build = jenkinsRule.assertBuildStatus(Result.FAILURE, project.scheduleBuild2(0));
+        Node worker = build.getBuiltOn();
+        assertNotNull(worker);
 
-    // Need time for one-shot instance to terminate and create the snapshot
-    Awaitility.await()
-        .timeout(SNAPSHOT_TIMEOUT, TimeUnit.SECONDS)
-        .pollInterval(10, TimeUnit.SECONDS)
-        .until(() -> jenkinsRule.jenkins.getNode(worker.getNodeName()) == null);
+        // Need time for one-shot instance to terminate and create the snapshot
+        Awaitility.await()
+                .timeout(SNAPSHOT_TIMEOUT, TimeUnit.SECONDS)
+                .pollInterval(10, TimeUnit.SECONDS)
+                .until(() -> jenkinsRule.jenkins.getNode(worker.getNodeName()) == null);
 
-    createdSnapshot = client.getSnapshot(PROJECT_ID, worker.getNodeName());
-  }
-
-  @AfterClass
-  public static void teardown() throws IOException {
-    if (createdSnapshot != null) {
-      client.deleteSnapshotAsync(PROJECT_ID, createdSnapshot.getName());
+        createdSnapshot = client.getSnapshot(PROJECT_ID, worker.getNodeName());
     }
-    teardownResources(client, label, log);
-  }
 
-  /** Tests snapshot is created when we have failure builds for given node */
-  @Test
-  public void testSnapshotCreatedNotNull() {
-    assertNotNull(createdSnapshot);
-  }
+    @AfterClass
+    public static void teardown() throws IOException {
+        if (createdSnapshot != null) {
+            client.deleteSnapshotAsync(PROJECT_ID, createdSnapshot.getName());
+        }
+        teardownResources(client, label, log);
+    }
 
-  @Test
-  public void testSnapshotCreatedStatusReady() {
-    assertEquals("READY", createdSnapshot.getStatus());
-  }
+    /** Tests snapshot is created when we have failure builds for given node */
+    @Test
+    public void testSnapshotCreatedNotNull() {
+        assertNotNull(createdSnapshot);
+    }
 
-  @Test
-  public void testSnapshotCreatedOneShotInstanceDeleted() {
-    Awaitility.await()
-        .timeout(SNAPSHOT_TIMEOUT, TimeUnit.SECONDS)
-        .until(() -> client.listInstancesWithLabel(PROJECT_ID, label).isEmpty());
-  }
+    @Test
+    public void testSnapshotCreatedStatusReady() {
+        assertEquals("READY", createdSnapshot.getStatus());
+    }
+
+    @Test
+    public void testSnapshotCreatedOneShotInstanceDeleted() {
+        Awaitility.await()
+                .timeout(SNAPSHOT_TIMEOUT, TimeUnit.SECONDS)
+                .until(() -> client.listInstancesWithLabel(PROJECT_ID, label).isEmpty());
+    }
 }

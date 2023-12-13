@@ -20,6 +20,5 @@ import java.util.logging.Logger;
 
 // @RunWith(MockitoJUnitRunner.class)
 public class ComputeEngineLinuxLauncherTest {
-  private static final Logger LOGGER =
-      Logger.getLogger(ComputeEngineLinuxLauncherTest.class.getName());
+    private static final Logger LOGGER = Logger.getLogger(ComputeEngineLinuxLauncherTest.class.getName());
 }

@@ -56,70 +56,69 @@ import org.jvnet.hudson.test.JenkinsRule;
  * can be created using a non-standard Java executable path.
  */
 public class ComputeEngineCloudNonStandardJavaIT {
-  private static final String NON_STANDARD_JAVA_STARTUP_SCRIPT =
-      "#!/bin/bash\n"
-          + "sudo su -\n"
-          + "/etc/init.d/ssh stop\n"
-          + "echo \"deb http://http.debian.net/debian stretch-backports main\" >> /etc/apt/sources.list\n"
-          + "apt-get -y update\n"
-          + "apt-get -y install -t stretch-backports openjdk-8-jdk\n"
-          + "update-java-alternatives -s java-1.8.0-openjdk-amd64\n"
-          + "mv /usr/bin/java /usr/bin/non-standard-java\n"
-          + "/etc/init.d/ssh start";
+    private static final String NON_STANDARD_JAVA_STARTUP_SCRIPT = "#!/bin/bash\n"
+            + "sudo su -\n"
+            + "/etc/init.d/ssh stop\n"
+            + "echo \"deb http://http.debian.net/debian stretch-backports main\" >> /etc/apt/sources.list\n"
+            + "apt-get -y update\n"
+            + "apt-get -y install -t stretch-backports openjdk-8-jdk\n"
+            + "update-java-alternatives -s java-1.8.0-openjdk-amd64\n"
+            + "mv /usr/bin/java /usr/bin/non-standard-java\n"
+            + "/etc/init.d/ssh start";
 
-  private static final String NON_STANDARD_JAVA_PATH = "/usr/bin/non-standard-java";
+    private static final String NON_STANDARD_JAVA_PATH = "/usr/bin/non-standard-java";
 
-  private static Logger log = Logger.getLogger(ComputeEngineCloudNonStandardJavaIT.class.getName());
+    private static Logger log = Logger.getLogger(ComputeEngineCloudNonStandardJavaIT.class.getName());
 
-  @ClassRule
-  public static Timeout timeout = new Timeout(5 * TEST_TIMEOUT_MULTIPLIER, TimeUnit.MINUTES);
+    @ClassRule
+    public static Timeout timeout = new Timeout(5 * TEST_TIMEOUT_MULTIPLIER, TimeUnit.MINUTES);
 
-  @ClassRule public static JenkinsRule jenkinsRule = new JenkinsRule();
+    @ClassRule
+    public static JenkinsRule jenkinsRule = new JenkinsRule();
 
-  private static ComputeClient client;
-  private static Map<String, String> label = getLabel(ComputeEngineCloudNonStandardJavaIT.class);
-  private static Collection<PlannedNode> planned;
-  private static Instance instance;
+    private static ComputeClient client;
+    private static Map<String, String> label = getLabel(ComputeEngineCloudNonStandardJavaIT.class);
+    private static Collection<PlannedNode> planned;
+    private static Instance instance;
 
-  @BeforeClass
-  public static void init() throws Exception {
-    assumeFalse(windows);
-    log.info("init");
-    initCredentials(jenkinsRule);
-    ComputeEngineCloud cloud = initCloud(jenkinsRule);
-    client = initClient(jenkinsRule, label, log);
+    @BeforeClass
+    public static void init() throws Exception {
+        assumeFalse(windows);
+        log.info("init");
+        initCredentials(jenkinsRule);
+        ComputeEngineCloud cloud = initCloud(jenkinsRule);
+        client = initClient(jenkinsRule, label, log);
 
-    InstanceConfiguration instanceConfiguration =
-        instanceConfigurationBuilder()
-            .startupScript(NON_STANDARD_JAVA_STARTUP_SCRIPT)
-            .numExecutorsStr(NUM_EXECUTORS)
-            .labels(LABEL)
-            .oneShot(false)
-            .createSnapshot(false)
-            .template(NULL_TEMPLATE)
-            .javaExecPath(NON_STANDARD_JAVA_PATH)
-            .googleLabels(label)
-            .build();
+        InstanceConfiguration instanceConfiguration = instanceConfigurationBuilder()
+                .startupScript(NON_STANDARD_JAVA_STARTUP_SCRIPT)
+                .numExecutorsStr(NUM_EXECUTORS)
+                .labels(LABEL)
+                .oneShot(false)
+                .createSnapshot(false)
+                .template(NULL_TEMPLATE)
+                .javaExecPath(NON_STANDARD_JAVA_PATH)
+                .googleLabels(label)
+                .build();
 
-    cloud.setConfigurations(ImmutableList.of(instanceConfiguration));
-    planned = cloud.provision(new LabelAtom(LABEL), 1);
-    planned.iterator().next().future.get();
-    instance =
-        cloud.getClient().getInstance(PROJECT_ID, ZONE, planned.iterator().next().displayName);
-  }
+        cloud.setConfigurations(ImmutableList.of(instanceConfiguration));
+        planned = cloud.provision(new LabelAtom(LABEL), 1);
+        planned.iterator().next().future.get();
+        instance = cloud.getClient()
+                .getInstance(PROJECT_ID, ZONE, planned.iterator().next().displayName);
+    }
 
-  @AfterClass
-  public static void teardown() throws IOException {
-    teardownResources(client, label, log);
-  }
+    @AfterClass
+    public static void teardown() throws IOException {
+        teardownResources(client, label, log);
+    }
 
-  @Test
-  public void testWorkerCreatedOnePlannedNode() {
-    assertEquals(1, planned.size());
-  }
+    @Test
+    public void testWorkerCreatedOnePlannedNode() {
+        assertEquals(1, planned.size());
+    }
 
-  @Test
-  public void testInstanceStatusRunning() {
-    assertEquals("RUNNING", instance.getStatus());
-  }
+    @Test
+    public void testInstanceStatusRunning() {
+        assertEquals("RUNNING", instance.getStatus());
+    }
 }

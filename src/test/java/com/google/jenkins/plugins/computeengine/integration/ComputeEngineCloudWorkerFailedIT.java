@@ -52,29 +52,28 @@ import org.jvnet.hudson.test.JenkinsRule;
  * worker fails upon creation when Java is not installed.
  */
 public class ComputeEngineCloudWorkerFailedIT {
-  private static Logger log = Logger.getLogger(ComputeEngineCloudWorkerFailedIT.class.getName());
+    private static Logger log = Logger.getLogger(ComputeEngineCloudWorkerFailedIT.class.getName());
 
-  @ClassRule
-  public static Timeout timeout = new Timeout(7 * TEST_TIMEOUT_MULTIPLIER, TimeUnit.MINUTES);
+    @ClassRule
+    public static Timeout timeout = new Timeout(7 * TEST_TIMEOUT_MULTIPLIER, TimeUnit.MINUTES);
 
-  @ClassRule public static JenkinsRule jenkinsRule = new JenkinsRule();
+    @ClassRule
+    public static JenkinsRule jenkinsRule = new JenkinsRule();
 
-  private static ComputeClient client;
-  private static Map<String, String> label = getLabel(ComputeEngineCloudWorkerFailedIT.class);
-  private static Collection<PlannedNode> planned;
+    private static ComputeClient client;
+    private static Map<String, String> label = getLabel(ComputeEngineCloudWorkerFailedIT.class);
+    private static Collection<PlannedNode> planned;
 
-  @BeforeClass
-  public static void init() throws Exception {
-    Assume.assumeFalse(windows);
-    log.info("init");
-    initCredentials(jenkinsRule);
-    ComputeEngineCloud cloud = initCloud(jenkinsRule);
-    client = initClient(jenkinsRule, label, log);
+    @BeforeClass
+    public static void init() throws Exception {
+        Assume.assumeFalse(windows);
+        log.info("init");
+        initCredentials(jenkinsRule);
+        ComputeEngineCloud cloud = initCloud(jenkinsRule);
+        client = initClient(jenkinsRule, label, log);
 
-    // This configuration creates an instance with no Java installed.
-    cloud.setConfigurations(
-        ImmutableList.of(
-            instanceConfigurationBuilder()
+        // This configuration creates an instance with no Java installed.
+        cloud.setConfigurations(ImmutableList.of(instanceConfigurationBuilder()
                 .startupScript("")
                 .numExecutorsStr(NUM_EXECUTORS)
                 .labels(LABEL)
@@ -84,16 +83,16 @@ public class ComputeEngineCloudWorkerFailedIT {
                 .googleLabels(label)
                 .build()));
 
-    planned = cloud.provision(new LabelAtom(LABEL), 1);
-  }
+        planned = cloud.provision(new LabelAtom(LABEL), 1);
+    }
 
-  @AfterClass
-  public static void teardown() throws IOException {
-    teardownResources(client, label, log);
-  }
+    @AfterClass
+    public static void teardown() throws IOException {
+        teardownResources(client, label, log);
+    }
 
-  @Test(expected = ExecutionException.class)
-  public void testWorkerFailedCreationFails() throws Exception {
-    planned.iterator().next().future.get();
-  }
+    @Test(expected = ExecutionException.class)
+    public void testWorkerFailedCreationFails() throws Exception {
+        planned.iterator().next().future.get();
+    }
 }

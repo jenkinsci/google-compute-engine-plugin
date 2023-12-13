@@ -36,29 +36,30 @@ import org.jvnet.hudson.test.JenkinsRule;
 
 /** Integration test suite for {@link ComputeClient}. */
 public class ComputeClientIT {
-  private static Logger log = Logger.getLogger(ComputeClientIT.class.getName());
+    private static Logger log = Logger.getLogger(ComputeClientIT.class.getName());
 
-  private static Map<String, String> label = getLabel(ComputeClientIT.class);
-  private static ComputeClient client;
+    private static Map<String, String> label = getLabel(ComputeClientIT.class);
+    private static ComputeClient client;
 
-  @ClassRule public static JenkinsRule jenkinsRule = new JenkinsRule();
+    @ClassRule
+    public static JenkinsRule jenkinsRule = new JenkinsRule();
 
-  @BeforeClass
-  public static void init() throws Exception {
-    log.info("init");
-    initCredentials(jenkinsRule);
-    client = initClient(jenkinsRule, label, log);
-  }
+    @BeforeClass
+    public static void init() throws Exception {
+        log.info("init");
+        initCredentials(jenkinsRule);
+        client = initClient(jenkinsRule, label, log);
+    }
 
-  @AfterClass
-  public static void teardown() throws IOException {
-    teardownResources(client, label, log);
-  }
+    @AfterClass
+    public static void teardown() throws IOException {
+        teardownResources(client, label, log);
+    }
 
-  @Test
-  public void testGetImage() throws Exception {
-    Image image = client.getImage("debian-cloud", "debian-9-stretch-v20180820");
-    assertNotNull(image);
-    assertEquals("READY", image.getStatus());
-  }
+    @Test
+    public void testGetImage() throws Exception {
+        Image image = client.getImage("debian-cloud", "debian-9-stretch-v20180820");
+        assertNotNull(image);
+        assertEquals("READY", image.getStatus());
+    }
 }

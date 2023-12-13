@@ -62,96 +62,94 @@ import org.kohsuke.stapler.QueryParameter;
 @Log
 public class SshConfiguration implements Describable<SshConfiguration>, Serializable {
 
-  private String customPrivateKeyCredentialsId;
+    private String customPrivateKeyCredentialsId;
 
-  @DataBoundConstructor
-  public SshConfiguration() {}
+    @DataBoundConstructor
+    public SshConfiguration() {}
 
-  /**
-   * Returns the SSH private key if a custom SSH Credential is selected.
-   *
-   * @param id private key id from selected credential
-   * @return SSH private key in plain text to use for SSH
-   */
-  public static SSHUserPrivateKey getCustomPrivateKeyCredentials(String id) {
-    if (Strings.isNullOrEmpty(id)) {
-      return null;
-    }
-    return CredentialsMatchers.firstOrNull(
-        CredentialsProvider.lookupCredentials(
-            SSHUserPrivateKey.class, Jenkins.get(), null, Collections.emptyList()),
-        CredentialsMatchers.withId(id));
-  }
-
-  @SuppressWarnings("unchecked")
-  @Override
-  public Descriptor<SshConfiguration> getDescriptor() {
-    return Jenkins.get().getDescriptor(SshConfiguration.class);
-  }
-
-  @Extension
-  public static final class DescriptorImpl extends Descriptor<SshConfiguration> {
-
-    public ListBoxModel doFillCustomPrivateKeyCredentialsIdItems(
-        @AncestorInPath Jenkins context, @QueryParameter String customPrivateKeyCredentialsId) {
-      checkPermissions(context, Jenkins.ADMINISTER);
-
-      StandardListBoxModel result = new StandardListBoxModel();
-
-      return result
-          .includeMatchingAs(
-              ACL.SYSTEM,
-              context,
-              SSHUserPrivateKey.class,
-              new ArrayList<>(),
-              CredentialsMatchers.always())
-          .includeCurrentValue(customPrivateKeyCredentialsId);
-    }
-
-    public FormValidation doCheckCustomPrivateKeyCredentialsId(
-        @QueryParameter String value,
-        @QueryParameter("customPrivateKeyCredentialsId") String customPrivateKeyCredentialsId)
-        throws IOException {
-      checkPermissions(Jenkins.get(), Jenkins.ADMINISTER);
-
-      if (Strings.isNullOrEmpty(value) && Strings.isNullOrEmpty(customPrivateKeyCredentialsId)) {
-        return FormValidation.error("An SSH private key credential is required");
-      }
-
-      SSHUserPrivateKey customPrivateKey = getCustomPrivateKeyCredentials(value);
-      String privateKeyString = "";
-
-      if (customPrivateKey != null) {
-        privateKeyString = customPrivateKey.getPrivateKeys().get(0);
-      } else {
-        return FormValidation.error(
-            "Cannot find credential with name \"" + value + "\" in Global Credentials");
-      }
-
-      boolean hasProperStart = false;
-      boolean hasProperEnd = false;
-      BufferedReader br = new BufferedReader(new StringReader(privateKeyString));
-      String nextLine;
-
-      while ((nextLine = br.readLine()) != null) {
-        if (nextLine.equals("-----BEGIN RSA PRIVATE KEY-----")
-            || nextLine.equals("-----BEGIN OPENSSH PRIVATE KEY-----")) {
-          hasProperStart = true;
+    /**
+     * Returns the SSH private key if a custom SSH Credential is selected.
+     *
+     * @param id private key id from selected credential
+     * @return SSH private key in plain text to use for SSH
+     */
+    public static SSHUserPrivateKey getCustomPrivateKeyCredentials(String id) {
+        if (Strings.isNullOrEmpty(id)) {
+            return null;
         }
-        if (nextLine.equals("-----END RSA PRIVATE KEY-----")
-            || nextLine.equals("-----END OPENSSH PRIVATE KEY-----")) {
-          hasProperEnd = true;
-        }
-      }
-
-      if (!hasProperStart) {
-        return FormValidation.error("Invalid private key format (missing BEGIN key marker)");
-      }
-
-      if (!hasProperEnd) {
-        return FormValidation.error("Invalid private key format (missing END key marker)");
-      }
-      return FormValidation.ok();
+        return CredentialsMatchers.firstOrNull(
+                CredentialsProvider.lookupCredentials(
+                        SSHUserPrivateKey.class, Jenkins.get(), null, Collections.emptyList()),
+                CredentialsMatchers.withId(id));
     }
-  }
+
+    @SuppressWarnings("unchecked")
+    @Override
+    public Descriptor<SshConfiguration> getDescriptor() {
+        return Jenkins.get().getDescriptor(SshConfiguration.class);
+    }
+
+    @Extension
+    public static final class DescriptorImpl extends Descriptor<SshConfiguration> {
+
+        public ListBoxModel doFillCustomPrivateKeyCredentialsIdItems(
+                @AncestorInPath Jenkins context, @QueryParameter String customPrivateKeyCredentialsId) {
+            checkPermissions(context, Jenkins.ADMINISTER);
+
+            StandardListBoxModel result = new StandardListBoxModel();
+
+            return result.includeMatchingAs(
+                            ACL.SYSTEM,
+                            context,
+                            SSHUserPrivateKey.class,
+                            new ArrayList<>(),
+                            CredentialsMatchers.always())
+                    .includeCurrentValue(customPrivateKeyCredentialsId);
+        }
+
+        public FormValidation doCheckCustomPrivateKeyCredentialsId(
+                @QueryParameter String value,
+                @QueryParameter("customPrivateKeyCredentialsId") String customPrivateKeyCredentialsId)
+                throws IOException {
+            checkPermissions(Jenkins.get(), Jenkins.ADMINISTER);
+
+            if (Strings.isNullOrEmpty(value) && Strings.isNullOrEmpty(customPrivateKeyCredentialsId)) {
+                return FormValidation.error("An SSH private key credential is required");
+            }
+
+            SSHUserPrivateKey customPrivateKey = getCustomPrivateKeyCredentials(value);
+            String privateKeyString = "";
+
+            if (customPrivateKey != null) {
+                privateKeyString = customPrivateKey.getPrivateKeys().get(0);
+            } else {
+                return FormValidation.error("Cannot find credential with name \"" + value + "\" in Global Credentials");
+            }
+
+            boolean hasProperStart = false;
+            boolean hasProperEnd = false;
+            BufferedReader br = new BufferedReader(new StringReader(privateKeyString));
+            String nextLine;
+
+            while ((nextLine = br.readLine()) != null) {
+                if (nextLine.equals("-----BEGIN RSA PRIVATE KEY-----")
+                        || nextLine.equals("-----BEGIN OPENSSH PRIVATE KEY-----")) {
+                    hasProperStart = true;
+                }
+                if (nextLine.equals("-----END RSA PRIVATE KEY-----")
+                        || nextLine.equals("-----END OPENSSH PRIVATE KEY-----")) {
+                    hasProperEnd = true;
+                }
+            }
+
+            if (!hasProperStart) {
+                return FormValidation.error("Invalid private key format (missing BEGIN key marker)");
+            }
+
+            if (!hasProperEnd) {
+                return FormValidation.error("Invalid private key format (missing END key marker)");
+            }
+            return FormValidation.ok();
+        }
+    }
 }

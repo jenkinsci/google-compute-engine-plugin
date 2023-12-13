@@ -17,7 +17,7 @@
 package com.google.jenkins.plugins.computeengine;
 
 public class CloudNotFoundException extends RuntimeException {
-  public CloudNotFoundException(String message) {
-    super(message);
-  }
+    public CloudNotFoundException(String message) {
+        super(message);
+    }
 }

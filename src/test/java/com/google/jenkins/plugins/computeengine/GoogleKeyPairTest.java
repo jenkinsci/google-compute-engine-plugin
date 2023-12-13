@@ -33,25 +33,26 @@ import org.jvnet.hudson.test.WithoutJenkins;
 
 public class GoogleKeyPairTest {
 
-  @Rule public JenkinsRule r = new JenkinsRule();
+    @Rule
+    public JenkinsRule r = new JenkinsRule();
 
-  @WithoutJenkins
-  @Test
-  public void KeyPairGeneration() {
-    GoogleKeyPair gkp = GoogleKeyPair.generate("user");
-    assertNotNull(gkp.toString());
-    assert (gkp.getPublicKey().contains("user"));
-  }
+    @WithoutJenkins
+    @Test
+    public void KeyPairGeneration() {
+        GoogleKeyPair gkp = GoogleKeyPair.generate("user");
+        assertNotNull(gkp.toString());
+        assert (gkp.getPublicKey().contains("user"));
+    }
 
-  @Issue("SECURITY-2045")
-  @Test
-  public void privateKeyNotStoredAsPlainTextOnDisk() throws Exception {
-    GoogleKeyPair sshKeyPair = GoogleKeyPair.generate("test-user");
-    File configFile = new File(r.jenkins.getRootDir(), sshKeyPair.getClass().getName() + ".xml");
-    FileUtils.write(configFile, new XStream2().toXML(sshKeyPair), StandardCharsets.UTF_8);
+    @Issue("SECURITY-2045")
+    @Test
+    public void privateKeyNotStoredAsPlainTextOnDisk() throws Exception {
+        GoogleKeyPair sshKeyPair = GoogleKeyPair.generate("test-user");
+        File configFile = new File(r.jenkins.getRootDir(), sshKeyPair.getClass().getName() + ".xml");
+        FileUtils.write(configFile, new XStream2().toXML(sshKeyPair), StandardCharsets.UTF_8);
 
-    String configAsString = FileUtils.readFileToString(configFile, StandardCharsets.UTF_8);
-    assertTrue(configAsString.contains(sshKeyPair.getPrivateKey().getEncryptedValue()));
-    assertFalse(configAsString.contains(sshKeyPair.getPrivateKey().getPlainText()));
-  }
+        String configAsString = FileUtils.readFileToString(configFile, StandardCharsets.UTF_8);
+        assertTrue(configAsString.contains(sshKeyPair.getPrivateKey().getEncryptedValue()));
+        assertFalse(configAsString.contains(sshKeyPair.getPrivateKey().getPlainText()));
+    }
 }

@@ -57,33 +57,29 @@ import org.jvnet.hudson.test.JenkinsRule;
  * still present on the created instance.
  */
 public class ComputeEngineCloudTemplateNoGoogleLabelsIT {
-  private static Logger log =
-      Logger.getLogger(ComputeEngineCloudTemplateNoGoogleLabelsIT.class.getName());
+    private static Logger log = Logger.getLogger(ComputeEngineCloudTemplateNoGoogleLabelsIT.class.getName());
 
-  private static final String TEMPLATE =
-      format("projects/%s/global/instanceTemplates/test-template-no-labels");
+    private static final String TEMPLATE = format("projects/%s/global/instanceTemplates/test-template-no-labels");
 
-  @ClassRule
-  public static Timeout timeout = new Timeout(5 * TEST_TIMEOUT_MULTIPLIER, TimeUnit.MINUTES);
+    @ClassRule
+    public static Timeout timeout = new Timeout(5 * TEST_TIMEOUT_MULTIPLIER, TimeUnit.MINUTES);
 
-  @ClassRule public static JenkinsRule jenkinsRule = new JenkinsRule();
+    @ClassRule
+    public static JenkinsRule jenkinsRule = new JenkinsRule();
 
-  private static ComputeClient client;
-  private static Map<String, String> label =
-      getLabel(ComputeEngineCloudTemplateNoGoogleLabelsIT.class);
-  private static ComputeEngineCloud cloud;
-  private static Instance instance;
+    private static ComputeClient client;
+    private static Map<String, String> label = getLabel(ComputeEngineCloudTemplateNoGoogleLabelsIT.class);
+    private static ComputeEngineCloud cloud;
+    private static Instance instance;
 
-  @BeforeClass
-  public static void init() throws Exception {
-    log.info("init");
-    initCredentials(jenkinsRule);
-    cloud = initCloud(jenkinsRule);
-    client = initClient(jenkinsRule, label, log);
+    @BeforeClass
+    public static void init() throws Exception {
+        log.info("init");
+        initCredentials(jenkinsRule);
+        cloud = initCloud(jenkinsRule);
+        client = initClient(jenkinsRule, label, log);
 
-    cloud.setConfigurations(
-        ImmutableList.of(
-            instanceConfigurationBuilder()
+        cloud.setConfigurations(ImmutableList.of(instanceConfigurationBuilder()
                 .numExecutorsStr(NUM_EXECUTORS)
                 .labels(LABEL)
                 .oneShot(false)
@@ -92,34 +88,33 @@ public class ComputeEngineCloudTemplateNoGoogleLabelsIT {
                 .googleLabels(label)
                 .build()));
 
-    InstanceTemplate instanceTemplate = createTemplate(null, TEMPLATE);
-    client.insertTemplateAsync(cloud.getProjectId(), instanceTemplate);
-    Collection<PlannedNode> planned = cloud.provision(new LabelAtom(LABEL), 1);
+        InstanceTemplate instanceTemplate = createTemplate(null, TEMPLATE);
+        client.insertTemplateAsync(cloud.getProjectId(), instanceTemplate);
+        Collection<PlannedNode> planned = cloud.provision(new LabelAtom(LABEL), 1);
 
-    String name = planned.iterator().next().displayName;
-    planned.iterator().next().future.get();
-    instance = client.getInstance(PROJECT_ID, ZONE, name);
-  }
-
-  @AfterClass
-  public static void teardown() throws IOException {
-    try {
-      client.deleteTemplateAsync(cloud.getProjectId(), nameFromSelfLink(TEMPLATE));
-    } catch (Exception e) {
-      // noop
+        String name = planned.iterator().next().displayName;
+        planned.iterator().next().future.get();
+        instance = client.getInstance(PROJECT_ID, ZONE, name);
     }
 
-    teardownResources(client, label, log);
-  }
+    @AfterClass
+    public static void teardown() throws IOException {
+        try {
+            client.deleteTemplateAsync(cloud.getProjectId(), nameFromSelfLink(TEMPLATE));
+        } catch (Exception e) {
+            // noop
+        }
 
-  @Test
-  public void testTemplateNoGoogleLabelsCloudIdLabelKeyAndValue() {
-    assertEquals(
-        cloud.getInstanceId(), instance.getLabels().get(ComputeEngineCloud.CLOUD_ID_LABEL_KEY));
-  }
+        teardownResources(client, label, log);
+    }
 
-  @Test
-  public void testTemplateNoGoogleLabelsStatusRunning() {
-    assertEquals("RUNNING", instance.getStatus());
-  }
+    @Test
+    public void testTemplateNoGoogleLabelsCloudIdLabelKeyAndValue() {
+        assertEquals(cloud.getInstanceId(), instance.getLabels().get(ComputeEngineCloud.CLOUD_ID_LABEL_KEY));
+    }
+
+    @Test
+    public void testTemplateNoGoogleLabelsStatusRunning() {
+        assertEquals("RUNNING", instance.getStatus());
+    }
 }
