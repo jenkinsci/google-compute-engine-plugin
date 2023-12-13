@@ -52,32 +52,29 @@ import org.jvnet.hudson.test.JenkinsRule;
  * when configured to support multiple executors if the second executor is not required.
  */
 public class ComputeEngineCloud1WorkerCreatedFor2ExecutorsIT {
-  private static Logger log =
-      Logger.getLogger(ComputeEngineCloud1WorkerCreatedFor2ExecutorsIT.class.getName());
+    private static Logger log = Logger.getLogger(ComputeEngineCloud1WorkerCreatedFor2ExecutorsIT.class.getName());
 
-  private static final String MULTIPLE_NUM_EXECUTORS = "2";
+    private static final String MULTIPLE_NUM_EXECUTORS = "2";
 
-  @ClassRule
-  public static Timeout timeout = new Timeout(5 * TEST_TIMEOUT_MULTIPLIER, TimeUnit.MINUTES);
+    @ClassRule
+    public static Timeout timeout = new Timeout(5 * TEST_TIMEOUT_MULTIPLIER, TimeUnit.MINUTES);
 
-  @ClassRule public static JenkinsRule jenkinsRule = new JenkinsRule();
+    @ClassRule
+    public static JenkinsRule jenkinsRule = new JenkinsRule();
 
-  private static ComputeClient client;
-  private static Map<String, String> label =
-      getLabel(ComputeEngineCloud1WorkerCreatedFor2ExecutorsIT.class);
-  private static Collection<PlannedNode> planned;
-  private static Instance instance;
+    private static ComputeClient client;
+    private static Map<String, String> label = getLabel(ComputeEngineCloud1WorkerCreatedFor2ExecutorsIT.class);
+    private static Collection<PlannedNode> planned;
+    private static Instance instance;
 
-  @BeforeClass
-  public static void init() throws Exception {
-    log.info("init");
-    initCredentials(jenkinsRule);
-    ComputeEngineCloud cloud = initCloud(jenkinsRule);
-    client = initClient(jenkinsRule, label, log);
+    @BeforeClass
+    public static void init() throws Exception {
+        log.info("init");
+        initCredentials(jenkinsRule);
+        ComputeEngineCloud cloud = initCloud(jenkinsRule);
+        client = initClient(jenkinsRule, label, log);
 
-    cloud.setConfigurations(
-        ImmutableList.of(
-            instanceConfigurationBuilder()
+        cloud.setConfigurations(ImmutableList.of(instanceConfigurationBuilder()
                 .numExecutorsStr(MULTIPLE_NUM_EXECUTORS)
                 .labels(LABEL)
                 .oneShot(false)
@@ -86,24 +83,24 @@ public class ComputeEngineCloud1WorkerCreatedFor2ExecutorsIT {
                 .googleLabels(label)
                 .build()));
 
-    planned = cloud.provision(new LabelAtom(LABEL), 2);
-    planned.iterator().next().future.get();
+        planned = cloud.provision(new LabelAtom(LABEL), 2);
+        planned.iterator().next().future.get();
 
-    instance = client.getInstance(PROJECT_ID, ZONE, planned.iterator().next().displayName);
-  }
+        instance = client.getInstance(PROJECT_ID, ZONE, planned.iterator().next().displayName);
+    }
 
-  @AfterClass
-  public static void teardown() throws IOException {
-    teardownResources(client, label, log);
-  }
+    @AfterClass
+    public static void teardown() throws IOException {
+        teardownResources(client, label, log);
+    }
 
-  @Test
-  public void test1WorkerCreatedFor2ExecutorsStatusRunning() {
-    assertEquals("RUNNING", instance.getStatus());
-  }
+    @Test
+    public void test1WorkerCreatedFor2ExecutorsStatusRunning() {
+        assertEquals("RUNNING", instance.getStatus());
+    }
 
-  @Test
-  public void test1WorkerCreatedFor2ExecutorsOnly1Planned() {
-    assertEquals(1, planned.size());
-  }
+    @Test
+    public void test1WorkerCreatedFor2ExecutorsOnly1Planned() {
+        assertEquals(1, planned.size());
+    }
 }

@@ -30,33 +30,33 @@ import java.util.Map;
 
 /** Utility for generating OpenSSH RSA key pairs for use in GoogleKeyPair. */
 class SshKeysHelper {
-  private static final int KEY_SIZE = 2048;
+    private static final int KEY_SIZE = 2048;
 
-  static Map<String, String> generate() {
-    JSch jsch = new JSch();
-    KeyPair pair;
-    try {
-      pair = KeyPair.genKeyPair(jsch, KeyPair.RSA, KEY_SIZE);
-    } catch (JSchException e) {
-      throw propagate(e);
+    static Map<String, String> generate() {
+        JSch jsch = new JSch();
+        KeyPair pair;
+        try {
+            pair = KeyPair.genKeyPair(jsch, KeyPair.RSA, KEY_SIZE);
+        } catch (JSchException e) {
+            throw propagate(e);
+        }
+        ImmutableMap.Builder<String, String> builder = ImmutableMap.builder();
+        builder.put("public", getPublicKey(pair));
+        builder.put("private", getPrivateKey(pair));
+        return builder.build();
     }
-    ImmutableMap.Builder<String, String> builder = ImmutableMap.builder();
-    builder.put("public", getPublicKey(pair));
-    builder.put("private", getPrivateKey(pair));
-    return builder.build();
-  }
 
-  private static String getPublicKey(KeyPair pair) {
-    return "ssh-rsa " + Base64.getEncoder().encodeToString(pair.getPublicKeyBlob());
-  }
-
-  private static String getPrivateKey(KeyPair pair) {
-    ByteArrayOutputStream out = new ByteArrayOutputStream();
-    pair.writePrivateKey(out);
-    try {
-      return out.toString(StandardCharsets.US_ASCII.toString());
-    } catch (UnsupportedEncodingException e) {
-      throw propagate(e);
+    private static String getPublicKey(KeyPair pair) {
+        return "ssh-rsa " + Base64.getEncoder().encodeToString(pair.getPublicKeyBlob());
     }
-  }
+
+    private static String getPrivateKey(KeyPair pair) {
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        pair.writePrivateKey(out);
+        try {
+            return out.toString(StandardCharsets.US_ASCII.toString());
+        } catch (UnsupportedEncodingException e) {
+            throw propagate(e);
+        }
+    }
 }

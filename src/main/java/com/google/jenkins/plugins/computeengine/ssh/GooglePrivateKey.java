@@ -22,25 +22,26 @@ import java.io.Serializable;
 
 /** Class to store optional custom private key selected by user */
 public class GooglePrivateKey extends GoogleKeyCredential implements Serializable {
-  private final Secret privateKey;
+    private final Secret privateKey;
 
-  private GooglePrivateKey(Secret privateKey, String user) {
-    super(user);
-    this.privateKey = privateKey;
-  }
+    private GooglePrivateKey(Secret privateKey, String user) {
+        super(user);
+        this.privateKey = privateKey;
+    }
 
-  public static GooglePrivateKey generate(String credentialsId, String user) {
-    String privateKeyStr =
-        SshConfiguration.getCustomPrivateKeyCredentials(credentialsId).getPrivateKeys().get(0);
-    return new GooglePrivateKey(Secret.fromString(privateKeyStr), user);
-  }
+    public static GooglePrivateKey generate(String credentialsId, String user) {
+        String privateKeyStr = SshConfiguration.getCustomPrivateKeyCredentials(credentialsId)
+                .getPrivateKeys()
+                .get(0);
+        return new GooglePrivateKey(Secret.fromString(privateKeyStr), user);
+    }
 
-  public Secret getPrivateKey() {
-    return privateKey;
-  }
+    public Secret getPrivateKey() {
+        return privateKey;
+    }
 
-  @Override
-  public String toString() {
-    return "Private key:\n" + privateKey.getEncryptedValue();
-  }
+    @Override
+    public String toString() {
+        return "Private key:\n" + privateKey.getEncryptedValue();
+    }
 }

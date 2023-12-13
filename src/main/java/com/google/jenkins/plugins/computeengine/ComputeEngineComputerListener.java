@@ -23,11 +23,11 @@ import hudson.slaves.ComputerListener;
 
 @Extension
 public class ComputeEngineComputerListener extends ComputerListener {
-  @Override
-  public void onOnline(Computer c, TaskListener listener) {
-    if (c instanceof ComputeEngineComputer) {
-      ComputeEngineComputer computer = (ComputeEngineComputer) c;
-      computer.onConnected(listener);
+    @Override
+    public void onOnline(Computer c, TaskListener listener) {
+        if (c instanceof ComputeEngineComputer) {
+            ComputeEngineComputer computer = (ComputeEngineComputer) c;
+            computer.onConnected(listener);
+        }
     }
-  }
 }

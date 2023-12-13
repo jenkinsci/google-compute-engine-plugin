@@ -36,92 +36,82 @@ import jenkins.model.Jenkins;
  */
 @Extension(ordinal = 100)
 public class NoDelayProvisionerStrategy extends NodeProvisioner.Strategy {
-  private static final Logger LOGGER = Logger.getLogger(NoDelayProvisionerStrategy.class.getName());
+    private static final Logger LOGGER = Logger.getLogger(NoDelayProvisionerStrategy.class.getName());
 
-  private static final boolean DISABLE_NODELAY_PROVISING =
-      Boolean.valueOf(
-          System.getProperty(
-              "com.google.jenkins.plugins.computeengine.disableNoDelayProvisioning"));
+    private static final boolean DISABLE_NODELAY_PROVISING =
+            Boolean.valueOf(System.getProperty("com.google.jenkins.plugins.computeengine.disableNoDelayProvisioning"));
 
-  /** {@inheritDoc} */
-  @Override
-  public NodeProvisioner.StrategyDecision apply(NodeProvisioner.StrategyState strategyState) {
-    if (DISABLE_NODELAY_PROVISING) {
-      LOGGER.log(Level.FINE, "Provisioning not complete, NoDelayProvisionerStrategy is disabled");
-      return NodeProvisioner.StrategyDecision.CONSULT_REMAINING_STRATEGIES;
-    }
-    final Label label = strategyState.getLabel();
-
-    LoadStatistics.LoadStatisticsSnapshot snapshot = strategyState.getSnapshot();
-    int availableCapacity =
-        snapshot.getAvailableExecutors() // live executors
-            + snapshot.getConnectingExecutors() // executors present but not yet connected
-            + strategyState
-                .getPlannedCapacitySnapshot() // capacity added by previous strategies from previous
-            // rounds
-            + strategyState
-                .getAdditionalPlannedCapacity(); // capacity added by previous strategies _this
-    // round_
-    int currentDemand = snapshot.getQueueLength();
-    LOGGER.log(
-        Level.FINE,
-        "Available capacity={0}, currentDemand={1}",
-        new Object[] {availableCapacity, currentDemand});
-    if (availableCapacity < currentDemand) {
-      List<Cloud> jenkinsClouds = new ArrayList<>(Jenkins.get().clouds);
-      Collections.shuffle(jenkinsClouds);
-      for (Cloud cloud : jenkinsClouds) {
-        int workloadToProvision = currentDemand - availableCapacity;
-        if (!(cloud instanceof ComputeEngineCloud)) continue;
-        if (!cloud.canProvision(label)) continue;
-        ComputeEngineCloud gcp = (ComputeEngineCloud) cloud;
-        if (!gcp.isNoDelayProvisioning()) continue;
-        for (CloudProvisioningListener cl : CloudProvisioningListener.all()) {
-          if (cl.canProvision(cloud, strategyState.getLabel(), workloadToProvision) != null) {
-            continue;
-          }
+    /** {@inheritDoc} */
+    @Override
+    public NodeProvisioner.StrategyDecision apply(NodeProvisioner.StrategyState strategyState) {
+        if (DISABLE_NODELAY_PROVISING) {
+            LOGGER.log(Level.FINE, "Provisioning not complete, NoDelayProvisionerStrategy is disabled");
+            return NodeProvisioner.StrategyDecision.CONSULT_REMAINING_STRATEGIES;
         }
-        Collection<NodeProvisioner.PlannedNode> plannedNodes =
-            cloud.provision(label, workloadToProvision);
-        LOGGER.log(Level.FINE, "Planned {0} new nodes", plannedNodes.size());
-        fireOnStarted(cloud, strategyState.getLabel(), plannedNodes);
-        strategyState.recordPendingLaunches(plannedNodes);
-        availableCapacity += plannedNodes.size();
-        LOGGER.log(
-            Level.FINE,
-            "After provisioning, available capacity={0}, currentDemand={1}",
-            new Object[] {availableCapacity, currentDemand});
-        break;
-      }
-    }
-    if (availableCapacity >= currentDemand) {
-      LOGGER.log(Level.FINE, "Provisioning completed");
-      return NodeProvisioner.StrategyDecision.PROVISIONING_COMPLETED;
-    } else {
-      LOGGER.log(Level.FINE, "Provisioning not complete, consulting remaining strategies");
-      return NodeProvisioner.StrategyDecision.CONSULT_REMAINING_STRATEGIES;
-    }
-  }
+        final Label label = strategyState.getLabel();
 
-  private static void fireOnStarted(
-      final Cloud cloud,
-      final Label label,
-      final Collection<NodeProvisioner.PlannedNode> plannedNodes) {
-    for (CloudProvisioningListener cl : CloudProvisioningListener.all()) {
-      try {
-        cl.onStarted(cloud, label, plannedNodes);
-      } catch (Error e) {
-        throw e;
-      } catch (Throwable e) {
+        LoadStatistics.LoadStatisticsSnapshot snapshot = strategyState.getSnapshot();
+        int availableCapacity = snapshot.getAvailableExecutors() // live executors
+                + snapshot.getConnectingExecutors() // executors present but not yet connected
+                + strategyState.getPlannedCapacitySnapshot() // capacity added by previous strategies from previous
+                // rounds
+                + strategyState.getAdditionalPlannedCapacity(); // capacity added by previous strategies _this
+        // round_
+        int currentDemand = snapshot.getQueueLength();
         LOGGER.log(
-            Level.SEVERE,
-            "Unexpected uncaught exception encountered while "
-                + "processing onStarted() listener call in "
-                + cl
-                + " for label "
-                + label.toString(),
-            e);
-      }
+                Level.FINE, "Available capacity={0}, currentDemand={1}", new Object[] {availableCapacity, currentDemand
+                });
+        if (availableCapacity < currentDemand) {
+            List<Cloud> jenkinsClouds = new ArrayList<>(Jenkins.get().clouds);
+            Collections.shuffle(jenkinsClouds);
+            for (Cloud cloud : jenkinsClouds) {
+                int workloadToProvision = currentDemand - availableCapacity;
+                if (!(cloud instanceof ComputeEngineCloud)) continue;
+                if (!cloud.canProvision(label)) continue;
+                ComputeEngineCloud gcp = (ComputeEngineCloud) cloud;
+                if (!gcp.isNoDelayProvisioning()) continue;
+                for (CloudProvisioningListener cl : CloudProvisioningListener.all()) {
+                    if (cl.canProvision(cloud, strategyState.getLabel(), workloadToProvision) != null) {
+                        continue;
+                    }
+                }
+                Collection<NodeProvisioner.PlannedNode> plannedNodes = cloud.provision(label, workloadToProvision);
+                LOGGER.log(Level.FINE, "Planned {0} new nodes", plannedNodes.size());
+                fireOnStarted(cloud, strategyState.getLabel(), plannedNodes);
+                strategyState.recordPendingLaunches(plannedNodes);
+                availableCapacity += plannedNodes.size();
+                LOGGER.log(Level.FINE, "After provisioning, available capacity={0}, currentDemand={1}", new Object[] {
+                    availableCapacity, currentDemand
+                });
+                break;
+            }
+        }
+        if (availableCapacity >= currentDemand) {
+            LOGGER.log(Level.FINE, "Provisioning completed");
+            return NodeProvisioner.StrategyDecision.PROVISIONING_COMPLETED;
+        } else {
+            LOGGER.log(Level.FINE, "Provisioning not complete, consulting remaining strategies");
+            return NodeProvisioner.StrategyDecision.CONSULT_REMAINING_STRATEGIES;
+        }
     }
-  }
+
+    private static void fireOnStarted(
+            final Cloud cloud, final Label label, final Collection<NodeProvisioner.PlannedNode> plannedNodes) {
+        for (CloudProvisioningListener cl : CloudProvisioningListener.all()) {
+            try {
+                cl.onStarted(cloud, label, plannedNodes);
+            } catch (Error e) {
+                throw e;
+            } catch (Throwable e) {
+                LOGGER.log(
+                        Level.SEVERE,
+                        "Unexpected uncaught exception encountered while "
+                                + "processing onStarted() listener call in "
+                                + cl
+                                + " for label "
+                                + label.toString(),
+                        e);
+            }
+        }
+    }
 }

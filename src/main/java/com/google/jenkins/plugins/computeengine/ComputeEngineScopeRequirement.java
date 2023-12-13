@@ -21,8 +21,8 @@ import java.util.Collection;
 import java.util.Collections;
 
 public class ComputeEngineScopeRequirement extends GoogleOAuth2ScopeRequirement {
-  @Override
-  public Collection<String> getScopes() {
-    return Collections.singletonList("https://www.googleapis.com/auth/compute");
-  }
+    @Override
+    public Collection<String> getScopes() {
+        return Collections.singletonList("https://www.googleapis.com/auth/compute");
+    }
 }

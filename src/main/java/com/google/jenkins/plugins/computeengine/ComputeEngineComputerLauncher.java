@@ -50,445 +50,412 @@ import jenkins.model.Jenkins;
 import lombok.Getter;
 
 public abstract class ComputeEngineComputerLauncher extends ComputerLauncher {
-  private static final Logger LOGGER =
-      Logger.getLogger(ComputeEngineComputerLauncher.class.getName());
-  private static final SimpleFormatter sf = new SimpleFormatter();
-  private static final String AGENT_JAR = "agent.jar";
-  private static final String GUEST_ATTRIBUTE_HOST_KEY_NAMESPACE = "hostkeys";
+    private static final Logger LOGGER = Logger.getLogger(ComputeEngineComputerLauncher.class.getName());
+    private static final SimpleFormatter sf = new SimpleFormatter();
+    private static final String AGENT_JAR = "agent.jar";
+    private static final String GUEST_ATTRIBUTE_HOST_KEY_NAMESPACE = "hostkeys";
 
-  // TODO(google-compute-engine-plugin/issues/134): make this configurable
-  private static final int SSH_PORT = 22;
-  private static final int SSH_TIMEOUT_MILLIS = 10000;
-  private static final int SSH_SLEEP_MILLIS = 5000;
+    // TODO(google-compute-engine-plugin/issues/134): make this configurable
+    private static final int SSH_PORT = 22;
+    private static final int SSH_TIMEOUT_MILLIS = 10000;
+    private static final int SSH_SLEEP_MILLIS = 5000;
 
-  private final String insertOperationId;
-  private final String zone;
-  private final String cloudName;
-  @Getter protected final boolean useInternalAddress;
+    private final String insertOperationId;
+    private final String zone;
+    private final String cloudName;
 
-  public ComputeEngineComputerLauncher(
-      String cloudName, String insertOperationId, String zone, boolean useInternalAddress) {
-    super();
-    this.cloudName = cloudName;
-    this.insertOperationId = insertOperationId;
-    this.zone = zone;
-    this.useInternalAddress = useInternalAddress;
-  }
+    @Getter
+    protected final boolean useInternalAddress;
 
-  public static void log(Logger logger, Level level, TaskListener listener, String message) {
-    log(logger, level, listener, message, null);
-  }
-
-  public static void log(
-      Logger logger, Level level, TaskListener listener, String message, Throwable exception) {
-    logger.log(level, message, exception);
-    if (listener != null) {
-      if (exception != null) message += " Exception: " + exception;
-      LogRecord lr = new LogRecord(level, message);
-      PrintStream printStream = listener.getLogger();
-      printStream.print(sf.format(lr));
-    }
-  }
-
-  private void log(
-      Level level,
-      ComputeEngineComputer computer,
-      TaskListener listener,
-      String message,
-      Throwable exception) {
-    try {
-      ComputeEngineCloud cloud = computer.getCloud();
-      cloud.log(getLogger(), level, listener, message, exception);
-    } catch (CloudNotFoundException cnfe) {
-      log(getLogger(), Level.SEVERE, listener, "FATAL: Could not get cloud", cnfe);
-    }
-  }
-
-  protected void logException(
-      ComputeEngineComputer computer, TaskListener listener, String message, Throwable exception) {
-    log(Level.WARNING, computer, listener, message, exception);
-  }
-
-  protected void logInfo(ComputeEngineComputer computer, TaskListener listener, String message) {
-    log(Level.INFO, computer, listener, message, null);
-  }
-
-  protected void logWarning(ComputeEngineComputer computer, TaskListener listener, String message) {
-    log(Level.WARNING, computer, listener, message, null);
-  }
-
-  protected void logSevere(ComputeEngineComputer computer, TaskListener listener, String message) {
-    log(Level.SEVERE, computer, listener, message, null);
-  }
-
-  protected abstract Logger getLogger();
-
-  @Override
-  public void launch(SlaveComputer slaveComputer, TaskListener listener) {
-    ComputeEngineComputer computer = (ComputeEngineComputer) slaveComputer;
-    ComputeEngineCloud cloud;
-
-    try {
-      cloud = computer.getCloud();
-    } catch (CloudNotFoundException cnfe) {
-      log(LOGGER, Level.SEVERE, listener, String.format("Could not get cloud %s", cloudName));
-      return;
+    public ComputeEngineComputerLauncher(
+            String cloudName, String insertOperationId, String zone, boolean useInternalAddress) {
+        super();
+        this.cloudName = cloudName;
+        this.insertOperationId = insertOperationId;
+        this.zone = zone;
+        this.useInternalAddress = useInternalAddress;
     }
 
-    ComputeEngineInstance node = computer.getNode();
-    if (node == null) {
-      log(LOGGER, Level.SEVERE, listener, String.format("Could not get node from computer"));
-      return;
+    public static void log(Logger logger, Level level, TaskListener listener, String message) {
+        log(logger, level, listener, message, null);
     }
 
-    // Wait until the Operation from the Instance insert is complete or fails
-    Operation.Error opError = new Operation.Error();
-    try {
-      LOGGER.info(
-          String.format(
-              "Launch will wait %d for operation %s to complete...",
-              node.getLaunchTimeout(), insertOperationId));
-      /* This call will log a null error when the operation is complete, or a relevant error if it
-       * fails. */
-      try {
-        Operation operation =
-            cloud
-                .getClient()
-                .waitForOperationCompletion(
-                    cloud.getProjectId(), insertOperationId, zone, node.getLaunchTimeoutMillis());
-        opError = operation.getError();
-      } catch (OperationException e) {
-        opError = e.getError();
-      }
-      if (opError != null) {
-        LOGGER.info(
-            String.format(
-                "Launch failed while waiting for operation %s to complete. Operation error was %s",
-                insertOperationId, opError.getErrors().get(0).getMessage()));
-        return;
-      }
-    } catch (InterruptedException e) {
-      LOGGER.info(
-          String.format(
-              "Launch failed while waiting for operation %s to complete. Operation error was %s",
-              insertOperationId, opError.getErrors().get(0).getMessage()));
-      return;
+    public static void log(Logger logger, Level level, TaskListener listener, String message, Throwable exception) {
+        logger.log(level, message, exception);
+        if (listener != null) {
+            if (exception != null) message += " Exception: " + exception;
+            LogRecord lr = new LogRecord(level, message);
+            PrintStream printStream = listener.getLogger();
+            printStream.print(sf.format(lr));
+        }
     }
 
-    try {
-      // The operation succeeded. Now wait for the Instance status to be RUNNING
-      OUTER:
-      while (true) {
-        switch (computer.getInstanceStatus()) {
-          case "PROVISIONING":
-          case "STAGING":
-            cloud.log(
-                LOGGER,
-                Level.FINEST,
-                listener,
-                String.format("Instance %s is being prepared...", computer.getName()));
-            break;
-          case "RUNNING":
-            cloud.log(
-                LOGGER,
-                Level.FINEST,
-                listener,
-                String.format("Instance %s is running and ready...", computer.getName()));
-            break OUTER;
-          case "STOPPING":
-          case "SUSPENDING":
-          case "TERMINATED":
-            cloud.log(
-                LOGGER,
-                Level.FINEST,
-                listener,
-                String.format("Instance %s is being shut down...", computer.getName()));
-            break;
-            // TODO: Although the plugin doesn't put instances in the STOPPED or SUSPENDED states,
-            // it should handle them if they are placed in that state out-of-band.
-          case "STOPPED":
-          case "SUSPENDED":
-            cloud.log(
-                LOGGER,
-                Level.FINEST,
-                listener,
-                String.format(
-                    "Instance %s was unexpectedly stopped or suspended...", computer.getName()));
+    private void log(
+            Level level, ComputeEngineComputer computer, TaskListener listener, String message, Throwable exception) {
+        try {
+            ComputeEngineCloud cloud = computer.getCloud();
+            cloud.log(getLogger(), level, listener, message, exception);
+        } catch (CloudNotFoundException cnfe) {
+            log(getLogger(), Level.SEVERE, listener, "FATAL: Could not get cloud", cnfe);
+        }
+    }
+
+    protected void logException(
+            ComputeEngineComputer computer, TaskListener listener, String message, Throwable exception) {
+        log(Level.WARNING, computer, listener, message, exception);
+    }
+
+    protected void logInfo(ComputeEngineComputer computer, TaskListener listener, String message) {
+        log(Level.INFO, computer, listener, message, null);
+    }
+
+    protected void logWarning(ComputeEngineComputer computer, TaskListener listener, String message) {
+        log(Level.WARNING, computer, listener, message, null);
+    }
+
+    protected void logSevere(ComputeEngineComputer computer, TaskListener listener, String message) {
+        log(Level.SEVERE, computer, listener, message, null);
+    }
+
+    protected abstract Logger getLogger();
+
+    @Override
+    public void launch(SlaveComputer slaveComputer, TaskListener listener) {
+        ComputeEngineComputer computer = (ComputeEngineComputer) slaveComputer;
+        ComputeEngineCloud cloud;
+
+        try {
+            cloud = computer.getCloud();
+        } catch (CloudNotFoundException cnfe) {
+            log(LOGGER, Level.SEVERE, listener, String.format("Could not get cloud %s", cloudName));
             return;
         }
-        Thread.sleep(5000);
-      }
 
-      // Initiate the next launch phase. This is likely an SSH-based process for Linux hosts.
-      computer.refreshInstance();
-      launch(computer, listener);
-    } catch (IOException ioe) {
-      ioe.printStackTrace(listener.error(ioe.getMessage()));
-      node = (ComputeEngineInstance) slaveComputer.getNode();
-      if (node != null) {
+        ComputeEngineInstance node = computer.getNode();
+        if (node == null) {
+            log(LOGGER, Level.SEVERE, listener, String.format("Could not get node from computer"));
+            return;
+        }
+
+        // Wait until the Operation from the Instance insert is complete or fails
+        Operation.Error opError = new Operation.Error();
         try {
-          node.terminate();
+            LOGGER.info(String.format(
+                    "Launch will wait %d for operation %s to complete...", node.getLaunchTimeout(), insertOperationId));
+            /* This call will log a null error when the operation is complete, or a relevant error if it
+             * fails. */
+            try {
+                Operation operation = cloud.getClient()
+                        .waitForOperationCompletion(
+                                cloud.getProjectId(), insertOperationId, zone, node.getLaunchTimeoutMillis());
+                opError = operation.getError();
+            } catch (OperationException e) {
+                opError = e.getError();
+            }
+            if (opError != null) {
+                LOGGER.info(String.format(
+                        "Launch failed while waiting for operation %s to complete. Operation error was %s",
+                        insertOperationId, opError.getErrors().get(0).getMessage()));
+                return;
+            }
+        } catch (InterruptedException e) {
+            LOGGER.info(String.format(
+                    "Launch failed while waiting for operation %s to complete. Operation error was %s",
+                    insertOperationId, opError.getErrors().get(0).getMessage()));
+            return;
+        }
+
+        try {
+            // The operation succeeded. Now wait for the Instance status to be RUNNING
+            OUTER:
+            while (true) {
+                switch (computer.getInstanceStatus()) {
+                    case "PROVISIONING":
+                    case "STAGING":
+                        cloud.log(
+                                LOGGER,
+                                Level.FINEST,
+                                listener,
+                                String.format("Instance %s is being prepared...", computer.getName()));
+                        break;
+                    case "RUNNING":
+                        cloud.log(
+                                LOGGER,
+                                Level.FINEST,
+                                listener,
+                                String.format("Instance %s is running and ready...", computer.getName()));
+                        break OUTER;
+                    case "STOPPING":
+                    case "SUSPENDING":
+                    case "TERMINATED":
+                        cloud.log(
+                                LOGGER,
+                                Level.FINEST,
+                                listener,
+                                String.format("Instance %s is being shut down...", computer.getName()));
+                        break;
+                        // TODO: Although the plugin doesn't put instances in the STOPPED or SUSPENDED states,
+                        // it should handle them if they are placed in that state out-of-band.
+                    case "STOPPED":
+                    case "SUSPENDED":
+                        cloud.log(
+                                LOGGER,
+                                Level.FINEST,
+                                listener,
+                                String.format(
+                                        "Instance %s was unexpectedly stopped or suspended...", computer.getName()));
+                        return;
+                }
+                Thread.sleep(5000);
+            }
+
+            // Initiate the next launch phase. This is likely an SSH-based process for Linux hosts.
+            computer.refreshInstance();
+            launch(computer, listener);
+        } catch (IOException ioe) {
+            ioe.printStackTrace(listener.error(ioe.getMessage()));
+            node = (ComputeEngineInstance) slaveComputer.getNode();
+            if (node != null) {
+                try {
+                    node.terminate();
+                } catch (Exception e) {
+                    listener.error(String.format("Failed to terminate node %s", node.getDisplayName()));
+                }
+            }
+        } catch (InterruptedException ie) {
+
+        }
+    }
+
+    private boolean testCommand(
+            ComputeEngineComputer computer,
+            Connection conn,
+            String checkCommand,
+            PrintStream logger,
+            TaskListener listener)
+            throws IOException, InterruptedException {
+        logInfo(computer, listener, "Verifying: " + checkCommand);
+        return conn.exec(checkCommand, logger) == 0;
+    }
+
+    protected abstract Optional<Connection> setupConnection(
+            ComputeEngineInstance node, ComputeEngineComputer computer, TaskListener listener) throws Exception;
+
+    protected abstract String getPathSeparator();
+
+    private boolean checkJavaInstalled(
+            ComputeEngineComputer computer,
+            Connection conn,
+            PrintStream logger,
+            TaskListener listener,
+            String javaExecPath) {
+        try {
+            if (testCommand(computer, conn, String.format("%s -fullversion", javaExecPath), logger, listener)) {
+                return true;
+            }
+        } catch (IOException | InterruptedException ex) {
+            logException(computer, listener, "Failed to check java: ", ex);
+            return false;
+        }
+
+        logWarning(computer, listener, String.format("Java is not installed at %s", javaExecPath));
+        return false;
+    }
+
+    private void copyAgentJar(ComputeEngineComputer computer, Connection conn, TaskListener listener, String jenkinsDir)
+            throws IOException {
+        SCPClient scp = conn.createSCPClient();
+        logInfo(computer, listener, "Copying agent.jar to: " + jenkinsDir);
+        scp.put(Jenkins.get().getJnlpJars(AGENT_JAR).readFully(), AGENT_JAR, jenkinsDir);
+    }
+
+    private String getJavaLaunchString(String javaExecPath, String jenkinsDir) {
+        return String.format("%s -jar %s%s%s", javaExecPath, jenkinsDir, getPathSeparator(), AGENT_JAR);
+    }
+
+    private void launch(ComputeEngineComputer computer, TaskListener listener) {
+        ComputeEngineInstance node = computer.getNode();
+        if (node == null) {
+            logWarning(computer, listener, "Could not get node from computer");
+            return;
+        }
+
+        final Connection conn;
+        Optional<Connection> cleanupConn;
+        PrintStream logger = listener.getLogger();
+        logInfo(computer, listener, "Launching instance: " + node.getNodeName());
+        try {
+            cleanupConn = setupConnection(node, computer, listener);
+            if (!cleanupConn.isPresent()) {
+                return;
+            }
+            conn = cleanupConn.get();
+            String javaExecPath = node.getJavaExecPathOrDefault();
+            if (!checkJavaInstalled(computer, conn, logger, listener, javaExecPath)) {
+                return;
+            }
+            String jenkinsDir = node.getRemoteFS();
+            copyAgentJar(computer, conn, listener, jenkinsDir);
+            String launchString = getJavaLaunchString(javaExecPath, jenkinsDir);
+            logInfo(computer, listener, "Launching Jenkins agent via plugin SSH: " + launchString);
+            final Session sess = conn.openSession();
+            sess.execCommand(launchString);
+            computer.setChannel(sess.getStdout(), sess.getStdin(), logger, new Channel.Listener() {
+                @Override
+                public void onClosed(Channel channel, IOException cause) {
+                    sess.close();
+                    conn.close();
+                }
+            });
         } catch (Exception e) {
-          listener.error(String.format("Failed to terminate node %s", node.getDisplayName()));
+            logException(computer, listener, "Error: ", e);
         }
-      }
-    } catch (InterruptedException ie) {
-
-    }
-  }
-
-  private boolean testCommand(
-      ComputeEngineComputer computer,
-      Connection conn,
-      String checkCommand,
-      PrintStream logger,
-      TaskListener listener)
-      throws IOException, InterruptedException {
-    logInfo(computer, listener, "Verifying: " + checkCommand);
-    return conn.exec(checkCommand, logger) == 0;
-  }
-
-  protected abstract Optional<Connection> setupConnection(
-      ComputeEngineInstance node, ComputeEngineComputer computer, TaskListener listener)
-      throws Exception;
-
-  protected abstract String getPathSeparator();
-
-  private boolean checkJavaInstalled(
-      ComputeEngineComputer computer,
-      Connection conn,
-      PrintStream logger,
-      TaskListener listener,
-      String javaExecPath) {
-    try {
-      if (testCommand(
-          computer, conn, String.format("%s -fullversion", javaExecPath), logger, listener)) {
-        return true;
-      }
-    } catch (IOException | InterruptedException ex) {
-      logException(computer, listener, "Failed to check java: ", ex);
-      return false;
     }
 
-    logWarning(computer, listener, String.format("Java is not installed at %s", javaExecPath));
-    return false;
-  }
+    protected Connection connectToSsh(ComputeEngineComputer computer, TaskListener listener) throws Exception {
+        ComputeEngineInstance node = computer.getNode();
+        if (node == null) {
+            throw new IllegalArgumentException("A ComputeEngineComputer with no node was provided");
+        }
 
-  private void copyAgentJar(
-      ComputeEngineComputer computer, Connection conn, TaskListener listener, String jenkinsDir)
-      throws IOException {
-    SCPClient scp = conn.createSCPClient();
-    logInfo(computer, listener, "Copying agent.jar to: " + jenkinsDir);
-    scp.put(Jenkins.get().getJnlpJars(AGENT_JAR).readFully(), AGENT_JAR, jenkinsDir);
-  }
+        ComputeClient client = node.getCloud().getClient();
+        final long timeout = node.getLaunchTimeoutMillis();
+        final long startTime = System.currentTimeMillis();
+        Connection conn = null;
+        while (true) {
+            try {
+                long waitTime = System.currentTimeMillis() - startTime;
+                if (timeout > 0 && waitTime > timeout) {
+                    // TODO(google-compute-engine-plugin/issues/135): better exception
+                    throw new Exception("Timed out after "
+                            + (waitTime / 1000)
+                            + " seconds of waiting for ssh to become available. (maximum timeout configured is "
+                            + (timeout / 1000)
+                            + ")");
+                }
+                Instance instance = computer.refreshInstance();
 
-  private String getJavaLaunchString(String javaExecPath, String jenkinsDir) {
-    return String.format("%s -jar %s%s%s", javaExecPath, jenkinsDir, getPathSeparator(), AGENT_JAR);
-  }
+                String host = "";
 
-  private void launch(ComputeEngineComputer computer, TaskListener listener) {
-    ComputeEngineInstance node = computer.getNode();
-    if (node == null) {
-      logWarning(computer, listener, "Could not get node from computer");
-      return;
-    }
+                // TODO(google-compute-engine-plugin/issues/136): handle multiple NICs
+                NetworkInterface nic = instance.getNetworkInterfaces().get(0);
 
-    final Connection conn;
-    Optional<Connection> cleanupConn;
-    PrintStream logger = listener.getLogger();
-    logInfo(computer, listener, "Launching instance: " + node.getNodeName());
-    try {
-      cleanupConn = setupConnection(node, computer, listener);
-      if (!cleanupConn.isPresent()) {
-        return;
-      }
-      conn = cleanupConn.get();
-      String javaExecPath = node.getJavaExecPathOrDefault();
-      if (!checkJavaInstalled(computer, conn, logger, listener, javaExecPath)) {
-        return;
-      }
-      String jenkinsDir = node.getRemoteFS();
-      copyAgentJar(computer, conn, listener, jenkinsDir);
-      String launchString = getJavaLaunchString(javaExecPath, jenkinsDir);
-      logInfo(computer, listener, "Launching Jenkins agent via plugin SSH: " + launchString);
-      final Session sess = conn.openSession();
-      sess.execCommand(launchString);
-      computer.setChannel(
-          sess.getStdout(),
-          sess.getStdin(),
-          logger,
-          new Channel.Listener() {
-            @Override
-            public void onClosed(Channel channel, IOException cause) {
-              sess.close();
-              conn.close();
+                if (this.useInternalAddress) {
+                    host = nic.getNetworkIP();
+                } else {
+                    // Look for a public IP address
+                    if (nic.getAccessConfigs() != null) {
+                        for (AccessConfig ac : nic.getAccessConfigs()) {
+                            if (ac.getType().equals(InstanceConfiguration.NAT_TYPE)) {
+                                host = ac.getNatIP();
+                            }
+                        }
+                    }
+                    // No public address found. Fall back to internal address
+                    if (host.isEmpty()) {
+                        host = nic.getNetworkIP();
+                    }
+                }
+
+                int port = SSH_PORT;
+                logInfo(
+                        computer,
+                        listener,
+                        "Connecting to " + host + " on port " + port + ", with timeout " + SSH_TIMEOUT_MILLIS + ".");
+                conn = new Connection(host, port);
+                ProxyConfiguration proxyConfig = Jenkins.get().proxy;
+                Proxy proxy = proxyConfig == null ? Proxy.NO_PROXY : proxyConfig.createProxy(host);
+                if (!node.isIgnoreProxy()
+                        && !proxy.equals(Proxy.NO_PROXY)
+                        && proxy.address() instanceof InetSocketAddress) {
+                    InetSocketAddress address = (InetSocketAddress) proxy.address();
+                    HTTPProxyData proxyData = null;
+                    if (proxyConfig.getUserName() != null && proxyConfig.getPassword() != null) {
+                        proxyData = new HTTPProxyData(
+                                address.getHostName(),
+                                address.getPort(),
+                                proxyConfig.getUserName(),
+                                proxyConfig.getPassword());
+                    } else {
+                        proxyData = new HTTPProxyData(address.getHostName(), address.getPort());
+                    }
+                    conn.setProxyData(proxyData);
+                    logInfo(computer, listener, "Using HTTP Proxy Configuration");
+                }
+
+                conn.connect(
+                        (hostname, portNum, serverHostKeyAlgorithm, serverHostKey) -> verifyServerHostKey(
+                                client, computer, listener, instance, serverHostKeyAlgorithm, serverHostKey),
+                        SSH_TIMEOUT_MILLIS,
+                        SSH_TIMEOUT_MILLIS);
+                logInfo(computer, listener, "Connected via SSH.");
+                return conn;
+            } catch (IOException e) {
+                // keep retrying until SSH comes up
+                logInfo(computer, listener, "Failed to connect via ssh: " + e.getMessage());
+                logInfo(computer, listener, "Waiting for SSH to come up. Sleeping 5.");
+                Thread.sleep(SSH_SLEEP_MILLIS);
             }
-          });
-    } catch (Exception e) {
-      logException(computer, listener, "Error: ", e);
-    }
-  }
-
-  protected Connection connectToSsh(ComputeEngineComputer computer, TaskListener listener)
-      throws Exception {
-    ComputeEngineInstance node = computer.getNode();
-    if (node == null) {
-      throw new IllegalArgumentException("A ComputeEngineComputer with no node was provided");
-    }
-
-    ComputeClient client = node.getCloud().getClient();
-    final long timeout = node.getLaunchTimeoutMillis();
-    final long startTime = System.currentTimeMillis();
-    Connection conn = null;
-    while (true) {
-      try {
-        long waitTime = System.currentTimeMillis() - startTime;
-        if (timeout > 0 && waitTime > timeout) {
-          // TODO(google-compute-engine-plugin/issues/135): better exception
-          throw new Exception(
-              "Timed out after "
-                  + (waitTime / 1000)
-                  + " seconds of waiting for ssh to become available. (maximum timeout configured is "
-                  + (timeout / 1000)
-                  + ")");
         }
-        Instance instance = computer.refreshInstance();
+    }
 
-        String host = "";
-
-        // TODO(google-compute-engine-plugin/issues/136): handle multiple NICs
-        NetworkInterface nic = instance.getNetworkInterfaces().get(0);
-
-        if (this.useInternalAddress) {
-          host = nic.getNetworkIP();
-        } else {
-          // Look for a public IP address
-          if (nic.getAccessConfigs() != null) {
-            for (AccessConfig ac : nic.getAccessConfigs()) {
-              if (ac.getType().equals(InstanceConfiguration.NAT_TYPE)) {
-                host = ac.getNatIP();
-              }
-            }
-          }
-          // No public address found. Fall back to internal address
-          if (host.isEmpty()) {
-            host = nic.getNetworkIP();
-          }
+    private boolean verifyServerHostKey(
+            ComputeClient client,
+            ComputeEngineComputer computer,
+            TaskListener listener,
+            Instance instance,
+            String serverHostKeyAlgorithm,
+            byte[] serverHostKey)
+            throws IOException {
+        Optional<InstanceResourceData> instanceResourceData =
+                ClientUtil.parseInstanceResourceData(instance.getSelfLink());
+        if (!instanceResourceData.isPresent()) {
+            throw new IOException(String.format(
+                    "Failed to retrieve instance resource data for instance: %s", instance.getSelfLink()));
         }
 
-        int port = SSH_PORT;
-        logInfo(
-            computer,
-            listener,
-            "Connecting to "
-                + host
-                + " on port "
-                + port
-                + ", with timeout "
-                + SSH_TIMEOUT_MILLIS
-                + ".");
-        conn = new Connection(host, port);
-        ProxyConfiguration proxyConfig = Jenkins.get().proxy;
-        Proxy proxy = proxyConfig == null ? Proxy.NO_PROXY : proxyConfig.createProxy(host);
-        if (!node.isIgnoreProxy()
-            && !proxy.equals(Proxy.NO_PROXY)
-            && proxy.address() instanceof InetSocketAddress) {
-          InetSocketAddress address = (InetSocketAddress) proxy.address();
-          HTTPProxyData proxyData = null;
-          if (proxyConfig.getUserName() != null && proxyConfig.getPassword() != null) {
-            proxyData =
-                new HTTPProxyData(
-                    address.getHostName(),
-                    address.getPort(),
-                    proxyConfig.getUserName(),
-                    proxyConfig.getPassword());
-          } else {
-            proxyData = new HTTPProxyData(address.getHostName(), address.getPort());
-          }
-          conn.setProxyData(proxyData);
-          logInfo(computer, listener, "Using HTTP Proxy Configuration");
+        ImmutableList<GuestAttribute> guestAttrList;
+        try {
+            guestAttrList = client.getGuestAttributesSync(
+                    instanceResourceData.get().getProjectId(),
+                    instanceResourceData.get().getZone(),
+                    instanceResourceData.get().getName(),
+                    Util.rawEncode(GUEST_ATTRIBUTE_HOST_KEY_NAMESPACE + "/"));
+        } catch (IOException e) {
+            logWarning(
+                    computer,
+                    listener,
+                    String.format(
+                            "Failed to verify server host key because no host key metadata was available: %s",
+                            e.getMessage()));
+            return true;
         }
 
-        conn.connect(
-            (hostname, portNum, serverHostKeyAlgorithm, serverHostKey) ->
-                verifyServerHostKey(
-                    client, computer, listener, instance, serverHostKeyAlgorithm, serverHostKey),
-            SSH_TIMEOUT_MILLIS,
-            SSH_TIMEOUT_MILLIS);
-        logInfo(computer, listener, "Connected via SSH.");
-        return conn;
-      } catch (IOException e) {
-        // keep retrying until SSH comes up
-        logInfo(computer, listener, "Failed to connect via ssh: " + e.getMessage());
-        logInfo(computer, listener, "Waiting for SSH to come up. Sleeping 5.");
-        Thread.sleep(SSH_SLEEP_MILLIS);
-      }
-    }
-  }
-
-  private boolean verifyServerHostKey(
-      ComputeClient client,
-      ComputeEngineComputer computer,
-      TaskListener listener,
-      Instance instance,
-      String serverHostKeyAlgorithm,
-      byte[] serverHostKey)
-      throws IOException {
-    Optional<InstanceResourceData> instanceResourceData =
-        ClientUtil.parseInstanceResourceData(instance.getSelfLink());
-    if (!instanceResourceData.isPresent()) {
-      throw new IOException(
-          String.format(
-              "Failed to retrieve instance resource data for instance: %s",
-              instance.getSelfLink()));
-    }
-
-    ImmutableList<GuestAttribute> guestAttrList;
-    try {
-      guestAttrList =
-          client.getGuestAttributesSync(
-              instanceResourceData.get().getProjectId(),
-              instanceResourceData.get().getZone(),
-              instanceResourceData.get().getName(),
-              Util.rawEncode(GUEST_ATTRIBUTE_HOST_KEY_NAMESPACE + "/"));
-    } catch (IOException e) {
-      logWarning(
-          computer,
-          listener,
-          String.format(
-              "Failed to verify server host key because no host key metadata was available: %s",
-              e.getMessage()));
-      return true;
-    }
-
-    Optional<GuestAttribute> hostKeyAttr =
-        guestAttrList.stream()
-            .filter(
-                attr ->
-                    attr.getNamespace().equals(GUEST_ATTRIBUTE_HOST_KEY_NAMESPACE)
+        Optional<GuestAttribute> hostKeyAttr = guestAttrList.stream()
+                .filter(attr -> attr.getNamespace().equals(GUEST_ATTRIBUTE_HOST_KEY_NAMESPACE)
                         && attr.getKey().equals(serverHostKeyAlgorithm.toLowerCase()))
-            .findFirst();
+                .findFirst();
 
-    if (!hostKeyAttr.isPresent()) {
-      logWarning(
-          computer,
-          listener,
-          String.format(
-              "Failed to verify server host key: host key guest attribute doesn't exist for instance: %s",
-              instance.getSelfLink()));
-      return true;
+        if (!hostKeyAttr.isPresent()) {
+            logWarning(
+                    computer,
+                    listener,
+                    String.format(
+                            "Failed to verify server host key: host key guest attribute doesn't exist for instance: %s",
+                            instance.getSelfLink()));
+            return true;
+        }
+
+        if (!hostKeyAttr.get().getValue().equals(Base64.getEncoder().encodeToString(serverHostKey))) {
+            logWarning(
+                    computer,
+                    listener,
+                    String.format(
+                            "Failed to verify server host key: server host key didn't match for instance: %s",
+                            instance.getSelfLink()));
+            return false;
+        }
+
+        return true;
     }
-
-    if (!hostKeyAttr.get().getValue().equals(Base64.getEncoder().encodeToString(serverHostKey))) {
-      logWarning(
-          computer,
-          listener,
-          String.format(
-              "Failed to verify server host key: server host key didn't match for instance: %s",
-              instance.getSelfLink()));
-      return false;
-    }
-
-    return true;
-  }
 }

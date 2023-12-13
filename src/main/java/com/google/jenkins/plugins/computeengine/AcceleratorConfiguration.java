@@ -37,68 +37,67 @@ import org.kohsuke.stapler.QueryParameter;
 @Getter
 @EqualsAndHashCode
 public class AcceleratorConfiguration implements Describable<AcceleratorConfiguration> {
-  private final String gpuType;
-  private final String gpuCount;
+    private final String gpuType;
+    private final String gpuCount;
 
-  @DataBoundConstructor
-  public AcceleratorConfiguration(String gpuType, String gpuCount) {
-    this.gpuType = gpuType;
-    this.gpuCount = gpuCount;
-  }
-
-  public Integer gpuCount() {
-    return Integer.parseInt(gpuCount);
-  }
-
-  @SuppressWarnings("unchecked")
-  public Descriptor<AcceleratorConfiguration> getDescriptor() {
-    return Jenkins.get().getDescriptor(getClass());
-  }
-
-  @Override
-  public String toString() {
-    return String.format("%s (%s)", this.gpuType, this.gpuCount);
-  }
-
-  @Extension
-  public static final class DescriptorImpl extends Descriptor<AcceleratorConfiguration> {
-    private static ComputeClient computeClient;
-
-    public static void setComputeClient(ComputeClient client) {
-      computeClient = client;
+    @DataBoundConstructor
+    public AcceleratorConfiguration(String gpuType, String gpuCount) {
+        this.gpuType = gpuType;
+        this.gpuCount = gpuCount;
     }
 
-    private static ComputeClient computeClient(Jenkins context, String credentialsId)
-        throws IOException {
-      if (computeClient != null) {
-        return computeClient;
-      }
-      ClientFactory clientFactory = ClientUtil.getClientFactory(context, credentialsId);
-      return clientFactory.computeClient();
+    public Integer gpuCount() {
+        return Integer.parseInt(gpuCount);
     }
 
-    public ListBoxModel doFillGpuTypeItems(
-        @AncestorInPath Jenkins context,
-        @QueryParameter("projectId") @RelativePath("../..") final String projectId,
-        @QueryParameter("zone") @RelativePath("..") String zone,
-        @QueryParameter("credentialsId") @RelativePath("../..") final String credentialsId) {
-      ListBoxModel items = new ListBoxModel();
-      try {
-        ComputeClient compute = computeClient(context, credentialsId);
-        List<AcceleratorType> acceleratorTypes = compute.listAcceleratorTypes(projectId, zone);
+    @SuppressWarnings("unchecked")
+    public Descriptor<AcceleratorConfiguration> getDescriptor() {
+        return Jenkins.get().getDescriptor(getClass());
+    }
 
-        for (AcceleratorType a : acceleratorTypes) {
-          items.add(a.getName(), a.getSelfLink());
+    @Override
+    public String toString() {
+        return String.format("%s (%s)", this.gpuType, this.gpuCount);
+    }
+
+    @Extension
+    public static final class DescriptorImpl extends Descriptor<AcceleratorConfiguration> {
+        private static ComputeClient computeClient;
+
+        public static void setComputeClient(ComputeClient client) {
+            computeClient = client;
         }
-        return items;
-      } catch (IOException ioe) {
-        items.clear();
-        items.add("Error retrieving GPU types");
-        return items;
-      } catch (IllegalArgumentException iae) {
-        // TODO: log
-        return null;
-      }
+
+        private static ComputeClient computeClient(Jenkins context, String credentialsId) throws IOException {
+            if (computeClient != null) {
+                return computeClient;
+            }
+            ClientFactory clientFactory = ClientUtil.getClientFactory(context, credentialsId);
+            return clientFactory.computeClient();
+        }
+
+        public ListBoxModel doFillGpuTypeItems(
+                @AncestorInPath Jenkins context,
+                @QueryParameter("projectId") @RelativePath("../..") final String projectId,
+                @QueryParameter("zone") @RelativePath("..") String zone,
+                @QueryParameter("credentialsId") @RelativePath("../..") final String credentialsId) {
+            ListBoxModel items = new ListBoxModel();
+            try {
+                ComputeClient compute = computeClient(context, credentialsId);
+                List<AcceleratorType> acceleratorTypes = compute.listAcceleratorTypes(projectId, zone);
+
+                for (AcceleratorType a : acceleratorTypes) {
+                    items.add(a.getName(), a.getSelfLink());
+                }
+                return items;
+            } catch (IOException ioe) {
+                items.clear();
+                items.add("Error retrieving GPU types");
+                return items;
+            } catch (IllegalArgumentException iae) {
+                // TODO: log
+                return null;
+            }
+        }
     }
-  }
 }

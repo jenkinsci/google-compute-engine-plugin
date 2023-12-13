@@ -39,142 +39,138 @@ import lombok.Getter;
 
 @Getter
 public class ComputeEngineInstance extends AbstractCloudSlave {
-  private static final long serialVersionUID = 1;
-  private static final Logger LOGGER = Logger.getLogger(ComputeEngineInstance.class.getName());
-  private static final long CREATE_SNAPSHOT_TIMEOUT_LINUX = 120000;
-  private static final long CREATE_SNAPSHOT_TIMEOUT_WINDOWS = 600000;
+    private static final long serialVersionUID = 1;
+    private static final Logger LOGGER = Logger.getLogger(ComputeEngineInstance.class.getName());
+    private static final long CREATE_SNAPSHOT_TIMEOUT_LINUX = 120000;
+    private static final long CREATE_SNAPSHOT_TIMEOUT_WINDOWS = 600000;
 
-  // TODO: https://issues.jenkins-ci.org/browse/JENKINS-55518
-  private final String zone;
-  private final String cloudName;
-  private final String sshUser;
-  private final WindowsConfiguration windowsConfig;
-  private final SshConfiguration sshConfig;
-  private final boolean createSnapshot;
-  private final boolean oneShot;
-  private final boolean ignoreProxy;
-  private final String javaExecPath;
-  private final GoogleKeyCredential sshKeyCredential;
-  private Integer launchTimeout; // Seconds
-  private Boolean connected;
-  private transient ComputeEngineCloud cloud;
+    // TODO: https://issues.jenkins-ci.org/browse/JENKINS-55518
+    private final String zone;
+    private final String cloudName;
+    private final String sshUser;
+    private final WindowsConfiguration windowsConfig;
+    private final SshConfiguration sshConfig;
+    private final boolean createSnapshot;
+    private final boolean oneShot;
+    private final boolean ignoreProxy;
+    private final String javaExecPath;
+    private final GoogleKeyCredential sshKeyCredential;
+    private Integer launchTimeout; // Seconds
+    private Boolean connected;
+    private transient ComputeEngineCloud cloud;
 
-  @Builder
-  private ComputeEngineInstance(
-      String cloudName,
-      String name,
-      String zone,
-      String nodeDescription,
-      String sshUser,
-      String remoteFS,
-      // NOTE(stephenashank): Could not use optional due to serialization req.
-      @Nullable WindowsConfiguration windowsConfig,
-      @Nullable SshConfiguration sshConfig,
-      boolean createSnapshot,
-      boolean oneShot,
-      boolean ignoreProxy,
-      int numExecutors,
-      Mode mode,
-      String labelString,
-      ComputerLauncher launcher,
-      RetentionStrategy retentionStrategy,
-      Integer launchTimeout,
-      // NOTE(craigatgoogle): Could not use Optional due to serialization req.
-      @Nullable String javaExecPath,
-      @Nullable GoogleKeyCredential sshKeyCredential,
-      @Nullable ComputeEngineCloud cloud)
-      throws Descriptor.FormException, IOException {
-    super(
-        name,
-        nodeDescription,
-        remoteFS,
-        numExecutors,
-        mode,
-        labelString,
-        launcher,
-        retentionStrategy,
-        Collections.emptyList());
-    this.launchTimeout = launchTimeout;
-    this.zone = zone;
-    this.cloudName = cloudName;
-    this.sshUser = sshUser;
-    this.windowsConfig = windowsConfig;
-    this.sshConfig = sshConfig;
-    this.createSnapshot = createSnapshot;
-    this.oneShot = oneShot;
-    this.ignoreProxy = ignoreProxy;
-    this.javaExecPath = javaExecPath;
-    this.sshKeyCredential = sshKeyCredential;
-    this.cloud = cloud;
-  }
-
-  @Override
-  public AbstractCloudComputer createComputer() {
-    return new ComputeEngineComputer(this);
-  }
-
-  @Override
-  protected void _terminate(TaskListener listener) throws IOException, InterruptedException {
-    try {
-      ComputeEngineCloud cloud = getCloud();
-
-      Computer computer = this.toComputer();
-      if (this.oneShot
-          && this.createSnapshot
-          && computer != null
-          && !computer.getBuilds().failureOnly().isEmpty()) {
-        LOGGER.log(Level.INFO, "Creating snapshot for node ... " + this.getNodeName());
-        long createSnapshotTimeout =
-            (windowsConfig != null)
-                ? CREATE_SNAPSHOT_TIMEOUT_WINDOWS
-                : CREATE_SNAPSHOT_TIMEOUT_LINUX;
-        cloud
-            .getClient()
-            .createSnapshotSync(
-                cloud.getProjectId(), this.zone, this.getNodeName(), createSnapshotTimeout);
-      }
-
-      // If the instance is running, attempt to terminate it. This is an async call and we
-      // return immediately, hoping for the best.
-      cloud.getClient().terminateInstanceAsync(cloud.getProjectId(), zone, name);
-    } catch (CloudNotFoundException cnfe) {
-      listener.error(cnfe.getMessage());
-    } catch (OperationException oe) {
-      listener.error(oe.getError().toPrettyString());
+    @Builder
+    private ComputeEngineInstance(
+            String cloudName,
+            String name,
+            String zone,
+            String nodeDescription,
+            String sshUser,
+            String remoteFS,
+            // NOTE(stephenashank): Could not use optional due to serialization req.
+            @Nullable WindowsConfiguration windowsConfig,
+            @Nullable SshConfiguration sshConfig,
+            boolean createSnapshot,
+            boolean oneShot,
+            boolean ignoreProxy,
+            int numExecutors,
+            Mode mode,
+            String labelString,
+            ComputerLauncher launcher,
+            RetentionStrategy retentionStrategy,
+            Integer launchTimeout,
+            // NOTE(craigatgoogle): Could not use Optional due to serialization req.
+            @Nullable String javaExecPath,
+            @Nullable GoogleKeyCredential sshKeyCredential,
+            @Nullable ComputeEngineCloud cloud)
+            throws Descriptor.FormException, IOException {
+        super(
+                name,
+                nodeDescription,
+                remoteFS,
+                numExecutors,
+                mode,
+                labelString,
+                launcher,
+                retentionStrategy,
+                Collections.emptyList());
+        this.launchTimeout = launchTimeout;
+        this.zone = zone;
+        this.cloudName = cloudName;
+        this.sshUser = sshUser;
+        this.windowsConfig = windowsConfig;
+        this.sshConfig = sshConfig;
+        this.createSnapshot = createSnapshot;
+        this.oneShot = oneShot;
+        this.ignoreProxy = ignoreProxy;
+        this.javaExecPath = javaExecPath;
+        this.sshKeyCredential = sshKeyCredential;
+        this.cloud = cloud;
     }
-  }
 
-  public void onConnected() {
-    this.connected = true;
-  }
-
-  public long getLaunchTimeoutMillis() {
-    return launchTimeout * 1000L;
-  }
-
-  /** @return The configured Java executable path, or else the default Java binary. */
-  public String getJavaExecPathOrDefault() {
-    return !Strings.isNullOrEmpty(javaExecPath) ? javaExecPath : "java";
-  }
-
-  /** @return The configured Linux SSH key pair for this {@link ComputeEngineInstance}. */
-  public Optional<GoogleKeyCredential> getSSHKeyCredential() {
-    return Optional.ofNullable(sshKeyCredential);
-  }
-
-  public ComputeEngineCloud getCloud() throws CloudNotFoundException {
-    ComputeEngineCloud cloud = (ComputeEngineCloud) Jenkins.get().getCloud(cloudName);
-    if (cloud == null)
-      throw new CloudNotFoundException(
-          String.format("Could not find cloud %s in Jenkins configuration", cloudName));
-    return cloud;
-  }
-
-  @Extension
-  public static final class DescriptorImpl extends SlaveDescriptor {
     @Override
-    public String getDisplayName() {
-      return Messages.ComputeEngineAgent_DisplayName();
+    public AbstractCloudComputer createComputer() {
+        return new ComputeEngineComputer(this);
     }
-  }
+
+    @Override
+    protected void _terminate(TaskListener listener) throws IOException, InterruptedException {
+        try {
+            ComputeEngineCloud cloud = getCloud();
+
+            Computer computer = this.toComputer();
+            if (this.oneShot
+                    && this.createSnapshot
+                    && computer != null
+                    && !computer.getBuilds().failureOnly().isEmpty()) {
+                LOGGER.log(Level.INFO, "Creating snapshot for node ... " + this.getNodeName());
+                long createSnapshotTimeout =
+                        (windowsConfig != null) ? CREATE_SNAPSHOT_TIMEOUT_WINDOWS : CREATE_SNAPSHOT_TIMEOUT_LINUX;
+                cloud.getClient()
+                        .createSnapshotSync(cloud.getProjectId(), this.zone, this.getNodeName(), createSnapshotTimeout);
+            }
+
+            // If the instance is running, attempt to terminate it. This is an async call and we
+            // return immediately, hoping for the best.
+            cloud.getClient().terminateInstanceAsync(cloud.getProjectId(), zone, name);
+        } catch (CloudNotFoundException cnfe) {
+            listener.error(cnfe.getMessage());
+        } catch (OperationException oe) {
+            listener.error(oe.getError().toPrettyString());
+        }
+    }
+
+    public void onConnected() {
+        this.connected = true;
+    }
+
+    public long getLaunchTimeoutMillis() {
+        return launchTimeout * 1000L;
+    }
+
+    /** @return The configured Java executable path, or else the default Java binary. */
+    public String getJavaExecPathOrDefault() {
+        return !Strings.isNullOrEmpty(javaExecPath) ? javaExecPath : "java";
+    }
+
+    /** @return The configured Linux SSH key pair for this {@link ComputeEngineInstance}. */
+    public Optional<GoogleKeyCredential> getSSHKeyCredential() {
+        return Optional.ofNullable(sshKeyCredential);
+    }
+
+    public ComputeEngineCloud getCloud() throws CloudNotFoundException {
+        ComputeEngineCloud cloud = (ComputeEngineCloud) Jenkins.get().getCloud(cloudName);
+        if (cloud == null)
+            throw new CloudNotFoundException(
+                    String.format("Could not find cloud %s in Jenkins configuration", cloudName));
+        return cloud;
+    }
+
+    @Extension
+    public static final class DescriptorImpl extends SlaveDescriptor {
+        @Override
+        public String getDisplayName() {
+            return Messages.ComputeEngineAgent_DisplayName();
+        }
+    }
 }

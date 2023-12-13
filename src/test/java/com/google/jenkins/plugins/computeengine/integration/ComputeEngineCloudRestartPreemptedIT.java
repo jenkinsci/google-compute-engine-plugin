@@ -66,73 +66,70 @@ import org.jvnet.hudson.test.JenkinsRule;
  */
 @Log
 public class ComputeEngineCloudRestartPreemptedIT {
-  @ClassRule
-  public static Timeout timeout = new Timeout(20 * TEST_TIMEOUT_MULTIPLIER, TimeUnit.MINUTES);
+    @ClassRule
+    public static Timeout timeout = new Timeout(20 * TEST_TIMEOUT_MULTIPLIER, TimeUnit.MINUTES);
 
-  @ClassRule public static JenkinsRule jenkinsRule = new JenkinsRule();
+    @ClassRule
+    public static JenkinsRule jenkinsRule = new JenkinsRule();
 
-  private static ComputeClient client;
-  private static Map<String, String> label = getLabel(ComputeEngineCloudRestartPreemptedIT.class);
-  private static ComputeEngineCloud cloud;
+    private static ComputeClient client;
+    private static Map<String, String> label = getLabel(ComputeEngineCloudRestartPreemptedIT.class);
+    private static ComputeEngineCloud cloud;
 
-  @BeforeClass
-  public static void init() throws Exception {
-    log.info("init");
-    initCredentials(jenkinsRule);
-    cloud = initCloud(jenkinsRule);
-    client = initClient(jenkinsRule, label, log);
+    @BeforeClass
+    public static void init() throws Exception {
+        log.info("init");
+        initCredentials(jenkinsRule);
+        cloud = initCloud(jenkinsRule);
+        client = initClient(jenkinsRule, label, log);
 
-    InstanceConfiguration configuration =
-        instanceConfigurationBuilder()
-            .numExecutorsStr(NUM_EXECUTORS)
-            .labels(LABEL)
-            .template(NULL_TEMPLATE)
-            .preemptible(true)
-            .googleLabels(label)
-            .oneShot(false)
-            .build();
+        InstanceConfiguration configuration = instanceConfigurationBuilder()
+                .numExecutorsStr(NUM_EXECUTORS)
+                .labels(LABEL)
+                .template(NULL_TEMPLATE)
+                .preemptible(true)
+                .googleLabels(label)
+                .oneShot(false)
+                .build();
 
-    cloud.setConfigurations(Lists.newArrayList(configuration));
-  }
+        cloud.setConfigurations(Lists.newArrayList(configuration));
+    }
 
-  @AfterClass
-  public static void teardown() throws IOException {
-    teardownResources(client, label, log);
-  }
+    @AfterClass
+    public static void teardown() throws IOException {
+        teardownResources(client, label, log);
+    }
 
-  @Test
-  public void testIfNodeWasPreempted() throws Exception {
-    Collection<PlannedNode> planned = cloud.provision(new LabelAtom(LABEL), 1);
-    Iterator<PlannedNode> iterator = planned.iterator();
-    PlannedNode plannedNode = iterator.next();
-    String name = plannedNode.displayName;
-    plannedNode.future.get();
-    Node node = jenkinsRule.jenkins.getNode(name);
+    @Test
+    public void testIfNodeWasPreempted() throws Exception {
+        Collection<PlannedNode> planned = cloud.provision(new LabelAtom(LABEL), 1);
+        Iterator<PlannedNode> iterator = planned.iterator();
+        PlannedNode plannedNode = iterator.next();
+        String name = plannedNode.displayName;
+        plannedNode.future.get();
+        Node node = jenkinsRule.jenkins.getNode(name);
 
-    ComputeEngineComputer computer = (ComputeEngineComputer) node.toComputer();
-    assertTrue("Configuration was set as preemptible but saw as not", computer.getPreemptible());
+        ComputeEngineComputer computer = (ComputeEngineComputer) node.toComputer();
+        assertTrue("Configuration was set as preemptible but saw as not", computer.getPreemptible());
 
-    FreeStyleProject project = jenkinsRule.createFreeStyleProject();
-    Builder step = execute(Commands.SLEEP, "60");
-    project.getBuildersList().add(step);
-    project.setAssignedLabel(new LabelAtom(LABEL));
-    QueueTaskFuture<FreeStyleBuild> taskFuture = project.scheduleBuild2(0);
+        FreeStyleProject project = jenkinsRule.createFreeStyleProject();
+        Builder step = execute(Commands.SLEEP, "60");
+        project.getBuildersList().add(step);
+        project.setAssignedLabel(new LabelAtom(LABEL));
+        QueueTaskFuture<FreeStyleBuild> taskFuture = project.scheduleBuild2(0);
 
-    Awaitility.await()
-        .timeout(7, TimeUnit.MINUTES)
-        .until(() -> computer.getLog().contains("listening to metadata for preemption event"));
+        Awaitility.await().timeout(7, TimeUnit.MINUTES).until(() -> computer.getLog()
+                .contains("listening to metadata for preemption event"));
 
-    client.simulateMaintenanceEvent(PROJECT_ID, ZONE, name);
-    Awaitility.await().timeout(8, TimeUnit.MINUTES).until(computer::getPreempted);
+        client.simulateMaintenanceEvent(PROJECT_ID, ZONE, name);
+        Awaitility.await().timeout(8, TimeUnit.MINUTES).until(computer::getPreempted);
 
-    FreeStyleBuild freeStyleBuild = taskFuture.get();
-    assertEquals(FAILURE, freeStyleBuild.getResult());
+        FreeStyleBuild freeStyleBuild = taskFuture.get();
+        assertEquals(FAILURE, freeStyleBuild.getResult());
 
-    Awaitility.await()
-        .timeout(5, TimeUnit.MINUTES)
-        .until(() -> freeStyleBuild.getNextBuild() != null);
-    FreeStyleBuild nextBuild = freeStyleBuild.getNextBuild();
-    Awaitility.await().timeout(5, TimeUnit.MINUTES).until(() -> nextBuild.getResult() != null);
-    assertEquals(SUCCESS, nextBuild.getResult());
-  }
+        Awaitility.await().timeout(5, TimeUnit.MINUTES).until(() -> freeStyleBuild.getNextBuild() != null);
+        FreeStyleBuild nextBuild = freeStyleBuild.getNextBuild();
+        Awaitility.await().timeout(5, TimeUnit.MINUTES).until(() -> nextBuild.getResult() != null);
+        assertEquals(SUCCESS, nextBuild.getResult());
+    }
 }

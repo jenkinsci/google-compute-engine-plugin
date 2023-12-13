@@ -30,106 +30,97 @@ import java.util.logging.Logger;
  * <p>Launches Compute Engine Windows instances
  */
 public class ComputeEngineWindowsLauncher extends ComputeEngineComputerLauncher {
-  private static final Logger LOGGER =
-      Logger.getLogger(ComputeEngineWindowsLauncher.class.getName());
+    private static final Logger LOGGER = Logger.getLogger(ComputeEngineWindowsLauncher.class.getName());
 
-  private static int bootstrapAuthTries = 30;
-  private static int bootstrapAuthSleepMs = 15000;
+    private static int bootstrapAuthTries = 30;
+    private static int bootstrapAuthSleepMs = 15000;
 
-  public ComputeEngineWindowsLauncher(
-      String cloudName, Operation insertOperation, boolean useInternalAddress) {
-    super(cloudName, insertOperation.getName(), insertOperation.getZone(), useInternalAddress);
-  }
-
-  protected Logger getLogger() {
-    return LOGGER;
-  }
-
-  @Override
-  protected Optional<Connection> setupConnection(
-      ComputeEngineInstance node, ComputeEngineComputer computer, TaskListener listener)
-      throws Exception {
-    if (node.getWindowsConfig() == null) {
-      logWarning(computer, listener, "Non-windows node provided");
-      return Optional.empty();
+    public ComputeEngineWindowsLauncher(String cloudName, Operation insertOperation, boolean useInternalAddress) {
+        super(cloudName, insertOperation.getName(), insertOperation.getZone(), useInternalAddress);
     }
-    Optional<Connection> bootstrapConn = bootstrap(computer, listener);
-    if (!bootstrapConn.isPresent()) {
-      logWarning(computer, listener, "bootstrapresult failed");
-      return Optional.empty();
-    }
-    return bootstrapConn;
-  }
 
-  @VisibleForTesting
-  public static boolean authenticateSSH(
-      String windowsUsername,
-      WindowsConfiguration windowsConfig,
-      Connection sshConnection,
-      TaskListener listener)
-      throws Exception {
-    boolean isAuthenticated;
-    if (!windowsConfig.getPrivateKeyCredentialsId().isEmpty()) {
-      isAuthenticated =
-          SSHAuthenticator.newInstance(
-                  sshConnection, windowsConfig.getPrivateKeyCredentials(), windowsUsername)
-              .authenticate(listener);
-    } else {
-      isAuthenticated =
-          sshConnection.authenticateWithPassword(windowsUsername, windowsConfig.getPassword());
+    protected Logger getLogger() {
+        return LOGGER;
     }
-    return isAuthenticated;
-  }
 
-  private Optional<Connection> bootstrap(ComputeEngineComputer computer, TaskListener listener) {
-    Preconditions.checkNotNull(computer, "A null ComputeEngineComputer was provided");
-    logInfo(computer, listener, "bootstrap");
-
-    ComputeEngineInstance node = computer.getNode();
-    if (node == null) {
-      throw new IllegalArgumentException("A ComputeEngineComputer with no node was provided");
-    } else if (node.getWindowsConfig() == null) {
-      throw new IllegalArgumentException("A non-windows ComputeEngineComputer was provided.");
+    @Override
+    protected Optional<Connection> setupConnection(
+            ComputeEngineInstance node, ComputeEngineComputer computer, TaskListener listener) throws Exception {
+        if (node.getWindowsConfig() == null) {
+            logWarning(computer, listener, "Non-windows node provided");
+            return Optional.empty();
+        }
+        Optional<Connection> bootstrapConn = bootstrap(computer, listener);
+        if (!bootstrapConn.isPresent()) {
+            logWarning(computer, listener, "bootstrapresult failed");
+            return Optional.empty();
+        }
+        return bootstrapConn;
     }
-    WindowsConfiguration windowsConfig = node.getWindowsConfig();
-    Connection bootstrapConn = null;
-    try {
-      int tries = bootstrapAuthTries;
-      boolean isAuthenticated = false;
-      while (tries-- > 0) {
-        logInfo(computer, listener, "Authenticating as " + node.getSshUser());
+
+    @VisibleForTesting
+    public static boolean authenticateSSH(
+            String windowsUsername, WindowsConfiguration windowsConfig, Connection sshConnection, TaskListener listener)
+            throws Exception {
+        boolean isAuthenticated;
+        if (!windowsConfig.getPrivateKeyCredentialsId().isEmpty()) {
+            isAuthenticated = SSHAuthenticator.newInstance(
+                            sshConnection, windowsConfig.getPrivateKeyCredentials(), windowsUsername)
+                    .authenticate(listener);
+        } else {
+            isAuthenticated = sshConnection.authenticateWithPassword(windowsUsername, windowsConfig.getPassword());
+        }
+        return isAuthenticated;
+    }
+
+    private Optional<Connection> bootstrap(ComputeEngineComputer computer, TaskListener listener) {
+        Preconditions.checkNotNull(computer, "A null ComputeEngineComputer was provided");
+        logInfo(computer, listener, "bootstrap");
+
+        ComputeEngineInstance node = computer.getNode();
+        if (node == null) {
+            throw new IllegalArgumentException("A ComputeEngineComputer with no node was provided");
+        } else if (node.getWindowsConfig() == null) {
+            throw new IllegalArgumentException("A non-windows ComputeEngineComputer was provided.");
+        }
+        WindowsConfiguration windowsConfig = node.getWindowsConfig();
+        Connection bootstrapConn = null;
         try {
-          bootstrapConn = connectToSsh(computer, listener);
-          isAuthenticated =
-              authenticateSSH(node.getSshUser(), windowsConfig, bootstrapConn, listener);
-        } catch (IOException e) {
-          logException(computer, listener, "Exception trying to authenticate", e);
-          if (bootstrapConn != null) {
-            bootstrapConn.close();
-          }
+            int tries = bootstrapAuthTries;
+            boolean isAuthenticated = false;
+            while (tries-- > 0) {
+                logInfo(computer, listener, "Authenticating as " + node.getSshUser());
+                try {
+                    bootstrapConn = connectToSsh(computer, listener);
+                    isAuthenticated = authenticateSSH(node.getSshUser(), windowsConfig, bootstrapConn, listener);
+                } catch (IOException e) {
+                    logException(computer, listener, "Exception trying to authenticate", e);
+                    if (bootstrapConn != null) {
+                        bootstrapConn.close();
+                    }
+                }
+                if (isAuthenticated) {
+                    break;
+                }
+                logWarning(computer, listener, "Authentication failed. Trying again...");
+                Thread.sleep(bootstrapAuthSleepMs);
+            }
+            if (!isAuthenticated) {
+                logWarning(computer, listener, "Authentication failed");
+                return Optional.empty();
+            }
+        } catch (Exception e) {
+            logException(computer, listener, "Failed to authenticate with exception: ", e);
+            if (bootstrapConn != null) {
+                bootstrapConn.close();
+            }
+            return Optional.empty();
         }
-        if (isAuthenticated) {
-          break;
-        }
-        logWarning(computer, listener, "Authentication failed. Trying again...");
-        Thread.sleep(bootstrapAuthSleepMs);
-      }
-      if (!isAuthenticated) {
-        logWarning(computer, listener, "Authentication failed");
-        return Optional.empty();
-      }
-    } catch (Exception e) {
-      logException(computer, listener, "Failed to authenticate with exception: ", e);
-      if (bootstrapConn != null) {
-        bootstrapConn.close();
-      }
-      return Optional.empty();
+        return Optional.ofNullable(bootstrapConn);
     }
-    return Optional.ofNullable(bootstrapConn);
-  }
 
-  @Override
-  protected String getPathSeparator() {
-    return "\\";
-  }
+    @Override
+    protected String getPathSeparator() {
+        return "\\";
+    }
 }
