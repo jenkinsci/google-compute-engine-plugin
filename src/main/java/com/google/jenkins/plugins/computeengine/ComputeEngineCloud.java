@@ -62,7 +62,6 @@ import java.util.logging.LogRecord;
 import java.util.logging.Logger;
 import java.util.logging.SimpleFormatter;
 import java.util.stream.Collectors;
-import javax.annotation.Nonnull;
 import javax.servlet.ServletException;
 import jenkins.model.Jenkins;
 import lombok.Getter;
@@ -446,7 +445,7 @@ public class ComputeEngineCloud extends AbstractCloudImpl {
     @Extension
     public static class GoogleCloudDescriptor extends Descriptor<Cloud> {
 
-        @Nonnull
+        @NonNull
         @Override
         public String getDisplayName() {
             return Messages.ComputeEngineCloud_DisplayName();
