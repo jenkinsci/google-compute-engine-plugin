@@ -32,62 +32,60 @@ import org.apache.commons.io.IOUtils;
  * executed on node.
  */
 final class PreemptedCheckCallable extends MasterToSlaveCallable<Boolean, IOException> {
-  private static final String METADATA_SERVER_URL =
-      "http://metadata.google.internal/computeMetadata/v1/instance/preempted?wait_for_change=%s";
+    private static final String METADATA_SERVER_URL =
+            "http://metadata.google.internal/computeMetadata/v1/instance/preempted?wait_for_change=%s";
 
-  private final TaskListener listener;
+    private final TaskListener listener;
 
-  /**
-   * Callback constructor.
-   *
-   * @param listener Node listener on which we can add extra information from agent side.
-   */
-  PreemptedCheckCallable(TaskListener listener) {
-    this.listener = listener;
-  }
-
-  /**
-   * Actual callback code, executed on node side. Checks in Google metadata server if instance was
-   * preempted.
-   *
-   * <p>See
-   * https://cloud.google.com/compute/docs/instances/create-start-preemptible-instance#detecting_if_an_instance_was_preempted
-   *
-   * @return True if node was preempted.
-   * @throws IOException Exception when calling Google metadata API
-   */
-  @Override
-  public Boolean call() throws IOException {
-    HttpRequest initialRequest = createMetadataRequest(false);
-    HttpResponse initialResponse = initialRequest.execute();
-    final String initialResult = IOUtils.toString(initialResponse.getContent(), Charsets.UTF_8);
-    initialResponse.disconnect();
-    if ("TRUE".equals(initialResult)) {
-      listener
-          .getLogger()
-          .println("Instance was already preempted before monitoring metadata changes.");
-      return true;
+    /**
+     * Callback constructor.
+     *
+     * @param listener Node listener on which we can add extra information from agent side.
+     */
+    PreemptedCheckCallable(TaskListener listener) {
+        this.listener = listener;
     }
 
-    HttpRequest request = createMetadataRequest(true);
-    listener.getLogger().println("Preemptive instance, listening to metadata for preemption event");
-    HttpResponse response = request.execute();
-    final String result = IOUtils.toString(response.getContent(), Charsets.UTF_8);
-    listener.getLogger().println("Got preemption event " + result);
-    response.disconnect();
-    return "TRUE".equals(result);
-  }
+    /**
+     * Actual callback code, executed on node side. Checks in Google metadata server if instance was
+     * preempted.
+     *
+     * <p>See
+     * https://cloud.google.com/compute/docs/instances/create-start-preemptible-instance#detecting_if_an_instance_was_preempted
+     *
+     * @return True if node was preempted.
+     * @throws IOException Exception when calling Google metadata API
+     */
+    @Override
+    public Boolean call() throws IOException {
+        HttpRequest initialRequest = createMetadataRequest(false);
+        HttpResponse initialResponse = initialRequest.execute();
+        final String initialResult = IOUtils.toString(initialResponse.getContent(), Charsets.UTF_8);
+        initialResponse.disconnect();
+        if ("TRUE".equals(initialResult)) {
+            listener.getLogger().println("Instance was already preempted before monitoring metadata changes.");
+            return true;
+        }
 
-  private HttpRequest createMetadataRequest(boolean waitForChange) throws IOException {
-    HttpTransport transport = new NetHttpTransport();
-    GenericUrl metadata = new GenericUrl(getMetadataServerUrl(waitForChange));
-    HttpRequest request = transport.createRequestFactory().buildGetRequest(metadata);
-    request.setHeaders(new HttpHeaders().set("Metadata-Flavor", "Google"));
-    request.setReadTimeout(Integer.MAX_VALUE);
-    return request;
-  }
+        HttpRequest request = createMetadataRequest(true);
+        listener.getLogger().println("Preemptive instance, listening to metadata for preemption event");
+        HttpResponse response = request.execute();
+        final String result = IOUtils.toString(response.getContent(), Charsets.UTF_8);
+        listener.getLogger().println("Got preemption event " + result);
+        response.disconnect();
+        return "TRUE".equals(result);
+    }
 
-  private static String getMetadataServerUrl(boolean waitForChange) {
-    return String.format(METADATA_SERVER_URL, waitForChange);
-  }
+    private HttpRequest createMetadataRequest(boolean waitForChange) throws IOException {
+        HttpTransport transport = new NetHttpTransport();
+        GenericUrl metadata = new GenericUrl(getMetadataServerUrl(waitForChange));
+        HttpRequest request = transport.createRequestFactory().buildGetRequest(metadata);
+        request.setHeaders(new HttpHeaders().set("Metadata-Flavor", "Google"));
+        request.setReadTimeout(Integer.MAX_VALUE);
+        return request;
+    }
+
+    private static String getMetadataServerUrl(boolean waitForChange) {
+        return String.format(METADATA_SERVER_URL, waitForChange);
+    }
 }

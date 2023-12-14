@@ -54,29 +54,28 @@ import org.jvnet.hudson.test.JenkinsRule;
  * with multiple Jenkins labels and that these labels are properly provisioned.
  */
 public class ComputeEngineCloudMultipleLabelsIT {
-  private static Logger log = Logger.getLogger(ComputeEngineCloudMultipleLabelsIT.class.getName());
+    private static Logger log = Logger.getLogger(ComputeEngineCloudMultipleLabelsIT.class.getName());
 
-  private static final String MULTIPLE_LABEL = "integration test";
+    private static final String MULTIPLE_LABEL = "integration test";
 
-  @ClassRule
-  public static Timeout timeout = new Timeout(5 * TEST_TIMEOUT_MULTIPLIER, TimeUnit.MINUTES);
+    @ClassRule
+    public static Timeout timeout = new Timeout(5 * TEST_TIMEOUT_MULTIPLIER, TimeUnit.MINUTES);
 
-  @ClassRule public static JenkinsRule jenkinsRule = new JenkinsRule();
+    @ClassRule
+    public static JenkinsRule jenkinsRule = new JenkinsRule();
 
-  private static ComputeClient client;
-  private static Map<String, String> label = getLabel(ComputeEngineCloudMultipleLabelsIT.class);
-  private static String name;
+    private static ComputeClient client;
+    private static Map<String, String> label = getLabel(ComputeEngineCloudMultipleLabelsIT.class);
+    private static String name;
 
-  @BeforeClass
-  public static void init() throws Exception {
-    log.info("init");
-    initCredentials(jenkinsRule);
-    ComputeEngineCloud cloud = initCloud(jenkinsRule);
-    client = initClient(jenkinsRule, label, log);
+    @BeforeClass
+    public static void init() throws Exception {
+        log.info("init");
+        initCredentials(jenkinsRule);
+        ComputeEngineCloud cloud = initCloud(jenkinsRule);
+        client = initClient(jenkinsRule, label, log);
 
-    cloud.setConfigurations(
-        ImmutableList.of(
-            instanceConfigurationBuilder()
+        cloud.setConfigurations(ImmutableList.of(instanceConfigurationBuilder()
                 .numExecutorsStr(NUM_EXECUTORS)
                 .labels(MULTIPLE_LABEL)
                 .oneShot(false)
@@ -85,26 +84,26 @@ public class ComputeEngineCloudMultipleLabelsIT {
                 .googleLabels(label)
                 .build()));
 
-    Collection<PlannedNode> planned = cloud.provision(new LabelAtom(LABEL), 1);
-    name = planned.iterator().next().displayName;
-    planned.iterator().next().future.get();
-  }
+        Collection<PlannedNode> planned = cloud.provision(new LabelAtom(LABEL), 1);
+        name = planned.iterator().next().displayName;
+        planned.iterator().next().future.get();
+    }
 
-  @AfterClass
-  public static void teardown() throws IOException {
-    teardownResources(client, label, log);
-  }
+    @AfterClass
+    public static void teardown() throws IOException {
+        teardownResources(client, label, log);
+    }
 
-  @Test
-  public void testMultipleLabelsProvisionedWithLabels() {
-    Node node = jenkinsRule.jenkins.getNode(name);
-    assertNotNull(node);
-    String provisionedLabels = node.getLabelString();
-    assertEquals(MULTIPLE_LABEL, provisionedLabels);
-  }
+    @Test
+    public void testMultipleLabelsProvisionedWithLabels() {
+        Node node = jenkinsRule.jenkins.getNode(name);
+        assertNotNull(node);
+        String provisionedLabels = node.getLabelString();
+        assertEquals(MULTIPLE_LABEL, provisionedLabels);
+    }
 
-  @Test
-  public void testMultipleLabelsWorkerStatusRunning() throws Exception {
-    assertEquals("RUNNING", client.getInstance(PROJECT_ID, ZONE, name).getStatus());
-  }
+    @Test
+    public void testMultipleLabelsWorkerStatusRunning() throws Exception {
+        assertEquals("RUNNING", client.getInstance(PROJECT_ID, ZONE, name).getStatus());
+    }
 }

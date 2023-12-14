@@ -37,12 +37,12 @@ by Joshua Bloch in his book Effective Java -->
     <module name="RegexpSingleline">
         <!-- Checks that TODOs are properly formatted.
 
-             The (?&lt;!TODO\(.{0,100}) makes the regex ignore any secondary TODO's on the line
+             The (?&lt;!TODO\(.{0,120}) makes the regex ignore any secondary TODO's on the line
              so that things like //TODO(bob): remove this TODO on 1/1/2020 don't trigger a warning
-             because of the second TODO.  (The {0,100} is because java doesn't recognize arbitrary
-             length look backs, but we know each java line should be < 100 chars.)
+             because of the second TODO.  (The {0,120} is because java doesn't recognize arbitrary
+             length look backs, but we know each java line should be < 120 chars.)
         -->
-        <property name="format" value="((//.*)|(\*.*))(?&lt;!TODO\(.{0,100})(TODO[^(])|(TODO\([^)]*$)"/>
+        <property name="format" value="((//.*)|(\*.*))(?&lt;!TODO\(.{0,120})(TODO[^(])|(TODO\([^)]*$)"/>
         <property name="message"
                   value='All TODOs should be named.  e.g. "TODO(johndoe): Refactor when v2 is released."'/>
     </module>

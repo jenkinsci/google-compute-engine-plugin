@@ -21,11 +21,11 @@ import java.io.Serializable;
 
 /** Abstract class that is parent of GoogleKeyPair and GooglePrivateKey */
 public abstract class GoogleKeyCredential implements Serializable {
-  private final String user;
+    private final String user;
 
-  public GoogleKeyCredential(String user) {
-    this.user = user;
-  }
+    public GoogleKeyCredential(String user) {
+        this.user = user;
+    }
 
-  public abstract Secret getPrivateKey();
+    public abstract Secret getPrivateKey();
 }

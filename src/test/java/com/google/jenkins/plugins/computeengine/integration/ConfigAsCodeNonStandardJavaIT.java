@@ -38,59 +38,58 @@ import org.jvnet.hudson.test.JenkinsRule;
  * java path.
  */
 public class ConfigAsCodeNonStandardJavaIT {
-  private static Logger log = Logger.getLogger(ConfigAsCodeNonStandardJavaIT.class.getName());
-  @ClassRule public static JenkinsRule jenkinsRule = new JenkinsRule();
+    private static Logger log = Logger.getLogger(ConfigAsCodeNonStandardJavaIT.class.getName());
 
-  @ClassRule
-  public static Timeout timeout = new Timeout(5 * TEST_TIMEOUT_MULTIPLIER, TimeUnit.MINUTES);
+    @ClassRule
+    public static JenkinsRule jenkinsRule = new JenkinsRule();
 
-  private static ComputeClient client;
-  private static Map<String, String> label = getLabel(ConfigAsCodeNonStandardJavaIT.class);
+    @ClassRule
+    public static Timeout timeout = new Timeout(5 * TEST_TIMEOUT_MULTIPLIER, TimeUnit.MINUTES);
 
-  @BeforeClass
-  public static void init() throws Exception {
-    assumeFalse(windows);
-    log.info("init");
-    initCredentials(jenkinsRule);
-    client = initClient(jenkinsRule, label, log);
-  }
+    private static ComputeClient client;
+    private static Map<String, String> label = getLabel(ConfigAsCodeNonStandardJavaIT.class);
 
-  @AfterClass
-  public static void teardown() throws IOException {
-    teardownResources(client, label, log);
-  }
+    @BeforeClass
+    public static void init() throws Exception {
+        assumeFalse(windows);
+        log.info("init");
+        initCredentials(jenkinsRule);
+        client = initClient(jenkinsRule, label, log);
+    }
 
-  @Test
-  public void testNonStandardJavaWorkerCreated() throws Exception {
-    assumeFalse(windows);
-    ConfigurationAsCode.get()
-        .configure(
-            this.getClass()
-                .getResource("configuration-as-code-non-standard-java-it.yml")
-                .toString());
-    ComputeEngineCloud cloud =
-        (ComputeEngineCloud) jenkinsRule.jenkins.clouds.getByName("gce-integration");
+    @AfterClass
+    public static void teardown() throws IOException {
+        teardownResources(client, label, log);
+    }
 
-    // Should be 1 configuration
-    assertEquals(1, cloud.getConfigurations().size());
-    cloud.getConfigurations().get(0).setGoogleLabels(label);
+    @Test
+    public void testNonStandardJavaWorkerCreated() throws Exception {
+        assumeFalse(windows);
+        ConfigurationAsCode.get()
+                .configure(this.getClass()
+                        .getResource("configuration-as-code-non-standard-java-it.yml")
+                        .toString());
+        ComputeEngineCloud cloud = (ComputeEngineCloud) jenkinsRule.jenkins.clouds.getByName("gce-integration");
 
-    // Add a new node
-    Collection<PlannedNode> planned =
-        cloud.provision(new LabelAtom("integration-non-standard-java"), 1);
+        // Should be 1 configuration
+        assertEquals(1, cloud.getConfigurations().size());
+        cloud.getConfigurations().get(0).setGoogleLabels(label);
 
-    // There should be a planned node
-    assertEquals(1, planned.size());
-    String name = planned.iterator().next().displayName;
+        // Add a new node
+        Collection<PlannedNode> planned = cloud.provision(new LabelAtom("integration-non-standard-java"), 1);
 
-    // Wait for the node creation to finish
-    planned.iterator().next().future.get();
-    Instance instance = client.getInstance(PROJECT_ID, ZONE, name);
-    assertNotNull(instance);
+        // There should be a planned node
+        assertEquals(1, planned.size());
+        String name = planned.iterator().next().displayName;
 
-    FreeStyleProject project = jenkinsRule.createFreeStyleProject();
-    Builder step = execute(Commands.ECHO, "works");
-    project.getBuildersList().add(step);
-    jenkinsRule.buildAndAssertSuccess(project);
-  }
+        // Wait for the node creation to finish
+        planned.iterator().next().future.get();
+        Instance instance = client.getInstance(PROJECT_ID, ZONE, name);
+        assertNotNull(instance);
+
+        FreeStyleProject project = jenkinsRule.createFreeStyleProject();
+        Builder step = execute(Commands.ECHO, "works");
+        project.getBuildersList().add(step);
+        jenkinsRule.buildAndAssertSuccess(project);
+    }
 }

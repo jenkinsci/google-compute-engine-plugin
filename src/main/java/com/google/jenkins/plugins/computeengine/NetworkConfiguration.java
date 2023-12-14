@@ -29,41 +29,39 @@ import lombok.Getter;
 @Getter
 @EqualsAndHashCode
 public abstract class NetworkConfiguration implements Describable<NetworkConfiguration> {
-  private final String network;
-  private final String subnetwork;
+    private final String network;
+    private final String subnetwork;
 
-  public NetworkConfiguration(String network, String subnetwork) {
-    this.network = network;
-    this.subnetwork = subnetwork;
-  }
-
-  @SuppressWarnings("unchecked")
-  public Descriptor<NetworkConfiguration> getDescriptor() {
-    return Jenkins.get().getDescriptor(getClass());
-  }
-
-  @Override
-  public String toString() {
-    return String.format("Network: %s%nSubnetwork: %s", getNetwork(), getSubnetwork());
-  }
-
-  public abstract static class NetworkConfigurationDescriptor
-      extends Descriptor<NetworkConfiguration> {
-    private static ComputeClient computeClient;
-
-    public static void setComputeClient(ComputeClient client) {
-      computeClient = client;
+    public NetworkConfiguration(String network, String subnetwork) {
+        this.network = network;
+        this.subnetwork = subnetwork;
     }
 
-    public static ComputeClient computeClient(Jenkins context, String credentialsId)
-        throws IOException {
-      if (computeClient != null) {
-        return computeClient;
-      }
-      ClientFactory clientFactory = ClientUtil.getClientFactory(context, credentialsId);
-      return clientFactory.computeClient();
+    @SuppressWarnings("unchecked")
+    public Descriptor<NetworkConfiguration> getDescriptor() {
+        return Jenkins.get().getDescriptor(getClass());
     }
 
-    public abstract String getDisplayName();
-  }
+    @Override
+    public String toString() {
+        return String.format("Network: %s%nSubnetwork: %s", getNetwork(), getSubnetwork());
+    }
+
+    public abstract static class NetworkConfigurationDescriptor extends Descriptor<NetworkConfiguration> {
+        private static ComputeClient computeClient;
+
+        public static void setComputeClient(ComputeClient client) {
+            computeClient = client;
+        }
+
+        public static ComputeClient computeClient(Jenkins context, String credentialsId) throws IOException {
+            if (computeClient != null) {
+                return computeClient;
+            }
+            ClientFactory clientFactory = ClientUtil.getClientFactory(context, credentialsId);
+            return clientFactory.computeClient();
+        }
+
+        public abstract String getDisplayName();
+    }
 }

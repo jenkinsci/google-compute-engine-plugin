@@ -57,89 +57,85 @@ import org.jvnet.hudson.test.JenkinsRule;
  * are provisioned properly.
  */
 public class ComputeEngineCloudWorkerCreatedIT {
-  private static Logger log = Logger.getLogger(ComputeEngineCloudWorkerCreatedIT.class.getName());
+    private static Logger log = Logger.getLogger(ComputeEngineCloudWorkerCreatedIT.class.getName());
 
-  @ClassRule
-  public static Timeout timeout = new Timeout(5 * TEST_TIMEOUT_MULTIPLIER, TimeUnit.MINUTES);
+    @ClassRule
+    public static Timeout timeout = new Timeout(5 * TEST_TIMEOUT_MULTIPLIER, TimeUnit.MINUTES);
 
-  @ClassRule public static JenkinsRule jenkinsRule = new JenkinsRule();
+    @ClassRule
+    public static JenkinsRule jenkinsRule = new JenkinsRule();
 
-  private static ComputeClient client;
-  private static ComputeEngineCloud cloud;
-  private static Map<String, String> label = getLabel(ComputeEngineCloudWorkerCreatedIT.class);
-  private static InstanceConfiguration instanceConfiguration;
-  private static Collection<PlannedNode> planned;
-  private static Instance instance;
+    private static ComputeClient client;
+    private static ComputeEngineCloud cloud;
+    private static Map<String, String> label = getLabel(ComputeEngineCloudWorkerCreatedIT.class);
+    private static InstanceConfiguration instanceConfiguration;
+    private static Collection<PlannedNode> planned;
+    private static Instance instance;
 
-  @BeforeClass
-  public static void init() throws Exception {
-    log.info("init");
-    initCredentials(jenkinsRule);
-    cloud = initCloud(jenkinsRule);
-    client = initClient(jenkinsRule, label, log);
+    @BeforeClass
+    public static void init() throws Exception {
+        log.info("init");
+        initCredentials(jenkinsRule);
+        cloud = initCloud(jenkinsRule);
+        client = initClient(jenkinsRule, label, log);
 
-    instanceConfiguration =
-        instanceConfigurationBuilder()
-            .numExecutorsStr(NUM_EXECUTORS)
-            .labels(LABEL)
-            .oneShot(false)
-            .createSnapshot(false)
-            .template(NULL_TEMPLATE)
-            .googleLabels(label)
-            .cloud(cloud)
-            .build();
+        instanceConfiguration = instanceConfigurationBuilder()
+                .numExecutorsStr(NUM_EXECUTORS)
+                .labels(LABEL)
+                .oneShot(false)
+                .createSnapshot(false)
+                .template(NULL_TEMPLATE)
+                .googleLabels(label)
+                .cloud(cloud)
+                .build();
 
-    cloud.setConfigurations(ImmutableList.of(instanceConfiguration));
-    planned = cloud.provision(new LabelAtom(LABEL), 1);
+        cloud.setConfigurations(ImmutableList.of(instanceConfiguration));
+        planned = cloud.provision(new LabelAtom(LABEL), 1);
 
-    planned.iterator().next().future.get();
+        planned.iterator().next().future.get();
 
-    instance =
-        cloud.getClient().getInstance(PROJECT_ID, ZONE, planned.iterator().next().displayName);
-  }
+        instance = cloud.getClient()
+                .getInstance(PROJECT_ID, ZONE, planned.iterator().next().displayName);
+    }
 
-  @AfterClass
-  public static void teardown() throws IOException {
-    teardownResources(client, label, log);
-  }
+    @AfterClass
+    public static void teardown() throws IOException {
+        teardownResources(client, label, log);
+    }
 
-  @Test
-  public void testWorkerCreatedOnePlannedNode() {
-    assertEquals(1, planned.size());
-  }
+    @Test
+    public void testWorkerCreatedOnePlannedNode() {
+        assertEquals(1, planned.size());
+    }
 
-  @Test
-  public void testWorkerCreatedNumberOfLabels() {
-    assertEquals(3, instance.getLabels().size());
-  }
+    @Test
+    public void testWorkerCreatedNumberOfLabels() {
+        assertEquals(3, instance.getLabels().size());
+    }
 
-  @Test
-  public void testWorkerCreatedConfigLabelKeyAndValue() {
-    assertEquals(
-        instanceConfiguration.getNamePrefix(),
-        instance.getLabels().get(ComputeEngineCloud.CONFIG_LABEL_KEY));
-  }
+    @Test
+    public void testWorkerCreatedConfigLabelKeyAndValue() {
+        assertEquals(
+                instanceConfiguration.getNamePrefix(), instance.getLabels().get(ComputeEngineCloud.CONFIG_LABEL_KEY));
+    }
 
-  @Test
-  public void testWorkerCreatedCloudIdKeyAndValue() {
-    assertEquals(
-        cloud.getInstanceId(), instance.getLabels().get(ComputeEngineCloud.CLOUD_ID_LABEL_KEY));
-  }
+    @Test
+    public void testWorkerCreatedCloudIdKeyAndValue() {
+        assertEquals(cloud.getInstanceId(), instance.getLabels().get(ComputeEngineCloud.CLOUD_ID_LABEL_KEY));
+    }
 
-  @Test
-  public void testWorkerCreatedStatusRunning() {
-    assertEquals("RUNNING", instance.getStatus());
-  }
+    @Test
+    public void testWorkerCreatedStatusRunning() {
+        assertEquals("RUNNING", instance.getStatus());
+    }
 
-  @Test
-  public void testGuestAttributesEnabled() {
-    Optional<String> guestAttributes =
-        instance.getMetadata().getItems().stream()
-            .filter(
-                item -> item.getKey().equals(InstanceConfiguration.GUEST_ATTRIBUTES_METADATA_KEY))
-            .map(item -> item.getValue())
-            .findFirst();
-    assertTrue(guestAttributes.isPresent());
-    assertEquals(guestAttributes.get(), "TRUE");
-  }
+    @Test
+    public void testGuestAttributesEnabled() {
+        Optional<String> guestAttributes = instance.getMetadata().getItems().stream()
+                .filter(item -> item.getKey().equals(InstanceConfiguration.GUEST_ATTRIBUTES_METADATA_KEY))
+                .map(item -> item.getValue())
+                .findFirst();
+        assertTrue(guestAttributes.isPresent());
+        assertEquals(guestAttributes.get(), "TRUE");
+    }
 }

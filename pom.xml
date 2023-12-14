@@ -14,25 +14,25 @@
 -->
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
-
   <parent>
     <groupId>org.jenkins-ci.plugins</groupId>
     <artifactId>plugin</artifactId>
-    <version>4.72</version>
-    <relativePath/>
+    <version>4.76</version>
+    <relativePath />
   </parent>
 
   <artifactId>google-compute-engine</artifactId>
   <version>${revision}.${changelist}</version>
   <packaging>hpi</packaging>
-
   <name>Google Compute Engine Plugin</name>
   <description>This plugin allows Jenkins to provision dynamic worker nodes on Google Compute Engine.</description>
   <url>https://github.com/jenkinsci/${project.artifactId}-plugin</url>
+
   <organization>
     <name>Google</name>
     <url>https://www.google.com</url>
   </organization>
+
   <licenses>
     <license>
       <name>Apache License, Version 2.0</name>
@@ -57,8 +57,8 @@
   <scm>
     <connection>scm:git:https://github.com/${gitHubRepo}.git</connection>
     <developerConnection>scm:git:git@github.com:${gitHubRepo}.git</developerConnection>
-    <url>https://github.com/${gitHubRepo}</url>
     <tag>${scmTag}</tag>
+    <url>https://github.com/${gitHubRepo}</url>
   </scm>
 
   <properties>
@@ -82,6 +82,7 @@
     <it.runOrder>balanced</it.runOrder>
     <lombok.version>1.18.30</lombok.version>
     <delombok.output>${project.build.directory}/delombok</delombok.output>
+    <spotless.check.skip>false</spotless.check.skip>
   </properties>
 
   <dependencyManagement>
@@ -97,34 +98,71 @@
       <dependency>
         <groupId>org.jenkins-ci.plugins</groupId>
         <artifactId>google-oauth-plugin</artifactId>
-        <version>1.1.1</version>
+        <version>1.319.v5cb_58b_91b_389</version>
+      </dependency>
+      <dependency>
+        <groupId>org.jenkins-ci.plugins</groupId>
+        <artifactId>oauth-credentials</artifactId>
+        <version>0.646.v02b_66dc03d2e</version>
       </dependency>
     </dependencies>
   </dependencyManagement>
+
   <dependencies>
     <dependency>
-      <groupId>org.jenkins-ci.plugins</groupId>
-      <artifactId>jsch</artifactId>
+      <groupId>com.google.apis</groupId>
+      <artifactId>google-api-services-compute</artifactId>
+      <version>v1-rev${compute.revision}-${google.compute.api.version}</version>
+      <exclusions>
+        <exclusion>
+          <groupId>com.google.api-client</groupId>
+          <artifactId>google-api-client</artifactId>
+        </exclusion>
+      </exclusions>
     </dependency>
     <dependency>
-      <groupId>org.jenkins-ci.plugins</groupId>
-      <artifactId>jackson2-api</artifactId>
+      <groupId>com.google.cloud.graphite</groupId>
+      <artifactId>gcp-client</artifactId>
+      <version>${gcp-plugin-core.version}</version>
+      <exclusions>
+        <exclusion>
+          <groupId>com.google.api-client</groupId>
+          <artifactId>google-api-client</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>com.google.guava</groupId>
+          <artifactId>guava</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>com.google.http-client</groupId>
+          <artifactId>google-http-client-jackson2</artifactId>
+        </exclusion>
+      </exclusions>
     </dependency>
     <dependency>
-      <groupId>org.jenkins-ci.plugins</groupId>
-      <artifactId>google-oauth-plugin</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>org.jenkins-ci.plugins</groupId>
-      <artifactId>apache-httpcomponents-client-4-api</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>org.jenkins-ci.plugins</groupId>
-      <artifactId>ssh-credentials</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>org.jenkins-ci.plugins</groupId>
-      <artifactId>credentials</artifactId>
+      <groupId>com.google.http-client</groupId>
+      <artifactId>google-http-client</artifactId>
+      <version>${google.http.version}</version>
+      <exclusions>
+        <exclusion>
+          <groupId>com.google.code.findbugs</groupId>
+          <artifactId>jsr305</artifactId>
+        </exclusion>
+        <!-- Provided by Jenkins core -->
+        <exclusion>
+          <groupId>com.google.guava</groupId>
+          <artifactId>guava</artifactId>
+        </exclusion>
+        <!-- Provided by apache-httpcomponents-client-4-api plugin -->
+        <exclusion>
+          <groupId>org.apache.httpcomponents</groupId>
+          <artifactId>httpclient</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>org.apache.httpcomponents</groupId>
+          <artifactId>httpcore</artifactId>
+        </exclusion>
+      </exclusions>
     </dependency>
     <dependency>
       <groupId>com.google.j2objc</groupId>
@@ -132,15 +170,15 @@
       <version>${google.j2objc.version}</version>
     </dependency>
     <dependency>
-      <groupId>com.google.http-client</groupId>
-      <artifactId>google-http-client</artifactId>
-      <version>${google.http.version}</version>
-    </dependency>
-    <dependency>
       <groupId>com.google.oauth-client</groupId>
       <artifactId>google-oauth-client</artifactId>
       <version>${com.google.oauth-client.version}</version>
       <exclusions>
+        <!-- Provided by Jenkins core -->
+        <exclusion>
+          <groupId>com.google.guava</groupId>
+          <artifactId>guava</artifactId>
+        </exclusion>
         <exclusion>
           <groupId>com.google.http-client</groupId>
           <artifactId>google-http-client</artifactId>
@@ -148,9 +186,8 @@
       </exclusions>
     </dependency>
     <dependency>
-      <groupId>com.google.apis</groupId>
-      <artifactId>google-api-services-compute</artifactId>
-      <version>v1-rev${compute.revision}-${google.compute.api.version}</version>
+      <groupId>io.jenkins.plugins</groupId>
+      <artifactId>commons-text-api</artifactId>
     </dependency>
     <dependency>
       <groupId>io.opencensus</groupId>
@@ -158,38 +195,9 @@
       <version>0.31.1</version>
     </dependency>
     <dependency>
-      <groupId>io.jenkins.plugins</groupId>
-      <artifactId>commons-text-api</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>com.google.cloud.graphite</groupId>
-      <artifactId>gcp-client</artifactId>
-      <version>${gcp-plugin-core.version}</version>
-    </dependency>
-    <dependency>
-      <groupId>org.jenkins-ci.plugins</groupId>
-      <artifactId>trilead-api</artifactId>
-      <exclusions>
-        <exclusion>
-          <groupId>net.i2p.crypto</groupId>
-          <artifactId>eddsa</artifactId>
-        </exclusion>
-      </exclusions>
-    </dependency>
-    <dependency>
       <groupId>net.i2p.crypto</groupId>
       <artifactId>eddsa</artifactId>
       <version>0.3.0</version>
-    </dependency>
-    <dependency><!-- OnceRetentionStrategy -->
-      <groupId>org.jenkins-ci.plugins</groupId>
-      <artifactId>durable-task</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>org.projectlombok</groupId>
-      <artifactId>lombok</artifactId>
-      <version>${lombok.version}</version>
-      <scope>provided</scope>
     </dependency>
     <!-- gcp-client (abandoned?) actually depends on these libraries in _compile_ scope, so they must be bundled in the plugin. -->
     <!-- See https://github.com/GoogleCloudPlatform/gcp-plugin-core-java/blob/cce07995cf7f060e71bf11da37d7a1f976ea84ef/gcp-client/src/main/java/com/google/cloud/graphite/platforms/plugin/client/ComputeClient.java#L665 -->
@@ -202,16 +210,56 @@
       <groupId>org.hamcrest</groupId>
       <artifactId>hamcrest</artifactId>
     </dependency>
-    <!-- Test Dependencies -->
     <dependency>
-      <groupId>org.mockito</groupId>
-      <artifactId>mockito-core</artifactId>
-      <scope>test</scope>
+      <groupId>org.jenkins-ci.plugins</groupId>
+      <artifactId>apache-httpcomponents-client-4-api</artifactId>
     </dependency>
     <dependency>
       <groupId>org.jenkins-ci.plugins</groupId>
-      <artifactId>plain-credentials</artifactId>
-      <scope>test</scope>
+      <artifactId>credentials</artifactId>
+    </dependency>
+    <dependency>
+      <!-- OnceRetentionStrategy -->
+      <groupId>org.jenkins-ci.plugins</groupId>
+      <artifactId>durable-task</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.jenkins-ci.plugins</groupId>
+      <artifactId>google-oauth-plugin</artifactId>
+      <exclusions>
+        <exclusion>
+          <groupId>com.google.guava</groupId>
+          <artifactId>guava</artifactId>
+        </exclusion>
+      </exclusions>
+    </dependency>
+    <dependency>
+      <groupId>org.projectlombok</groupId>
+      <artifactId>lombok</artifactId>
+      <version>${lombok.version}</version>
+      <scope>provided</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.jenkins-ci.plugins</groupId>
+      <artifactId>jackson2-api</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.jenkins-ci.plugins</groupId>
+      <artifactId>jsch</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.jenkins-ci.plugins</groupId>
+      <artifactId>ssh-credentials</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.jenkins-ci.plugins</groupId>
+      <artifactId>trilead-api</artifactId>
+      <exclusions>
+        <exclusion>
+          <groupId>net.i2p.crypto</groupId>
+          <artifactId>eddsa</artifactId>
+        </exclusion>
+      </exclusions>
     </dependency>
     <dependency>
       <groupId>io.jenkins</groupId>
@@ -225,8 +273,19 @@
     </dependency>
     <dependency>
       <groupId>org.jenkins-ci.plugins</groupId>
+      <artifactId>plain-credentials</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.jenkins-ci.plugins</groupId>
       <artifactId>powershell</artifactId>
       <version>${powershell.version}</version>
+      <scope>test</scope>
+    </dependency>
+    <!-- Test Dependencies -->
+    <dependency>
+      <groupId>org.mockito</groupId>
+      <artifactId>mockito-core</artifactId>
       <scope>test</scope>
     </dependency>
   </dependencies>
@@ -237,6 +296,7 @@
       <url>https://repo.jenkins-ci.org/public/</url>
     </repository>
   </repositories>
+
   <pluginRepositories>
     <pluginRepository>
       <id>repo.jenkins-ci.org</id>
@@ -247,8 +307,8 @@
   <build>
     <testResources>
       <testResource>
-        <directory>src/test/resources</directory>
         <filtering>true</filtering>
+        <directory>src/test/resources</directory>
       </testResource>
     </testResources>
     <pluginManagement>
@@ -287,62 +347,16 @@
         </dependencies>
         <executions>
           <execution>
-            <phase>generate-sources</phase>
             <goals>
               <goal>delombok</goal>
             </goals>
+            <phase>generate-sources</phase>
           </execution>
         </executions>
-      </plugin>
-      <plugin>
-        <groupId>au.com.acegi</groupId>
-        <artifactId>xml-format-maven-plugin</artifactId>
-        <version>3.1.2</version>
-        <executions>
-          <execution>
-            <id>validate</id>
-            <phase>validate</phase>
-            <goals>
-              <goal>xml-format</goal>
-            </goals>
-          </execution>
-        </executions>
-        <configuration>
-          <includes>pom.xml</includes>
-        </configuration>
-      </plugin>
-      <plugin>
-        <groupId>org.codehaus.mojo</groupId>
-        <artifactId>tidy-maven-plugin</artifactId>
-        <version>1.1.0</version>
-        <executions>
-          <execution>
-            <id>validate</id>
-            <phase>validate</phase>
-            <goals>
-              <goal>pom</goal>
-            </goals>
-          </execution>
-        </executions>
-      </plugin>
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-release-plugin</artifactId>
-        <configuration>
-          <completionGoals>xml-format:xml-format tidy:pom</completionGoals>
-        </configuration>
       </plugin>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-failsafe-plugin</artifactId>
-        <executions>
-          <execution>
-            <goals>
-              <goal>integration-test</goal>
-              <goal>verify</goal>
-            </goals>
-          </execution>
-        </executions>
         <configuration>
           <skipITs>${skipITs}</skipITs>
           <disableXmlReport>true</disableXmlReport>
@@ -362,6 +376,14 @@
           <runOrder>${it.runOrder}</runOrder>
           <reuseForks>false</reuseForks>
         </configuration>
+        <executions>
+          <execution>
+            <goals>
+              <goal>integration-test</goal>
+              <goal>verify</goal>
+            </goals>
+          </execution>
+        </executions>
       </plugin>
       <plugin>
         <artifactId>maven-surefire-plugin</artifactId>
@@ -388,42 +410,21 @@
         </configuration>
       </plugin>
       <plugin>
-        <groupId>com.coveo</groupId>
-        <artifactId>fmt-maven-plugin</artifactId>
-        <version>2.9</version>
-        <configuration>
-          <sourceDirectory>src/main/java</sourceDirectory>
-          <testSourceDirectory>src/test/java</testSourceDirectory>
-          <verbose>true</verbose>
-          <filesNamePattern>.*\.java</filesNamePattern>
-          <skip>false</skip>
-          <skipSortingImports>false</skipSortingImports>
-          <style>google</style>
-        </configuration>
-        <executions>
-          <execution>
-            <goals>
-              <goal>format</goal>
-            </goals>
-          </execution>
-        </executions>
-      </plugin>
-      <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-shade-plugin</artifactId>
         <version>3.5.1</version>
         <executions>
           <execution>
-            <phase>package</phase>
             <goals>
               <goal>shade</goal>
             </goals>
+            <phase>package</phase>
             <configuration>
               <shadedGroupFilter>com.google.cloud.graphite</shadedGroupFilter>
               <promoteTransitiveDependencies>true</promoteTransitiveDependencies>
               <createDependencyReducedPom>false</createDependencyReducedPom>
               <transformers>
-                <transformer implementation="org.apache.maven.plugins.shade.resource.ApacheLicenseResourceTransformer"/>
+                <transformer implementation="org.apache.maven.plugins.shade.resource.ApacheLicenseResourceTransformer" />
               </transformers>
             </configuration>
           </execution>

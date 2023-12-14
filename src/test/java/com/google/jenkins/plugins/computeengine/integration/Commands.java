@@ -8,15 +8,15 @@ import lombok.Getter;
  */
 @Getter
 public enum Commands {
-  ECHO("echo %s", "echo %s"),
-  EXIT("exit %s", "exit %s"),
-  SLEEP("sleep -s %s", "sleep %s");
+    ECHO("echo %s", "echo %s"),
+    EXIT("exit %s", "exit %s"),
+    SLEEP("sleep -s %s", "sleep %s");
 
-  private String windows;
-  private String linux;
+    private String windows;
+    private String linux;
 
-  Commands(String windows, String linux) {
-    this.windows = windows;
-    this.linux = linux;
-  }
+    Commands(String windows, String linux) {
+        this.windows = windows;
+        this.linux = linux;
+    }
 }

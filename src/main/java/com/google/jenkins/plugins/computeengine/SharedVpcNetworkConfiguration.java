@@ -20,63 +20,60 @@ import com.google.common.base.Strings;
 import hudson.Extension;
 import hudson.RelativePath;
 import hudson.util.FormValidation;
+import jenkins.model.Jenkins;
 import lombok.Getter;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.QueryParameter;
 
 @Getter
 public class SharedVpcNetworkConfiguration extends NetworkConfiguration {
-  public static final String SUBNETWORK_TEMPLATE = "projects/%s/regions/%s/subnetworks/%s";
-  private final String projectId;
-  private final String subnetworkShortName;
-  private final String region;
+    public static final String SUBNETWORK_TEMPLATE = "projects/%s/regions/%s/subnetworks/%s";
+    private final String projectId;
+    private final String subnetworkShortName;
+    private final String region;
 
-  @DataBoundConstructor
-  public SharedVpcNetworkConfiguration(
-      String projectId, String region, String subnetworkShortName) {
-    super("", String.format(SUBNETWORK_TEMPLATE, projectId, region, subnetworkShortName));
-    this.projectId = projectId;
-    this.subnetworkShortName = subnetworkShortName;
-    this.region = region;
-  }
-
-  @Extension
-  public static final class DescriptorImpl extends NetworkConfigurationDescriptor {
-    public String getDisplayName() {
-      return "Shared VPC";
+    @DataBoundConstructor
+    public SharedVpcNetworkConfiguration(String projectId, String region, String subnetworkShortName) {
+        super("", String.format(SUBNETWORK_TEMPLATE, projectId, region, subnetworkShortName));
+        this.projectId = projectId;
+        this.subnetworkShortName = subnetworkShortName;
+        this.region = region;
     }
 
-    public FormValidation doCheckProjectId(@QueryParameter String value) {
-      checkPermissions();
-      if (Strings.isNullOrEmpty(value)) {
-        return FormValidation.error("Project ID required");
-      }
-      return FormValidation.ok();
-    }
+    @Extension
+    public static final class DescriptorImpl extends NetworkConfigurationDescriptor {
+        public String getDisplayName() {
+            return "Shared VPC";
+        }
 
-    public FormValidation doCheckSubnetworkName(@QueryParameter String value) {
-      checkPermissions();
-      if (Strings.isNullOrEmpty(value)) {
-        return FormValidation.error("Subnetwork name required");
-      }
+        public FormValidation doCheckProjectId(@QueryParameter String value) {
+            checkPermissions(Jenkins.get(), Jenkins.ADMINISTER);
+            if (Strings.isNullOrEmpty(value)) {
+                return FormValidation.error("Project ID required");
+            }
+            return FormValidation.ok();
+        }
 
-      if (value.contains("/")) {
-        return FormValidation.error("Subnetwork name should not contain any '/' characters");
-      }
-      return FormValidation.ok();
-    }
+        public FormValidation doCheckSubnetworkName(@QueryParameter String value) {
+            checkPermissions(Jenkins.get(), Jenkins.ADMINISTER);
+            if (Strings.isNullOrEmpty(value)) {
+                return FormValidation.error("Subnetwork name required");
+            }
 
-    public FormValidation doCheckRegion(
-        @QueryParameter String value,
-        @QueryParameter("region") @RelativePath("..") final String region) {
-      checkPermissions();
-      if (Strings.isNullOrEmpty(region)
-          || Strings.isNullOrEmpty(value)
-          || !region.endsWith(value)) {
-        return FormValidation.error(
-            "The region you specify for a shared VPC should match the region selected in the 'Location' section above");
-      }
-      return FormValidation.ok();
+            if (value.contains("/")) {
+                return FormValidation.error("Subnetwork name should not contain any '/' characters");
+            }
+            return FormValidation.ok();
+        }
+
+        public FormValidation doCheckRegion(
+                @QueryParameter String value, @QueryParameter("region") @RelativePath("..") final String region) {
+            checkPermissions(Jenkins.get(), Jenkins.ADMINISTER);
+            if (Strings.isNullOrEmpty(region) || Strings.isNullOrEmpty(value) || !region.endsWith(value)) {
+                return FormValidation.error(
+                        "The region you specify for a shared VPC should match the region selected in the 'Location' section above");
+            }
+            return FormValidation.ok();
+        }
     }
-  }
 }

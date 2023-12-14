@@ -22,30 +22,30 @@ import java.util.Map;
 
 /** Class to store auto generated key pair from SshKeysHelper Utility */
 public class GoogleKeyPair extends GoogleKeyCredential implements Serializable {
-  private final Secret privateKey;
-  private final String publicKey;
+    private final Secret privateKey;
+    private final String publicKey;
 
-  private GoogleKeyPair(String publicKey, Secret privateKey, String user) {
-    super(user);
-    this.publicKey = user + ":" + publicKey + " " + user;
-    this.privateKey = privateKey;
-  }
+    private GoogleKeyPair(String publicKey, Secret privateKey, String user) {
+        super(user);
+        this.publicKey = user + ":" + publicKey + " " + user;
+        this.privateKey = privateKey;
+    }
 
-  public static GoogleKeyPair generate(String user) {
-    Map<String, String> keys = SshKeysHelper.generate();
-    return new GoogleKeyPair(keys.get("public"), Secret.fromString(keys.get("private")), user);
-  }
+    public static GoogleKeyPair generate(String user) {
+        Map<String, String> keys = SshKeysHelper.generate();
+        return new GoogleKeyPair(keys.get("public"), Secret.fromString(keys.get("private")), user);
+    }
 
-  public String getPublicKey() {
-    return publicKey;
-  }
+    public String getPublicKey() {
+        return publicKey;
+    }
 
-  public Secret getPrivateKey() {
-    return privateKey;
-  }
+    public Secret getPrivateKey() {
+        return privateKey;
+    }
 
-  @Override
-  public String toString() {
-    return "Public key:\n" + publicKey + "\n\nPrivate key:\n" + privateKey.getEncryptedValue();
-  }
+    @Override
+    public String toString() {
+        return "Public key:\n" + publicKey + "\n\nPrivate key:\n" + privateKey.getEncryptedValue();
+    }
 }
