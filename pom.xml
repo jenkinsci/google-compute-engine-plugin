@@ -65,7 +65,7 @@
     <revision>4</revision>
     <changelist>999999-SNAPSHOT</changelist>
     <gitHubRepo>jenkinsci/${project.artifactId}-plugin</gitHubRepo>
-    <jenkins.version>2.387.3</jenkins.version>
+    <jenkins.version>2.401.3</jenkins.version>
     <jenkinsRuleTimeout>0</jenkinsRuleTimeout>
     <skip.surefire.tests>${skipTests}</skip.surefire.tests>
     <skipITs>true</skipITs>
@@ -89,21 +89,10 @@
     <dependencies>
       <dependency>
         <groupId>io.jenkins.tools.bom</groupId>
-        <artifactId>bom-2.387.x</artifactId>
-        <version>2465.va_e76ed7b_3061</version>
+        <artifactId>bom-2.401.x</artifactId>
+        <version>2671.va_73a_b_4c103fb_</version>
         <type>pom</type>
         <scope>import</scope>
-      </dependency>
-      <!-- TODO: Remove the version here when it is integrated in the BOM -->
-      <dependency>
-        <groupId>org.jenkins-ci.plugins</groupId>
-        <artifactId>google-oauth-plugin</artifactId>
-        <version>1.319.v5cb_58b_91b_389</version>
-      </dependency>
-      <dependency>
-        <groupId>org.jenkins-ci.plugins</groupId>
-        <artifactId>oauth-credentials</artifactId>
-        <version>0.646.v02b_66dc03d2e</version>
       </dependency>
     </dependencies>
   </dependencyManagement>
@@ -248,6 +237,8 @@
     <dependency>
       <groupId>org.jenkins-ci.plugins</groupId>
       <artifactId>trilead-api</artifactId>
+      <!-- TODO remove when upgrading BOM -->
+      <version>2.84.v72119de229b_7</version>
       <exclusions>
         <exclusion>
           <groupId>net.i2p.crypto</groupId>
