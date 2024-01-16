@@ -109,7 +109,13 @@
                     <f:entry title="${%Network tags}" field="networkTags">
                         <f:textbox/>
                     </f:entry>
-                    <f:entry field="externalAddress" title="${%Attach External IP?}">
+                    <f:entry field="ipStackType" title="${%Network Interface IP stack type}">
+                        <f:select/>
+                    </f:entry>
+                    <f:entry field="externalAddress" title="${%Attach External IPV4 address?}">
+                        <f:checkbox/>
+                    </f:entry>
+                    <f:entry field="externalIPV6Address" title="${%Attach External IPV6 address?}">
                         <f:checkbox/>
                     </f:entry>
                 </f:section>

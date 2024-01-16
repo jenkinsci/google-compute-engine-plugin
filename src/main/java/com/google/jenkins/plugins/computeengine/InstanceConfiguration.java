@@ -100,6 +100,8 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
     public static final String METADATA_WINDOWS_STARTUP_SCRIPT_KEY = "windows-startup-script-ps1";
     public static final String NAT_TYPE = "ONE_TO_ONE_NAT";
     public static final String NAT_NAME = "External NAT";
+    public static final String IPV6_TYPE = "DIRECT_IPV6";
+    public static final String IPV6_NAME = "external-ipv6";
     public static final List<String> KNOWN_IMAGE_PROJECTS = Collections.unmodifiableList(new ArrayList<String>() {
         {
             add("centos-cloud");
@@ -114,6 +116,15 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
             add("windows-sql-cloud");
         }
     });
+    public static final String IP_SINGLE_STACK = "IPV4_ONLY";
+    public static final String IP_DUAL_STACK = "IPV4_IPV6";
+    public static final List<String> IP_STACK_TYPES = Collections.unmodifiableList(new ArrayList<String>() {
+        {
+            add(IP_SINGLE_STACK);
+            add(IP_DUAL_STACK);
+        }
+    });
+    public static final String PREMIUM_NETWORK_TIER = "PREMIUM";
 
     private String description;
     private String namePrefix;
@@ -131,7 +142,9 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
     private String bootDiskSourceImageName;
     private String bootDiskSourceImageProject;
     private NetworkConfiguration networkConfiguration;
+    private String ipStackType;
     private boolean externalAddress;
+    private boolean externalIPV6Address;
     private boolean useInternalAddress;
     private boolean ignoreProxy;
     private String networkTags;
@@ -522,11 +535,17 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
     private List<NetworkInterface> networkInterfaces() {
         List<NetworkInterface> networkInterfaces = new ArrayList<>();
         List<AccessConfig> accessConfigs = new ArrayList<>();
+        NetworkInterface nic = new NetworkInterface().setStackType(this.ipStackType);
         if (externalAddress) {
             accessConfigs.add(new AccessConfig().setType(NAT_TYPE).setName(NAT_NAME));
+            nic.setAccessConfigs(accessConfigs);
         }
-        NetworkInterface nic = new NetworkInterface().setAccessConfigs(accessConfigs);
-
+        List<AccessConfig> ipv6AccessConfigs = new ArrayList<>();
+        if (externalIPV6Address) {
+            ipv6AccessConfigs.add(
+                    new AccessConfig().setType(IPV6_TYPE).setName(IPV6_NAME).setNetworkTier(PREMIUM_NETWORK_TIER));
+            nic.setIpv6AccessConfigs(ipv6AccessConfigs);
+        }
         // Don't include subnetwork name if using default
         if (!networkConfiguration.getSubnetwork().equals("default")) {
             nic.setSubnetwork(stripSelfLinkPrefix(networkConfiguration.getSubnetwork()));
@@ -937,6 +956,23 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
             } else if (numExecutors > 1 && oneShot) {
                 return FormValidation.error(Messages.InstanceConfiguration_NumExecutorsOneShotError());
             }
+            return FormValidation.ok();
+        }
+
+        public ListBoxModel doFillIpStackTypeItems() {
+            checkPermissions(Jenkins.get(), Jenkins.ADMINISTER);
+            ListBoxModel items = new ListBoxModel();
+            for (String v : IP_STACK_TYPES) {
+                items.add(v);
+            }
+            return items;
+        }
+
+        public FormValidation doCheckIpStackType(@QueryParameter String value) {
+            if (value.isEmpty()) {
+                return FormValidation.error("Please select an IP stack type...");
+            }
+
             return FormValidation.ok();
         }
     }

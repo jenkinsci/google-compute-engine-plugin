@@ -343,7 +343,7 @@ public abstract class ComputeEngineComputerLauncher extends ComputerLauncher {
                 if (this.useInternalAddress) {
                     host = nic.getNetworkIP();
                 } else {
-                    // Look for a public IP address
+                    // Look for a public IPv4 address
                     if (nic.getAccessConfigs() != null) {
                         for (AccessConfig ac : nic.getAccessConfigs()) {
                             if (ac.getType().equals(InstanceConfiguration.NAT_TYPE)) {
@@ -351,9 +351,20 @@ public abstract class ComputeEngineComputerLauncher extends ComputerLauncher {
                             }
                         }
                     }
+                    // Look for a public IPv6 address
+                    // TODO: IPv6 address is preferred compared to IPv4, we could let the user select
+                    //  his preferences to prioritize them.
+                    if (nic.getIpv6AccessConfigs() != null) {
+                        for (AccessConfig ac : nic.getIpv6AccessConfigs()) {
+                            if (ac.getType().equals(InstanceConfiguration.IPV6_TYPE)) {
+                                host = ac.getExternalIpv6();
+                            }
+                        }
+                    }
                     // No public address found. Fall back to internal address
                     if (host.isEmpty()) {
                         host = nic.getNetworkIP();
+                        logInfo(computer, listener, "No public address found. Fall back to internal address.");
                     }
                 }
 
