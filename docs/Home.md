@@ -57,7 +57,7 @@ View Google Compute Engine on the plugin site for more information.
 ### Google Compute Engine configuration
 Each GCE configuration can point to a different GCP project. Follow the steps below to create one.
 
- 1. Go to Manage Jenkins, then Configure System
+ 1. Go to Manage Jenkins, then Nodes and Clouds, then CLouds in the left menu 
  2. At the bottom of the page there will be a button labeled Add a new cloud, click the 
     button then click Google Compute Engine.
  3. Enter a name for your cloud configuration and the Project ID that you will be using
@@ -134,6 +134,5 @@ If you want to turn off this Strategy globally then you can set a SystemProperty
 
 Follow the steps below to configure it:
 
- 1. Go to Manage Jenkins, then Configure System
- 2. At the bottom of the page there will be a Cloud Section
- 3. Select the cloud project and look for the `No delay provisioning` checkbox, and click on to enable it. 
+ 1. Go to Manage Jenkins, then Nodes and Clouds, then CLouds in the left menu
+ 2. Select the cloud project and look for the `No delay provisioning` checkbox, and click on to enable it. 
