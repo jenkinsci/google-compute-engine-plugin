@@ -111,7 +111,7 @@
                     </f:entry>
                     <f:entry title="Network Interface IP stack type">
                         <f:hetero-radio field="networkInterfaceIpStackMode"
-                                        descriptors="${instance.networkInterfaceIpStackModeDescriptors}"/>
+                                        descriptors="${descriptor.networkInterfaceIpStackModeDescriptors}"/>
                     </f:entry>
                 </f:section>
 

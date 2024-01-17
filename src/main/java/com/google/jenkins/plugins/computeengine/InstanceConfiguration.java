@@ -232,10 +232,6 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
         this.createSnapshot = createSnapshot && this.oneShot;
     }
 
-    public List<NetworkInterfaceIpStackMode.Descriptor> getNetworkInterfaceIpStackModeDescriptors() {
-        return ExtensionList.lookup(NetworkInterfaceIpStackMode.Descriptor.class);
-    }
-
     public static Integer intOrDefault(String toParse, Integer defaultTo) {
         Integer toReturn;
         try {
@@ -937,6 +933,10 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
                 return FormValidation.error(Messages.InstanceConfiguration_NumExecutorsOneShotError());
             }
             return FormValidation.ok();
+        }
+
+        public List<NetworkInterfaceIpStackMode.Descriptor> getNetworkInterfaceIpStackModeDescriptors() {
+            return ExtensionList.lookup(NetworkInterfaceIpStackMode.Descriptor.class);
         }
     }
 
