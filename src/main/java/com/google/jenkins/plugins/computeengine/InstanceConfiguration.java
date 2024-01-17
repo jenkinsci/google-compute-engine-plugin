@@ -116,12 +116,12 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
             add("windows-sql-cloud");
         }
     });
-    public static final String IP_SINGLE_STACK = "IPV4_ONLY";
-    public static final String IP_DUAL_STACK = "IPV4_IPV6";
+    public static final String SINGLE_IP_STACK_TYPE = "IPV4_ONLY";
+    public static final String DUAL_IP_STACK_TYPE = "IPV4_IPV6";
     public static final List<String> IP_STACK_TYPES = Collections.unmodifiableList(new ArrayList<String>() {
         {
-            add(IP_SINGLE_STACK);
-            add(IP_DUAL_STACK);
+            add(SINGLE_IP_STACK_TYPE);
+            add(DUAL_IP_STACK_TYPE);
         }
     });
     public static final String PREMIUM_NETWORK_TIER = "PREMIUM";
