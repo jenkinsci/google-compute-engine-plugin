@@ -130,6 +130,7 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
     private String bootDiskSourceImageProject;
     private NetworkConfiguration networkConfiguration;
     private NetworkInterfaceIpStackMode networkInterfaceIpStackMode;
+    @Deprecated private boolean externalAddress;
     private boolean useInternalAddress;
     private boolean ignoreProxy;
     private String networkTags;
@@ -349,6 +350,7 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
     /** Initializes transient properties */
     protected Object readResolve() {
         labelSet = Label.parse(labels);
+        this.networkInterfaceIpStackMode = new NetworkInterfaceSingleStack(externalAddress);
         return this;
     }
 
