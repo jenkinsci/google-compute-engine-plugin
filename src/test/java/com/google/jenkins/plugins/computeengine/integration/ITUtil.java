@@ -21,8 +21,8 @@ import static com.google.common.collect.ImmutableList.copyOf;
 import static com.google.common.collect.ImmutableList.of;
 import static com.google.jenkins.plugins.computeengine.InstanceConfiguration.METADATA_LINUX_STARTUP_SCRIPT_KEY;
 import static com.google.jenkins.plugins.computeengine.InstanceConfiguration.METADATA_WINDOWS_STARTUP_SCRIPT_KEY;
-import static com.google.jenkins.plugins.computeengine.InstanceConfiguration.NAT_NAME;
-import static com.google.jenkins.plugins.computeengine.InstanceConfiguration.NAT_TYPE;
+import static com.google.jenkins.plugins.computeengine.NetworkInterfaceIpStackMode.NAT_NAME;
+import static com.google.jenkins.plugins.computeengine.NetworkInterfaceIpStackMode.NAT_TYPE;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
@@ -55,6 +55,7 @@ import com.google.jenkins.plugins.computeengine.AcceleratorConfiguration;
 import com.google.jenkins.plugins.computeengine.AutofilledNetworkConfiguration;
 import com.google.jenkins.plugins.computeengine.ComputeEngineCloud;
 import com.google.jenkins.plugins.computeengine.InstanceConfiguration;
+import com.google.jenkins.plugins.computeengine.NetworkInterfaceSingleStack;
 import com.google.jenkins.plugins.computeengine.SshConfiguration;
 import com.google.jenkins.plugins.computeengine.WindowsConfiguration;
 import com.google.jenkins.plugins.computeengine.client.ClientUtil;
@@ -318,7 +319,7 @@ class ITUtil {
                                 : null)
                 .remoteFs(null)
                 .networkConfiguration(new AutofilledNetworkConfiguration(NETWORK_NAME, SUBNETWORK_NAME))
-                .externalAddress(EXTERNAL_ADDR)
+                .networkInterfaceIpStackMode(new NetworkInterfaceSingleStack(true))
                 .useInternalAddress(false)
                 .ignoreProxy(false)
                 .networkTags(NETWORK_TAGS)

@@ -32,9 +32,9 @@ jenkins:
                 region:         europe-west1
                 subnetworkShortName: gce-jenkins-cloud
             networkTags:        jenkins-agent
-            ipStackType:        "IPV4_ONLY"
-            externalAddress:    true
-            externalIPV6Address: false
+            networkInterfaceIpStackMode:
+              singleStack:
+                externalIPV4Address:    true
             useInternalAddress: false
             bootDiskSourceImageProject: gce-jenkins
             bootDiskSourceImageName: "https://www.googleapis.com/compute/v1/projects/gce-jenkins/global/images/gce-jenkins-build-image"

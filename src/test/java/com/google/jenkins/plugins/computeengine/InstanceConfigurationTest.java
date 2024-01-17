@@ -204,7 +204,7 @@ public class InstanceConfigurationTest {
         r.assertEqualBeans(
                 want,
                 got,
-                "namePrefix,region,zone,machineType,preemptible,windowsConfiguration,minCpuPlatform,startupScript,bootDiskType,bootDiskSourceImageName,bootDiskSourceImageProject,bootDiskSizeGb,acceleratorConfiguration,networkConfiguration,externalAddress,networkTags,serviceAccountEmail");
+                "namePrefix,region,zone,machineType,preemptible,windowsConfiguration,minCpuPlatform,startupScript,bootDiskType,bootDiskSourceImageName,bootDiskSourceImageProject,bootDiskSizeGb,acceleratorConfiguration,networkConfiguration,networkInterfaceIpStackMode,networkTags,serviceAccountEmail");
     }
 
     @Test
@@ -319,7 +319,7 @@ public class InstanceConfigurationTest {
                 .createSnapshot(false)
                 .remoteFs(null)
                 .networkConfiguration(new AutofilledNetworkConfiguration(NETWORK_NAME, SUBNETWORK_NAME))
-                .externalAddress(EXTERNAL_ADDR)
+                .networkInterfaceIpStackMode(new NetworkInterfaceSingleStack(true))
                 .useInternalAddress(false)
                 .ignoreProxy(false)
                 .networkTags(NETWORK_TAGS)

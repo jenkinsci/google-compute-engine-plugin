@@ -346,7 +346,7 @@ public abstract class ComputeEngineComputerLauncher extends ComputerLauncher {
                     // Look for a public IPv4 address
                     if (nic.getAccessConfigs() != null) {
                         for (AccessConfig ac : nic.getAccessConfigs()) {
-                            if (ac.getType().equals(InstanceConfiguration.NAT_TYPE)) {
+                            if (ac.getType().equals(NetworkInterfaceIpStackMode.NAT_TYPE)) {
                                 host = ac.getNatIP();
                             }
                         }
@@ -356,7 +356,7 @@ public abstract class ComputeEngineComputerLauncher extends ComputerLauncher {
                     //  his preferences to prioritize them.
                     if (nic.getIpv6AccessConfigs() != null) {
                         for (AccessConfig ac : nic.getIpv6AccessConfigs()) {
-                            if (ac.getType().equals(InstanceConfiguration.IPV6_TYPE)) {
+                            if (ac.getType().equals(NetworkInterfaceDualStack.IPV6_TYPE)) {
                                 host = ac.getExternalIpv6();
                             }
                         }
