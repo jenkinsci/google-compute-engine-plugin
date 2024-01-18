@@ -130,7 +130,10 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
     private String bootDiskSourceImageProject;
     private NetworkConfiguration networkConfiguration;
     private NetworkInterfaceIpStackMode networkInterfaceIpStackMode;
-    @Deprecated private boolean externalAddress;
+
+    @Deprecated
+    private boolean externalAddress;
+
     private boolean useInternalAddress;
     private boolean ignoreProxy;
     private String networkTags;
