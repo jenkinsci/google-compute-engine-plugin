@@ -30,7 +30,9 @@ jenkins:
                 network:        default 
                 subnetwork:     default
             networkTags:        "jenkins-agent ssh"
-            externalAddress:    true
+            networkInterfaceIpStackMode:
+              singleStack:
+                externalIPV4Address:    true
             useInternalAddress: false
             bootDiskSourceImageProject: debian-cloud
             bootDiskSourceImageName: "projects/debian-cloud/global/images/family/debian-9"

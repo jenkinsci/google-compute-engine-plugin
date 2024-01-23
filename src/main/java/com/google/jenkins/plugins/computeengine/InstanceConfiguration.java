@@ -20,7 +20,6 @@ import static com.google.cloud.graphite.platforms.plugin.client.util.ClientUtil.
 import static com.google.jenkins.plugins.computeengine.ComputeEngineCloud.checkPermissions;
 
 import com.google.api.services.compute.model.AcceleratorConfig;
-import com.google.api.services.compute.model.AccessConfig;
 import com.google.api.services.compute.model.AttachedDisk;
 import com.google.api.services.compute.model.AttachedDiskInitializeParams;
 import com.google.api.services.compute.model.DiskType;
@@ -46,6 +45,7 @@ import com.google.jenkins.plugins.computeengine.ssh.GooglePrivateKey;
 import edu.umd.cs.findbugs.annotations.Nullable;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import hudson.Extension;
+import hudson.ExtensionList;
 import hudson.RelativePath;
 import hudson.Util;
 import hudson.model.Describable;
@@ -98,8 +98,6 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
     public static final String DEFAULT_RUN_AS_USER = "jenkins";
     public static final String METADATA_LINUX_STARTUP_SCRIPT_KEY = "startup-script";
     public static final String METADATA_WINDOWS_STARTUP_SCRIPT_KEY = "windows-startup-script-ps1";
-    public static final String NAT_TYPE = "ONE_TO_ONE_NAT";
-    public static final String NAT_NAME = "External NAT";
     public static final List<String> KNOWN_IMAGE_PROJECTS = Collections.unmodifiableList(new ArrayList<String>() {
         {
             add("centos-cloud");
@@ -131,7 +129,11 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
     private String bootDiskSourceImageName;
     private String bootDiskSourceImageProject;
     private NetworkConfiguration networkConfiguration;
+    private NetworkInterfaceIpStackMode networkInterfaceIpStackMode;
+
+    @Deprecated
     private boolean externalAddress;
+
     private boolean useInternalAddress;
     private boolean ignoreProxy;
     private String networkTags;
@@ -351,6 +353,7 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
     /** Initializes transient properties */
     protected Object readResolve() {
         labelSet = Label.parse(labels);
+        this.networkInterfaceIpStackMode = new NetworkInterfaceSingleStack(externalAddress);
         return this;
     }
 
@@ -521,18 +524,15 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
 
     private List<NetworkInterface> networkInterfaces() {
         List<NetworkInterface> networkInterfaces = new ArrayList<>();
-        List<AccessConfig> accessConfigs = new ArrayList<>();
-        if (externalAddress) {
-            accessConfigs.add(new AccessConfig().setType(NAT_TYPE).setName(NAT_NAME));
-        }
-        NetworkInterface nic = new NetworkInterface().setAccessConfigs(accessConfigs);
+
+        NetworkInterface networkInterface = networkInterfaceIpStackMode.getNetworkInterface();
 
         // Don't include subnetwork name if using default
         if (!networkConfiguration.getSubnetwork().equals("default")) {
-            nic.setSubnetwork(stripSelfLinkPrefix(networkConfiguration.getSubnetwork()));
+            networkInterface.setSubnetwork(stripSelfLinkPrefix(networkConfiguration.getSubnetwork()));
         }
 
-        networkInterfaces.add(nic);
+        networkInterfaces.add(networkInterface);
         return networkInterfaces;
     }
 
@@ -939,6 +939,10 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
             }
             return FormValidation.ok();
         }
+
+        public List<NetworkInterfaceIpStackMode.Descriptor> getNetworkInterfaceIpStackModeDescriptors() {
+            return ExtensionList.lookup(NetworkInterfaceIpStackMode.Descriptor.class);
+        }
     }
 
     public static class Builder {
@@ -962,7 +966,7 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
             instanceConfiguration.setBootDiskSourceImageName(this.bootDiskSourceImageName);
             instanceConfiguration.setBootDiskSourceImageProject(this.bootDiskSourceImageProject);
             instanceConfiguration.setNetworkConfiguration(this.networkConfiguration);
-            instanceConfiguration.setExternalAddress(this.externalAddress);
+            instanceConfiguration.setNetworkInterfaceIpStackMode(this.networkInterfaceIpStackMode);
             instanceConfiguration.setUseInternalAddress(this.useInternalAddress);
             instanceConfiguration.setIgnoreProxy(this.ignoreProxy);
             instanceConfiguration.setNetworkTags(this.networkTags);

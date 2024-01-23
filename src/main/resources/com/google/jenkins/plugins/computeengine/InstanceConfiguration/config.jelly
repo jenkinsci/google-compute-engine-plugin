@@ -109,8 +109,9 @@
                     <f:entry title="${%Network tags}" field="networkTags">
                         <f:textbox/>
                     </f:entry>
-                    <f:entry field="externalAddress" title="${%Attach External IP?}">
-                        <f:checkbox/>
+                    <f:entry title="Network Interface IP stack type">
+                        <f:hetero-radio field="networkInterfaceIpStackMode"
+                                        descriptors="${descriptor.networkInterfaceIpStackModeDescriptors}"/>
                     </f:entry>
                 </f:section>
 

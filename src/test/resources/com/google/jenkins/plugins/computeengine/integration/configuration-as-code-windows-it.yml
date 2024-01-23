@@ -32,7 +32,9 @@ jenkins:
                 network:        default
                 subnetwork:     default
             networkTags:        "jenkins-agent ssh"
-            externalAddress:    true
+            networkInterfaceIpStackMode:
+              singleStack:
+                externalIPV4Address:    true
             useInternalAddress: false
             bootDiskSourceImageProject: ${env.GOOGLE_BOOT_DISK_PROJECT_ID}
             bootDiskSourceImageName: "projects/${env.GOOGLE_BOOT_DISK_PROJECT_ID}/global/images/${env.GOOGLE_BOOT_DISK_IMAGE_NAME}"

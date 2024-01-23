@@ -17,6 +17,7 @@
 package com.google.jenkins.plugins.computeengine.integration;
 
 import static com.google.cloud.graphite.platforms.plugin.client.util.ClientUtil.nameFromSelfLink;
+import static com.google.jenkins.plugins.computeengine.NetworkInterfaceIpStackMode.NAT_TYPE;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.LABEL;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.NUM_EXECUTORS;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.PROJECT_ID;
@@ -153,7 +154,7 @@ public class ComputeEngineCloudTemplateIT {
             String host = "";
             if (nic.getAccessConfigs() != null) {
                 for (AccessConfig ac : nic.getAccessConfigs()) {
-                    if (ac.getType().equals(InstanceConfiguration.NAT_TYPE)) {
+                    if (ac.getType().equals(NAT_TYPE)) {
                         host = ac.getNatIP();
                     }
                 }
