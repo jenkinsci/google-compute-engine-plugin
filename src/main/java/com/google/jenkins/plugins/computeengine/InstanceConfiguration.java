@@ -132,7 +132,7 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
     private NetworkInterfaceIpStackMode networkInterfaceIpStackMode;
 
     @Deprecated
-    private boolean externalAddress;
+    private Boolean externalAddress;
 
     private boolean useInternalAddress;
     private boolean ignoreProxy;
@@ -353,7 +353,10 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
     /** Initializes transient properties */
     protected Object readResolve() {
         labelSet = Label.parse(labels);
-        this.networkInterfaceIpStackMode = new NetworkInterfaceSingleStack(externalAddress);
+        if (externalAddress != null) {
+            this.networkInterfaceIpStackMode = new NetworkInterfaceSingleStack(externalAddress);
+            this.externalAddress = null;
+        }
         return this;
     }
 
