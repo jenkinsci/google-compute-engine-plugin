@@ -16,6 +16,8 @@
 
 package com.google.jenkins.plugins.computeengine;
 
+import static com.google.jenkins.plugins.computeengine.ComputeEngineCloud.checkPermissions;
+
 import com.google.api.services.compute.model.AcceleratorType;
 import com.google.cloud.graphite.platforms.plugin.client.ClientFactory;
 import com.google.cloud.graphite.platforms.plugin.client.ComputeClient;
@@ -81,6 +83,7 @@ public class AcceleratorConfiguration implements Describable<AcceleratorConfigur
                 @QueryParameter("projectId") @RelativePath("../..") final String projectId,
                 @QueryParameter("zone") @RelativePath("..") String zone,
                 @QueryParameter("credentialsId") @RelativePath("../..") final String credentialsId) {
+            checkPermissions(Jenkins.get(), Jenkins.ADMINISTER);
             ListBoxModel items = new ListBoxModel();
             try {
                 ComputeClient compute = computeClient(context, credentialsId);
