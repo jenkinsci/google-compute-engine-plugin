@@ -22,7 +22,7 @@
   </parent>
 
   <artifactId>google-compute-engine</artifactId>
-  <version>${revision}.${changelist}</version>
+  <version>4.561.${changelist}</version>
   <packaging>hpi</packaging>
   <name>Google Compute Engine Plugin</name>
   <description>This plugin allows Jenkins to provision dynamic worker nodes on Google Compute Engine.</description>
