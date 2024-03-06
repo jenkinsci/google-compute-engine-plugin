@@ -53,7 +53,7 @@
             <f:entry title="${%Remote Location}" field="remoteFs">
                 <f:textbox default=""/>
             </f:entry>
-            <f:entry title="${%Java Exec Path}" field="javaExecPath">
+            <f:entry title="${%Java Path}" field="javaExecPath">
                 <f:textbox default="java"/>
             </f:entry>
             <f:optionalProperty field="windowsConfiguration" title="${%Windows?}">
