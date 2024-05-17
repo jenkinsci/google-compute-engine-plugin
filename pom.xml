@@ -192,11 +192,6 @@
       <artifactId>opencensus-api</artifactId>
       <version>0.31.1</version>
     </dependency>
-    <dependency>
-      <groupId>net.i2p.crypto</groupId>
-      <artifactId>eddsa</artifactId>
-      <version>0.3.0</version>
-    </dependency>
     <!-- gcp-client (abandoned?) actually depends on these libraries in _compile_ scope, so they must be bundled in the plugin. -->
     <!-- See https://github.com/GoogleCloudPlatform/gcp-plugin-core-java/blob/cce07995cf7f060e71bf11da37d7a1f976ea84ef/gcp-client/src/main/java/com/google/cloud/graphite/platforms/plugin/client/ComputeClient.java#L665 -->
     <dependency>
@@ -246,14 +241,6 @@
     <dependency>
       <groupId>org.jenkins-ci.plugins</groupId>
       <artifactId>trilead-api</artifactId>
-      <!-- TODO remove when upgrading BOM -->
-      <version>2.84.v72119de229b_7</version>
-      <exclusions>
-        <exclusion>
-          <groupId>net.i2p.crypto</groupId>
-          <artifactId>eddsa</artifactId>
-        </exclusion>
-      </exclusions>
     </dependency>
     <dependency>
       <groupId>org.projectlombok</groupId>
