@@ -154,14 +154,16 @@ public abstract class ComputeEngineComputerLauncher extends ComputerLauncher {
             }
             if (opError != null) {
                 LOGGER.info(String.format(
-                        "Launch failed while waiting for operation %s to complete. Operation error was %s",
+                        "Launch failed while waiting for operation %s to complete. Operation error was %s. Terminating instance.",
                         insertOperationId, opError.getErrors().get(0).getMessage()));
+                terminateNode(computer, listener);
                 return;
             }
         } catch (InterruptedException e) {
             LOGGER.info(String.format(
-                    "Launch failed while waiting for operation %s to complete. Operation error was %s",
+                    "Launch failed while waiting for operation %s to complete. Operation error was %s. Terminating instance",
                     insertOperationId, opError.getErrors().get(0).getMessage()));
+            terminateNode(computer, listener);
             return;
         }
 
@@ -214,16 +216,20 @@ public abstract class ComputeEngineComputerLauncher extends ComputerLauncher {
             launch(computer, listener);
         } catch (IOException ioe) {
             ioe.printStackTrace(listener.error(ioe.getMessage()));
-            node = (ComputeEngineInstance) slaveComputer.getNode();
-            if (node != null) {
-                try {
-                    node.terminate();
-                } catch (Exception e) {
-                    listener.error(String.format("Failed to terminate node %s", node.getDisplayName()));
-                }
-            }
+            terminateNode(slaveComputer, listener);
         } catch (InterruptedException ie) {
 
+        }
+    }
+
+    private static void terminateNode(SlaveComputer slaveComputer, TaskListener listener) {
+        ComputeEngineInstance node = (ComputeEngineInstance) slaveComputer.getNode();
+        if (node != null) {
+            try {
+                node.terminate();
+            } catch (Exception e) {
+                listener.error(String.format("Failed to terminate node %s", node.getDisplayName()));
+            }
         }
     }
 
