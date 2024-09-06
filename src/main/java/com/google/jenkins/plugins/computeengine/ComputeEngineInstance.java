@@ -16,8 +16,11 @@
 
 package com.google.jenkins.plugins.computeengine;
 
+import static com.google.jenkins.plugins.computeengine.ComputeEngineCloud.CLOUD_ID_LABEL_KEY;
+
 import com.google.cloud.graphite.platforms.plugin.client.ComputeClient.OperationException;
 import com.google.common.base.Strings;
+import com.google.common.collect.ImmutableMap;
 import com.google.jenkins.plugins.computeengine.ssh.GoogleKeyCredential;
 import edu.umd.cs.findbugs.annotations.Nullable;
 import hudson.Extension;
@@ -30,6 +33,7 @@ import hudson.slaves.ComputerLauncher;
 import hudson.slaves.RetentionStrategy;
 import java.io.IOException;
 import java.util.Collections;
+import java.util.Map;
 import java.util.Optional;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -130,9 +134,16 @@ public class ComputeEngineInstance extends AbstractCloudSlave {
                         .createSnapshotSync(cloud.getProjectId(), this.zone, this.getNodeName(), createSnapshotTimeout);
             }
 
-            // If the instance is running, attempt to terminate it. This is an async call and we
+            Map<String, String> filterLabel = ImmutableMap.of(CLOUD_ID_LABEL_KEY, cloud.getInstanceId());
+            var instanceExistsInCloud =
+                    cloud.getClient().listInstancesWithLabel(cloud.getProjectId(), filterLabel).stream()
+                            .anyMatch(instance -> instance.getName().equals(name));
+
+            // If the instance exists in the cloud, attempt to terminate it. This is an async call and we
             // return immediately, hoping for the best.
-            cloud.getClient().terminateInstanceAsync(cloud.getProjectId(), zone, name);
+            if (instanceExistsInCloud) {
+                cloud.getClient().terminateInstanceAsync(cloud.getProjectId(), zone, name);
+            }
         } catch (CloudNotFoundException cnfe) {
             listener.error(cnfe.getMessage());
         } catch (OperationException oe) {
