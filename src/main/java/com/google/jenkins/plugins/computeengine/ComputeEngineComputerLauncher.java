@@ -280,10 +280,11 @@ public abstract class ComputeEngineComputerLauncher extends ComputerLauncher {
             return;
         }
 
-        final Connection conn;
+        Connection conn = null;
         Optional<Connection> cleanupConn;
         PrintStream logger = listener.getLogger();
         logInfo(computer, listener, "Launching instance: " + node.getNodeName());
+        Session sess = null;
         try {
             cleanupConn = setupConnection(node, computer, listener);
             if (!cleanupConn.isPresent()) {
@@ -298,16 +299,24 @@ public abstract class ComputeEngineComputerLauncher extends ComputerLauncher {
             copyAgentJar(computer, conn, listener, jenkinsDir);
             String launchString = getJavaLaunchString(javaExecPath, jenkinsDir);
             logInfo(computer, listener, "Launching Jenkins agent via plugin SSH: " + launchString);
-            final Session sess = conn.openSession();
+            sess = conn.openSession();
             sess.execCommand(launchString);
+            Session finalSess = sess;
+            Connection finalConn = conn;
             computer.setChannel(sess.getStdout(), sess.getStdin(), logger, new Channel.Listener() {
                 @Override
                 public void onClosed(Channel channel, IOException cause) {
-                    sess.close();
-                    conn.close();
+                    finalSess.close();
+                    finalConn.close();
                 }
             });
         } catch (Exception e) {
+            if (sess != null) {
+                sess.close();
+            }
+            if (conn != null) {
+                conn.close();
+            }
             logException(computer, listener, "Error: ", e);
         }
     }
