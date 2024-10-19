@@ -542,9 +542,11 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
     private List<ServiceAccount> serviceAccounts() {
         if (notNullOrEmpty(serviceAccountEmail)) {
             List<ServiceAccount> serviceAccounts = new ArrayList<>();
-            serviceAccounts.add(new ServiceAccount()
-                    .setEmail(serviceAccountEmail)
-                    .setScopes(Arrays.asList(new String[] {"https://www.googleapis.com/auth/cloud-platform"})));
+            serviceAccounts.add(
+                    new ServiceAccount().setEmail(serviceAccountEmail).setScopes(Arrays.asList(new String[] {
+                        "https://www.googleapis.com/auth/cloud-platform",
+                        "https://www.googleapis.com/auth/userinfo.email"
+                    })));
             return serviceAccounts;
         } else {
             return null;
