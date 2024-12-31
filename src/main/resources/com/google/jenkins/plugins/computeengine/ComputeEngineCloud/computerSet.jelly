@@ -12,28 +12,32 @@
  License.
 -->
 <?jelly escape-by-default='true'?>
-<j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:f="/lib/form">
+<j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:f="/lib/form"
+    xmlns:l="/lib/layout" xmlns:dd="/lib/layout/dropdowns">
     <j:if test="${it.hasPermission(it.PROVISION)}">
+        <j:set var="formId" value="${h.generateId()}"/>
         <tr>
             <td/>
-            <td colspan="${monitors.size()+1}">
-                <f:form action="${rootURL}/${it.url}/provision" method="post" name="provision">
-                    <input type="submit" class="gce-provision-button" value="${%Provision via} ${it.displayName}"/>
-                    <select name="configuration">
-                        <j:forEach var="c" items="${it.configurations}">
-                            <option value="${c.description}">${c.description}</option>
-                        </j:forEach>
-                    </select>
-                    <st:once>
-                        <script>
-                            Behaviour.register({
-                            ".gce-provision-button" : function (e) {
-                            new YAHOO.widget.Button(e, { type: "menu", menu: e.nextSibling });
-                            }
-                            });
-                        </script>
-                    </st:once>
+            <td colspan="${monitors.size()+2}">
+                <l:overflowButton icon="symbol-add"
+                                  text="${%Provision via} ${it.displayName}"
+                                  tooltip="${null}"
+                                  clazz="jenkins-!-margin-top-2">
+                    <j:forEach var="t" items="${it.configurations}">
+                        <dd:custom>
+                            <button class="jenkins-dropdown__item"
+                                    data-type="gcloud-provision"
+                                    data-form="${formId}"
+                                    data-url="${t.description}">
+                                ${t.description}
+                            </button>
+                        </dd:custom>
+                    </j:forEach>
+                </l:overflowButton>
+                <f:form action="${rootURL}/${it.url}/provision" method="post" name="provision" id="${formId}">
+                    <input type="hidden" name="configuration"/>
                 </f:form>
+                <st:adjunct includes="com.google.jenkins.plugins.computeengine.ComputeEngineCloud.provision"/>
             </td>
         </tr>
     </j:if>

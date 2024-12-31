@@ -92,6 +92,9 @@ public class ComputeEngineWindowsLauncher extends ComputeEngineComputerLauncher 
                 logInfo(computer, listener, "Authenticating as " + node.getSshUser());
                 try {
                     bootstrapConn = connectToSsh(computer, listener);
+                    if (bootstrapConn == null) {
+                        break;
+                    }
                     isAuthenticated = authenticateSSH(node.getSshUser(), windowsConfig, bootstrapConn, listener);
                 } catch (IOException e) {
                     logException(computer, listener, "Exception trying to authenticate", e);

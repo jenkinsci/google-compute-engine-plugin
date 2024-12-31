@@ -85,6 +85,9 @@ public class ComputeEngineLinuxLauncher extends ComputeEngineComputerLauncher {
                 logInfo(computer, listener, "Authenticating as " + node.getSshUser());
                 try {
                     bootstrapConn = connectToSsh(computer, listener);
+                    if (bootstrapConn == null) {
+                        break;
+                    }
                     isAuthenticated = bootstrapConn.authenticateWithPublicKey(
                             node.getSshUser(),
                             Secret.toString(keyCred.getPrivateKey()).toCharArray(),
