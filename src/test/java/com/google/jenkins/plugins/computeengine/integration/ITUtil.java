@@ -359,7 +359,8 @@ class ITUtil {
      * Used to label the nodes created in a given testClass for deletion
      */
     static Map<String, String> getLabel(Class testClass) {
-        return ImmutableMap.of(testClass.getSimpleName().toLowerCase(), "delete");
+        return ImmutableMap.of(
+                testClass.getSimpleName().toLowerCase(), "delete", "user", System.getProperty("user.name", "unknown"));
     }
 
     private static void deleteIntegrationInstances(

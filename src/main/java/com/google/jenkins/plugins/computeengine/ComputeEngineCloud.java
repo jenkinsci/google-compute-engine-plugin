@@ -29,6 +29,7 @@ import com.google.cloud.graphite.platforms.plugin.client.ComputeClient;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableMap;
 import com.google.jenkins.plugins.computeengine.client.ClientUtil;
+import com.google.jenkins.plugins.computeengine.client.ComputeClientV2;
 import com.google.jenkins.plugins.credentials.oauth.GoogleOAuth2Credentials;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import hudson.Extension;
@@ -48,6 +49,7 @@ import hudson.util.HttpResponses;
 import hudson.util.ListBoxModel;
 import java.io.IOException;
 import java.io.PrintStream;
+import java.security.GeneralSecurityException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Iterator;
@@ -90,6 +92,7 @@ public class ComputeEngineCloud extends AbstractCloudImpl {
     private List<InstanceConfiguration> configurations;
 
     private transient volatile ComputeClient client;
+    private transient volatile ComputeClientV2 clientV2;
     private boolean noDelayProvisioning;
 
     @DataBoundConstructor
@@ -161,6 +164,8 @@ public class ComputeEngineCloud extends AbstractCloudImpl {
 
                 // Apply a label that identifies the name of this instance configuration
                 configuration.appendLabel(CONFIG_LABEL_KEY, configuration.getNamePrefix());
+                configuration.appendLabel(
+                        CleanLostNodesWork.NODE_IN_USE_LABEL_KEY, CleanLostNodesWork.getLastRefreshLabelVal());
             }
         }
         setInstanceId(instanceId);
@@ -207,6 +212,17 @@ public class ComputeEngineCloud extends AbstractCloudImpl {
             }
         }
         return client;
+    }
+
+    public ComputeClientV2 getClientV2() throws IOException, GeneralSecurityException {
+        if (clientV2 == null) {
+            synchronized (this) {
+                if (clientV2 == null) {
+                    clientV2 = ClientUtil.createComputeClientV2(projectId, credentialsId);
+                }
+            }
+        }
+        return clientV2;
     }
 
     /**

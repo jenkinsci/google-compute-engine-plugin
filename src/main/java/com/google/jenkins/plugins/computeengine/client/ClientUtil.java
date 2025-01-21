@@ -4,7 +4,10 @@ import com.cloudbees.plugins.credentials.CredentialsMatchers;
 import com.cloudbees.plugins.credentials.CredentialsProvider;
 import com.cloudbees.plugins.credentials.domains.DomainRequirement;
 import com.google.api.client.auth.oauth2.Credential;
+import com.google.api.client.googleapis.javanet.GoogleNetHttpTransport;
 import com.google.api.client.http.HttpTransport;
+import com.google.api.client.json.jackson2.JacksonFactory;
+import com.google.api.services.compute.Compute;
 import com.google.cloud.graphite.platforms.plugin.client.ClientFactory;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
@@ -19,6 +22,7 @@ import java.io.IOException;
 import java.security.GeneralSecurityException;
 import java.util.List;
 import java.util.Optional;
+import jenkins.model.Jenkins;
 
 /** Utilities for using the gcp-plugin-core clients. */
 public class ClientUtil {
@@ -87,5 +91,18 @@ public class ClientUtil {
 
     private static Credential getGoogleCredential(GoogleRobotCredentials credentials) throws GeneralSecurityException {
         return credentials.getGoogleCredential(new ComputeEngineScopeRequirement());
+    }
+
+    public static ComputeClientV2 createComputeClientV2(String projectId, String credentialsId)
+            throws GeneralSecurityException, IOException {
+        Credential httpRequestInitializer = ClientUtil.getGoogleCredential(
+                ClientUtil.getRobotCredentials(Jenkins.get(), ImmutableList.of(), credentialsId));
+        Compute compute = new Compute.Builder(
+                        GoogleNetHttpTransport.newTrustedTransport(), new JacksonFactory(), httpRequestInitializer)
+                .setGoogleClientRequestInitializer(request ->
+                        request.setRequestHeaders(request.getRequestHeaders().setUserAgent(APPLICATION_NAME)))
+                .setApplicationName(ClientUtil.APPLICATION_NAME)
+                .build();
+        return new ComputeClientV2(projectId, compute);
     }
 }
