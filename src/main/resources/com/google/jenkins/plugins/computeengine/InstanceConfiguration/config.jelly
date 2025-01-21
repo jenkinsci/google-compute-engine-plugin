@@ -117,7 +117,7 @@
 
                 <f:section title="Boot Disk">
                     <f:entry field="bootDiskSourceImageProject" title="${%Image project}">
-                        <f:select/>
+                        <f:combobox/>
                     </f:entry>
                     <f:entry field="bootDiskSourceImageName" title="${%Image name}">
                         <f:select/>
