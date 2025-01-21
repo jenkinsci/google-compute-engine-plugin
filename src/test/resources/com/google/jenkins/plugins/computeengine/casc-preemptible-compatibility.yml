@@ -3,7 +3,7 @@ jenkins:
     - computeEngine:
         cloudName: jenkins-build
         projectId: gce-jenkins
-        instanceCapStr: 53
+        instanceCapStr: 2
         credentialsId: gce-jenkins
         noDelayProvisioning: false
         configurations:
@@ -21,10 +21,11 @@ jenkins:
             createSnapshot:     false
             region:             "https://www.googleapis.com/compute/v1/projects/gce-jenkins/regions/europe-west1"
             zone:               "https://www.googleapis.com/compute/v1/projects/gce-jenkins/zones/europe-west1-a"
-            template:           '' # tried not setting, added when 'saved' in UI
+            template:           ''
             machineType:        "https://www.googleapis.com/compute/v1/projects/gce-jenkins/zones/europe-west1-a/machineTypes/n1-standard-2"
-            minCpuPlatform:     '' # tried not setting, added when 'saved' in UI
-            startupScript:      '' # tried not setting, added when 'saved' in UI
+            preemptible:        true
+            minCpuPlatform:     ''
+            startupScript:      ''
             networkConfiguration:
               sharedVpc:
                 projectId:      gce-jenkins-cloud-123456
@@ -41,14 +42,3 @@ jenkins:
             bootDiskSizeGbStr:  50
             bootDiskAutoDelete: true
             serviceAccountEmail: 'jenkins-test@gce-jenkins-ops.iam.gserviceaccount.com'
-credentials:
-  system:
-    domainCredentials:
-      - credentials:
-          - googleRobotPrivateKeyCredentials:
-              id: gce-jenkins
-              projectId: gce-jenkins
-              serviceAccountConfig:
-                jsonServiceAccountConfig:
-                  # The encoded version of {"client_email": "example@example.com"}
-                  secretJsonKey: 'eyJjbGllbnRfZW1haWwiOiAiZXhhbXBsZUBleGFtcGxlLmNvbSJ9'

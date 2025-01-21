@@ -36,6 +36,8 @@ import com.google.api.services.compute.model.Subnetwork;
 import com.google.api.services.compute.model.Zone;
 import com.google.cloud.graphite.platforms.plugin.client.ComputeClient;
 import com.google.common.collect.ImmutableList;
+import com.google.jenkins.plugins.computeengine.config.PreemptibleVm;
+import com.google.jenkins.plugins.computeengine.config.Standard;
 import hudson.model.Node;
 import hudson.util.FormValidation;
 import java.util.ArrayList;
@@ -308,7 +310,7 @@ public class InstanceConfigurationTest {
                 .machineType(MACHINE_TYPE)
                 .numExecutorsStr(NUM_EXECUTORS)
                 .startupScript(STARTUP_SCRIPT)
-                .preemptible(PREEMPTIBLE)
+                .provisioningType(PREEMPTIBLE ? new PreemptibleVm() : new Standard(0))
                 .labels(LABEL)
                 .description(CONFIG_DESC)
                 .bootDiskType(BOOT_DISK_TYPE)

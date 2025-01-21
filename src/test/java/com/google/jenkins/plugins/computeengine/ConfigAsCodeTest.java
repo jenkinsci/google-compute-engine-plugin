@@ -1,9 +1,14 @@
 package com.google.jenkins.plugins.computeengine;
 
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.instanceOf;
+import static org.hamcrest.Matchers.is;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertThrows;
 
+import com.google.jenkins.plugins.computeengine.config.PreemptibleVm;
 import com.google.jenkins.plugins.credentials.oauth.GoogleRobotPrivateKeyCredentials;
 import hudson.model.Node;
 import io.jenkins.plugins.casc.misc.ConfiguredWithCode;
@@ -40,6 +45,7 @@ public class ConfigAsCodeTest {
         assertEquals("Wrong configurations runAsUser", "jenkins", configuration.getRunAsUser());
         assertEquals("Wrong configurations remoteFs", "agent", configuration.getRemoteFs());
         assertEquals("Wrong configurations javaExecPath", "java", configuration.getJavaExecPath());
+        assertNull("Wrong configuration provisioningType non null", configuration.getProvisioningType());
     }
 
     @Test
@@ -50,5 +56,12 @@ public class ConfigAsCodeTest {
         assertNotNull("Cloud by name not found", cloud);
         // Ensure correct exception is thrown
         assertThrows(GoogleRobotPrivateKeyCredentials.PrivateKeyNotSetException.class, cloud::getClient);
+    }
+
+    @Test
+    @ConfiguredWithCode("casc-preemptible-compatibility.yml")
+    public void provisioningTypeShouldBePreemptible() {
+        ComputeEngineCloud cloud = (ComputeEngineCloud) jenkinsRule.jenkins.clouds.getByName("gce-jenkins-build");
+        assertThat(cloud.getConfigurations().get(0).getProvisioningType(), is(instanceOf(PreemptibleVm.class)));
     }
 }

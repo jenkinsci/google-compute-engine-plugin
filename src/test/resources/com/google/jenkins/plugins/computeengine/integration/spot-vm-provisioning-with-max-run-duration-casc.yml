@@ -6,26 +6,28 @@ jenkins:
         instanceCapStr: 10
         credentialsId: ${env.GOOGLE_PROJECT_ID}
         configurations:
-          - namePrefix:         integration-non-standard-java
-            description:        integration-non-standard-java
+          - namePrefix:         max-run-duration
+            description:        max-run-duration
             launchTimeoutSecondsStr: ''
-            retentionTimeMinutesStr: ''
+            retentionTimeMinutesStr: "30"
             mode:               EXCLUSIVE
-            labelString:        integration-non-standard-java
+            labelString:        integration
             numExecutorsStr:    1
             runAsUser:          jenkins
             remoteFs:           ''
-            oneShot:            true
+            oneShot:            false
             createSnapshot:     false
             region:             "https://www.googleapis.com/compute/v1/projects/${env.GOOGLE_PROJECT_ID}/regions/${env.GOOGLE_REGION}"
             zone:               "https://www.googleapis.com/compute/v1/projects/${env.GOOGLE_PROJECT_ID}/zones/${env.GOOGLE_ZONE}"
             template:           '' # tried not setting, added when 'saved' in UI
             machineType:        "https://www.googleapis.com/compute/v1/projects/${env.GOOGLE_PROJECT_ID}/zones/${env.GOOGLE_ZONE}/machineTypes/n1-standard-1"
-            minCpuPlatform:     '' # tried not setting, added when 'saved' in UI
-            javaExecPath:       'non-standard-java'
+            javaExecPath:       '/usr/bin/java'
+            provisioningType:
+              spotVm:
+                maxRunDurationSeconds: 180
             networkConfiguration:
               autofilled:
-                network:        default 
+                network:        default
                 subnetwork:     default
             networkTags:        "jenkins-agent ssh"
             networkInterfaceIpStackMode:
@@ -33,8 +35,8 @@ jenkins:
                 externalIPV4Address:    true
             useInternalAddress: false
             bootDiskSourceImageProject: ${env.GOOGLE_PROJECT_ID}
-            bootDiskSourceImageName: "projects/${env.GOOGLE_PROJECT_ID}/global/images/jenkins-gce-integration-test-jre-non-standard-java"
-            bootDiskType:       "https://www.googleapis.com/compute/v1/projects/${env.GOOGLE_PROJECT_ID}/zones/${env.GOOGLE_ZONE}/diskTypes/pd-ssd"
+            bootDiskSourceImageName: "projects/${env.GOOGLE_PROJECT_ID}/global/images/jenkins-gce-integration-test-jre"
+            bootDiskType:       "https://www.googleapis.com/compute/v1/projects/${env.GOOGLE_PROJECT_ID}/zones/${env.GOOGLE_ZONE}/diskTypes/pd-standard"
             bootDiskSizeGbStr:  20
             bootDiskAutoDelete: true
             serviceAccountEmail: "${env.GOOGLE_SA_NAME}@${env.GOOGLE_PROJECT_ID}.iam.gserviceaccount.com"

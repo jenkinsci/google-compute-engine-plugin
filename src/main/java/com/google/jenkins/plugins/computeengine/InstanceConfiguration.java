@@ -37,8 +37,12 @@ import com.google.api.services.compute.model.Tags;
 import com.google.api.services.compute.model.Zone;
 import com.google.cloud.graphite.platforms.plugin.client.ClientFactory;
 import com.google.cloud.graphite.platforms.plugin.client.ComputeClient;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Strings;
 import com.google.jenkins.plugins.computeengine.client.ClientUtil;
+import com.google.jenkins.plugins.computeengine.config.PreemptibleVm;
+import com.google.jenkins.plugins.computeengine.config.ProvisioningType;
+import com.google.jenkins.plugins.computeengine.config.Standard;
 import com.google.jenkins.plugins.computeengine.ssh.GoogleKeyCredential;
 import com.google.jenkins.plugins.computeengine.ssh.GoogleKeyPair;
 import com.google.jenkins.plugins.computeengine.ssh.GooglePrivateKey;
@@ -117,7 +121,7 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
     private String machineType;
     private String numExecutorsStr;
     private String startupScript;
-    private boolean preemptible;
+    private ProvisioningType provisioningType;
     private String minCpuPlatform;
     private String labels;
     private String runAsUser;
@@ -163,6 +167,11 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
     @Getter(AccessLevel.PROTECTED)
     @Setter(AccessLevel.PROTECTED)
     protected transient ComputeEngineCloud cloud;
+
+    /** @deprecated Use {@link #provisioningType} instead. */
+    @SuppressWarnings("DeprecatedIsStillUsed")
+    @Deprecated
+    private transient boolean preemptible;
 
     private static List<Metadata.Items> mergeMetadataItems(List<Metadata.Items> winner, List<Metadata.Items> loser) {
         if (loser == null) {
@@ -231,6 +240,24 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
     @DataBoundSetter
     public void setCreateSnapshot(boolean createSnapshot) {
         this.createSnapshot = createSnapshot && this.oneShot;
+    }
+
+    /**
+     * This setter is kept only to provide JCasC compatibility, don't use for any other.
+     * Although JCasC is not "required" to keep compatibility, but in this case,
+     * as it is very low effort to keep the compatibility, we have decided to keep it.
+     * <p>
+     * Previously, JCasC syntax would be {@code preemptible: true}, going forward instead should be done as,
+     * {@code provisioningType: preemptibleVm}
+     * <p>
+     * Currently only caller is, JCasC configurators if the bundle is having `preemptible` field defined in it.
+     * Consider deleting it in future (perhaps after a year or so)
+     */
+    @DataBoundSetter
+    public void setPreemptible(boolean preemptible) {
+        if (preemptible) {
+            this.provisioningType = new PreemptibleVm();
+        }
     }
 
     public static Integer intOrDefault(String toParse, Integer defaultTo) {
@@ -353,6 +380,10 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
         if (externalAddress != null) {
             this.networkInterfaceIpStackMode = new NetworkInterfaceSingleStack(externalAddress);
             this.externalAddress = null;
+        }
+        /* deprecating `preemptible` in favor of extensible `provisioningType` */
+        if (preemptible && provisioningType == null) {
+            provisioningType = new PreemptibleVm();
         }
         return this;
     }
@@ -489,9 +520,13 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
         return null;
     }
 
-    private Scheduling scheduling() {
+    @VisibleForTesting
+    Scheduling scheduling() {
         Scheduling scheduling = new Scheduling();
-        scheduling.setPreemptible(preemptible);
+        if (provisioningType == null) {
+            return scheduling;
+        }
+        provisioningType.configure(scheduling);
         return scheduling;
     }
 
@@ -585,6 +620,11 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
 
         public static SshConfiguration defaultSshConfiguration() {
             return SshConfiguration.builder().customPrivateKeyCredentialsId("").build();
+        }
+
+        @SuppressWarnings("unused") // jelly
+        public ProvisioningType defaultProvisioningType() {
+            return new Standard(0);
         }
 
         public static NetworkConfiguration defaultNetworkConfiguration() {
@@ -936,6 +976,11 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
             return FormValidation.ok();
         }
 
+        @SuppressWarnings("unused") // jelly
+        public List<ProvisioningType.ProvisioningTypeDescriptor> getProvisioningTypes() {
+            return ExtensionList.lookup(ProvisioningType.ProvisioningTypeDescriptor.class);
+        }
+
         public List<NetworkInterfaceIpStackMode.Descriptor> getNetworkInterfaceIpStackModeDescriptors() {
             return ExtensionList.lookup(NetworkInterfaceIpStackMode.Descriptor.class);
         }
@@ -951,7 +996,7 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
             instanceConfiguration.setMachineType(this.machineType);
             instanceConfiguration.setNumExecutorsStr(this.numExecutorsStr);
             instanceConfiguration.setStartupScript(this.startupScript);
-            instanceConfiguration.setPreemptible(this.preemptible);
+            instanceConfiguration.setProvisioningType(this.provisioningType);
             instanceConfiguration.setMinCpuPlatform(this.minCpuPlatform);
             instanceConfiguration.setLabelString(this.labels);
             instanceConfiguration.setRunAsUser(this.runAsUser);

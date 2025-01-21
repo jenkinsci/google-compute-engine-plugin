@@ -39,6 +39,7 @@ import com.google.common.collect.Lists;
 import com.google.jenkins.plugins.computeengine.ComputeEngineCloud;
 import com.google.jenkins.plugins.computeengine.ComputeEngineComputer;
 import com.google.jenkins.plugins.computeengine.InstanceConfiguration;
+import com.google.jenkins.plugins.computeengine.config.PreemptibleVm;
 import hudson.model.FreeStyleBuild;
 import hudson.model.FreeStyleProject;
 import hudson.model.Node;
@@ -94,7 +95,7 @@ public class ComputeEngineCloudRestartPreemptedIT {
                 .numExecutorsStr(NUM_EXECUTORS)
                 .labels(LABEL)
                 .template(NULL_TEMPLATE)
-                .preemptible(true)
+                .provisioningType(new PreemptibleVm())
                 .googleLabels(label)
                 .oneShot(false)
                 .build();

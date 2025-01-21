@@ -59,6 +59,8 @@ import com.google.jenkins.plugins.computeengine.NetworkInterfaceSingleStack;
 import com.google.jenkins.plugins.computeengine.SshConfiguration;
 import com.google.jenkins.plugins.computeengine.WindowsConfiguration;
 import com.google.jenkins.plugins.computeengine.client.ClientUtil;
+import com.google.jenkins.plugins.computeengine.config.PreemptibleVm;
+import com.google.jenkins.plugins.computeengine.config.Standard;
 import com.google.jenkins.plugins.computeengine.ssh.GoogleKeyCredential;
 import com.google.jenkins.plugins.computeengine.ssh.GoogleKeyPair;
 import com.google.jenkins.plugins.credentials.oauth.GoogleRobotPrivateKeyCredentials;
@@ -315,7 +317,7 @@ class ITUtil {
                 .region(REGION)
                 .zone(ZONE)
                 .machineType(MACHINE_TYPE)
-                .preemptible(PREEMPTIBLE)
+                .provisioningType(PREEMPTIBLE ? new PreemptibleVm() : new Standard(0))
                 .minCpuPlatform(MIN_CPU_PLATFORM)
                 .description(CONFIG_DESC)
                 .bootDiskType(BOOT_DISK_TYPE)
