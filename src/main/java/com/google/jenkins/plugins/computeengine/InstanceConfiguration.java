@@ -430,7 +430,10 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
             instance.setLabels(mergedLabels);
         } else {
             configureStartupScript(instance);
-            var labelsWithLastRefresh = new HashMap<>(googleLabels);
+            Map<String, String> labelsWithLastRefresh = new HashMap<>();
+            if (googleLabels != null) { // some tests don't set the labels
+                labelsWithLastRefresh.putAll(googleLabels);
+            }
             labelsWithLastRefresh.put(
                     CleanLostNodesWork.NODE_IN_USE_LABEL_KEY, CleanLostNodesWork.getLastRefreshLabelVal());
             instance.setLabels(labelsWithLastRefresh);
