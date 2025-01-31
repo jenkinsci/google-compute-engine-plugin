@@ -56,7 +56,9 @@ public class CleanLostNodesWork extends PeriodicWork {
      * "The value can only contain lowercase letters, numeric characters, underscores and dashes.
      * The value can be at most 63 characters long. International characters are allowed".
      */
-    private static final DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy_MM_dd't'HH_mm_ss_SSS'z'");
+    @VisibleForTesting
+    public static final DateTimeFormatter LAST_REFRESH_FORMATTER =
+            DateTimeFormatter.ofPattern("yyyy_MM_dd't'HH_mm_ss_SSS'z'");
 
     /** {@inheritDoc} */
     @Override
@@ -65,7 +67,7 @@ public class CleanLostNodesWork extends PeriodicWork {
     }
 
     public static String getLastRefreshLabelVal() {
-        return formatter.format(OffsetDateTime.now(ZoneOffset.UTC));
+        return LAST_REFRESH_FORMATTER.format(OffsetDateTime.now(ZoneOffset.UTC));
     }
 
     /** {@inheritDoc} */
@@ -107,7 +109,7 @@ public class CleanLostNodesWork extends PeriodicWork {
             return false;
         }
         OffsetDateTime lastRefresh =
-                LocalDateTime.parse(nodeLastRefresh, formatter).atOffset(ZoneOffset.UTC);
+                LocalDateTime.parse(nodeLastRefresh, LAST_REFRESH_FORMATTER).atOffset(ZoneOffset.UTC);
         boolean isOrphan = lastRefresh
                 .plus(RECURRENCE_PERIOD * LOST_MULTIPLIER, ChronoUnit.MILLIS)
                 .isBefore(OffsetDateTime.now(ZoneOffset.UTC));

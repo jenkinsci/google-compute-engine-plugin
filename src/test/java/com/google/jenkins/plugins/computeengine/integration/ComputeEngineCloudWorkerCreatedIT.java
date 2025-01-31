@@ -28,22 +28,32 @@ import static com.google.jenkins.plugins.computeengine.integration.ITUtil.initCl
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.initCredentials;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.instanceConfigurationBuilder;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.teardownResources;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertTrue;
 
+import com.google.api.services.compute.model.Instance;
 import com.google.api.services.compute.model.Metadata;
 import com.google.cloud.graphite.platforms.plugin.client.ComputeClient;
 import com.google.common.collect.ImmutableList;
+import com.google.jenkins.plugins.computeengine.CleanLostNodesWork;
 import com.google.jenkins.plugins.computeengine.ComputeEngineCloud;
 import com.google.jenkins.plugins.computeengine.InstanceConfiguration;
 import hudson.model.Node;
 import hudson.model.labels.LabelAtom;
 import java.io.IOException;
+import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
+import jenkins.model.Jenkins;
+import org.hamcrest.Description;
+import org.hamcrest.TypeSafeMatcher;
 import org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition;
 import org.jenkinsci.plugins.workflow.job.WorkflowJob;
 import org.junit.AfterClass;
@@ -139,5 +149,64 @@ public class ComputeEngineCloudWorkerCreatedIT {
         Node node = jenkinsRule.jenkins.getNodes().get(0);
         var instance = client.getInstance(PROJECT_ID, ZONE, node.getNodeName());
         jenkinsRule.assertLogContains("Running on " + instance.getName(), r);
+    }
+
+    @Test
+    public void testWorkerCreatedWithLatestLastRefresh() throws Exception {
+        // create node without running any job
+        var planned = cloud.provision(new LabelAtom(LABEL), 1);
+        planned.iterator().next().future.get();
+        var instance = client.getInstance(PROJECT_ID, ZONE, planned.iterator().next().displayName);
+        var lastRefreshInstance1 = getLastRefresh(instance);
+        // remove the node from jenkins
+        Jenkins.get().removeNode(Jenkins.get().getNode(instance.getName()));
+
+        // run a job, creates another instance
+        var p = jenkinsRule.createProject(WorkflowJob.class, "p");
+        p.setDefinition(new CpsFlowDefinition("node('" + LABEL + "') { sh 'date' }", true));
+        var r = jenkinsRule.buildAndAssertSuccess(p);
+        assertEquals(1, jenkinsRule.jenkins.getNodes().size());
+        var instance2 = client.getInstance(
+                PROJECT_ID, ZONE, jenkinsRule.jenkins.getNodes().get(0).getNodeName());
+        assertNotEquals(instance.getName(), instance2.getName());
+        var lastRefreshInstance2 = getLastRefresh(instance2);
+        assertThat(lastRefreshInstance2, isAfter(lastRefreshInstance1));
+
+        // stop the instance
+        Jenkins.get().removeNode(Jenkins.get().getNode(instance2.getName()));
+
+        // create one more instance manually
+        planned = cloud.provision(new LabelAtom(LABEL), 1);
+        planned.iterator().next().future.get();
+        var instance3 = client.getInstance(PROJECT_ID, ZONE, planned.iterator().next().displayName);
+        var lastRefreshInstance3 = getLastRefresh(instance3);
+        assertThat(lastRefreshInstance3, isAfter(lastRefreshInstance2));
+    }
+
+    private OffsetDateTime getLastRefresh(Instance instance) {
+        return LocalDateTime.parse(
+                        instance.getLabels().get(CleanLostNodesWork.NODE_IN_USE_LABEL_KEY),
+                        CleanLostNodesWork.LAST_REFRESH_FORMATTER)
+                .atOffset(ZoneOffset.UTC);
+    }
+
+    // Custom isAfter matcher for OffsetDateTime
+    public static TypeSafeMatcher<OffsetDateTime> isAfter(OffsetDateTime expected) {
+        return new TypeSafeMatcher<>() {
+            @Override
+            protected boolean matchesSafely(OffsetDateTime actual) {
+                return actual.isAfter(expected);
+            }
+
+            @Override
+            public void describeTo(Description description) {
+                description.appendText("a date-time that is after ").appendValue(expected);
+            }
+
+            @Override
+            protected void describeMismatchSafely(OffsetDateTime actual, Description mismatchDescription) {
+                mismatchDescription.appendText("was ").appendValue(actual);
+            }
+        };
     }
 }

@@ -426,10 +426,14 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
                         instanceTemplate.getProperties().getLabels();
                 mergedLabels.putAll(templateLabels);
             }
+            mergedLabels.put(CleanLostNodesWork.NODE_IN_USE_LABEL_KEY, CleanLostNodesWork.getLastRefreshLabelVal());
             instance.setLabels(mergedLabels);
         } else {
             configureStartupScript(instance);
-            instance.setLabels(googleLabels);
+            var labelsWithLastRefresh = new HashMap<>(googleLabels);
+            labelsWithLastRefresh.put(
+                    CleanLostNodesWork.NODE_IN_USE_LABEL_KEY, CleanLostNodesWork.getLastRefreshLabelVal());
+            instance.setLabels(labelsWithLastRefresh);
             instance.setMachineType(stripSelfLinkPrefix(machineType));
             instance.setTags(tags());
             instance.setScheduling(scheduling());
