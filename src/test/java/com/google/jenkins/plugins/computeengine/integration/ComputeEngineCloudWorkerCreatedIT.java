@@ -62,6 +62,7 @@ import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.rules.Timeout;
 import org.jvnet.hudson.test.BuildWatcher;
+import org.jvnet.hudson.test.Issue;
 import org.jvnet.hudson.test.JenkinsRule;
 
 /**
@@ -151,6 +152,7 @@ public class ComputeEngineCloudWorkerCreatedIT {
         jenkinsRule.assertLogContains("Running on " + instance.getName(), r);
     }
 
+    @Issue("https://github.com/jenkinsci/google-compute-engine-plugin/issues/512")
     @Test
     public void testWorkerCreatedWithLatestLastRefresh() throws Exception {
         // create node without running any job
