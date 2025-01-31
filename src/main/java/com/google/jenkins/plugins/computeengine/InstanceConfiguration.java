@@ -406,6 +406,13 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
             }
         }
 
+        Map<String, String> effectiveGoogleLabels = new HashMap<>();
+        if (googleLabels != null) { // some tests don't set the labels, but comes as null
+            effectiveGoogleLabels.putAll(googleLabels);
+        }
+        effectiveGoogleLabels.put(
+                CleanLostNodesWork.NODE_IN_USE_LABEL_KEY, CleanLostNodesWork.getLastRefreshLabelVal());
+
         if (StringUtils.isNotEmpty(template)) {
             InstanceTemplate instanceTemplate =
                     cloud.getClient().getTemplate(nameFromSelfLink(cloud.getProjectId()), nameFromSelfLink(template));
@@ -420,23 +427,15 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
                 instance.getMetadata().setItems(mergeMetadataItems(instanceItems, instanceTemplateItems));
             }
 
-            Map<String, String> mergedLabels = new HashMap<>(googleLabels);
             if (instanceTemplate.getProperties().getLabels() != null) {
                 Map<String, String> templateLabels =
                         instanceTemplate.getProperties().getLabels();
-                mergedLabels.putAll(templateLabels);
+                effectiveGoogleLabels.putAll(templateLabels);
             }
-            mergedLabels.put(CleanLostNodesWork.NODE_IN_USE_LABEL_KEY, CleanLostNodesWork.getLastRefreshLabelVal());
-            instance.setLabels(mergedLabels);
+            instance.setLabels(effectiveGoogleLabels);
         } else {
             configureStartupScript(instance);
-            Map<String, String> labelsWithLastRefresh = new HashMap<>();
-            if (googleLabels != null) { // some tests don't set the labels
-                labelsWithLastRefresh.putAll(googleLabels);
-            }
-            labelsWithLastRefresh.put(
-                    CleanLostNodesWork.NODE_IN_USE_LABEL_KEY, CleanLostNodesWork.getLastRefreshLabelVal());
-            instance.setLabels(labelsWithLastRefresh);
+            instance.setLabels(effectiveGoogleLabels);
             instance.setMachineType(stripSelfLinkPrefix(machineType));
             instance.setTags(tags());
             instance.setScheduling(scheduling());
