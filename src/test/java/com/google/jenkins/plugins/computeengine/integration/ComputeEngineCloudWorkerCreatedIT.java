@@ -56,9 +56,10 @@ import org.hamcrest.Description;
 import org.hamcrest.TypeSafeMatcher;
 import org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition;
 import org.jenkinsci.plugins.workflow.job.WorkflowJob;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
+import org.junit.After;
+import org.junit.Before;
 import org.junit.ClassRule;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.Timeout;
 import org.jvnet.hudson.test.BuildWatcher;
@@ -74,10 +75,10 @@ public class ComputeEngineCloudWorkerCreatedIT {
     private static final Logger log = Logger.getLogger(ComputeEngineCloudWorkerCreatedIT.class.getName());
 
     @ClassRule
-    public static Timeout timeout = new Timeout(10L * TEST_TIMEOUT_MULTIPLIER, TimeUnit.MINUTES);
+    public static Timeout timeout = new Timeout(15L * TEST_TIMEOUT_MULTIPLIER, TimeUnit.MINUTES);
 
-    @ClassRule
-    public static JenkinsRule jenkinsRule = new JenkinsRule();
+    @Rule
+    public JenkinsRule jenkinsRule = new JenkinsRule();
 
     @ClassRule
     public static BuildWatcher bw = new BuildWatcher();
@@ -87,8 +88,8 @@ public class ComputeEngineCloudWorkerCreatedIT {
     private static final Map<String, String> label = getLabel(ComputeEngineCloudWorkerCreatedIT.class);
     private static InstanceConfiguration instanceConfiguration;
 
-    @BeforeClass
-    public static void init() throws Exception {
+    @Before
+    public void init() throws Exception {
         log.info("init");
         initCredentials(jenkinsRule);
         cloud = initCloud(jenkinsRule);
@@ -107,8 +108,8 @@ public class ComputeEngineCloudWorkerCreatedIT {
         cloud.setConfigurations(ImmutableList.of(instanceConfiguration));
     }
 
-    @AfterClass
-    public static void teardown() throws IOException {
+    @After
+    public void teardown() throws IOException {
         teardownResources(client, label, log);
     }
 
@@ -120,7 +121,12 @@ public class ComputeEngineCloudWorkerCreatedIT {
                 .getInstance(PROJECT_ID, ZONE, planned.iterator().next().displayName);
 
         assertEquals("one instance should be provisioned", 1, planned.size());
-        assertEquals("GCP VM should have 3 labels", 3, instance.getLabels().size());
+        /* There are 5 labels,
+         * actual code: jenkins_cloud_id, jenkins_config_name, jenkins_node_last_refresh
+         * test code: <current class name>, user
+         * Total 5 labels here.
+         * */
+        assertEquals("GCP VM should have 5 labels", 5, instance.getLabels().size());
         assertEquals(
                 "GCP VM name starts with the prefix configured",
                 instanceConfiguration.getNamePrefix(),
