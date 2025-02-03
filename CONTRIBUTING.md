@@ -93,7 +93,7 @@ Steps to execute integration test
 * Export these mandatory environment variable   
   ```bash
   export GOOGLE_PROJECT_ID=your-project-id
-  export GOOGLE_CREDENTIALS=/path/to/sa-key.json
+  export GOOGLE_CREDENTIALS_FILE=/path/to/sa-key.json
   export GOOGLE_REGION=us-central1
   export GOOGLE_ZONE=us-central1-a
   export GOOGLE_SA_NAME=jenkins-agent-sa
