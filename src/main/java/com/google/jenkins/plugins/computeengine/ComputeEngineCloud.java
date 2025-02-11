@@ -16,7 +16,7 @@
 
 package com.google.jenkins.plugins.computeengine;
 
-import static javax.servlet.http.HttpServletResponse.SC_BAD_REQUEST;
+import static jakarta.servlet.http.HttpServletResponse.SC_BAD_REQUEST;
 
 import com.cloudbees.plugins.credentials.CredentialsMatchers;
 import com.cloudbees.plugins.credentials.CredentialsProvider;
@@ -47,6 +47,7 @@ import hudson.slaves.NodeProvisioner.PlannedNode;
 import hudson.util.FormValidation;
 import hudson.util.HttpResponses;
 import hudson.util.ListBoxModel;
+import jakarta.servlet.ServletException;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.security.GeneralSecurityException;
@@ -64,7 +65,6 @@ import java.util.logging.LogRecord;
 import java.util.logging.Logger;
 import java.util.logging.SimpleFormatter;
 import java.util.stream.Collectors;
-import javax.servlet.ServletException;
 import jenkins.model.Jenkins;
 import lombok.Getter;
 import lombok.extern.java.Log;

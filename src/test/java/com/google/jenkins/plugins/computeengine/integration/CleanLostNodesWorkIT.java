@@ -15,7 +15,6 @@ import static org.junit.Assert.assertNotEquals;
 import com.google.common.collect.ImmutableList;
 import com.google.jenkins.plugins.computeengine.CleanLostNodesWork;
 import com.google.jenkins.plugins.computeengine.ComputeEngineCloud;
-import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
@@ -179,7 +178,7 @@ public class CleanLostNodesWorkIT {
         });
     }
 
-    private static WorkflowJob createPipeline(JenkinsRule j) throws IOException {
+    private static WorkflowJob createPipeline(JenkinsRule j) throws Exception {
         var p1 = j.createProject(WorkflowJob.class, "p1");
         /* Sleep the pipeline for a duration that ensures the periodic task runs `CleanLostNodesWork.LOST_MULTIPLIER
         + 1` times. This guarantees that if the VM is to be deleted, it will be deleted. The sleep is split into two

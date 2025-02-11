@@ -162,7 +162,7 @@ public class SpotVmProvisioningWithMaxRunDurationCasCIT {
         assertThat("Build didn't run on GCP", JenkinsRule.getLog(run), is(containsString(agentName)));
     }
 
-    private void createProjects() throws IOException {
+    private void createProjects() throws Exception {
         // create a freestyle project
         FreeStyleProject fp = j.createFreeStyleProject("f");
         Builder step = execute(Commands.ECHO, "hello world");
