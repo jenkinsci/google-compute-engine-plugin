@@ -41,19 +41,6 @@
     </license>
   </licenses>
 
-  <developers>
-    <developer>
-      <id>donmccasland</id>
-      <name>Don McCasland</name>
-      <email>donmccasland@google.com</email>
-    </developer>
-    <developer>
-      <id>tarahernandez</id>
-      <name>Tara Hernandez</name>
-      <email>tarahernandez@google.com</email>
-    </developer>
-  </developers>
-
   <scm>
     <connection>scm:git:https://github.com/${gitHubRepo}.git</connection>
     <developerConnection>scm:git:git@github.com:${gitHubRepo}.git</developerConnection>
@@ -92,7 +79,7 @@
       <dependency>
         <groupId>io.jenkins.tools.bom</groupId>
         <artifactId>bom-${jenkins.baseline}.x</artifactId>
-        <version>3893.v213a_42768d35</version>
+        <version>4136.vca_c3202a_7fd1</version>
         <type>pom</type>
         <scope>import</scope>
       </dependency>
