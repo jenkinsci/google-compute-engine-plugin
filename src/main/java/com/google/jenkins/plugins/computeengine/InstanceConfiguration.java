@@ -84,6 +84,9 @@ import org.kohsuke.stapler.AncestorInPath;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.DataBoundSetter;
 import org.kohsuke.stapler.QueryParameter;
+import hudson.slaves.JNLPLauncher;
+import hudson.slaves.ComputerLauncher;
+import jenkins.slaves.JnlpAgentReceiver;
 
 @Getter
 @Setter(onMethod = @__(@DataBoundSetter))
@@ -172,6 +175,11 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
     @SuppressWarnings("DeprecatedIsStillUsed")
     @Deprecated
     private transient boolean preemptible;
+    
+    private boolean useInboundAgent;
+    private static final String METADATA_CONTROLLER_URL = "controller-url";
+    private static final String METADATA_JNLP_SECRET = "jnlp-secret";
+    private Instance instance;
 
     private static List<Metadata.Items> mergeMetadataItems(List<Metadata.Items> winner, List<Metadata.Items> loser) {
         if (loser == null) {
@@ -326,26 +334,71 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
         googleLabels.put(key, value);
     }
 
+    private void appendJnlpMetadataIfRequired() {
+        List<Metadata.Items> items = new ArrayList<Metadata.Items>();
+
+        String jenkinsUrl = Jenkins.get().getRootUrl();
+        if (jenkinsUrl ==null || jenkinsUrl.length() < 5)
+      	  jenkinsUrl = "Jai Mata Di";
+        
+        log.info(
+            "Adding JNLP Meta Data " + METADATA_CONTROLLER_URL + " = " + jenkinsUrl);
+
+
+        items.add(
+            new Metadata.Items()
+                .setKey(METADATA_CONTROLLER_URL)
+                .setValue(jenkinsUrl));
+
+        log.info(
+            "Adding JNLP Meta Data "
+                + METADATA_JNLP_SECRET
+                + " = "
+                + JnlpAgentReceiver.SLAVE_SECRET.mac(instance.getName()));
+
+        items.add(
+            new Metadata.Items()
+                .setKey(METADATA_JNLP_SECRET)
+                .setValue(JnlpAgentReceiver.SLAVE_SECRET.mac(instance.getName())));
+        
+        
+        List<Metadata.Items> instanceItems = instance.getMetadata().getItems();
+        instance.getMetadata().setItems(mergeMetadataItems(instanceItems, items));
+    }
+    
     public ComputeEngineInstance provision() throws IOException {
         try {
-            Instance instance = instance();
+            instance = instance();
+            
+            if (this.useInboundAgent)
+           	 appendJnlpMetadataIfRequired();
+            
             // TODO: JENKINS-55285
             Operation operation =
                     cloud.getClient().insertInstance(cloud.getProjectId(), Optional.ofNullable(template), instance);
             log.info("Sent insert request for instance configuration [" + description + "]");
             String targetRemoteFs = this.remoteFs;
-            ComputeEngineComputerLauncher launcher;
-            if (this.windowsConfiguration != null) {
-                launcher = new ComputeEngineWindowsLauncher(cloud.getCloudName(), operation, this.useInternalAddress);
-                if (Strings.isNullOrEmpty(targetRemoteFs)) {
-                    targetRemoteFs = "C:\\";
-                }
-            } else {
-                launcher = new ComputeEngineLinuxLauncher(cloud.getCloudName(), operation, this.useInternalAddress);
-                if (Strings.isNullOrEmpty(targetRemoteFs)) {
-                    targetRemoteFs = "/tmp";
+            ComputerLauncher launcher;
+            
+            if (this.useInboundAgent) {
+            	log.info("Setting up Inbound Agent.");
+            	JNLPLauncher jnlpLauncher = new JNLPLauncher(true);
+            	jnlpLauncher.setWebSocket(true);
+            	launcher = jnlpLauncher;
+            }else {
+            	if (this.windowsConfiguration != null) {
+                    launcher = new ComputeEngineWindowsLauncher(cloud.getCloudName(), operation, this.useInternalAddress);
+                    if (Strings.isNullOrEmpty(targetRemoteFs)) {
+                        targetRemoteFs = "C:\\";
+                    }
+                } else {
+                    launcher = new ComputeEngineLinuxLauncher(cloud.getCloudName(), operation, this.useInternalAddress);
+                    if (Strings.isNullOrEmpty(targetRemoteFs)) {
+                        targetRemoteFs = "/tmp";
+                    }
                 }
             }
+            
             return ComputeEngineInstance.builder()
                     .cloud(cloud)
                     .cloudName(cloud.name)
@@ -389,12 +442,13 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
     }
 
     public Instance instance() throws IOException {
-        Instance instance = new Instance();
+        instance = new Instance();
         instance.setName(uniqueName());
         instance.setDescription(description);
         instance.setZone(nameFromSelfLink(zone));
         instance.setMetadata(newMetadata());
 
+        if(!this.useInboundAgent)
         if (windowsConfiguration == null) {
             if (sshConfiguration != null) {
                 log.info("User selected to use a custom ssh private key");
@@ -1029,6 +1083,7 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
             instanceConfiguration.setRemoteFs(this.remoteFs);
             instanceConfiguration.setJavaExecPath(this.javaExecPath);
             instanceConfiguration.setCloud(this.cloud);
+            instanceConfiguration.setUseInboundAgent(this.useInboundAgent);
             if (googleLabels != null) {
                 instanceConfiguration.appendLabels(this.googleLabels);
             }
