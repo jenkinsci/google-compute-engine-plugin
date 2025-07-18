@@ -57,6 +57,8 @@ import hudson.model.Descriptor;
 import hudson.model.Label;
 import hudson.model.Node;
 import hudson.model.labels.LabelAtom;
+import hudson.slaves.ComputerLauncher;
+import hudson.slaves.JNLPLauncher;
 import hudson.util.ComboBoxModel;
 import hudson.util.FormValidation;
 import hudson.util.ListBoxModel;
@@ -71,6 +73,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.logging.Level;
 import jenkins.model.Jenkins;
+import jenkins.slaves.JnlpAgentReceiver;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -84,9 +87,6 @@ import org.kohsuke.stapler.AncestorInPath;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.DataBoundSetter;
 import org.kohsuke.stapler.QueryParameter;
-import hudson.slaves.JNLPLauncher;
-import hudson.slaves.ComputerLauncher;
-import jenkins.slaves.JnlpAgentReceiver;
 
 @Getter
 @Setter(onMethod = @__(@DataBoundSetter))
@@ -175,7 +175,7 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
     @SuppressWarnings("DeprecatedIsStillUsed")
     @Deprecated
     private transient boolean preemptible;
-    
+
     private boolean useInboundAgent;
     private static final String METADATA_CONTROLLER_URL = "controller-url";
     private static final String METADATA_JNLP_SECRET = "jnlp-secret";
@@ -338,56 +338,47 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
         List<Metadata.Items> items = new ArrayList<Metadata.Items>();
 
         String jenkinsUrl = Jenkins.get().getRootUrl();
-        if (jenkinsUrl ==null || jenkinsUrl.length() < 5)
-      	  jenkinsUrl = "Jai Mata Di";
-        
-        log.info(
-            "Adding JNLP Meta Data " + METADATA_CONTROLLER_URL + " = " + jenkinsUrl);
+        if (jenkinsUrl == null || jenkinsUrl.length() < 5) jenkinsUrl = "Jai Mata Di";
 
+        log.info("Adding JNLP Meta Data " + METADATA_CONTROLLER_URL + " = " + jenkinsUrl);
 
-        items.add(
-            new Metadata.Items()
-                .setKey(METADATA_CONTROLLER_URL)
-                .setValue(jenkinsUrl));
+        items.add(new Metadata.Items().setKey(METADATA_CONTROLLER_URL).setValue(jenkinsUrl));
 
-        log.info(
-            "Adding JNLP Meta Data "
+        log.info("Adding JNLP Meta Data "
                 + METADATA_JNLP_SECRET
                 + " = "
                 + JnlpAgentReceiver.SLAVE_SECRET.mac(instance.getName()));
 
-        items.add(
-            new Metadata.Items()
+        items.add(new Metadata.Items()
                 .setKey(METADATA_JNLP_SECRET)
                 .setValue(JnlpAgentReceiver.SLAVE_SECRET.mac(instance.getName())));
-        
-        
+
         List<Metadata.Items> instanceItems = instance.getMetadata().getItems();
         instance.getMetadata().setItems(mergeMetadataItems(instanceItems, items));
     }
-    
+
     public ComputeEngineInstance provision() throws IOException {
         try {
             instance = instance();
-            
-            if (this.useInboundAgent)
-           	 appendJnlpMetadataIfRequired();
-            
+
+            if (this.useInboundAgent) appendJnlpMetadataIfRequired();
+
             // TODO: JENKINS-55285
             Operation operation =
                     cloud.getClient().insertInstance(cloud.getProjectId(), Optional.ofNullable(template), instance);
             log.info("Sent insert request for instance configuration [" + description + "]");
             String targetRemoteFs = this.remoteFs;
             ComputerLauncher launcher;
-            
+
             if (this.useInboundAgent) {
-            	log.info("Setting up Inbound Agent.");
-            	JNLPLauncher jnlpLauncher = new JNLPLauncher(true);
-            	jnlpLauncher.setWebSocket(true);
-            	launcher = jnlpLauncher;
-            }else {
-            	if (this.windowsConfiguration != null) {
-                    launcher = new ComputeEngineWindowsLauncher(cloud.getCloudName(), operation, this.useInternalAddress);
+                log.info("Setting up Inbound Agent.");
+                JNLPLauncher jnlpLauncher = new JNLPLauncher();
+                jnlpLauncher.setWebSocket(true);
+                launcher = jnlpLauncher;
+            } else {
+                if (this.windowsConfiguration != null) {
+                    launcher =
+                            new ComputeEngineWindowsLauncher(cloud.getCloudName(), operation, this.useInternalAddress);
                     if (Strings.isNullOrEmpty(targetRemoteFs)) {
                         targetRemoteFs = "C:\\";
                     }
@@ -398,7 +389,7 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
                     }
                 }
             }
-            
+
             return ComputeEngineInstance.builder()
                     .cloud(cloud)
                     .cloudName(cloud.name)
@@ -448,17 +439,17 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
         instance.setZone(nameFromSelfLink(zone));
         instance.setMetadata(newMetadata());
 
-        if(!this.useInboundAgent)
-        if (windowsConfiguration == null) {
-            if (sshConfiguration != null) {
-                log.info("User selected to use a custom ssh private key");
-                sshKeyCredential =
-                        configureSSHPrivateKey(sshConfiguration.getCustomPrivateKeyCredentialsId(), runAsUser);
-            } else {
-                log.info("User selected to use an autogenerated ssh key pair");
-                sshKeyCredential = configureSSHKeyPair(instance, runAsUser);
+        if (!this.useInboundAgent)
+            if (windowsConfiguration == null) {
+                if (sshConfiguration != null) {
+                    log.info("User selected to use a custom ssh private key");
+                    sshKeyCredential =
+                            configureSSHPrivateKey(sshConfiguration.getCustomPrivateKeyCredentialsId(), runAsUser);
+                } else {
+                    log.info("User selected to use an autogenerated ssh key pair");
+                    sshKeyCredential = configureSSHKeyPair(instance, runAsUser);
+                }
             }
-        }
 
         Map<String, String> effectiveGoogleLabels = new HashMap<>();
         if (googleLabels != null) { // some tests don't set the labels, but comes as null
