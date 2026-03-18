@@ -49,6 +49,7 @@ import java.util.logging.LogRecord;
 import java.util.logging.Logger;
 import java.util.logging.SimpleFormatter;
 import jenkins.model.Jenkins;
+import jenkins.util.SystemProperties;
 import lombok.Getter;
 
 public abstract class ComputeEngineComputerLauncher extends ComputerLauncher {
@@ -65,6 +66,28 @@ public abstract class ComputeEngineComputerLauncher extends ComputerLauncher {
     private final String insertOperationId;
     private final String zone;
     private final String cloudName;
+
+    /**
+     * Maximum number of SSH authentication attempts before giving up.
+     * Applies to both Linux and Windows launchers.
+     * <p>
+     * Configurable via system property {@code com.google.jenkins.plugins.computeengine.ComputeEngineComputerLauncher.bootstrapAuthTries}. Default: {@code 30}.
+     *
+     * @see #BOOT_STRAP_AUTH_SLEEP_MS
+     */
+    protected static final int BOOT_STRAP_AUTH_TRIES =
+            SystemProperties.getInteger(ComputeEngineComputerLauncher.class.getName() + ".bootstrapAuthTries", 30);
+
+    /**
+     * Delay in milliseconds between SSH authentication retries.
+     * Applies to both Linux and Windows launchers.
+     * <p>
+     * Configurable via system property {@code com.google.jenkins.plugins.computeengine.ComputeEngineComputerLauncher.bootstrapAuthSleepMs}. Default: {@code 15000}.
+     *
+     * @see #BOOT_STRAP_AUTH_TRIES
+     */
+    protected static final int BOOT_STRAP_AUTH_SLEEP_MS =
+            SystemProperties.getInteger(ComputeEngineComputerLauncher.class.getName() + ".bootstrapAuthSleepMs", 15000);
 
     @Getter
     protected final boolean useInternalAddress;

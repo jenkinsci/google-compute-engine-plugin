@@ -32,9 +32,6 @@ import java.util.logging.Logger;
 public class ComputeEngineWindowsLauncher extends ComputeEngineComputerLauncher {
     private static final Logger LOGGER = Logger.getLogger(ComputeEngineWindowsLauncher.class.getName());
 
-    private static int bootstrapAuthTries = 30;
-    private static int bootstrapAuthSleepMs = 15000;
-
     public ComputeEngineWindowsLauncher(String cloudName, Operation insertOperation, boolean useInternalAddress) {
         super(cloudName, insertOperation.getName(), insertOperation.getZone(), useInternalAddress);
     }
@@ -86,7 +83,7 @@ public class ComputeEngineWindowsLauncher extends ComputeEngineComputerLauncher 
         WindowsConfiguration windowsConfig = node.getWindowsConfig();
         Connection bootstrapConn = null;
         try {
-            int tries = bootstrapAuthTries;
+            int tries = BOOT_STRAP_AUTH_TRIES;
             boolean isAuthenticated = false;
             while (tries-- > 0) {
                 logInfo(computer, listener, "Authenticating as " + node.getSshUser());
@@ -106,7 +103,7 @@ public class ComputeEngineWindowsLauncher extends ComputeEngineComputerLauncher 
                     break;
                 }
                 logWarning(computer, listener, "Authentication failed. Trying again...");
-                Thread.sleep(bootstrapAuthSleepMs);
+                Thread.sleep(BOOT_STRAP_AUTH_SLEEP_MS);
             }
             if (!isAuthenticated) {
                 logWarning(computer, listener, "Authentication failed");
