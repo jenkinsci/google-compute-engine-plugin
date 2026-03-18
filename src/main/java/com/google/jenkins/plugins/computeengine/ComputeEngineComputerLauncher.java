@@ -73,9 +73,9 @@ public abstract class ComputeEngineComputerLauncher extends ComputerLauncher {
      * <p>
      * Configurable via system property {@code com.google.jenkins.plugins.computeengine.ComputeEngineComputerLauncher.bootstrapAuthTries}. Default: {@code 30}.
      *
-     * @see #BOOT_STRAP_AUTH_SLEEP_MS
+     * @see #BOOTSTRAP_AUTH_SLEEP_MS
      */
-    protected static final int BOOT_STRAP_AUTH_TRIES =
+    protected static final int BOOTSTRAP_AUTH_TRIES =
             SystemProperties.getInteger(ComputeEngineComputerLauncher.class.getName() + ".bootstrapAuthTries", 30);
 
     /**
@@ -84,9 +84,9 @@ public abstract class ComputeEngineComputerLauncher extends ComputerLauncher {
      * <p>
      * Configurable via system property {@code com.google.jenkins.plugins.computeengine.ComputeEngineComputerLauncher.bootstrapAuthSleepMs}. Default: {@code 15000}.
      *
-     * @see #BOOT_STRAP_AUTH_TRIES
+     * @see #BOOTSTRAP_AUTH_TRIES
      */
-    protected static final int BOOT_STRAP_AUTH_SLEEP_MS =
+    protected static final int BOOTSTRAP_AUTH_SLEEP_MS =
             SystemProperties.getInteger(ComputeEngineComputerLauncher.class.getName() + ".bootstrapAuthSleepMs", 15000);
 
     @Getter

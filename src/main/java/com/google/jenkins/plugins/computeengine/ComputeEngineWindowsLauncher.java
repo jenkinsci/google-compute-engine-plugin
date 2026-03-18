@@ -83,7 +83,7 @@ public class ComputeEngineWindowsLauncher extends ComputeEngineComputerLauncher 
         WindowsConfiguration windowsConfig = node.getWindowsConfig();
         Connection bootstrapConn = null;
         try {
-            int tries = BOOT_STRAP_AUTH_TRIES;
+            int tries = BOOTSTRAP_AUTH_TRIES;
             boolean isAuthenticated = false;
             while (tries-- > 0) {
                 logInfo(computer, listener, "Authenticating as " + node.getSshUser());
@@ -103,7 +103,7 @@ public class ComputeEngineWindowsLauncher extends ComputeEngineComputerLauncher 
                     break;
                 }
                 logWarning(computer, listener, "Authentication failed. Trying again...");
-                Thread.sleep(BOOT_STRAP_AUTH_SLEEP_MS);
+                Thread.sleep(BOOTSTRAP_AUTH_SLEEP_MS);
             }
             if (!isAuthenticated) {
                 logWarning(computer, listener, "Authentication failed");

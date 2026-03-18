@@ -69,7 +69,7 @@ public class ComputeEngineLinuxLauncher extends ComputeEngineComputerLauncher {
         }
         Connection bootstrapConn = null;
         try {
-            int tries = BOOT_STRAP_AUTH_TRIES;
+            int tries = BOOTSTRAP_AUTH_TRIES;
             boolean isAuthenticated = false;
             if (keyCred instanceof GoogleKeyPair) {
                 logInfo(computer, listener, "Getting keypair...");
@@ -99,7 +99,7 @@ public class ComputeEngineLinuxLauncher extends ComputeEngineComputerLauncher {
                     break;
                 }
                 logWarning(computer, listener, "Authentication failed. Trying again...");
-                Thread.sleep(BOOT_STRAP_AUTH_SLEEP_MS);
+                Thread.sleep(BOOTSTRAP_AUTH_SLEEP_MS);
             }
             if (!isAuthenticated) {
                 logWarning(computer, listener, "Authentication failed");
