@@ -32,6 +32,9 @@
             <f:entry title="${%Number of Executors}" field="numExecutorsStr">
                 <f:textbox default="1"/>
             </f:entry>
+            <f:entry title="${%Terminate idle agents during shutdown}" field="terminateIdleDuringShutdown">
+                <f:checkbox/>
+            </f:entry>
         </f:section>
 
         <f:section title="Launch Configuration">

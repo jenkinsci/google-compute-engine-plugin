@@ -54,6 +54,7 @@ public class ComputeEngineInstance extends AbstractCloudSlave {
     private final String sshUser;
     private final WindowsConfiguration windowsConfig;
     private final SshConfiguration sshConfig;
+    private final boolean terminateIdleDuringShutdown;
     private final boolean createSnapshot;
     private final boolean oneShot;
     private final boolean ignoreProxy;
@@ -77,6 +78,7 @@ public class ComputeEngineInstance extends AbstractCloudSlave {
             boolean createSnapshot,
             boolean oneShot,
             boolean ignoreProxy,
+            boolean terminateIdleDuringShutdown,
             int numExecutors,
             Mode mode,
             String labelString,
@@ -107,6 +109,7 @@ public class ComputeEngineInstance extends AbstractCloudSlave {
         this.createSnapshot = createSnapshot;
         this.oneShot = oneShot;
         this.ignoreProxy = ignoreProxy;
+        this.terminateIdleDuringShutdown = terminateIdleDuringShutdown;
         this.javaExecPath = javaExecPath;
         this.sshKeyCredential = sshKeyCredential;
         this.cloud = cloud;

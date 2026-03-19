@@ -159,6 +159,7 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
     private GoogleKeyCredential sshKeyCredential;
     private Map<String, String> googleLabels;
     private Integer numExecutors;
+    private boolean terminateIdleDuringShutdown;
     private Integer retentionTimeMinutes;
     private Integer launchTimeoutSeconds;
     private Long bootDiskSizeGb;
@@ -359,6 +360,7 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
                     .createSnapshot(createSnapshot)
                     .oneShot(oneShot)
                     .ignoreProxy(ignoreProxy)
+                    .terminateIdleDuringShutdown(terminateIdleDuringShutdown)
                     .numExecutors(numExecutors)
                     .mode(mode)
                     .labelString(labels)
@@ -1026,6 +1028,7 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
             instanceConfiguration.setOneShot(this.oneShot);
             instanceConfiguration.setTemplate(this.template);
             instanceConfiguration.setCreateSnapshot(this.createSnapshot);
+            instanceConfiguration.setTerminateIdleDuringShutdown(this.terminateIdleDuringShutdown);
             instanceConfiguration.setRemoteFs(this.remoteFs);
             instanceConfiguration.setJavaExecPath(this.javaExecPath);
             instanceConfiguration.setCloud(this.cloud);
