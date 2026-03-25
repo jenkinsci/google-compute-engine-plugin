@@ -99,7 +99,7 @@ public class ComputeEngineLinuxLauncher extends ComputeEngineComputerLauncher {
                     break;
                 }
                 logWarning(computer, listener, "Authentication failed. Trying again...");
-                Thread.sleep(BOOTSTRAP_AUTH_SLEEP_MS);
+                Thread.sleep(BOOTSTRAP_AUTH_SLEEP_DURATION.toMillis());
             }
             if (!isAuthenticated) {
                 logWarning(computer, listener, "Authentication failed");

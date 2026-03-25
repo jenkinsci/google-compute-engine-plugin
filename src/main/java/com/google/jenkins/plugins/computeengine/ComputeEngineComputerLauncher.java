@@ -42,6 +42,8 @@ import java.io.PrintStream;
 import java.net.InetSocketAddress;
 import java.net.Proxy;
 import java.net.SocketTimeoutException;
+import java.time.Duration;
+import java.time.temporal.ChronoUnit;
 import java.util.Base64;
 import java.util.Optional;
 import java.util.logging.Level;
@@ -73,21 +75,24 @@ public abstract class ComputeEngineComputerLauncher extends ComputerLauncher {
      * <p>
      * Configurable via system property {@code com.google.jenkins.plugins.computeengine.ComputeEngineComputerLauncher.bootstrapAuthTries}. Default: {@code 30}.
      *
-     * @see #BOOTSTRAP_AUTH_SLEEP_MS
+     * @see #BOOTSTRAP_AUTH_SLEEP_DURATION
      */
     protected static final int BOOTSTRAP_AUTH_TRIES =
             SystemProperties.getInteger(ComputeEngineComputerLauncher.class.getName() + ".bootstrapAuthTries", 30);
 
     /**
-     * Delay in milliseconds between SSH authentication retries.
+     * Delay between SSH authentication retries.
      * Applies to both Linux and Windows launchers.
      * <p>
-     * Configurable via system property {@code com.google.jenkins.plugins.computeengine.ComputeEngineComputerLauncher.bootstrapAuthSleepMs}. Default: {@code 15000}.
+     * Configurable via system property {@code com.google.jenkins.plugins.computeengine.ComputeEngineComputerLauncher.bootstrapAuthSleepDuration}.
+     * Bare numeric values are interpreted as seconds. Default: {@code 15s}.
      *
      * @see #BOOTSTRAP_AUTH_TRIES
      */
-    protected static final int BOOTSTRAP_AUTH_SLEEP_MS =
-            SystemProperties.getInteger(ComputeEngineComputerLauncher.class.getName() + ".bootstrapAuthSleepMs", 15000);
+    protected static final Duration BOOTSTRAP_AUTH_SLEEP_DURATION = SystemProperties.getDuration(
+            ComputeEngineComputerLauncher.class.getName() + ".bootstrapAuthSleepDuration",
+            ChronoUnit.SECONDS,
+            Duration.ofSeconds(15));
 
     @Getter
     protected final boolean useInternalAddress;
