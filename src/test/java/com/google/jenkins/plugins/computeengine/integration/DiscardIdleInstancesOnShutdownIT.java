@@ -9,7 +9,10 @@ import static com.google.jenkins.plugins.computeengine.integration.ITUtil.initCr
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.instanceConfigurationBuilder;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.teardownResources;
 import static org.awaitility.Awaitility.await;
-import static org.junit.Assert.assertEquals;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.empty;
+import static org.hamcrest.Matchers.hasSize;
+import static org.hamcrest.Matchers.is;
 
 import com.google.common.collect.ImmutableList;
 import com.google.jenkins.plugins.computeengine.ComputeEngineCloud;
@@ -89,12 +92,10 @@ public class DiscardIdleInstancesOnShutdownIT {
                 tail.waitForCompletion();
             }
             var cloud = (ComputeEngineCloud) j.jenkins.clouds.getByName("gce-integration");
-            assertEquals(
+            assertThat(
                     "VM should exist before shutdown",
-                    1,
-                    cloud.getClient()
-                            .listInstancesWithLabel(cloud.getProjectId(), GOOGLE_LABELS)
-                            .size());
+                    cloud.getClient().listInstancesWithLabel(cloud.getProjectId(), GOOGLE_LABELS),
+                    hasSize(1));
         });
         // Stop Jenkins - this triggers the @Terminator which should delete idle instances
         rj.stopJenkins();
@@ -102,17 +103,19 @@ public class DiscardIdleInstancesOnShutdownIT {
         rj.startJenkins();
         rj.runRemotely(j -> {
             // Jenkins should have no GCE agent nodes after restart
-            long gceNodeCount = j.jenkins.getNodes().stream()
-                    .filter(ComputeEngineInstance.class::isInstance)
-                    .count();
-            assertEquals("Jenkins should have no GCE agent nodes after restart", 0, gceNodeCount);
+            assertThat(
+                    "Jenkins should have no GCE agent nodes after restart",
+                    j.jenkins.getNodes().stream()
+                            .filter(ComputeEngineInstance.class::isInstance)
+                            .toList(),
+                    is(empty()));
             // The VM should be gone from GCP
             var cloud = (ComputeEngineCloud) j.jenkins.clouds.getByName("gce-integration");
             await("VM should be deleted from GCP after shutdown")
                     .timeout(2, TimeUnit.MINUTES)
-                    .until(() -> cloud.getClient()
-                            .listInstancesWithLabel(cloud.getProjectId(), GOOGLE_LABELS)
-                            .isEmpty());
+                    .until(
+                            () -> cloud.getClient().listInstancesWithLabel(cloud.getProjectId(), GOOGLE_LABELS),
+                            is(empty()));
         });
         LOGGER.info("Test completed successfully - idle instance was terminated on shutdown");
     }
