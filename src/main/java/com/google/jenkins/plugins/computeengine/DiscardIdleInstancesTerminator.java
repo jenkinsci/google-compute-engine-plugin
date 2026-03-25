@@ -44,8 +44,8 @@ public class DiscardIdleInstancesTerminator {
         /* Wait for all terminations to avoid classloader unload while tasks run (would cause NoClassDefFoundError and leave VMs running).
         `ComputeEngineInstance._terminate` calls GCP async APIs, so should return quickly; 10s timeout is sufficient. */
         try {
-            CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).get(10, TimeUnit.SECONDS);
-            LOGGER.fine("Done discarding idle instances, there were " + futures.size() + " instances to discard");
+            CompletableFuture.allOf(futures.toArray(CompletableFuture[]::new)).get(10, TimeUnit.SECONDS);
+            LOGGER.fine(() -> "Done discarding idle instances, there were " + futures.size() + " instances to discard");
         } catch (Exception e) {
             LOGGER.log(Level.WARNING, "Timeout or error waiting for GCE instance terminations", e);
         }

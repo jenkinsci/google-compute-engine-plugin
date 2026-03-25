@@ -47,7 +47,7 @@ public class DiscardIdleInstancesOnShutdownIT {
     public void init() throws Throwable {
         rj.withLogger(DiscardIdleInstancesTerminator.class, Level.FINE);
         rj.startJenkins();
-        rj.runRemotely(r -> {
+        rj.run(r -> {
             initCredentials(r);
             var cloud = initCloud(r);
             var instanceConfig = instanceConfigurationBuilder()
@@ -60,7 +60,7 @@ public class DiscardIdleInstancesOnShutdownIT {
                     .terminateIdleDuringShutdown(true)
                     .cloud(cloud)
                     .build();
-            cloud.setConfigurations(ImmutableList.of(instanceConfig));
+            cloud.setConfigurations(List.of(instanceConfig));
         });
     }
 
