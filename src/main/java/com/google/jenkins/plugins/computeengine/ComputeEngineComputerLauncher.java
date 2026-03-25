@@ -198,8 +198,8 @@ public abstract class ComputeEngineComputerLauncher extends ComputerLauncher {
                                 listener,
                                 String.format("Instance %s is being shut down...", computer.getName()));
                         break;
-                        // TODO: Although the plugin doesn't put instances in the STOPPED or SUSPENDED states,
-                        // it should handle them if they are placed in that state out-of-band.
+                    // TODO: Although the plugin doesn't put instances in the STOPPED or SUSPENDED states,
+                    // it should handle them if they are placed in that state out-of-band.
                     case "STOPPED":
                     case "SUSPENDED":
                         cloud.log(
