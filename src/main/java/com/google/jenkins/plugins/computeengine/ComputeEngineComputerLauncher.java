@@ -43,7 +43,6 @@ import java.net.InetSocketAddress;
 import java.net.Proxy;
 import java.net.SocketTimeoutException;
 import java.time.Duration;
-import java.time.temporal.ChronoUnit;
 import java.util.Base64;
 import java.util.Optional;
 import java.util.logging.Level;
@@ -85,13 +84,12 @@ public abstract class ComputeEngineComputerLauncher extends ComputerLauncher {
      * Applies to both Linux and Windows launchers.
      * <p>
      * Configurable via system property {@code com.google.jenkins.plugins.computeengine.ComputeEngineComputerLauncher.bootstrapAuthSleepDuration}.
-     * Bare numeric values are interpreted as seconds. Default: {@code 15s}.
+     * Default: {@code 15s}.
      *
      * @see #BOOTSTRAP_AUTH_TRIES
      */
     protected static final Duration BOOTSTRAP_AUTH_SLEEP_DURATION = SystemProperties.getDuration(
             ComputeEngineComputerLauncher.class.getName() + ".bootstrapAuthSleepDuration",
-            ChronoUnit.SECONDS,
             Duration.ofSeconds(15));
 
     @Getter
