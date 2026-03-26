@@ -71,8 +71,8 @@ public class DiscardIdleInstancesOnShutdownIT {
     public void tearDown() throws Throwable {
         rj.runRemotely(j -> {
             var cloud = (ComputeEngineCloud) j.jenkins.clouds.getByName("gce-integration");
-            // though nothing to tearDown, idle instances are deleted during Jenkins shutdown part of the test.
-            // but kept in case of test failures.
+            // In the success case, idle instances are already deleted during RealJenkinsRule#stopJenkins.
+            // This tearDown exists as a safety net to clean up any VMs left behind if the test fails mid-way.
             teardownResources(cloud.getClient(), GOOGLE_LABELS, LOGGER);
         });
     }
