@@ -89,8 +89,7 @@ public abstract class ComputeEngineComputerLauncher extends ComputerLauncher {
      * @see #BOOTSTRAP_AUTH_TRIES
      */
     protected static final Duration BOOTSTRAP_AUTH_SLEEP_DURATION = SystemProperties.getDuration(
-            ComputeEngineComputerLauncher.class.getName() + ".bootstrapAuthSleepDuration",
-            Duration.ofSeconds(15));
+            ComputeEngineComputerLauncher.class.getName() + ".bootstrapAuthSleepDuration", Duration.ofSeconds(15));
 
     @Getter
     protected final boolean useInternalAddress;
