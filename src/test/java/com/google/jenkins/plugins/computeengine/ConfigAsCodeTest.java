@@ -46,6 +46,19 @@ public class ConfigAsCodeTest {
         assertEquals("Wrong configurations remoteFs", "agent", configuration.getRemoteFs());
         assertEquals("Wrong configurations javaExecPath", "java", configuration.getJavaExecPath());
         assertNull("Wrong configuration provisioningType non null", configuration.getProvisioningType());
+        assertEquals("Wrong minimumNumberOfInstances", 2, configuration.getMinimumNumberOfInstances());
+        assertEquals("Wrong minimumNumberOfSpareInstances", 1, configuration.getMinimumNumberOfSpareInstances());
+        var timeRangeConfig = configuration.getMinimumNumberOfInstancesTimeRangeConfig();
+        assertNotNull("minimumNumberOfInstancesTimeRangeConfig should not be null", timeRangeConfig);
+        assertEquals("09:00", timeRangeConfig.getActiveFrom());
+        assertEquals("17:00", timeRangeConfig.getActiveTo());
+        assertEquals(true, timeRangeConfig.getMonday());
+        assertEquals(true, timeRangeConfig.getTuesday());
+        assertEquals(true, timeRangeConfig.getWednesday());
+        assertEquals(true, timeRangeConfig.getThursday());
+        assertEquals(true, timeRangeConfig.getFriday());
+        assertEquals(false, timeRangeConfig.getSaturday());
+        assertEquals(false, timeRangeConfig.getSunday());
     }
 
     @Test

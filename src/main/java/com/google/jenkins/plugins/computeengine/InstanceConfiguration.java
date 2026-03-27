@@ -52,11 +52,14 @@ import hudson.Extension;
 import hudson.ExtensionList;
 import hudson.RelativePath;
 import hudson.Util;
+import hudson.XmlFile;
 import hudson.model.Describable;
 import hudson.model.Descriptor;
 import hudson.model.Label;
 import hudson.model.Node;
+import hudson.model.Saveable;
 import hudson.model.labels.LabelAtom;
+import hudson.model.listeners.SaveableListener;
 import hudson.util.ComboBoxModel;
 import hudson.util.FormValidation;
 import hudson.util.ListBoxModel;
@@ -145,6 +148,12 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
     private String launchTimeoutSecondsStr;
     private String bootDiskSizeGbStr;
     private boolean oneShot;
+    private int minimumNumberOfInstances;
+    private int minimumNumberOfSpareInstances;
+
+    @Nullable
+    private MinimumNumberOfInstancesTimeRangeConfig minimumNumberOfInstancesTimeRangeConfig;
+
     private String template;
     // Optional not possible due to serialization requirement
     @Nullable
@@ -984,6 +993,74 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
             return FormValidation.ok();
         }
 
+        private FormValidation validateMinimumInstances(String fieldName, String value, String instanceCapStr) {
+            if (value == null || value.isBlank()) {
+                return FormValidation.ok();
+            }
+            try {
+                int val = Integer.parseInt(value);
+                if (val >= 0) {
+                    int instanceCap;
+                    try {
+                        instanceCap = Integer.parseInt(instanceCapStr);
+                    } catch (NumberFormatException ignore) {
+                        instanceCap = Integer.MAX_VALUE;
+                    }
+                    if (val > instanceCap) {
+                        return FormValidation.error(
+                                "%s must not be larger than Instance Cap %d", fieldName, instanceCap);
+                    }
+                    return FormValidation.ok();
+                }
+            } catch (NumberFormatException ignore) {
+            }
+            return FormValidation.error("%s must be a non-negative integer", fieldName);
+        }
+
+        public FormValidation doCheckMinimumNumberOfInstances(
+                @QueryParameter String value,
+                @QueryParameter("instanceCapStr") @RelativePath("..") String instanceCapStr) {
+            return validateMinimumInstances("Minimum number of instances", value, instanceCapStr);
+        }
+
+        public FormValidation doCheckMinimumNumberOfSpareInstances(
+                @QueryParameter String value,
+                @QueryParameter("instanceCapStr") @RelativePath("..") String instanceCapStr) {
+            return validateMinimumInstances("Minimum number of spare instances", value, instanceCapStr);
+        }
+
+        private FormValidation validateTimeRange(String value) {
+            try {
+                MinimumNumberOfInstancesTimeRangeConfig.validateLocalTimeString(value);
+                return FormValidation.ok();
+            } catch (IllegalArgumentException e) {
+                return FormValidation.error("Please enter value in format 'h:mm a' or 'HH:mm'");
+            }
+        }
+
+        public FormValidation doCheckActiveFrom(@QueryParameter String value) {
+            return validateTimeRange(value);
+        }
+
+        public FormValidation doCheckActiveTo(@QueryParameter String value) {
+            return validateTimeRange(value);
+        }
+
+        public FormValidation doCheckMonday(
+                @QueryParameter boolean monday,
+                @QueryParameter boolean tuesday,
+                @QueryParameter boolean wednesday,
+                @QueryParameter boolean thursday,
+                @QueryParameter boolean friday,
+                @QueryParameter boolean saturday,
+                @QueryParameter boolean sunday) {
+            if (!(monday || tuesday || wednesday || thursday || friday || saturday || sunday)) {
+                return FormValidation.warning(
+                        "At least one day should be checked or minimum number of instances won't be active");
+            }
+            return FormValidation.ok();
+        }
+
         @SuppressWarnings("unused") // jelly
         public List<ProvisioningType.ProvisioningTypeDescriptor> getProvisioningTypes() {
             return ExtensionList.lookup(ProvisioningType.ProvisioningTypeDescriptor.class);
@@ -991,6 +1068,19 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
 
         public List<NetworkInterfaceIpStackMode.Descriptor> getNetworkInterfaceIpStackModeDescriptors() {
             return ExtensionList.lookup(NetworkInterfaceIpStackMode.Descriptor.class);
+        }
+    }
+
+    /** Triggers minimum instance check when Jenkins configuration is saved. This ensures any updates to the
+     * values of minimum instances are immediately taken into effect.
+     */
+    @Extension
+    public static final class OnSaveListener extends SaveableListener {
+        @Override
+        public void onChange(Saveable o, XmlFile file) {
+            if (o instanceof Jenkins) {
+                MinimumInstanceChecker.checkForMinimumInstances();
+            }
         }
     }
 
@@ -1026,6 +1116,10 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
             instanceConfiguration.setLaunchTimeoutSecondsStr(this.launchTimeoutSecondsStr);
             instanceConfiguration.setBootDiskSizeGbStr(this.bootDiskSizeGbStr);
             instanceConfiguration.setOneShot(this.oneShot);
+            instanceConfiguration.setMinimumNumberOfInstances(this.minimumNumberOfInstances);
+            instanceConfiguration.setMinimumNumberOfSpareInstances(this.minimumNumberOfSpareInstances);
+            instanceConfiguration.setMinimumNumberOfInstancesTimeRangeConfig(
+                    this.minimumNumberOfInstancesTimeRangeConfig);
             instanceConfiguration.setTemplate(this.template);
             instanceConfiguration.setCreateSnapshot(this.createSnapshot);
             instanceConfiguration.setTerminateIdleDuringShutdown(this.terminateIdleDuringShutdown);

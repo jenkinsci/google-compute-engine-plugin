@@ -27,6 +27,8 @@ import hudson.security.ACL;
 import hudson.security.ACLContext;
 import hudson.slaves.RetentionStrategy;
 import java.util.List;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.logging.Level;
 import jenkins.model.Jenkins;
 import lombok.extern.java.Log;
@@ -39,6 +41,14 @@ import org.jenkinsci.plugins.durabletask.executors.OnceRetentionStrategy;
 @Log
 public class ComputeEngineRetentionStrategy extends RetentionStrategy<ComputeEngineComputer>
         implements ExecutorListener {
+    /**
+     * Tracks how many spare agents we have already declined to protect (i.e., allowed the delegate
+     * to terminate) per config description. This prevents a TOCTOU race where multiple agents all
+     * see the same currentSpare count before any async termination completes, causing all of them
+     * to be terminated simultaneously.
+     */
+    private static final ConcurrentHashMap<String, AtomicInteger> pendingTerminations = new ConcurrentHashMap<>();
+
     private final OnceRetentionStrategy delegate;
     private final boolean oneShot;
 
@@ -56,7 +66,51 @@ public class ComputeEngineRetentionStrategy extends RetentionStrategy<ComputeEng
 
     @Override
     public long check(ComputeEngineComputer c) {
+        var node = c.getNode();
+        if (node != null) {
+            var cloud = node.getCloud();
+            var config = cloud.getInstanceConfigurationByDescription(node.getNodeDescription());
+            if (config != null
+                    && MinimumInstanceChecker.isActiveTimeRange(config.getMinimumNumberOfInstancesTimeRangeConfig())) {
+                String configDesc = config.getDescription();
+                // Protect agents needed for minimumNumberOfInstances
+                if (config.getMinimumNumberOfInstances() > 0) {
+                    int currentCount = MinimumInstanceChecker.countCurrentNumberOfAgents(config);
+                    int pending = getPendingTerminations(configDesc);
+                    if (currentCount - pending <= config.getMinimumNumberOfInstances()) {
+                        // TODO: put 1 for now, check again.
+                        return 1;
+                    }
+                }
+                // Protect idle agents needed for minimumNumberOfSpareInstances
+                if (config.getMinimumNumberOfSpareInstances() > 0 && c.isIdle() && c.isOnline()) {
+                    int currentSpare = MinimumInstanceChecker.countCurrentNumberOfSpareAgents(config);
+                    int pending = getPendingTerminations(configDesc);
+                    if (currentSpare - pending <= config.getMinimumNumberOfSpareInstances()) {
+                        // TODO: put 1 for now, check again.
+                        return 1;
+                    }
+                }
+                // This agent will not be protected — track it so subsequent checks account for it
+                incrementPendingTerminations(configDesc);
+            }
+        }
         return delegate.check(c);
+    }
+
+    private static int getPendingTerminations(String configDesc) {
+        var counter = pendingTerminations.get(configDesc);
+        return counter == null ? 0 : counter.get();
+    }
+
+    private static void incrementPendingTerminations(String configDesc) {
+        pendingTerminations
+                .computeIfAbsent(configDesc, k -> new AtomicInteger(0))
+                .incrementAndGet();
+    }
+
+    public static void resetPendingTerminations() {
+        pendingTerminations.clear();
     }
 
     @Override
@@ -76,6 +130,8 @@ public class ComputeEngineRetentionStrategy extends RetentionStrategy<ComputeEng
                 }
             }
         }
+        // An agent just became busy, so spare count dropped — replenish if needed
+        MinimumInstanceChecker.checkForMinimumInstances();
     }
 
     @Override
@@ -85,6 +141,7 @@ public class ComputeEngineRetentionStrategy extends RetentionStrategy<ComputeEng
         }
         if (oneShot) {
             delegate.taskCompleted(executor, task, durationMS);
+            MinimumInstanceChecker.checkForMinimumInstances();
         }
     }
 
@@ -95,6 +152,7 @@ public class ComputeEngineRetentionStrategy extends RetentionStrategy<ComputeEng
         }
         if (oneShot) {
             delegate.taskCompletedWithProblems(executor, task, durationMS, problems);
+            MinimumInstanceChecker.checkForMinimumInstances();
         }
     }
 
