@@ -44,6 +44,9 @@
             <f:entry title="${%Use Internal IP?}" field="useInternalAddress">
                 <f:checkbox/>
             </f:entry>
+            <f:entry title="${%Use Inbound Agent}" field="useInboundAgent">
+                <f:checkbox/>
+            </f:entry>
             <f:entry title="${%Ignore Jenkins Proxy?}" field="ignoreProxy">
                 <f:checkbox/>
             </f:entry>
