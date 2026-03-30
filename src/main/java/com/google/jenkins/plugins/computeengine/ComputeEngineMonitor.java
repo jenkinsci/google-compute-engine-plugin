@@ -52,7 +52,11 @@ public class ComputeEngineMonitor extends AsyncPeriodicWork {
     }
 
     /** Provision minimum instances right after Jenkins has started */
-    @Initializer(after = InitMilestone.PLUGINS_STARTED)
+    // TODO: getting error when using `InitMilestone.COMPLETED`
+    /* com.google.jenkins.plugins.computeengine.integration.ComputeEngineCloudMinimumInstancesIT.testRetentionAgentsPreservedAcrossBuilds -- Time elapsed: 4.535 s <<< ERROR!
+    java.lang.Exception: Jenkins initialization has not reached the COMPLETED initialization stage. Current state is Configuration for all jobs updated. Likely there is an issue with the Initialization task graph (e.g. usage of @Initializer(after = InitMilestone.COMPLETED)). See JENKINS-37759 for more inf
+        * */
+    @Initializer(after = InitMilestone.JOB_CONFIG_ADAPTED)
     public static void onStartup() {
         MinimumInstanceChecker.checkForMinimumInstances();
     }
