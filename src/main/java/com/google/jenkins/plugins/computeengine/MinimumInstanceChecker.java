@@ -18,7 +18,6 @@ package com.google.jenkins.plugins.computeengine;
 
 import com.google.common.annotations.VisibleForTesting;
 import edu.umd.cs.findbugs.annotations.NonNull;
-import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import hudson.model.Computer;
 import hudson.model.Label;
 import hudson.model.Queue;
