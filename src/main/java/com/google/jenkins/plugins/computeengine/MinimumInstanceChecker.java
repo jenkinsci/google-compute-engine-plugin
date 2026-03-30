@@ -28,6 +28,7 @@ import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.Arrays;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -110,30 +111,19 @@ public class MinimumInstanceChecker {
         var input = MinCheckerInput.of(config);
         int pending = getPendingTerminations(configDesc);
 
-        boolean preserve = shouldPreserveAgent(minInstances, minSpare, input, pending, c.isIdle(), c.isOnline());
+        var preserve = shouldPreserveAgent(minInstances, minSpare, input, pending, c.isIdle(), c.isOnline());
 
-        if (preserve) {
+        if (preserve.isEmpty()) {
             LOGGER.log(Level.FINE, "Preserving {0}: {1}, pending={2}, minInstances={3}, minSpare={4}", new Object[] {
                 c.getName(), input, pending, minInstances, minSpare
             });
             return true;
         }
 
-        String reason;
-        if (!c.isOnline()) {
-            reason = "agent is offline";
-        } else if (!c.isIdle()) {
-            reason = "agent is busy";
-        } else if (minInstances > 0 && input.totalAgents() - pending > minInstances) {
-            reason = "totalAgents(" + input.totalAgents() + ")-pending(" + pending + ") > minInstances(" + minInstances
-                    + ")";
-        } else {
-            reason = "spareAgents(" + input.spareAgents() + ")-pending(" + pending + ") > minSpare(" + minSpare + ")";
-        }
         LOGGER.log(
                 Level.FINE,
                 "Not preserving {0}, allowing delegate retention strategy to decide. Why: {1}",
-                new Object[] {c.getName(), reason});
+                new Object[] {c.getName(), preserve.get()});
         incrementPendingTerminations(configDesc);
         return false;
     }
@@ -162,10 +152,12 @@ public class MinimumInstanceChecker {
 
     /**
      * Determines whether an agent should be preserved to meet minimum instance requirements.
+     * Returns {@link Optional#empty()} if the agent should be preserved, or a reason string
+     * explaining why it should not be preserved.
      * Pure function — no Jenkins access, no side effects.
      */
     @VisibleForTesting
-    static boolean shouldPreserveAgent(
+    static Optional<String> shouldPreserveAgent(
             int minInstances,
             int minSpare,
             MinCheckerInput input,
@@ -173,12 +165,23 @@ public class MinimumInstanceChecker {
             boolean idle,
             boolean online) {
         if (minInstances > 0 && input.totalAgents() - pendingTerminations <= minInstances) {
-            return true;
+            return Optional.empty();
         }
         if (minSpare > 0 && idle && online && input.spareAgents() - pendingTerminations <= minSpare) {
-            return true;
+            return Optional.empty();
         }
-        return false;
+        if (!online) {
+            return Optional.of("agent is offline");
+        }
+        if (!idle) {
+            return Optional.of("agent is busy");
+        }
+        if (minInstances > 0 && input.totalAgents() - pendingTerminations > minInstances) {
+            return Optional.of("totalAgents(" + input.totalAgents() + ")-pending(" + pendingTerminations
+                    + ") > minInstances(" + minInstances + ")");
+        }
+        return Optional.of("spareAgents(" + input.spareAgents() + ")-pending(" + pendingTerminations + ") > minSpare("
+                + minSpare + ")");
     }
 
     /**

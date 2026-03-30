@@ -336,7 +336,7 @@ public class ComputeEngineCloudMinimumInstancesIT {
         log.info("Enabling time range for current day: " + today);
         setDayActive(timeRangeConfig, today, true);
 
-        // Re-read config to verify the update took effect
+        // Verify the config update took effect
         var updatedTimeRange = cloud.getConfigurations().get(0).getMinimumNumberOfInstancesTimeRangeConfig();
         assertThat("current day is now active", updatedTimeRange.isDayActive(today), is(true));
 
