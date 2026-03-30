@@ -209,10 +209,7 @@ public class ComputeEngineCloudMinimumInstancesIT {
                 .timeout(Duration.ofMinutes(5))
                 .until(this::countOnlineIdleNodes, is(2));
         var newAgentNames = currentNodeNames();
-        assertThat(
-                "new agents should have different names (new instances) than initial agents",
-                newAgentNames,
-                not(is(initialNames)));
+        assertThat("new agents should have different names than initial agents", newAgentNames, not(is(initialNames)));
     }
 
     /**
@@ -224,8 +221,8 @@ public class ComputeEngineCloudMinimumInstancesIT {
      *       is terminated by the retention strategy's idle-timeout</li>
      * </ol>
      *
-     * <p>Uses a 10-min retention timeout so the offline agent survives long enough for the
-     * replacement to provision (~3.5 min) before being brought back online.
+     * <p>Uses a 4-min retention timeout so the offline agent survives long enough for the
+     * replacement to provision before being brought back online.
      */
     @Test
     @ConfiguredWithCode("minimum-instances-offline-spare-casc.yml")
@@ -332,7 +329,7 @@ public class ComputeEngineCloudMinimumInstancesIT {
         assertThat("no agents provisioned outside active time range", j.jenkins.getNodes(), hasSize(0));
 
         // Enable the current day so the time range becomes active
-        DayOfWeek today = LocalDateTime.now().getDayOfWeek();
+        var today = LocalDateTime.now().getDayOfWeek();
         log.info("Enabling time range for current day: " + today);
         setDayActive(timeRangeConfig, today, true);
 

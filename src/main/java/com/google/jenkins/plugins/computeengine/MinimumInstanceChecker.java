@@ -67,11 +67,12 @@ public class MinimumInstanceChecker {
 
     /**
      * Tracks how many spare agents we have already declined to protect (i.e., allowed the delegate
-     * to terminate) per config description. This prevents a TOCTOU race where multiple agents all
+     * to terminate) per config instance. This prevents a TOCTOU race where multiple agents all
      * see the same currentSpare count before any async termination completes, causing all of them
      * to be terminated simultaneously.
      */
-    private static final ConcurrentHashMap<String, AtomicInteger> pendingTerminations = new ConcurrentHashMap<>();
+    private static final ConcurrentHashMap<InstanceConfiguration, AtomicInteger> pendingTerminations =
+            new ConcurrentHashMap<>();
 
     /** Guard against re-entrant calls (e.g. addNode triggers SaveableListener on the same thread). */
     private static final AtomicBoolean checking = new AtomicBoolean(false);
@@ -88,7 +89,7 @@ public class MinimumInstanceChecker {
         }
     }
 
-    /** Called by {@link ComputeEngineRetentionStrategy#check} before delegating to the idle-timeout strategy. */
+    /** Called by {@link ComputeEngineRetentionStrategy#check} before delegating to the {@code OnceRetentionStrategy} */
     public static boolean shouldPreserve(ComputeEngineComputer c) {
         var node = c.getNode();
         if (node == null) {
@@ -107,9 +108,8 @@ public class MinimumInstanceChecker {
 
         int minInstances = config.getMinimumNumberOfInstances();
         int minSpare = config.getMinimumNumberOfSpareInstances();
-        String configDesc = config.getDescription();
         var input = MinCheckerInput.of(config);
-        int pending = getPendingTerminations(configDesc);
+        int pending = getPendingTerminations(config);
 
         var preserve = shouldPreserveAgent(minInstances, minSpare, input, pending, c.isIdle(), c.isOnline());
 
@@ -124,18 +124,14 @@ public class MinimumInstanceChecker {
                 Level.FINE,
                 "Not preserving {0}, allowing delegate retention strategy to decide. Why: {1}",
                 new Object[] {c.getName(), preserve.get()});
-        incrementPendingTerminations(configDesc);
+        incrementPendingTerminations(config);
         return false;
     }
 
     /**
-     * Skips (rather than queues) if another call is already in progress. A queued call would
-     * see the same state the in-progress call already handled (newly provisioned nodes are still
-     * connecting and not yet counted), leading to double-provisioning. The next natural trigger
-     * (periodic check, task event) will catch any changes that occurred during the skipped window.
-     *
-     * <p>Also prevents same-thread re-entrance via the {@code addNode()} → {@code Jenkins.save()}
-     * → {@code SaveableListener} → {@code checkForMinimumInstances()} chain.
+     * Provisions agents as needed to satisfy minimum instance requirements across all GCE cloud
+     * configurations. Concurrent and re-entrant calls are skipped rather than queued to avoid
+     * double-provisioning.
      */
     public static void checkForMinimumInstances() {
         if (!checking.compareAndSet(false, true)) {
@@ -285,16 +281,18 @@ public class MinimumInstanceChecker {
                 }));
     }
 
-    private static int getPendingTerminations(String configDesc) {
-        var counter = pendingTerminations.get(configDesc);
+    private static int getPendingTerminations(InstanceConfiguration config) {
+        var counter = pendingTerminations.get(config);
         return counter == null ? 0 : counter.get();
     }
 
-    private static void incrementPendingTerminations(String configDesc) {
+    private static void incrementPendingTerminations(InstanceConfiguration config) {
         int newValue = pendingTerminations
-                .computeIfAbsent(configDesc, k -> new AtomicInteger(0))
+                .computeIfAbsent(config, k -> new AtomicInteger(0))
                 .incrementAndGet();
-        LOGGER.log(Level.FINEST, "pendingTerminations for {0} incremented to {1}", new Object[] {configDesc, newValue});
+        LOGGER.log(Level.FINEST, "pendingTerminations for {0} incremented to {1}", new Object[] {
+            config.getDescription(), newValue
+        });
     }
 
     static void resetPendingTerminations() {

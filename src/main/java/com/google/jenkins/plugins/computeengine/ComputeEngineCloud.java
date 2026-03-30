@@ -319,9 +319,10 @@ public class ComputeEngineCloud extends AbstractCloudImpl {
                 availableCapacity--;
             }
             if (numberToProvision > 0) {
-                log.warning(
-                        "Could not provision %d nodes for minimum instances. Cloud provider %s has reached its configured capacity of %d"
-                                .formatted(numberToProvision, getCloudName(), getInstanceCap()));
+                log.log(
+                        Level.WARNING,
+                        "Could not provision {0} nodes for minimum instances. Cloud provider {1} has reached its configured capacity of {2}",
+                        new Object[] {numberToProvision, getCloudName(), getInstanceCap()});
             }
         } catch (IOException ioe) {
             log.log(Level.WARNING, "Error provisioning node for minimum instances", ioe);

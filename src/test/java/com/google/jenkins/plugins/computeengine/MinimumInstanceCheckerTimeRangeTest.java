@@ -48,7 +48,7 @@ public class MinimumInstanceCheckerTimeRangeTest {
         var config = timeRange("09:00", "17:00");
         config.setTuesday(true);
 
-        setClock(2026, Month.SEPTEMBER, 22, 12, 0); // Tuesday 12:00
+        setClock(2026, Month.APRIL, 7, 12, 0); // Tuesday 12:00
         assertTrue(MinimumInstanceChecker.isActiveTimeRange(config));
     }
 
@@ -58,7 +58,7 @@ public class MinimumInstanceCheckerTimeRangeTest {
         config.setMonday(true);
         config.setTuesday(false);
 
-        setClock(2026, Month.SEPTEMBER, 22, 12, 0); // Tuesday 12:00
+        setClock(2026, Month.APRIL, 7, 12, 0); // Tuesday 12:00
         assertFalse(MinimumInstanceChecker.isActiveTimeRange(config));
     }
 
@@ -67,7 +67,7 @@ public class MinimumInstanceCheckerTimeRangeTest {
         var config = timeRange("09:00", "17:00");
         config.setTuesday(true);
 
-        setClock(2026, Month.SEPTEMBER, 22, 18, 0); // Tuesday 18:00
+        setClock(2026, Month.APRIL, 7, 18, 0); // Tuesday 18:00
         assertFalse(MinimumInstanceChecker.isActiveTimeRange(config));
     }
 
@@ -76,7 +76,7 @@ public class MinimumInstanceCheckerTimeRangeTest {
         var config = timeRange("09:00", "17:00");
         config.setTuesday(true);
 
-        setClock(2026, Month.SEPTEMBER, 22, 8, 0); // Tuesday 08:00
+        setClock(2026, Month.APRIL, 7, 8, 0); // Tuesday 08:00
         assertFalse(MinimumInstanceChecker.isActiveTimeRange(config));
     }
 
@@ -85,7 +85,7 @@ public class MinimumInstanceCheckerTimeRangeTest {
         var config = timeRange("09:00", "17:00");
         config.setTuesday(true);
 
-        setClock(2026, Month.SEPTEMBER, 22, 9, 0); // Tuesday 09:00 exactly
+        setClock(2026, Month.APRIL, 7, 9, 0); // Tuesday 09:00 exactly
         assertTrue(MinimumInstanceChecker.isActiveTimeRange(config));
     }
 
@@ -94,7 +94,7 @@ public class MinimumInstanceCheckerTimeRangeTest {
         var config = timeRange("09:00", "17:00");
         config.setTuesday(true);
 
-        setClock(2026, Month.SEPTEMBER, 22, 17, 0); // Tuesday 17:00 exactly
+        setClock(2026, Month.APRIL, 7, 17, 0); // Tuesday 17:00 exactly
         assertFalse(MinimumInstanceChecker.isActiveTimeRange(config));
     }
 
@@ -103,7 +103,7 @@ public class MinimumInstanceCheckerTimeRangeTest {
         var config = timeRange("09:00", "17:00");
         config.setTuesday(true);
 
-        setClock(2026, Month.SEPTEMBER, 22, 16, 59); // Tuesday 16:59
+        setClock(2026, Month.APRIL, 7, 16, 59); // Tuesday 16:59
         assertTrue(MinimumInstanceChecker.isActiveTimeRange(config));
     }
 
@@ -112,7 +112,7 @@ public class MinimumInstanceCheckerTimeRangeTest {
         var config = timeRange("22:00", "06:00");
         config.setTuesday(true);
 
-        setClock(2026, Month.SEPTEMBER, 22, 23, 0); // Tuesday 23:00
+        setClock(2026, Month.APRIL, 7, 23, 0); // Tuesday 23:00
         assertTrue(MinimumInstanceChecker.isActiveTimeRange(config));
     }
 
@@ -122,7 +122,7 @@ public class MinimumInstanceCheckerTimeRangeTest {
         config.setTuesday(true);
 
         // Wednesday 03:00 — post-midnight portion attributed to Tuesday
-        setClock(2026, Month.SEPTEMBER, 23, 3, 0); // Wednesday
+        setClock(2026, Month.APRIL, 8, 3, 0); // Wednesday
         assertTrue(MinimumInstanceChecker.isActiveTimeRange(config));
     }
 
@@ -131,7 +131,7 @@ public class MinimumInstanceCheckerTimeRangeTest {
         var config = timeRange("22:00", "06:00");
         config.setTuesday(true);
 
-        setClock(2026, Month.SEPTEMBER, 22, 12, 0); // Tuesday 12:00 — gap between 06:00-22:00
+        setClock(2026, Month.APRIL, 7, 12, 0); // Tuesday 12:00 — gap between 06:00-22:00
         assertFalse(MinimumInstanceChecker.isActiveTimeRange(config));
     }
 
@@ -141,7 +141,7 @@ public class MinimumInstanceCheckerTimeRangeTest {
         config.setTuesday(true);
 
         // Wednesday 06:00 exactly — excluded (half-open)
-        setClock(2026, Month.SEPTEMBER, 23, 6, 0); // Wednesday
+        setClock(2026, Month.APRIL, 8, 6, 0); // Wednesday
         assertFalse(MinimumInstanceChecker.isActiveTimeRange(config));
     }
 
@@ -152,7 +152,7 @@ public class MinimumInstanceCheckerTimeRangeTest {
         config.setWednesday(true);
 
         // Tuesday 23:00 — Tuesday is inactive, even though time is in range
-        setClock(2026, Month.SEPTEMBER, 22, 23, 0); // Tuesday
+        setClock(2026, Month.APRIL, 7, 23, 0); // Tuesday
         assertFalse(MinimumInstanceChecker.isActiveTimeRange(config));
     }
 
@@ -163,7 +163,7 @@ public class MinimumInstanceCheckerTimeRangeTest {
         config.setWednesday(true);
 
         // Wednesday 03:00 — post-midnight attributed to Tuesday, which is inactive
-        setClock(2026, Month.SEPTEMBER, 23, 3, 0); // Wednesday
+        setClock(2026, Month.APRIL, 8, 3, 0); // Wednesday
         assertFalse(MinimumInstanceChecker.isActiveTimeRange(config));
     }
 
@@ -172,7 +172,7 @@ public class MinimumInstanceCheckerTimeRangeTest {
         var config = timeRange("22:00", "06:00");
         config.setTuesday(true);
 
-        setClock(2026, Month.SEPTEMBER, 22, 22, 0); // Tuesday 22:00 exactly
+        setClock(2026, Month.APRIL, 7, 22, 0); // Tuesday 22:00 exactly
         assertTrue(MinimumInstanceChecker.isActiveTimeRange(config));
     }
 
@@ -182,11 +182,9 @@ public class MinimumInstanceCheckerTimeRangeTest {
         config.setSunday(true);
 
         // Monday 03:00 — post-midnight attributed to Sunday via today.minus(1)
-        setClock(2026, Month.SEPTEMBER, 21, 3, 0); // Monday
+        setClock(2026, Month.APRIL, 6, 3, 0); // Monday
         assertTrue(MinimumInstanceChecker.isActiveTimeRange(config));
     }
-
-    // ── Day-of-week coverage ────────────────────────────────────────────
 
     @Test
     public void weekday_allDaysActive() {
@@ -197,7 +195,7 @@ public class MinimumInstanceCheckerTimeRangeTest {
         config.setThursday(true);
         config.setFriday(true);
 
-        setClock(2026, Month.SEPTEMBER, 23, 12, 0); // Wednesday
+        setClock(2026, Month.APRIL, 8, 12, 0); // Wednesday
         assertTrue(MinimumInstanceChecker.isActiveTimeRange(config));
     }
 
@@ -211,7 +209,7 @@ public class MinimumInstanceCheckerTimeRangeTest {
         config.setFriday(true);
         // Saturday/Sunday not set → inactive
 
-        setClock(2026, Month.SEPTEMBER, 26, 12, 0); // Saturday
+        setClock(2026, Month.APRIL, 11, 12, 0); // Saturday
         assertFalse(MinimumInstanceChecker.isActiveTimeRange(config));
     }
 
@@ -223,7 +221,7 @@ public class MinimumInstanceCheckerTimeRangeTest {
     }
 
     private void setClock(int year, Month month, int day, int hour, int minute) {
-        LocalDateTime dateTime = LocalDateTime.of(year, month, day, hour, minute);
+        var dateTime = LocalDateTime.of(year, month, day, hour, minute);
         MinimumInstanceChecker.clock =
                 Clock.fixed(dateTime.atZone(ZoneId.systemDefault()).toInstant(), ZoneId.systemDefault());
     }
