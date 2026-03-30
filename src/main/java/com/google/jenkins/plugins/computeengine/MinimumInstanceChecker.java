@@ -62,7 +62,6 @@ import jenkins.model.Jenkins;
 public class MinimumInstanceChecker {
     private static final Logger LOGGER = Logger.getLogger(MinimumInstanceChecker.class.getName());
 
-    @SuppressFBWarnings(value = "MS_SHOULD_BE_FINAL", justification = "Mutable for test clock injection")
     @VisibleForTesting
     static Clock clock = Clock.systemDefaultZone();
 
