@@ -55,6 +55,7 @@ public class ComputeEngineMonitor extends AsyncPeriodicWork {
     public static class OnStartupListener extends ItemListener {
         @Override
         public void onLoaded() {
+            LOGGER.info("launching minimum instances checker on startup");
             MinimumInstanceChecker.checkForMinimumInstances();
         }
     }

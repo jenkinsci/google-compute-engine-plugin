@@ -63,7 +63,8 @@ public class MinimumInstanceChecker {
     private static final Logger LOGGER = Logger.getLogger(MinimumInstanceChecker.class.getName());
 
     @SuppressFBWarnings(value = "MS_SHOULD_BE_FINAL", justification = "Mutable for test clock injection")
-    public static Clock clock = Clock.systemDefaultZone();
+    @VisibleForTesting
+    static Clock clock = Clock.systemDefaultZone();
 
     /**
      * Tracks how many spare agents we have already declined to protect (i.e., allowed the delegate
@@ -74,7 +75,7 @@ public class MinimumInstanceChecker {
     private static final ConcurrentHashMap<InstanceConfiguration, AtomicInteger> pendingTerminations =
             new ConcurrentHashMap<>();
 
-    /** Guard against re-entrant calls (e.g. addNode triggers SaveableListener on the same thread). */
+    /** Guard against concurrent calls (e.g. periodic checker and SaveableListener firing simultaneously). */
     private static final AtomicBoolean checking = new AtomicBoolean(false);
 
     private MinimumInstanceChecker() {}
@@ -130,12 +131,11 @@ public class MinimumInstanceChecker {
 
     /**
      * Provisions agents as needed to satisfy minimum instance requirements across all GCE cloud
-     * configurations. Concurrent and re-entrant calls are skipped rather than queued to avoid
-     * double-provisioning.
+     * configurations. Concurrent calls are skipped rather than queued to avoid double-provisioning.
      */
     public static void checkForMinimumInstances() {
         if (!checking.compareAndSet(false, true)) {
-            LOGGER.log(Level.FINER, "Concurrent or re-entrant checkForMinimumInstances call, skipping");
+            LOGGER.log(Level.FINER, "Concurrent checkForMinimumInstances call, skipping");
             return;
         }
         try {
@@ -184,6 +184,7 @@ public class MinimumInstanceChecker {
      * Computes how many agents to provision for a config to meet minimum instance requirements.
      * Pure function — no Jenkins access, no side effects.
      */
+    @VisibleForTesting
     static int computeProvisionCount(int requiredMin, int requiredMinSpare, MinCheckerInput input) {
         int forMin = requiredMin > 0 ? Math.max(0, requiredMin - input.totalAgents()) : 0;
         int forSpare = requiredMinSpare > 0
@@ -219,7 +220,8 @@ public class MinimumInstanceChecker {
      * @param timeRangeConfig the time range configuration, or null if not configured
      * @return true if minimum instances should be enforced
      */
-    public static boolean isActiveTimeRange(MinimumNumberOfInstancesTimeRangeConfig timeRangeConfig) {
+    @VisibleForTesting
+    static boolean isActiveTimeRange(MinimumNumberOfInstancesTimeRangeConfig timeRangeConfig) {
         if (timeRangeConfig == null) {
             return true;
         }
@@ -295,14 +297,14 @@ public class MinimumInstanceChecker {
         });
     }
 
-    static void resetPendingTerminations() {
+    private static void resetPendingTerminations() {
         if (!pendingTerminations.isEmpty()) {
             LOGGER.log(Level.FINEST, "Resetting pendingTerminations: {0}", pendingTerminations);
         }
         pendingTerminations.clear();
     }
 
-    static Stream<ComputeEngineComputer> agentsForConfig(@NonNull InstanceConfiguration config) {
+    private static Stream<ComputeEngineComputer> agentsForConfig(@NonNull InstanceConfiguration config) {
         return Arrays.stream(Jenkins.get().getComputers())
                 .filter(ComputeEngineComputer.class::isInstance)
                 .map(ComputeEngineComputer.class::cast)
@@ -316,22 +318,22 @@ public class MinimumInstanceChecker {
         return agentsForConfig(config).filter(Computer::isIdle);
     }
 
-    static int countCurrentNumberOfAgents(@NonNull InstanceConfiguration config) {
+    private static int countCurrentNumberOfAgents(@NonNull InstanceConfiguration config) {
         return (int) agentsForConfig(config).count();
     }
 
-    static int countCurrentNumberOfSpareAgents(@NonNull InstanceConfiguration config) {
+    private static int countCurrentNumberOfSpareAgents(@NonNull InstanceConfiguration config) {
         return (int) idleAgents(config).filter(Computer::isOnline).count();
     }
 
-    static int countCurrentNumberOfProvisioningAgents(@NonNull InstanceConfiguration config) {
+    private static int countCurrentNumberOfProvisioningAgents(@NonNull InstanceConfiguration config) {
         return (int) idleAgents(config)
                 .filter(Computer::isOffline)
                 .filter(Computer::isConnecting)
                 .count();
     }
 
-    static int countQueueItemsForConfig(@NonNull InstanceConfiguration config) {
+    private static int countQueueItemsForConfig(@NonNull InstanceConfiguration config) {
         return (int) Queue.getInstance().getBuildableItems().stream()
                 .map(Queue.Item::getAssignedLabel)
                 .filter(Objects::nonNull)
