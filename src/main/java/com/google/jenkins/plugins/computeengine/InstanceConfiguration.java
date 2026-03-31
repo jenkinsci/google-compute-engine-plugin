@@ -997,24 +997,28 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
             if (value == null || value.isBlank()) {
                 return FormValidation.ok();
             }
+            int minimumInstances;
             try {
-                int val = Integer.parseInt(value);
-                if (val >= 0) {
-                    int instanceCap;
-                    try {
-                        instanceCap = Integer.parseInt(instanceCapStr);
-                    } catch (NumberFormatException ignore) {
-                        instanceCap = Integer.MAX_VALUE;
-                    }
-                    if (val > instanceCap) {
-                        return FormValidation.error(
-                                "%s must not be larger than Instance Cap %d", fieldName, instanceCap);
-                    }
-                    return FormValidation.ok();
-                }
-            } catch (NumberFormatException ignore) {
+                minimumInstances = Integer.parseInt(value);
+            } catch (NumberFormatException e) {
+                return FormValidation.error("%s must be a non-negative integer", fieldName);
             }
-            return FormValidation.error("%s must be a non-negative integer", fieldName);
+            if (minimumInstances < 0) {
+                return FormValidation.error("%s must be a non-negative integer", fieldName);
+            }
+            if (instanceCapStr == null || instanceCapStr.isBlank()) {
+                return FormValidation.ok();
+            }
+            int instanceCap;
+            try {
+                instanceCap = Integer.parseInt(instanceCapStr);
+            } catch (NumberFormatException e) {
+                return FormValidation.error("Instance Cap must be a valid integer");
+            }
+            if (minimumInstances > instanceCap) {
+                return FormValidation.error("%s must not be larger than Instance Cap %d", fieldName, instanceCap);
+            }
+            return FormValidation.ok();
         }
 
         public FormValidation doCheckMinimumNumberOfInstances(
