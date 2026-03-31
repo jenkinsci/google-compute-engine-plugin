@@ -225,17 +225,10 @@ public class ComputeEngineCloudMinimumInstancesIT {
      *   <li>After bringing the agent back online, the excess agent (3 spare vs 2 required)
      *       is terminated by the retention strategy's idle-timeout</li>
      * </ol>
-     *
-     * <p>Increases retention timeout to 4 min so the offline agent survives long enough for the
-     * replacement to provision before being brought back online.
      */
     @Test
-    @ConfiguredWithCode("minimum-instances-retention-spare-casc.yml")
+    @ConfiguredWithCode("minimum-instances-offline-spare-casc.yml")
     public void testAgentTemporarilyOffline_notCountedAsSpare() throws Exception {
-        // Increase retention so the offline agent isn't terminated before the replacement provisions
-        var cloud = (ComputeEngineCloud) j.jenkins.clouds.getByName("gce-integration");
-        cloud.getConfigurations().get(0).setRetentionTimeMinutesStr("5");
-
         waitForSpareAgents(2);
 
         var node = j.jenkins.getNodes().get(0);
