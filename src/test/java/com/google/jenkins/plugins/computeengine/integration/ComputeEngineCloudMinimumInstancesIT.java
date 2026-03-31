@@ -27,6 +27,7 @@ import static org.hamcrest.Matchers.*;
 
 import com.google.cloud.graphite.platforms.plugin.client.ComputeClient;
 import com.google.jenkins.plugins.computeengine.ComputeEngineCloud;
+import com.google.jenkins.plugins.computeengine.ComputeEngineMonitor;
 import com.google.jenkins.plugins.computeengine.MinimumNumberOfInstancesTimeRangeConfig;
 import com.google.jenkins.plugins.computeengine.client.ClientUtil;
 import hudson.model.Node;
@@ -77,12 +78,12 @@ public class ComputeEngineCloudMinimumInstancesIT {
 
     @BeforeClass
     public static void configurePeriodicCheck() {
-        System.setProperty("com.google.jenkins.plugins.computeengine.minimumInstanceCheckPeriod", "PT2M");
+        System.setProperty(ComputeEngineMonitor.MINIMUM_INSTANCE_CHECK_PERIOD_PROPERTY, "PT2M");
     }
 
     @AfterClass
     public static void clearPeriodicCheck() {
-        System.clearProperty("com.google.jenkins.plugins.computeengine.minimumInstanceCheckPeriod");
+        System.clearProperty(ComputeEngineMonitor.MINIMUM_INSTANCE_CHECK_PERIOD_PROPERTY);
     }
 
     @Before
