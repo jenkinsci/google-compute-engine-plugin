@@ -27,7 +27,6 @@ import static org.hamcrest.Matchers.*;
 
 import com.google.cloud.graphite.platforms.plugin.client.ComputeClient;
 import com.google.jenkins.plugins.computeengine.ComputeEngineCloud;
-import com.google.jenkins.plugins.computeengine.ComputeEngineMonitor;
 import com.google.jenkins.plugins.computeengine.MinimumNumberOfInstancesTimeRangeConfig;
 import com.google.jenkins.plugins.computeengine.client.ClientUtil;
 import hudson.model.Node;
@@ -76,14 +75,19 @@ public class ComputeEngineCloudMinimumInstancesIT {
 
     private ComputeClient client;
 
+    // Use string literal to avoid loading ComputeEngineMonitor class, which would initialize
+    // recurrencePeriod (a static final) before this property is set, defaulting to 10 minutes.
+    private static final String CHECK_PERIOD_PROPERTY =
+            "com.google.jenkins.plugins.computeengine.ComputeEngineMonitor.minimumInstanceCheckPeriod";
+
     @BeforeClass
     public static void configurePeriodicCheck() {
-        System.setProperty(ComputeEngineMonitor.MINIMUM_INSTANCE_CHECK_PERIOD_PROPERTY, "PT2M");
+        System.setProperty(CHECK_PERIOD_PROPERTY, "PT2M");
     }
 
     @AfterClass
     public static void clearPeriodicCheck() {
-        System.clearProperty(ComputeEngineMonitor.MINIMUM_INSTANCE_CHECK_PERIOD_PROPERTY);
+        System.clearProperty(CHECK_PERIOD_PROPERTY);
     }
 
     @Before
@@ -230,7 +234,7 @@ public class ComputeEngineCloudMinimumInstancesIT {
     public void testAgentTemporarilyOffline_notCountedAsSpare() throws Exception {
         // Increase retention so the offline agent isn't terminated before the replacement provisions
         var cloud = (ComputeEngineCloud) j.jenkins.clouds.getByName("gce-integration");
-        cloud.getConfigurations().get(0).setRetentionTimeMinutesStr("4");
+        cloud.getConfigurations().get(0).setRetentionTimeMinutesStr("5");
 
         waitForSpareAgents(2);
 
