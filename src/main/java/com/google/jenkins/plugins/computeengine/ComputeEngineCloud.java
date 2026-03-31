@@ -307,8 +307,7 @@ public class ComputeEngineCloud extends AbstractCloudImpl {
         }
         try {
             log.info("Provisioning spare nodes from config " + config + " for number " + numberToProvision);
-            int availableCapacity = availableNodeCapacity();
-            while (numberToProvision > 0 && availableCapacity > 0) {
+            while (numberToProvision > 0 && availableNodeCapacity() > 0) {
                 final ComputeEngineInstance node = config.provision();
                 if (node == null) {
                     break;
@@ -316,7 +315,6 @@ public class ComputeEngineCloud extends AbstractCloudImpl {
                 Jenkins.get().addNode(node);
                 result.add(createPlannedNode(config, node));
                 numberToProvision--;
-                availableCapacity--;
             }
             if (numberToProvision > 0) {
                 log.log(
