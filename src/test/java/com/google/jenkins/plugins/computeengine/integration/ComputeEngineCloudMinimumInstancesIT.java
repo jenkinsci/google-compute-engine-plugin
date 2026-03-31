@@ -46,14 +46,13 @@ import java.util.stream.Collectors;
 import org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition;
 import org.jenkinsci.plugins.workflow.job.WorkflowJob;
 import org.junit.After;
-import org.junit.AfterClass;
 import org.junit.Before;
-import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.Timeout;
 import org.jvnet.hudson.test.BuildWatcher;
+import org.jvnet.hudson.test.FlagRule;
 import org.jvnet.hudson.test.JenkinsRule;
 import org.jvnet.hudson.test.LoggerRule;
 
@@ -73,22 +72,11 @@ public class ComputeEngineCloudMinimumInstancesIT {
     @ClassRule
     public static BuildWatcher bw = new BuildWatcher();
 
+    @ClassRule
+    public static FlagRule<String> minimumCheckPeriodPropRule = FlagRule.systemProperty(
+            "com.google.jenkins.plugins.computeengine.ComputeEngineMonitor.minimumInstanceCheckPeriod", "PT2M");
+
     private ComputeClient client;
-
-    // Use string literal to avoid loading ComputeEngineMonitor class, which would initialize
-    // recurrencePeriod (a static final) before this property is set, defaulting to 10 minutes.
-    private static final String CHECK_PERIOD_PROPERTY =
-            "com.google.jenkins.plugins.computeengine.ComputeEngineMonitor.minimumInstanceCheckPeriod";
-
-    @BeforeClass
-    public static void configurePeriodicCheck() {
-        System.setProperty(CHECK_PERIOD_PROPERTY, "PT2M");
-    }
-
-    @AfterClass
-    public static void clearPeriodicCheck() {
-        System.clearProperty(CHECK_PERIOD_PROPERTY);
-    }
 
     @Before
     public void init() throws Exception {

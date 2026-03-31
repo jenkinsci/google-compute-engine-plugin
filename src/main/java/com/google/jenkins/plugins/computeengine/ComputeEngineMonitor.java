@@ -16,7 +16,6 @@
 
 package com.google.jenkins.plugins.computeengine;
 
-import com.google.common.annotations.VisibleForTesting;
 import hudson.Extension;
 import hudson.model.AsyncPeriodicWork;
 import hudson.model.TaskListener;
@@ -34,12 +33,8 @@ import jenkins.util.SystemProperties;
 public class ComputeEngineMonitor extends AsyncPeriodicWork {
     private static final Logger LOGGER = Logger.getLogger(ComputeEngineMonitor.class.getName());
 
-    @VisibleForTesting
-    public static final String MINIMUM_INSTANCE_CHECK_PERIOD_PROPERTY =
-            ComputeEngineMonitor.class.getName() + ".minimumInstanceCheckPeriod";
-
-    private static final Duration recurrencePeriod =
-            SystemProperties.getDuration(MINIMUM_INSTANCE_CHECK_PERIOD_PROPERTY, Duration.ofMinutes(10));
+    private static final Duration recurrencePeriod = SystemProperties.getDuration(
+            ComputeEngineMonitor.class.getName() + ".minimumInstanceCheckPeriod", Duration.ofMinutes(10));
 
     public ComputeEngineMonitor() {
         super("GCE minimum instances checker");
