@@ -90,6 +90,12 @@ public class ComputeEngineRetentionStrategy extends RetentionStrategy<ComputeEng
         }
         if (oneShot) {
             delegate.taskCompleted(executor, task, durationMS);
+            /*
+             * The delegate terminates this oneShot agent, dropping the total agent count.
+             * For configs with minimumInstances > 1, minimumSpareInstances = 0, taskAccepted
+             * would not have triggered replenishment. This triggers immediate replenishment
+             * rather than waiting up to 10 minutes for the periodic checker.
+             */
             MinimumInstanceChecker.checkForMinimumInstances();
         }
     }
@@ -101,6 +107,12 @@ public class ComputeEngineRetentionStrategy extends RetentionStrategy<ComputeEng
         }
         if (oneShot) {
             delegate.taskCompletedWithProblems(executor, task, durationMS, problems);
+            /*
+             * The delegate terminates this oneShot agent, dropping the total agent count.
+             * For configs with minimumInstances > 1, minimumSpareInstances = 0, taskAccepted
+             * would not have triggered replenishment. This triggers immediate replenishment
+             * rather than waiting up to 10 minutes for the periodic checker.
+             */
             MinimumInstanceChecker.checkForMinimumInstances();
         }
     }
