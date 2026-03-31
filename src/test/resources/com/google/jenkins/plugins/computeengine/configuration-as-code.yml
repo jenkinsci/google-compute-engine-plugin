@@ -19,6 +19,18 @@ jenkins:
             javaExecPath:       "java"
             oneShot:            true
             createSnapshot:     false
+            minimumNumberOfInstances: 2
+            minimumNumberOfSpareInstances: 1
+            minimumNumberOfInstancesTimeRangeConfig:
+              activeFrom: "09:00"
+              activeTo: "17:00"
+              monday: true
+              tuesday: true
+              wednesday: true
+              thursday: true
+              friday: true
+              saturday: false
+              sunday: false
             region:             "https://www.googleapis.com/compute/v1/projects/gce-jenkins/regions/europe-west1"
             zone:               "https://www.googleapis.com/compute/v1/projects/gce-jenkins/zones/europe-west1-a"
             template:           '' # tried not setting, added when 'saved' in UI
