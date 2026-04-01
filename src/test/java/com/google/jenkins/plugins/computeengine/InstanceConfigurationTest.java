@@ -302,6 +302,44 @@ public class InstanceConfigurationTest {
         assertEquals(sshKeys.length, 1);
     }
 
+    @Test
+    public void testInstanceCustomMetadata() throws Exception {
+        List<CustomMetadataItem> metadata = List.of(
+                new CustomMetadataItem("test-key", "test-value"),
+                new CustomMetadataItem("test-multiline", "line1\nline2\nline3"));
+        var instanceConfiguration =
+                instanceConfigurationBuilder().customMetadata(metadata).build();
+
+        var instance = instanceConfiguration.instance();
+
+        Optional<String> simpleValue = instance.getMetadata().getItems().stream()
+                .filter(item -> item.getKey().equals("test-key"))
+                .map(Metadata.Items::getValue)
+                .findFirst();
+        assertTrue("custom metadata 'test-key' should be present", simpleValue.isPresent());
+        assertEquals("test-value", simpleValue.get());
+
+        Optional<String> multilineValue = instance.getMetadata().getItems().stream()
+                .filter(item -> item.getKey().equals("test-multiline"))
+                .map(Metadata.Items::getValue)
+                .findFirst();
+        assertTrue("custom metadata 'test-multiline' should be present", multilineValue.isPresent());
+        assertEquals("line1\nline2\nline3", multilineValue.get());
+
+        // Verify custom metadata coexists with programmatic metadata
+        Optional<String> guestAttributes = instance.getMetadata().getItems().stream()
+                .filter(item -> item.getKey().equals(InstanceConfiguration.GUEST_ATTRIBUTES_METADATA_KEY))
+                .map(Metadata.Items::getValue)
+                .findFirst();
+        assertTrue("guest attributes should still be present", guestAttributes.isPresent());
+
+        Optional<String> startupScript = instance.getMetadata().getItems().stream()
+                .filter(item -> item.getKey().equals(InstanceConfiguration.METADATA_LINUX_STARTUP_SCRIPT_KEY))
+                .map(Metadata.Items::getValue)
+                .findFirst();
+        assertTrue("startup script should still be present", startupScript.isPresent());
+    }
+
     public static InstanceConfiguration.Builder instanceConfigurationBuilder() {
         return InstanceConfiguration.builder()
                 .namePrefix(NAME_PREFIX)
