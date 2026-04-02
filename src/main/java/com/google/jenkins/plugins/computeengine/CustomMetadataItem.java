@@ -39,10 +39,10 @@ public class CustomMetadataItem implements Describable<CustomMetadataItem> {
     private final String value;
 
     @DataBoundConstructor
-    public CustomMetadataItem(String key, String value) {
+    public CustomMetadataItem(String key, String value) throws Descriptor.FormException {
         if (RESERVED_KEYS.contains(key)) {
-            throw new IllegalArgumentException(
-                    String.format("Key '%s' is reserved for internal use by the plugin.", key));
+            throw new Descriptor.FormException(
+                    "Custom Metadata: key '" + key + "' is reserved for internal use by the plugin.", "key");
         }
         this.key = key;
         this.value = value;
