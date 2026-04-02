@@ -40,6 +40,10 @@ public class CustomMetadataItem implements Describable<CustomMetadataItem> {
 
     @DataBoundConstructor
     public CustomMetadataItem(String key, String value) {
+        if (RESERVED_KEYS.contains(key)) {
+            throw new IllegalArgumentException(
+                    String.format("Key '%s' is reserved for internal use by the plugin.", key));
+        }
         this.key = key;
         this.value = value;
     }
