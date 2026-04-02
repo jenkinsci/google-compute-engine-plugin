@@ -23,6 +23,7 @@ import static com.google.jenkins.plugins.computeengine.integration.ITUtil.ZONE;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.initCredentials;
 import static org.awaitility.Awaitility.await;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.is;
 
 import com.google.api.services.compute.model.Metadata;
@@ -93,9 +94,7 @@ public class ComputeEngineCloudCustomMetadataIT {
         var p = j.createProject(WorkflowJob.class, "p");
         p.setDefinition(new CpsFlowDefinition("node('" + LABEL + "') { sh 'sleep 60' }", true));
         var build = p.scheduleBuild2(0);
-        await("agent should be created")
-                .timeout(Duration.ofMinutes(5))
-                .until(j.jenkins::getNodes, hasSize(1));
+        await("agent should be created").timeout(Duration.ofMinutes(5)).until(j.jenkins::getNodes, hasSize(1));
         var node = j.jenkins.getNodes().get(0);
         log.info("Agent provisioned: " + node.getNodeName());
         await("agent online").timeout(Duration.ofMinutes(5)).until(() -> {
