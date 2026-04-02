@@ -95,7 +95,7 @@ public class ComputeEngineCloudCustomMetadataIT {
         var build = p.scheduleBuild2(0);
         await("agent should be created")
                 .timeout(Duration.ofMinutes(5))
-                .until(() -> j.jenkins.getNodes().size(), is(1));
+                .until(j.jenkins::getNodes, hasSize(1));
         var node = j.jenkins.getNodes().get(0);
         log.info("Agent provisioned: " + node.getNodeName());
         await("agent online").timeout(Duration.ofMinutes(5)).until(() -> {
