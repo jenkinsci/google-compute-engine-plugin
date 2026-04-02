@@ -301,23 +301,49 @@ public class DiskMappingParserTest {
 
     @Test
     public void testNormalizeDiskSourceShortName() {
-        assertEquals("zones/us-east1-b/disks/my-disk", DiskMappingParser.normalizeDiskSource("my-disk", "us-east1-b"));
+        assertEquals(
+                "projects/my-project/zones/us-east1-b/disks/my-disk",
+                DiskMappingParser.normalizeDiskSource("my-disk", "my-project", "us-east1-b"));
     }
 
     @Test
     public void testNormalizeDiskSourceRelativePath() {
         var relativePath = "projects/myproject/zones/us-east1-b/disks/my-disk";
-        assertEquals(relativePath, DiskMappingParser.normalizeDiskSource(relativePath, "us-west1-a"));
+        assertEquals(relativePath, DiskMappingParser.normalizeDiskSource(relativePath, "other-project", "us-west1-a"));
     }
 
     @Test
     public void testNormalizeDiskSourceFullUrl() {
         var fullUrl = "https://compute.googleapis.com/compute/v1/projects/myproject/zones/us-east1-b/disks/my-disk";
-        assertEquals(fullUrl, DiskMappingParser.normalizeDiskSource(fullUrl, "us-west1-a"));
+        assertEquals(fullUrl, DiskMappingParser.normalizeDiskSource(fullUrl, "other-project", "us-west1-a"));
     }
 
     @Test
     public void testNormalizeDiskSourceNull() {
-        assertNull(DiskMappingParser.normalizeDiskSource(null, "us-east1-b"));
+        assertNull(DiskMappingParser.normalizeDiskSource(null, "my-project", "us-east1-b"));
+    }
+
+    @Test
+    public void testNormalizeSnapshotSourceShortName() {
+        assertEquals(
+                "projects/my-project/global/snapshots/my-snapshot",
+                DiskMappingParser.normalizeSnapshotSource("my-snapshot", "my-project"));
+    }
+
+    @Test
+    public void testNormalizeSnapshotSourceRelativePath() {
+        var relativePath = "projects/other-project/global/snapshots/my-snapshot";
+        assertEquals(relativePath, DiskMappingParser.normalizeSnapshotSource(relativePath, "my-project"));
+    }
+
+    @Test
+    public void testNormalizeSnapshotSourceFullUrl() {
+        var fullUrl = "https://compute.googleapis.com/compute/v1/projects/other-project/global/snapshots/my-snapshot";
+        assertEquals(fullUrl, DiskMappingParser.normalizeSnapshotSource(fullUrl, "my-project"));
+    }
+
+    @Test
+    public void testNormalizeSnapshotSourceNull() {
+        assertNull(DiskMappingParser.normalizeSnapshotSource(null, "my-project"));
     }
 }

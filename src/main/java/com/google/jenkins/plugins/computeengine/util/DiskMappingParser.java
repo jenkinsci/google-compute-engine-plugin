@@ -238,19 +238,37 @@ public class DiskMappingParser {
     }
 
     /**
-     * Expands short disk names to zone-qualified resource paths
-     * ({@code zones/{zone}/disks/{name}}). Full URLs and relative paths that already
-     * contain a {@code /} are returned unchanged.
+     * Expands short disk names to project- and zone-qualified resource paths
+     * ({@code projects/{project}/zones/{zone}/disks/{name}}). Full URLs and relative paths
+     * that already contain a {@code /} are returned unchanged.
      *
      * @param diskSource the disk name or path from the mapping, or null
+     * @param project the project ID (e.g. {@code my-project})
      * @param zone the zone name (e.g. {@code us-east1-b})
      * @return the qualified disk source, or null if input is null
      */
     @Nullable
-    public static String normalizeDiskSource(@Nullable String diskSource, String zone) {
+    public static String normalizeDiskSource(@Nullable String diskSource, String project, String zone) {
         if (diskSource == null || diskSource.contains("/")) {
             return diskSource;
         }
-        return "zones/" + zone + "/disks/" + diskSource;
+        return "projects/" + project + "/zones/" + zone + "/disks/" + diskSource;
+    }
+
+    /**
+     * Expands short snapshot names to project-qualified resource paths
+     * ({@code projects/{project}/global/snapshots/{name}}). Full URLs and relative paths
+     * that already contain a {@code /} are returned unchanged.
+     *
+     * @param snapshotSource the snapshot name or path from the mapping, or null
+     * @param project the project ID (e.g. {@code my-project})
+     * @return the qualified snapshot source, or null if input is null
+     */
+    @Nullable
+    public static String normalizeSnapshotSource(@Nullable String snapshotSource, String project) {
+        if (snapshotSource == null || snapshotSource.contains("/")) {
+            return snapshotSource;
+        }
+        return "projects/" + project + "/global/snapshots/" + snapshotSource;
     }
 }

@@ -575,12 +575,17 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
         disks.add(boot);
 
         var zoneName = nameFromSelfLink(zone);
+        var projectId = cloud != null ? nameFromSelfLink(cloud.getProjectId()) : null;
         for (var mapped : DiskMappingParser.parse(diskMapping)) {
             if (mapped.getInitializeParams() != null) {
                 var params = mapped.getInitializeParams();
                 params.setDiskType(DiskMappingParser.normalizeDiskType(params.getDiskType(), zoneName));
-            } else {
-                mapped.setSource(DiskMappingParser.normalizeDiskSource(mapped.getSource(), zoneName));
+                if (projectId != null) {
+                    params.setSourceSnapshot(
+                            DiskMappingParser.normalizeSnapshotSource(params.getSourceSnapshot(), projectId));
+                }
+            } else if (projectId != null) {
+                mapped.setSource(DiskMappingParser.normalizeDiskSource(mapped.getSource(), projectId, zoneName));
             }
             disks.add(mapped);
         }

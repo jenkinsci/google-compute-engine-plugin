@@ -377,6 +377,7 @@ public class InstanceConfigurationTest {
     @Test
     public void testDiskMappingAttachesDisks() throws Exception {
         var instance = instanceConfigurationBuilder()
+                .cloud(cloud)
                 .diskMapping("source-snapshot=snap-a,size=50,type=pd-ssd,auto-delete=yes\n"
                         + "source-snapshot=snap-b,size=100,auto-delete=no")
                 .build()
@@ -388,7 +389,9 @@ public class InstanceConfigurationTest {
         var diskA = instance.getDisks().get(1);
         assertFalse(diskA.getBoot());
         assertTrue(diskA.getAutoDelete());
-        assertEquals("snap-a", diskA.getInitializeParams().getSourceSnapshot());
+        assertEquals(
+                "projects/" + PROJECT_ID + "/global/snapshots/snap-a",
+                diskA.getInitializeParams().getSourceSnapshot());
         assertEquals(
                 "zones/" + ZONE + "/diskTypes/pd-ssd",
                 diskA.getInitializeParams().getDiskType());
@@ -397,7 +400,9 @@ public class InstanceConfigurationTest {
         var diskB = instance.getDisks().get(2);
         assertFalse(diskB.getBoot());
         assertFalse(diskB.getAutoDelete());
-        assertEquals("snap-b", diskB.getInitializeParams().getSourceSnapshot());
+        assertEquals(
+                "projects/" + PROJECT_ID + "/global/snapshots/snap-b",
+                diskB.getInitializeParams().getSourceSnapshot());
         assertEquals(Long.valueOf(100), diskB.getInitializeParams().getDiskSizeGb());
     }
 
