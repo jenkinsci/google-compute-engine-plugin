@@ -162,6 +162,9 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
     @Nullable
     private SshConfiguration sshConfiguration;
 
+    @Nullable
+    private List<CustomMetadataItem> customMetadata;
+
     private boolean createSnapshot;
     private String remoteFs;
     private String javaExecPath;
@@ -483,6 +486,14 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
         metadata.setItems(new ArrayList<>());
         metadata.getItems()
                 .add(new Metadata.Items().setKey(GUEST_ATTRIBUTES_METADATA_KEY).setValue("TRUE"));
+        if (customMetadata != null) {
+            for (CustomMetadataItem item : customMetadata) {
+                if (item.getKey() != null && !item.getKey().isEmpty()) {
+                    metadata.getItems()
+                            .add(new Metadata.Items().setKey(item.getKey()).setValue(item.getValue()));
+                }
+            }
+        }
         return metadata;
     }
 
@@ -1127,6 +1138,7 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
             instanceConfiguration.setTemplate(this.template);
             instanceConfiguration.setCreateSnapshot(this.createSnapshot);
             instanceConfiguration.setTerminateIdleDuringShutdown(this.terminateIdleDuringShutdown);
+            instanceConfiguration.setCustomMetadata(this.customMetadata);
             instanceConfiguration.setRemoteFs(this.remoteFs);
             instanceConfiguration.setJavaExecPath(this.javaExecPath);
             instanceConfiguration.setCloud(this.cloud);

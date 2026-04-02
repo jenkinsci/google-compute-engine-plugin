@@ -53,6 +53,11 @@ jenkins:
             bootDiskSizeGbStr:  50
             bootDiskAutoDelete: true
             serviceAccountEmail: 'jenkins-test@gce-jenkins-ops.iam.gserviceaccount.com'
+            customMetadata:
+              - key: "my-custom-key"
+                value: "my-custom-value"
+              - key: "my-multiline-key"
+                value: "line1\nline2\nline3"
 credentials:
   system:
     domainCredentials:
