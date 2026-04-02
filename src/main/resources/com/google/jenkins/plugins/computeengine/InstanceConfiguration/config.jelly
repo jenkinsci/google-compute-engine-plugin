@@ -172,6 +172,12 @@
                     </f:entry>
                 </f:section>
 
+                <f:section title="Disk Mapping">
+                    <f:entry field="diskMapping" title="${%Disk Mapping}">
+                        <f:textarea/>
+                    </f:entry>
+                </f:section>
+
                 <f:section title="IAM">
                     <f:entry field="serviceAccountEmail" title="${%Service Account E-mail}">
                         <f:textbox/>
