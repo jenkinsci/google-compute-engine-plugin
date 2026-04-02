@@ -16,11 +16,9 @@
 
 package com.google.jenkins.plugins.computeengine;
 
-import static com.google.jenkins.plugins.computeengine.ComputeEngineCloud.CLOUD_ID_LABEL_KEY;
-
+import com.google.api.client.googleapis.json.GoogleJsonResponseException;
 import com.google.cloud.graphite.platforms.plugin.client.ComputeClient.OperationException;
 import com.google.common.base.Strings;
-import com.google.common.collect.ImmutableMap;
 import com.google.jenkins.plugins.computeengine.ssh.GoogleKeyCredential;
 import edu.umd.cs.findbugs.annotations.Nullable;
 import hudson.Extension;
@@ -33,7 +31,6 @@ import hudson.slaves.ComputerLauncher;
 import hudson.slaves.RetentionStrategy;
 import java.io.IOException;
 import java.util.Collections;
-import java.util.Map;
 import java.util.Optional;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -137,15 +134,15 @@ public class ComputeEngineInstance extends AbstractCloudSlave {
                         .createSnapshotSync(cloud.getProjectId(), this.zone, this.getNodeName(), createSnapshotTimeout);
             }
 
-            Map<String, String> filterLabel = ImmutableMap.of(CLOUD_ID_LABEL_KEY, cloud.getInstanceId());
-            var instanceExistsInCloud =
-                    cloud.getClient().listInstancesWithLabel(cloud.getProjectId(), filterLabel).stream()
-                            .anyMatch(instance -> instance.getName().equals(name));
+            boolean instanceExistsInCloud = instanceExistsInCloud(cloud);
 
             // If the instance exists in the cloud, attempt to terminate it. This is an async call and we
             // return immediately, hoping for the best.
             if (instanceExistsInCloud) {
                 cloud.getClient().terminateInstanceAsync(cloud.getProjectId(), zone, name);
+                LOGGER.finer(() -> "Termination request was made for " + this.getNodeName());
+            } else {
+                LOGGER.fine(() -> "Instance " + name + " not found in GCP, nothing to terminate");
             }
         } catch (CloudNotFoundException cnfe) {
             listener.error(cnfe.getMessage());
@@ -170,6 +167,21 @@ public class ComputeEngineInstance extends AbstractCloudSlave {
     /** @return The configured Linux SSH key pair for this {@link ComputeEngineInstance}. */
     public Optional<GoogleKeyCredential> getSSHKeyCredential() {
         return Optional.ofNullable(sshKeyCredential);
+    }
+
+    private boolean instanceExistsInCloud(ComputeEngineCloud cloud) {
+        try {
+            return cloud.getClient().getInstance(cloud.getProjectId(), zone, name) != null;
+        } catch (GoogleJsonResponseException gjre) {
+            if (gjre.getStatusCode() == 404) {
+                return false;
+            }
+            LOGGER.log(Level.WARNING, "Error checking instance " + name, gjre);
+            return false;
+        } catch (IOException ioe) {
+            LOGGER.log(Level.WARNING, "Error checking instance " + name, ioe);
+            return false;
+        }
     }
 
     public ComputeEngineCloud getCloud() throws CloudNotFoundException {
