@@ -129,14 +129,13 @@
                     <f:textarea/>
                 </f:entry>
                 <f:entry title="${%Custom metadata}" description="${%Additional metadata key-value pairs to set on the instance}">
-                    <f:repeatable field="customMetadata" minimum="0" add="${%Add metadata}">
-                        <st:include page="config.jelly" class="${descriptor.clazz}"/>
-                        <f:entry title="">
+                    <f:repeatableProperty field="customMetadata" minimum="0" add="${%Add metadata}">
+                        <f:block>
                             <div align="right">
                                 <f:repeatableDeleteButton/>
                             </div>
-                        </f:entry>
-                    </f:repeatable>
+                        </f:block>
+                    </f:repeatableProperty>
                 </f:entry>
                 <f:optionalProperty field="acceleratorConfiguration" title="GPUs">
                     <st:include page="config.jelly" class="${descriptor.clazz}"/>

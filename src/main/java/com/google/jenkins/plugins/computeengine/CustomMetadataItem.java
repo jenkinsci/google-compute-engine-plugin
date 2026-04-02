@@ -21,7 +21,6 @@ import hudson.model.Describable;
 import hudson.model.Descriptor;
 import hudson.util.FormValidation;
 import java.util.Set;
-import jenkins.model.Jenkins;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import org.kohsuke.stapler.DataBoundConstructor;
@@ -45,11 +44,6 @@ public class CustomMetadataItem implements Describable<CustomMetadataItem> {
         this.value = value;
     }
 
-    @SuppressWarnings("unchecked")
-    public Descriptor<CustomMetadataItem> getDescriptor() {
-        return Jenkins.get().getDescriptor(getClass());
-    }
-
     @Override
     public String toString() {
         return String.format("%s=%s", key, value);
@@ -62,9 +56,7 @@ public class CustomMetadataItem implements Describable<CustomMetadataItem> {
                 return FormValidation.error("Key must not be empty");
             }
             if (RESERVED_KEYS.contains(value)) {
-                return FormValidation.warning(
-                        "Key '%s' is used internally by the plugin. Setting it here may cause unexpected behavior.",
-                        value);
+                return FormValidation.error("Key '%s' is reserved for internal use by the plugin.", value);
             }
             return FormValidation.ok();
         }

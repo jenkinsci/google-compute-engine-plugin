@@ -119,7 +119,7 @@ public class ComputeEngineCloudCustomMetadataIT {
                 .findFirst();
         assertThat(
                 "multiline custom metadata 'test-multiline' should be present", multilineValue.isPresent(), is(true));
-        assertThat(multilineValue.get(), is("line1\nline2\nline3\n"));
+        assertThat(multilineValue.get(), is("line1\nline2\nline3"));
 
         j.assertBuildStatusSuccess(build);
     }

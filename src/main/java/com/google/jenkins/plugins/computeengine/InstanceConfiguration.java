@@ -163,7 +163,6 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
     private SshConfiguration sshConfiguration;
 
     @Nullable
-    @Setter(AccessLevel.NONE)
     private List<CustomMetadataItem> customMetadata;
 
     private boolean createSnapshot;
@@ -225,11 +224,6 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
     @DataBoundSetter
     public void setNetworkTags(String networkTags) {
         this.networkTags = Util.fixNull(networkTags).trim();
-    }
-
-    @DataBoundSetter
-    public void setCustomMetadata(@Nullable List<CustomMetadataItem> customMetadata) {
-        this.customMetadata = customMetadata;
     }
 
     @DataBoundSetter
