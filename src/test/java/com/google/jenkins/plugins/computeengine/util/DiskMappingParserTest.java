@@ -59,7 +59,7 @@ public class DiskMappingParserTest {
         var disk = DiskMappingParser.parse(" source-snapshot = my-snapshot , size = 50 , type = pd-ssd ")
                 .get(0);
         assertEquals("my-snapshot", disk.getInitializeParams().getSourceSnapshot());
-        assertEquals(Long.valueOf(50), disk.getInitializeParams().getDiskSizeGb());
+        assertThat(disk.getInitializeParams().getDiskSizeGb(), is(50L));
         assertEquals("pd-ssd", disk.getInitializeParams().getDiskType());
     }
 
