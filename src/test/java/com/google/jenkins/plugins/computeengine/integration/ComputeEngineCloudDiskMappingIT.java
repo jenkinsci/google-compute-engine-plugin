@@ -16,6 +16,7 @@
 
 package com.google.jenkins.plugins.computeengine.integration;
 
+import static com.google.jenkins.plugins.computeengine.integration.ITUtil.BOOT_DISK_IMAGE_NAME;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.NULL_TEMPLATE;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.NUM_EXECUTORS;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.PROJECT_ID;
@@ -34,7 +35,13 @@ import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.notNullValue;
 
 import com.google.api.services.compute.Compute;
+import com.google.api.services.compute.model.AccessConfig;
+import com.google.api.services.compute.model.AttachedDisk;
+import com.google.api.services.compute.model.AttachedDiskInitializeParams;
 import com.google.api.services.compute.model.Disk;
+import com.google.api.services.compute.model.Instance;
+import com.google.api.services.compute.model.Metadata;
+import com.google.api.services.compute.model.NetworkInterface;
 import com.google.api.services.compute.model.Operation;
 import com.google.api.services.compute.model.Snapshot;
 import com.google.cloud.graphite.platforms.plugin.client.ComputeClient;
@@ -68,11 +75,8 @@ import org.jvnet.hudson.test.JenkinsRule;
  *   <li>Attach existing disks ({@code --disk} semantics with {@code name})</li>
  * </ol>
  *
- * <p><b>Limitation:</b> Snapshot-based tests create snapshots from blank disks, so the startup
- * script formats them before writing marker files. This verifies that the disk mapping plumbing
- * works (parsing, GCP API call, device attachment, auto-delete) but not that pre-existing
- * snapshot data is used by the build &mdash; which would require a prep instance to write data before
- * snapshotting.
+ * <p>Snapshot and existing-disk tests use a throwaway <em>prep VM</em> to write marker data to the
+ * disk before snapshotting or attaching.
  */
 public class ComputeEngineCloudDiskMappingIT {
     private static final Logger log = Logger.getLogger(ComputeEngineCloudDiskMappingIT.class.getName());
@@ -81,9 +85,12 @@ public class ComputeEngineCloudDiskMappingIT {
 
     private static final String TEST_SNAPSHOT_A = "it-disk-mapping-snap-a";
     private static final String TEST_SNAPSHOT_B = "it-disk-mapping-snap-b";
-    private static final String SNAPSHOT_SOURCE_DISK = "it-disk-mapping-snap-source";
+    private static final String SNAPSHOT_SOURCE_DISK_A = "it-disk-mapping-snap-source-a";
+    private static final String SNAPSHOT_SOURCE_DISK_B = "it-disk-mapping-snap-source-b";
 
     private static final String TEST_EXISTING_DISK = "it-disk-mapping-existing";
+
+    private static final String PREP_VM_NAME = "it-disk-mapping-prep-vm";
 
     /** Timeout in seconds for waiting on GCP resource cleanup (instance/disk deletion). */
     private static final int CLEANUP_TIMEOUT_SECONDS = 300;
@@ -117,6 +124,7 @@ public class ComputeEngineCloudDiskMappingIT {
     public void teardown() throws IOException {
         log.info("teardown");
         teardownResources(client, label, log);
+        deletePrepVm();
         snapshotsToDelete.forEach(this::deleteTestSnapshot);
         disksToDelete.forEach(this::deleteTestDisk);
     }
@@ -130,19 +138,16 @@ public class ComputeEngineCloudDiskMappingIT {
         createTestSnapshots();
 
         var diskMapping = String.format(
-                "source-snapshot=%s,auto-delete=yes\nsource-snapshot=%s,auto-delete=yes",
+                "source-snapshot=%s,device-name=snap-a,auto-delete=yes\nsource-snapshot=%s,device-name=snap-b,auto-delete=yes",
                 snapshotSelfLink(TEST_SNAPSHOT_A), snapshotSelfLink(TEST_SNAPSHOT_B));
 
         var startupScript = """
                 #!/bin/bash
-                mkfs.ext4 -F /dev/sdb
+                set -euo pipefail
                 mkdir -p /mnt/disk-a
-                mount /dev/sdb /mnt/disk-a
-                echo 'snapshot-disk-a' > /mnt/disk-a/marker.txt
-                mkfs.ext4 -F /dev/sdc
+                mount /dev/disk/by-id/google-snap-a /mnt/disk-a
                 mkdir -p /mnt/disk-b
-                mount /dev/sdc /mnt/disk-b
-                echo 'snapshot-disk-b' > /mnt/disk-b/marker.txt""";
+                mount /dev/disk/by-id/google-snap-b /mnt/disk-b""";
 
         cloud.setConfigurations(ImmutableList.of(instanceConfigurationBuilder()
                 .numExecutorsStr(NUM_EXECUTORS)
@@ -171,8 +176,8 @@ public class ComputeEngineCloudDiskMappingIT {
         var workerNodeName = extractWorkerNodeName(buildLog);
         log.info("Build paused on node: " + workerNodeName);
 
-        j.assertLogContains("snapshot-disk-a", build);
-        j.assertLogContains("snapshot-disk-b", build);
+        j.assertLogContains("SNAPSHOT_MARKER_A", build);
+        j.assertLogContains("SNAPSHOT_MARKER_B", build);
 
         var instance = client.getInstance(PROJECT_ID, ZONE, workerNodeName);
         assertThat("Instance should exist while build is paused", instance, is(notNullValue()));
@@ -275,10 +280,8 @@ public class ComputeEngineCloudDiskMappingIT {
 
         var startupScript = """
                 #!/bin/bash
-                mkfs.ext4 -F /dev/disk/by-id/google-data
                 mkdir -p /mnt/data
-                mount /dev/disk/by-id/google-data /mnt/data
-                echo 'existing-disk-ok' > /mnt/data/marker.txt""";
+                mount /dev/disk/by-id/google-data /mnt/data""";
 
         cloud.setConfigurations(ImmutableList.of(instanceConfigurationBuilder()
                 .numExecutorsStr(NUM_EXECUTORS)
@@ -306,7 +309,7 @@ public class ComputeEngineCloudDiskMappingIT {
         var workerNodeName = extractWorkerNodeName(buildLog);
         log.info("Build paused on node: " + workerNodeName);
 
-        j.assertLogContains("existing-disk-ok", build);
+        j.assertLogContains("EXISTING_DISK_MARKER", build);
 
         var instance = client.getInstance(PROJECT_ID, ZONE, workerNodeName);
         assertThat("Instance should exist while build is paused", instance, is(notNullValue()));
@@ -370,42 +373,56 @@ public class ComputeEngineCloudDiskMappingIT {
 
     private void createTestSnapshots() throws Exception {
         // Clean up stale resources from previous failed runs
+        deletePrepVm();
         deleteTestSnapshot(TEST_SNAPSHOT_A);
         deleteTestSnapshot(TEST_SNAPSHOT_B);
-        deleteTestDisk(SNAPSHOT_SOURCE_DISK);
+        deleteTestDisk(SNAPSHOT_SOURCE_DISK_A);
+        deleteTestDisk(SNAPSHOT_SOURCE_DISK_B);
 
-        log.info("Creating source disk " + SNAPSHOT_SOURCE_DISK);
-        var disk = new Disk();
-        disk.setName(SNAPSHOT_SOURCE_DISK);
-        disk.setSizeGb(10L);
-
-        var diskOp = compute.disks().insert(PROJECT_ID, ZONE, disk).execute();
-        disksToDelete.add(SNAPSHOT_SOURCE_DISK);
-        waitForZoneOperation(diskOp);
-        log.info("Source disk created");
-
-        for (var snapshotName : new String[] {TEST_SNAPSHOT_A, TEST_SNAPSHOT_B}) {
-            log.info("Creating snapshot " + snapshotName);
-            var snapshot = new Snapshot();
-            snapshot.setName(snapshotName);
-            var snapOp = compute.disks()
-                    .createSnapshot(PROJECT_ID, ZONE, SNAPSHOT_SOURCE_DISK, snapshot)
-                    .execute();
-            snapshotsToDelete.add(snapshotName);
-            waitForZoneOperation(snapOp);
-            log.info("Snapshot created: " + snapshotName);
+        // Create two source disks so each snapshot gets unique marker content
+        for (var diskName : new String[] {SNAPSHOT_SOURCE_DISK_A, SNAPSHOT_SOURCE_DISK_B}) {
+            log.info("Creating source disk " + diskName);
+            var disk = new Disk();
+            disk.setName(diskName);
+            disk.setSizeGb(10L);
+            var diskOp = compute.disks().insert(PROJECT_ID, ZONE, disk).execute();
+            disksToDelete.add(diskName);
+            waitForZoneOperation(diskOp);
+            log.info("Source disk created: " + diskName);
         }
 
-        log.info("Deleting source disk " + SNAPSHOT_SOURCE_DISK);
-        var deleteOp =
-                compute.disks().delete(PROJECT_ID, ZONE, SNAPSHOT_SOURCE_DISK).execute();
-        waitForZoneOperation(deleteOp);
-        disksToDelete.remove(SNAPSHOT_SOURCE_DISK);
-        log.info("Source disk deleted");
+        // Boot a single prep VM with both disks attached, writing different markers to each
+        populateSnapshotDisksViaPrepVm();
+
+        // Snapshot each source disk
+        var sourceAndSnapshot = Map.of(
+                SNAPSHOT_SOURCE_DISK_A, TEST_SNAPSHOT_A,
+                SNAPSHOT_SOURCE_DISK_B, TEST_SNAPSHOT_B);
+        for (var entry : sourceAndSnapshot.entrySet()) {
+            log.info("Creating snapshot " + entry.getValue() + " from " + entry.getKey());
+            var snapshot = new Snapshot();
+            snapshot.setName(entry.getValue());
+            var snapOp = compute.disks()
+                    .createSnapshot(PROJECT_ID, ZONE, entry.getKey(), snapshot)
+                    .execute();
+            snapshotsToDelete.add(entry.getValue());
+            waitForZoneOperation(snapOp);
+            log.info("Snapshot created: " + entry.getValue());
+        }
+
+        // Delete source disks (no longer needed once snapshots exist)
+        for (var diskName : new String[] {SNAPSHOT_SOURCE_DISK_A, SNAPSHOT_SOURCE_DISK_B}) {
+            log.info("Deleting source disk " + diskName);
+            var deleteOp = compute.disks().delete(PROJECT_ID, ZONE, diskName).execute();
+            waitForZoneOperation(deleteOp);
+            disksToDelete.remove(diskName);
+            log.info("Source disk deleted: " + diskName);
+        }
     }
 
     private void createTestExistingDisk() throws Exception {
-        // Clean up stale resource from previous failed runs
+        // Clean up stale resources from previous failed runs
+        deletePrepVm();
         deleteTestDisk(TEST_EXISTING_DISK);
 
         log.info("Creating existing disk " + TEST_EXISTING_DISK);
@@ -417,6 +434,139 @@ public class ComputeEngineCloudDiskMappingIT {
         disksToDelete.add(TEST_EXISTING_DISK);
         waitForZoneOperation(diskOp);
         log.info("Existing disk created: " + TEST_EXISTING_DISK);
+
+        populateDiskViaPrepVm(TEST_EXISTING_DISK, "EXISTING_DISK_MARKER: data written before attach");
+    }
+
+    /**
+     * Boots a prep VM with both snapshot source disks attached, writes a distinct marker file
+     * to each, then shuts down. One prep VM boot populates both disks.
+     */
+    private void populateSnapshotDisksViaPrepVm() throws Exception {
+        log.info("Booting prep VM to populate both snapshot source disks");
+
+        var startupScript = """
+                #!/bin/bash
+                set -euo pipefail
+                mkfs.ext4 -F /dev/disk/by-id/google-prep-disk-a
+                mkdir -p /mnt/disk-a
+                mount /dev/disk/by-id/google-prep-disk-a /mnt/disk-a
+                echo 'SNAPSHOT_MARKER_A: data written to disk-a before snapshotting' > /mnt/disk-a/marker.txt
+                umount /mnt/disk-a
+                mkfs.ext4 -F /dev/disk/by-id/google-prep-disk-b
+                mkdir -p /mnt/disk-b
+                mount /dev/disk/by-id/google-prep-disk-b /mnt/disk-b
+                echo 'SNAPSHOT_MARKER_B: data written to disk-b before snapshotting' > /mnt/disk-b/marker.txt
+                umount /mnt/disk-b
+                shutdown -h now
+                """;
+
+        bootPrepVmAndWait(
+                startupScript,
+                List.of(
+                        new AttachedDisk()
+                                .setSource(format("projects/%s/zones/" + ZONE + "/disks/" + SNAPSHOT_SOURCE_DISK_A))
+                                .setDeviceName("prep-disk-a")
+                                .setBoot(false)
+                                .setAutoDelete(false),
+                        new AttachedDisk()
+                                .setSource(format("projects/%s/zones/" + ZONE + "/disks/" + SNAPSHOT_SOURCE_DISK_B))
+                                .setDeviceName("prep-disk-b")
+                                .setBoot(false)
+                                .setAutoDelete(false)));
+    }
+
+    /**
+     * Boots a prep VM with a single data disk, writes a marker file, then shuts down.
+     */
+    private void populateDiskViaPrepVm(String diskName, String markerContent) throws Exception {
+        log.info("Booting prep VM to populate disk " + diskName);
+
+        var startupScript = """
+                #!/bin/bash
+                set -euo pipefail
+                mkfs.ext4 -F /dev/disk/by-id/google-prep-data
+                mkdir -p /mnt/data
+                mount /dev/disk/by-id/google-prep-data /mnt/data
+                echo '%s' > /mnt/data/marker.txt
+                umount /mnt/data
+                shutdown -h now
+                """.formatted(markerContent);
+
+        bootPrepVmAndWait(
+                startupScript,
+                List.of(new AttachedDisk()
+                        .setSource(format("projects/%s/zones/" + ZONE + "/disks/" + diskName))
+                        .setDeviceName("prep-data")
+                        .setBoot(false)
+                        .setAutoDelete(false)));
+    }
+
+    /**
+     * Boots a throwaway VM with the given startup script and data disks attached. Blocks until
+     * the VM reaches TERMINATED status (startup script called {@code shutdown -h now}), then
+     * deletes the VM.
+     */
+    private void bootPrepVmAndWait(String startupScript, List<AttachedDisk> dataDisks) throws Exception {
+        var bootDisk = new AttachedDisk()
+                .setBoot(true)
+                .setAutoDelete(true)
+                .setInitializeParams(new AttachedDiskInitializeParams()
+                        .setSourceImage(BOOT_DISK_IMAGE_NAME)
+                        .setDiskSizeGb(20L));
+
+        var allDisks = new ArrayList<AttachedDisk>();
+        allDisks.add(bootDisk);
+        allDisks.addAll(dataDisks);
+
+        var network = new NetworkInterface()
+                .setNetwork(format("projects/%s/global/networks/default"))
+                .setAccessConfigs(List.of(new AccessConfig().setType("ONE_TO_ONE_NAT")));
+
+        var metadata = new Metadata()
+                .setItems(List.of(new Metadata.Items().setKey("startup-script").setValue(startupScript)));
+
+        var instance = new Instance()
+                .setName(PREP_VM_NAME)
+                .setMachineType("zones/" + ZONE + "/machineTypes/e2-small")
+                .setDisks(allDisks)
+                .setNetworkInterfaces(List.of(network))
+                .setMetadata(metadata);
+
+        var insertOp = compute.instances().insert(PROJECT_ID, ZONE, instance).execute();
+        waitForZoneOperation(insertOp);
+        log.info("Prep VM created, waiting for startup script to complete (TERMINATED status)");
+
+        Awaitility.await()
+                .timeout(CLEANUP_TIMEOUT_SECONDS, TimeUnit.SECONDS)
+                .pollInterval(10, TimeUnit.SECONDS)
+                .until(() -> {
+                    var vm = compute.instances()
+                            .get(PROJECT_ID, ZONE, PREP_VM_NAME)
+                            .execute();
+                    return "TERMINATED".equals(vm.getStatus());
+                });
+        log.info("Prep VM terminated (startup script complete)");
+
+        var deleteOp =
+                compute.instances().delete(PROJECT_ID, ZONE, PREP_VM_NAME).execute();
+        waitForZoneOperation(deleteOp);
+        log.info("Prep VM deleted");
+    }
+
+    private void deletePrepVm() {
+        try {
+            compute.instances().get(PROJECT_ID, ZONE, PREP_VM_NAME).execute();
+        } catch (IOException e) {
+            return;
+        }
+        try {
+            log.info("Deleting stale prep VM " + PREP_VM_NAME);
+            var op = compute.instances().delete(PROJECT_ID, ZONE, PREP_VM_NAME).execute();
+            waitForZoneOperation(op);
+        } catch (Exception e) {
+            log.warning("Failed to delete prep VM: " + e.getMessage());
+        }
     }
 
     private void deleteTestSnapshot(String snapshotName) {
