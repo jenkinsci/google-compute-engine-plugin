@@ -50,7 +50,7 @@ import java.util.logging.Logger;
 import org.awaitility.Awaitility;
 import org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition;
 import org.jenkinsci.plugins.workflow.job.WorkflowJob;
-import org.jenkinsci.plugins.workflow.support.steps.input.InputAction;
+import org.jenkinsci.plugins.workflow.test.steps.SemaphoreStep;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.ClassRule;
@@ -84,8 +84,6 @@ public class ComputeEngineCloudDiskMappingIT {
     private static final String SNAPSHOT_SOURCE_DISK = "it-disk-mapping-snap-source";
 
     private static final String TEST_EXISTING_DISK = "it-disk-mapping-existing";
-
-    private static final String INPUT_MESSAGE = "disk-mapping-assertions-checkpoint";
 
     /** Timeout in seconds for waiting on GCP resource cleanup (instance/disk deletion). */
     private static final int CLEANUP_TIMEOUT_SECONDS = 300;
@@ -162,12 +160,12 @@ public class ComputeEngineCloudDiskMappingIT {
                 "node('" + GCE_LABEL + "') {\n"
                         + "  sh 'cat /mnt/disk-a/marker.txt'\n"
                         + "  sh 'cat /mnt/disk-b/marker.txt'\n"
-                        + "  input message: '" + INPUT_MESSAGE + "'\n"
+                        + "  semaphore 'snapshotDisk'\n"
                         + "}",
                 true));
 
         var build = p.scheduleBuild2(0).waitForStart();
-        j.waitForMessage(INPUT_MESSAGE, build);
+        SemaphoreStep.waitForStart("snapshotDisk/1", build);
         var buildLog = JenkinsRule.getLog(build);
 
         var workerNodeName = extractWorkerNodeName(buildLog);
@@ -190,7 +188,7 @@ public class ComputeEngineCloudDiskMappingIT {
             log.info("Snapshot disk " + i + " name: " + diskName);
         }
 
-        build.getAction(InputAction.class).getExecutions().get(0).proceed(null);
+        SemaphoreStep.success("snapshotDisk/1", null);
         j.waitForCompletion(build);
         j.assertBuildStatusSuccess(build);
 
@@ -233,12 +231,12 @@ public class ComputeEngineCloudDiskMappingIT {
         p.setDefinition(new CpsFlowDefinition(
                 "node('" + GCE_LABEL + "') {\n"
                         + "  sh 'cat /mnt/scratch/marker.txt'\n"
-                        + "  input message: '" + INPUT_MESSAGE + "'\n"
+                        + "  semaphore 'blankDisk'\n"
                         + "}",
                 true));
 
         var build = p.scheduleBuild2(0).waitForStart();
-        j.waitForMessage(INPUT_MESSAGE, build);
+        SemaphoreStep.waitForStart("blankDisk/1", build);
         var buildLog = JenkinsRule.getLog(build);
 
         var workerNodeName = extractWorkerNodeName(buildLog);
@@ -255,7 +253,7 @@ public class ComputeEngineCloudDiskMappingIT {
         var blankDiskName = blankDiskSource.substring(blankDiskSource.lastIndexOf("/") + 1);
         log.info("Blank disk name: " + blankDiskName);
 
-        build.getAction(InputAction.class).getExecutions().get(0).proceed(null);
+        SemaphoreStep.success("blankDisk/1", null);
         j.waitForCompletion(build);
         j.assertBuildStatusSuccess(build);
 
@@ -297,12 +295,12 @@ public class ComputeEngineCloudDiskMappingIT {
         p.setDefinition(new CpsFlowDefinition(
                 "node('" + GCE_LABEL + "') {\n"
                         + "  sh 'cat /mnt/data/marker.txt'\n"
-                        + "  input message: '" + INPUT_MESSAGE + "'\n"
+                        + "  semaphore 'existingDisk'\n"
                         + "}",
                 true));
 
         var build = p.scheduleBuild2(0).waitForStart();
-        j.waitForMessage(INPUT_MESSAGE, build);
+        SemaphoreStep.waitForStart("existingDisk/1", build);
         var buildLog = JenkinsRule.getLog(build);
 
         var workerNodeName = extractWorkerNodeName(buildLog);
@@ -314,7 +312,7 @@ public class ComputeEngineCloudDiskMappingIT {
         assertThat("Instance should exist while build is paused", instance, is(notNullValue()));
         assertThat("Instance should have 2 disks (boot + existing)", instance.getDisks(), hasSize(2));
 
-        build.getAction(InputAction.class).getExecutions().get(0).proceed(null);
+        SemaphoreStep.success("existingDisk/1", null);
         j.waitForCompletion(build);
         j.assertBuildStatusSuccess(build);
 
