@@ -346,6 +346,7 @@ public class ComputeEngineCloudDiskMappingIT {
         Awaitility.await()
                 .timeout(CLEANUP_TIMEOUT_SECONDS, TimeUnit.SECONDS)
                 .pollInterval(10, TimeUnit.SECONDS)
+                // GCP API throws 404 (wrapped in IOException) when the instance no longer exists
                 .until(() -> {
                     try {
                         client.getInstance(PROJECT_ID, ZONE, workerNodeName);
@@ -361,6 +362,7 @@ public class ComputeEngineCloudDiskMappingIT {
         Awaitility.await()
                 .timeout(CLEANUP_TIMEOUT_SECONDS, TimeUnit.SECONDS)
                 .pollInterval(10, TimeUnit.SECONDS)
+                // GCP API throws 404 (wrapped in IOException) when the disk no longer exists
                 .until(() -> {
                     try {
                         compute.disks().get(PROJECT_ID, ZONE, diskName).execute();
