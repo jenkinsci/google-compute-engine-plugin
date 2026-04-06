@@ -13,68 +13,46 @@
 -->
 <div>
     <p>
-        Specify additional disks to attach to the instance, using GCP key=value format.
-        One disk per line. Supports both creating new disks and attaching existing disks.
+        Additional disks to attach to the instance. One disk per line, using comma-separated
+        <code>key=value</code> pairs. Three modes are supported:
     </p>
 
-    <h4>Create new disk (<a href="https://docs.cloud.google.com/sdk/gcloud/reference/compute/instances/create#--create-disk"><code>--create-disk</code></a> semantics)</h4>
-    <p>
-        When the line contains <code>source-snapshot</code>, <code>size</code>, or <code>type</code>,
-        a new disk is created and attached. At least one of <code>source-snapshot</code> or
-        <code>size</code> is required.
-    </p>
-    <ul>
-        <li><code>source-snapshot</code> — Snapshot name, relative path
-            (e.g. <code>projects/{project}/global/snapshots/{name}</code>),
-            or full resource URI (e.g. <code>https://compute.googleapis.com/compute/v1/projects/{project}/global/snapshots/{name}</code>).
-            Use just the name for snapshots in the same project.</li>
-        <li><code>size</code> — Disk size in GB. Required for blank disks; optional when a
-            source is specified (defaults to the source snapshot size).</li>
-        <li><code>type</code> — Disk type: short name (e.g. <code>pd-ssd</code>), relative path
-            (e.g. <code>zones/us-east1-b/diskTypes/pd-ssd</code>), or full resource URI.
-            Short names are automatically qualified to the instance's zone. Defaults to <code>pd-standard</code>.</li>
-        <li><code>name</code> — Name for the new disk. If omitted, GCP generates a name automatically.</li>
-        <li><code>device-name</code> — Device name shown in the guest OS.</li>
-        <li><code>description</code> — Optional description for the disk.</li>
-        <li><code>mode</code> — <code>ro</code> for read-only or <code>rw</code> for read-write (default: <code>rw</code>).</li>
-        <li><code>interface</code> — <code>SCSI</code> or <code>NVME</code>.</li>
-        <li><code>auto-delete</code> — <code>yes</code> or <code>no</code> (default: <code>yes</code>).</li>
-    </ul>
-
-    <h4>Attach existing disk (<a href="https://docs.cloud.google.com/sdk/gcloud/reference/compute/instances/create#--disk"><code>--disk</code></a> semantics)</h4>
-    <p>
-        When the line contains only <code>name</code> (without any create-disk keys), an existing
-        disk is attached by reference.
-    </p>
-    <ul>
-        <li><code>name</code> — Existing disk name, relative path, or full resource URI (required).
-            Use just the name for zonal disks in the same zone; use a relative path or full resource URI for regional or
-            cross-project disks (e.g. <code>projects/myproject/regions/us-central1/disks/my-regional-disk</code>).</li>
-        <li><code>device-name</code> — Device name shown in the guest OS.</li>
-        <li><code>mode</code> — <code>ro</code> for read-only or <code>rw</code> for read-write (default: <code>rw</code>).
-            Use <code>ro</code> when multiple instances may attach the same disk.</li>
-        <li><code>interface</code> — <code>SCSI</code> or <code>NVME</code>.</li>
-        <li><code>auto-delete</code> — <code>yes</code> or <code>no</code> (default: <code>yes</code>).</li>
-    </ul>
-
-    <p>Examples:</p>
-    <pre>source-snapshot=my-cache-snapshot
-source-snapshot=my-data-snapshot,size=100,type=pd-ssd,auto-delete=no
-source-snapshot=https://compute.googleapis.com/compute/v1/projects/other-project/global/snapshots/shared-cache,size=50,type=pd-balanced
-size=200,type=pd-ssd,name=scratch-disk
-name=shared-data-disk,mode=ro
-name=projects/other-project/zones/us-east1-b/disks/team-data,mode=ro,auto-delete=no</pre>
+    <ol>
+        <li><strong>Create from snapshot</strong>
+            (<a href="https://docs.cloud.google.com/sdk/gcloud/reference/compute/instances/create#--create-disk"><code>--create-disk</code></a>)
+            — line contains <code>source-snapshot</code>.
+            Keys: <code>source-snapshot</code> (required), <code>size</code>, <code>type</code>,
+            <code>name</code>, <code>description</code>.</li>
+        <li><strong>Create blank disk</strong>
+            (<a href="https://docs.cloud.google.com/sdk/gcloud/reference/compute/instances/create#--create-disk"><code>--create-disk</code></a>)
+            — line contains <code>size</code> or <code>type</code>
+            but no <code>source-snapshot</code>.
+            Keys: <code>size</code> (required), <code>type</code>, <code>name</code>,
+            <code>description</code>.</li>
+        <li><strong>Attach existing disk</strong>
+            (<a href="https://docs.cloud.google.com/sdk/gcloud/reference/compute/instances/create#--disk"><code>--disk</code></a>)
+            — line contains only <code>name</code>.
+            Keys: <code>name</code> (required).</li>
+    </ol>
 
     <p>
-        <strong>Cross-project resources:</strong> Snapshots are global resources in GCP.
-        To use a snapshot from a different project, specify a relative path
-        (e.g. <code>projects/{project}/global/snapshots/{name}</code>) or the full resource URI
-        from the Compute API (e.g. <code>https://compute.googleapis.com/compute/v1/projects/{project}/global/snapshots/{name}</code>).
-        To attach an existing disk from a different project or region, use its relative path or full resource URI.
-        The configured service account must have appropriate IAM permissions on the source project.
+        <strong>Common keys</strong> (all modes):
+        <code>device-name</code>,
+        <code>mode</code> (<code>ro</code> | <code>rw</code>, default <code>rw</code>),
+        <code>interface</code> (<code>SCSI</code> | <code>NVME</code>),
+        <code>auto-delete</code> (<code>yes</code> | <code>no</code>, default <code>yes</code>).
     </p>
+
+    <p><strong>Examples:</strong></p>
+    <pre>source-snapshot=my-data-snapshot,size=100,type=pd-ssd,auto-delete=yes
+size=200,type=pd-ssd,name=scratch-disk,auto-delete=yes
+name=shared-data-disk,mode=ro,auto-delete=no</pre>
+
     <p>
+        Short names for <code>source-snapshot</code>, <code>type</code>, and <code>name</code> are
+        automatically qualified to the instance's project and zone. For cross-project resources, use a
+        relative path (e.g. <code>projects/{project}/global/snapshots/{name}</code>) or full resource URI
+        (e.g. <code>https://compute.googleapis.com/compute/v1/projects/{project}/global/snapshots/{name}</code>).
         Mounting disks inside the VM must be done via the startup script.
-        Leave empty to not attach any additional disks.
     </p>
 </div>
