@@ -24,21 +24,21 @@
         <code>size</code> is required.
     </p>
     <ul>
-        <li><code>source-snapshot</code> &mdash; Snapshot name, relative path
+        <li><code>source-snapshot</code> — Snapshot name, relative path
             (e.g. <code>projects/{project}/global/snapshots/{name}</code>),
             or full resource URI (e.g. <code>https://compute.googleapis.com/compute/v1/projects/{project}/global/snapshots/{name}</code>).
             Use just the name for snapshots in the same project.</li>
-        <li><code>size</code> &mdash; Disk size in GB. Required for blank disks; optional when a
+        <li><code>size</code> — Disk size in GB. Required for blank disks; optional when a
             source is specified (defaults to the source snapshot size).</li>
-        <li><code>type</code> &mdash; Disk type: short name (e.g. <code>pd-ssd</code>), relative path
+        <li><code>type</code> — Disk type: short name (e.g. <code>pd-ssd</code>), relative path
             (e.g. <code>zones/us-east1-b/diskTypes/pd-ssd</code>), or full resource URI.
             Short names are automatically qualified to the instance's zone. Defaults to <code>pd-standard</code>.</li>
-        <li><code>name</code> &mdash; Name for the new disk. If omitted, GCP generates a name automatically.</li>
-        <li><code>device-name</code> &mdash; Device name shown in the guest OS.</li>
-        <li><code>description</code> &mdash; Optional description for the disk.</li>
-        <li><code>mode</code> &mdash; <code>ro</code> for read-only or <code>rw</code> for read-write (default: <code>rw</code>).</li>
-        <li><code>interface</code> &mdash; <code>SCSI</code> or <code>NVME</code>.</li>
-        <li><code>auto-delete</code> &mdash; <code>yes</code> or <code>no</code> (default: <code>yes</code>).</li>
+        <li><code>name</code> — Name for the new disk. If omitted, GCP generates a name automatically.</li>
+        <li><code>device-name</code> — Device name shown in the guest OS.</li>
+        <li><code>description</code> — Optional description for the disk.</li>
+        <li><code>mode</code> — <code>ro</code> for read-only or <code>rw</code> for read-write (default: <code>rw</code>).</li>
+        <li><code>interface</code> — <code>SCSI</code> or <code>NVME</code>.</li>
+        <li><code>auto-delete</code> — <code>yes</code> or <code>no</code> (default: <code>yes</code>).</li>
     </ul>
 
     <h4>Attach existing disk (<a href="https://docs.cloud.google.com/sdk/gcloud/reference/compute/instances/create#--disk"><code>--disk</code></a> semantics)</h4>
@@ -47,14 +47,14 @@
         disk is attached by reference.
     </p>
     <ul>
-        <li><code>name</code> &mdash; Existing disk name, relative path, or full resource URI (required).
+        <li><code>name</code> — Existing disk name, relative path, or full resource URI (required).
             Use just the name for zonal disks in the same zone; use a relative path or full resource URI for regional or
             cross-project disks (e.g. <code>projects/myproject/regions/us-central1/disks/my-regional-disk</code>).</li>
-        <li><code>device-name</code> &mdash; Device name shown in the guest OS.</li>
-        <li><code>mode</code> &mdash; <code>ro</code> for read-only or <code>rw</code> for read-write (default: <code>rw</code>).
+        <li><code>device-name</code> — Device name shown in the guest OS.</li>
+        <li><code>mode</code> — <code>ro</code> for read-only or <code>rw</code> for read-write (default: <code>rw</code>).
             Use <code>ro</code> when multiple instances may attach the same disk.</li>
-        <li><code>interface</code> &mdash; <code>SCSI</code> or <code>NVME</code>.</li>
-        <li><code>auto-delete</code> &mdash; <code>yes</code> or <code>no</code> (default: <code>yes</code>).</li>
+        <li><code>interface</code> — <code>SCSI</code> or <code>NVME</code>.</li>
+        <li><code>auto-delete</code> — <code>yes</code> or <code>no</code> (default: <code>yes</code>).</li>
     </ul>
 
     <p>Examples:</p>

@@ -33,11 +33,11 @@ import java.util.Set;
  * <ul>
  *   <li><b>Create disk</b>
  *       (<a href="https://docs.cloud.google.com/sdk/gcloud/reference/compute/instances/create#--create-disk">{@code --create-disk}</a>
- *       semantics) &mdash; when the line contains {@code source-snapshot}, {@code size}, or {@code type}.
+ *       semantics) — when the line contains {@code source-snapshot}, {@code size}, or {@code type}.
  *       A new disk is created and attached.</li>
  *   <li><b>Attach existing disk</b>
  *       (<a href="https://docs.cloud.google.com/sdk/gcloud/reference/compute/instances/create#--disk">{@code --disk}</a>
- *       semantics) &mdash; when the line contains only {@code name} (without any create-disk keys).
+ *       semantics) — when the line contains only {@code name} (without any create-disk keys).
  *       An existing disk is attached by reference.</li>
  * </ul>
  */
@@ -100,11 +100,11 @@ public class DiskMappingParser {
      *
      * <p>Mode-specific keys:
      * <ul>
-     *   <li>{@code source-snapshot} &mdash; snapshot name, relative path, or full URL</li>
-     *   <li>{@code size} &mdash; disk size in GB</li>
-     *   <li>{@code type} &mdash; disk type (e.g. {@code pd-ssd})</li>
-     *   <li>{@code name} &mdash; name for the new disk</li>
-     *   <li>{@code description} &mdash; optional description</li>
+     *   <li>{@code source-snapshot} — snapshot name, relative path, or full URL</li>
+     *   <li>{@code size} — disk size in GB</li>
+     *   <li>{@code type} — disk type (e.g. {@code pd-ssd})</li>
+     *   <li>{@code name} — name for the new disk</li>
+     *   <li>{@code description} — optional description</li>
      * </ul>
      *
      * <p>Also supports the common keys ({@code device-name}, {@code mode}, {@code interface},
@@ -172,7 +172,7 @@ public class DiskMappingParser {
      *
      * <p>Mode-specific keys:
      * <ul>
-     *   <li>{@code name} &mdash; existing disk name, relative path, or full URL (required)</li>
+     *   <li>{@code name} — existing disk name, relative path, or full URL (required)</li>
      * </ul>
      *
      * <p>Also supports the common keys ({@code device-name}, {@code mode}, {@code interface},
