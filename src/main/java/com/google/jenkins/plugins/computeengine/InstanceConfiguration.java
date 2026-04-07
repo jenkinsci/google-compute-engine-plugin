@@ -46,6 +46,7 @@ import com.google.jenkins.plugins.computeengine.config.Standard;
 import com.google.jenkins.plugins.computeengine.ssh.GoogleKeyCredential;
 import com.google.jenkins.plugins.computeengine.ssh.GoogleKeyPair;
 import com.google.jenkins.plugins.computeengine.ssh.GooglePrivateKey;
+import com.google.jenkins.plugins.computeengine.util.DiskMappingParser;
 import edu.umd.cs.findbugs.annotations.Nullable;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import hudson.Extension;
@@ -166,6 +167,7 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
     private List<CustomMetadataItem> customMetadata;
 
     private boolean createSnapshot;
+    private String diskMapping;
     private String remoteFs;
     private String javaExecPath;
     private GoogleKeyCredential sshKeyCredential;
@@ -558,6 +560,8 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
         return scheduling;
     }
 
+    /** Builds the list of disks for the instance: the boot disk followed by any additional
+     *  disks parsed from the {@link #diskMapping} field. */
     private List<AttachedDisk> disks() {
         AttachedDisk boot = new AttachedDisk();
         boot.setBoot(true);
@@ -569,6 +573,23 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
 
         List<AttachedDisk> disks = new ArrayList<>();
         disks.add(boot);
+
+        var zoneName = nameFromSelfLink(zone);
+        var projectId = cloud != null ? nameFromSelfLink(cloud.getProjectId()) : null;
+        for (var mapped : DiskMappingParser.parse(diskMapping)) {
+            if (mapped.getInitializeParams() != null) {
+                var params = mapped.getInitializeParams();
+                params.setDiskType(DiskMappingParser.normalizeDiskType(params.getDiskType(), zoneName));
+                if (projectId != null) {
+                    params.setSourceSnapshot(
+                            DiskMappingParser.normalizeSnapshotSource(params.getSourceSnapshot(), projectId));
+                }
+            } else if (projectId != null) {
+                mapped.setSource(DiskMappingParser.normalizeDiskSource(mapped.getSource(), projectId, zoneName));
+            }
+            disks.add(mapped);
+        }
+
         return disks;
     }
 
@@ -1137,6 +1158,7 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
                     this.minimumNumberOfInstancesTimeRangeConfig);
             instanceConfiguration.setTemplate(this.template);
             instanceConfiguration.setCreateSnapshot(this.createSnapshot);
+            instanceConfiguration.setDiskMapping(this.diskMapping);
             instanceConfiguration.setTerminateIdleDuringShutdown(this.terminateIdleDuringShutdown);
             instanceConfiguration.setCustomMetadata(this.customMetadata);
             instanceConfiguration.setRemoteFs(this.remoteFs);

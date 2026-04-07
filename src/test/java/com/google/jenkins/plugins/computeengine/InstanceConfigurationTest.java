@@ -206,7 +206,7 @@ public class InstanceConfigurationTest {
         r.assertEqualBeans(
                 want,
                 got,
-                "namePrefix,region,zone,machineType,preemptible,windowsConfiguration,minCpuPlatform,startupScript,bootDiskType,bootDiskSourceImageName,bootDiskSourceImageProject,bootDiskSizeGb,acceleratorConfiguration,networkConfiguration,networkInterfaceIpStackMode,networkTags,serviceAccountEmail,minimumNumberOfInstances,minimumNumberOfSpareInstances");
+                "namePrefix,region,zone,machineType,preemptible,windowsConfiguration,minCpuPlatform,startupScript,bootDiskType,bootDiskSourceImageName,bootDiskSourceImageProject,bootDiskSizeGb,diskMapping,acceleratorConfiguration,networkConfiguration,networkInterfaceIpStackMode,networkTags,serviceAccountEmail,minimumNumberOfInstances,minimumNumberOfSpareInstances");
     }
 
     @Test
@@ -268,6 +268,7 @@ public class InstanceConfigurationTest {
         assertEquals(SERVICE_ACCOUNT_EMAIL, instance.getServiceAccounts().get(0).getEmail());
 
         // Disks
+        assertEquals(1, instance.getDisks().size());
         assertEquals(BOOT_DISK_AUTODELETE, instance.getDisks().get(0).getAutoDelete());
         assertTrue(instance.getDisks().get(0).getBoot());
         assertEquals(
@@ -371,6 +372,45 @@ public class InstanceConfigurationTest {
                 .runAsUser(RUN_AS_USER)
                 .oneShot(false)
                 .template(null);
+    }
+
+    @Test
+    public void testDiskMappingAttachesDisks() throws Exception {
+        var instance = instanceConfigurationBuilder()
+                .cloud(cloud)
+                .diskMapping("source-snapshot=snap-a,size=50,type=pd-ssd,auto-delete=yes\n"
+                        + "source-snapshot=snap-b,size=100,auto-delete=no")
+                .build()
+                .instance();
+
+        assertEquals(3, instance.getDisks().size());
+        assertTrue(instance.getDisks().get(0).getBoot());
+
+        var diskA = instance.getDisks().get(1);
+        assertFalse(diskA.getBoot());
+        assertTrue(diskA.getAutoDelete());
+        assertEquals(
+                "projects/" + PROJECT_ID + "/global/snapshots/snap-a",
+                diskA.getInitializeParams().getSourceSnapshot());
+        assertEquals(
+                "zones/" + ZONE + "/diskTypes/pd-ssd",
+                diskA.getInitializeParams().getDiskType());
+        assertEquals(Long.valueOf(50), diskA.getInitializeParams().getDiskSizeGb());
+
+        var diskB = instance.getDisks().get(2);
+        assertFalse(diskB.getBoot());
+        assertFalse(diskB.getAutoDelete());
+        assertEquals(
+                "projects/" + PROJECT_ID + "/global/snapshots/snap-b",
+                diskB.getInitializeParams().getSourceSnapshot());
+        assertEquals(Long.valueOf(100), diskB.getInitializeParams().getDiskSizeGb());
+    }
+
+    @Test
+    public void testNoDiskMappingOnlyBootDisk() throws Exception {
+        var instance = instanceConfigurationBuilder().build().instance();
+        assertEquals(1, instance.getDisks().size());
+        assertTrue(instance.getDisks().get(0).getBoot());
     }
 
     @Test
