@@ -106,6 +106,16 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
     public static final String DEFAULT_RUN_AS_USER = "jenkins";
     public static final String METADATA_LINUX_STARTUP_SCRIPT_KEY = "startup-script";
     public static final String METADATA_WINDOWS_STARTUP_SCRIPT_KEY = "windows-startup-script-ps1";
+    public static final String GUEST_ATTRIBUTE_STARTUP_SCRIPT_NAMESPACE = "startup-script";
+    public static final String GUEST_ATTRIBUTE_STARTUP_SCRIPT_STATUS_KEY = "status";
+    public static final String DEFAULT_LINUX_EXIT_REPORTER = """
+            curl -s -X PUT -H "Metadata-Flavor: Google" \\
+              "http://metadata.google.internal/computeMetadata/v1/instance/guest-attributes/startup-script/status" \\
+              -d "$1\"""";
+    public static final String DEFAULT_WINDOWS_EXIT_REPORTER = """
+            Invoke-RestMethod -Method PUT -Body "$($args[0])" `
+              -Headers @{'Metadata-Flavor'='Google'} `
+              -Uri "http://metadata.google.internal/computeMetadata/v1/instance/guest-attributes/startup-script/status\"""";
     public static final List<String> KNOWN_IMAGE_PROJECTS = List.of(
             "centos-cloud",
             "coreos-cloud",
@@ -125,6 +135,7 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
     private String machineType;
     private String numExecutorsStr;
     private String startupScript;
+    private String startupScriptExitReporter;
     private ProvisioningType provisioningType;
     private String minCpuPlatform;
     private String labels;
@@ -383,6 +394,7 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
                     .launchTimeout(getLaunchTimeoutMillis())
                     .javaExecPath(javaExecPath)
                     .sshKeyCredential(sshKeyCredential)
+                    .waitForStartupScript(notNullOrEmpty(startupScript) && notNullOrEmpty(resolveExitReporter()))
                     .build();
         } catch (Descriptor.FormException fe) {
             log.log(Level.WARNING, "Error provisioning instance: " + fe.getMessage(), fe);
@@ -526,19 +538,97 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
         return sshPrivateKey;
     }
 
+    /**
+     * Returns the exit reporter script as-is. A null or empty value means no exit reporting:
+     * the startup script will not be wrapped and the launcher will not wait for completion.
+     * <p>
+     * New configurations get the platform default populated by the UI (config-adjunct.js).
+     * Existing configurations upgraded from older plugin versions have null here, so they
+     * keep their previous behaviour (no wrapping, no waiting).
+     */
+    private String resolveExitReporter() {
+        return startupScriptExitReporter;
+    }
+
     private void configureStartupScript(Instance instance) {
         if (notNullOrEmpty(startupScript)) {
-            List<Metadata.Items> items = instance.getMetadata().getItems();
+            var items = instance.getMetadata().getItems();
+            var reporter = resolveExitReporter();
             if (windowsConfiguration != null) {
+                var effectiveScript = wrapWindowsStartupScript(startupScript, reporter);
+                log.info("Startup script configured"
+                        + (notNullOrEmpty(reporter) ? " with completion reporting" : " without completion reporting"));
+                log.finer("Effective Windows startup script:\n" + effectiveScript);
                 items.add(new Metadata.Items()
                         .setKey(METADATA_WINDOWS_STARTUP_SCRIPT_KEY)
-                        .setValue(startupScript));
+                        .setValue(effectiveScript));
             } else {
+                var effectiveScript = wrapLinuxStartupScript(startupScript, reporter);
+                log.info("Startup script configured"
+                        + (notNullOrEmpty(reporter) ? " with completion reporting" : " without completion reporting"));
+                log.finer("Effective Linux startup script:\n" + effectiveScript);
                 items.add(new Metadata.Items()
                         .setKey(METADATA_LINUX_STARTUP_SCRIPT_KEY)
-                        .setValue(startupScript));
+                        .setValue(effectiveScript));
             }
         }
+    }
+
+    @VisibleForTesting
+    static String wrapLinuxStartupScript(String script, String completionScript) {
+        if (!notNullOrEmpty(completionScript)) {
+            return script;
+        }
+        var sb = new StringBuilder();
+        var scriptBody = script;
+        if (script.startsWith("#!")) {
+            var newlineIdx = script.indexOf('\n');
+            if (newlineIdx >= 0) {
+                sb.append(script, 0, newlineIdx + 1);
+                scriptBody = script.substring(newlineIdx + 1);
+            } else {
+                sb.append(script).append('\n');
+                scriptBody = "";
+            }
+        }
+        sb.append("# --- GCE plugin: exit reporter begin ---\n");
+        sb.append("__gce_plugin_report_status() {\n");
+        sb.append(completionScript).append('\n');
+        sb.append("}\n");
+        sb.append(
+                "trap '__gce_plugin_ec=$?; __gce_plugin_report_status \"$__gce_plugin_ec\" || true; exit $__gce_plugin_ec' EXIT\n");
+        sb.append("# --- GCE plugin: exit reporter end ---\n");
+        sb.append(scriptBody);
+        return sb.toString();
+    }
+
+    @VisibleForTesting
+    static String wrapWindowsStartupScript(String script, String completionScript) {
+        if (!notNullOrEmpty(completionScript)) {
+            return script;
+        }
+        var sb = new StringBuilder();
+        sb.append("# --- GCE plugin: exit reporter begin ---\n");
+        sb.append("$__gce_plugin_ec = 0\n");
+        sb.append("try {\n");
+        sb.append("# --- GCE plugin: user startup script begin ---\n");
+        sb.append(script).append('\n');
+        sb.append("# --- GCE plugin: user startup script end ---\n");
+        sb.append("    $__gce_plugin_ec = $LASTEXITCODE\n");
+        sb.append("    if ($null -eq $__gce_plugin_ec) { $__gce_plugin_ec = 0 }\n");
+        sb.append("} catch {\n");
+        sb.append("    $__gce_plugin_ec = 1\n");
+        sb.append("} finally {\n");
+        sb.append("    $__gce_plugin_exit_args = @($__gce_plugin_ec)\n");
+        sb.append("    try {\n");
+        sb.append("        & {\n");
+        sb.append("            ").append(completionScript).append('\n');
+        sb.append("        } $__gce_plugin_exit_args\n");
+        sb.append("    } catch {}\n");
+        sb.append("    exit $__gce_plugin_ec\n");
+        sb.append("}\n");
+        sb.append("# --- GCE plugin: exit reporter end ---\n");
+        return sb.toString();
     }
 
     private Tags tags() {
@@ -1130,6 +1220,7 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
             instanceConfiguration.setMachineType(this.machineType);
             instanceConfiguration.setNumExecutorsStr(this.numExecutorsStr);
             instanceConfiguration.setStartupScript(this.startupScript);
+            instanceConfiguration.setStartupScriptExitReporter(this.startupScriptExitReporter);
             instanceConfiguration.setProvisioningType(this.provisioningType);
             instanceConfiguration.setMinCpuPlatform(this.minCpuPlatform);
             instanceConfiguration.setLabelString(this.labels);

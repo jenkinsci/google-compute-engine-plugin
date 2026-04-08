@@ -128,6 +128,10 @@
                 <f:entry field="startupScript" title="${%Startup script}">
                     <f:textarea/>
                 </f:entry>
+                <f:entry field="startupScriptExitReporter" title="${%Startup script exit reporter}">
+                    <f:textarea/>
+                </f:entry>
+                <st:adjunct includes="com.google.jenkins.plugins.computeengine.InstanceConfiguration.config-adjunct"/>
                 <f:entry title="${%Custom metadata}" description="${%Additional metadata key-value pairs to set on the instance}">
                     <f:repeatableProperty field="customMetadata" minimum="0" add="${%Add metadata}">
                         <f:block>

@@ -57,6 +57,9 @@ public class ComputeEngineInstance extends AbstractCloudSlave {
     private final boolean ignoreProxy;
     private final String javaExecPath;
     private final GoogleKeyCredential sshKeyCredential;
+    // Carried from InstanceConfiguration at provision time because the launcher has no access to whether
+    // startup script exit reporting was configured
+    private final boolean waitForStartupScript;
     private Integer launchTimeout; // Seconds
     private Boolean connected;
     private transient ComputeEngineCloud cloud;
@@ -85,6 +88,7 @@ public class ComputeEngineInstance extends AbstractCloudSlave {
             // NOTE(craigatgoogle): Could not use Optional due to serialization req.
             @Nullable String javaExecPath,
             @Nullable GoogleKeyCredential sshKeyCredential,
+            boolean waitForStartupScript,
             @Nullable ComputeEngineCloud cloud)
             throws Descriptor.FormException, IOException {
         super(
@@ -109,6 +113,7 @@ public class ComputeEngineInstance extends AbstractCloudSlave {
         this.terminateIdleDuringShutdown = terminateIdleDuringShutdown;
         this.javaExecPath = javaExecPath;
         this.sshKeyCredential = sshKeyCredential;
+        this.waitForStartupScript = waitForStartupScript;
         this.cloud = cloud;
     }
 
