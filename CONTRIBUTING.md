@@ -121,11 +121,18 @@ Steps to execute integration test
   mvn verify -Dit.windows=true
   ```
 * You need to prepare the windows image before running the tests.  
-  * More information on building your baseline windows image can be found [here](WINDOWS.md)  
-      and an example powershell script for setup can be found [here](windows-it-install.ps1).  
+  * Build the image using the Packer setup in `testimages/windows/`:  
+    ```bash
+    # Password is auto-generated if not set
+    export JENKINS_PASSWORD=your-secure-password  # optional
+    bash testimages/windows/setup-gce-image.sh
+    ```
+    This creates a Windows Server 2022 image with Java 21 and OpenSSH pre-installed.
+    The build can be run from any platform (macOS, Linux) — it does not require a Windows machine.
+    Use `--recreate` to rebuild an existing image, or `--delete` to remove it.
   * In addition to the environment variables mentioned in the previous section, also export these variables too,  
     ```bash
     export GOOGLE_BOOT_DISK_PROJECT_ID=your-project-id # will be the same as your project id
-    export GOOGLE_BOOT_DISK_IMAGE_NAME=windows-image-name # will be the name of the image you created using packer in Google cloud console
-    export GOOGLE_JENKINS_PASSWORD=password # will be the password you set when creating the image with packer, used for password based ssh authentication.
+    export GOOGLE_BOOT_DISK_IMAGE_NAME=jenkins-gce-integration-test-windows-jre
+    export GOOGLE_JENKINS_PASSWORD=password # the password from the image build output
     ```
