@@ -598,7 +598,12 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
         sb.append(
                 "trap '__gce_plugin_ec=$?; __gce_plugin_report_status \"$__gce_plugin_ec\" || true; exit $__gce_plugin_ec' EXIT\n");
         sb.append("# --- GCE plugin: exit reporter end ---\n");
+        sb.append("# --- GCE plugin: user startup script begin ---\n");
         sb.append(scriptBody);
+        if (!scriptBody.endsWith("\n")) {
+            sb.append('\n');
+        }
+        sb.append("# --- GCE plugin: user startup script end ---\n");
         return sb.toString();
     }
 
@@ -608,26 +613,29 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
             return script;
         }
         var sb = new StringBuilder();
-        sb.append("# --- GCE plugin: exit reporter begin ---\n");
         sb.append("$__gce_plugin_ec = 0\n");
         sb.append("try {\n");
         sb.append("# --- GCE plugin: user startup script begin ---\n");
-        sb.append(script).append('\n');
+        sb.append(script);
+        if (!script.endsWith("\n")) {
+            sb.append('\n');
+        }
         sb.append("# --- GCE plugin: user startup script end ---\n");
         sb.append("    $__gce_plugin_ec = $LASTEXITCODE\n");
         sb.append("    if ($null -eq $__gce_plugin_ec) { $__gce_plugin_ec = 0 }\n");
         sb.append("} catch {\n");
         sb.append("    $__gce_plugin_ec = 1\n");
         sb.append("} finally {\n");
+        sb.append("    # --- GCE plugin: exit reporter begin ---\n");
         sb.append("    $__gce_plugin_exit_args = @($__gce_plugin_ec)\n");
         sb.append("    try {\n");
         sb.append("        & {\n");
         sb.append("            ").append(completionScript).append('\n');
         sb.append("        } $__gce_plugin_exit_args\n");
         sb.append("    } catch {}\n");
+        sb.append("    # --- GCE plugin: exit reporter end ---\n");
         sb.append("    exit $__gce_plugin_ec\n");
         sb.append("}\n");
-        sb.append("# --- GCE plugin: exit reporter end ---\n");
         return sb.toString();
     }
 
