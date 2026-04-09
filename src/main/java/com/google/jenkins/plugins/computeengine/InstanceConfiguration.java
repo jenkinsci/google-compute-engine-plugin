@@ -778,6 +778,16 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
             return new AutofilledNetworkConfiguration();
         }
 
+        @SuppressWarnings("unused") // jelly
+        public static String defaultLinuxExitReporter() {
+            return DEFAULT_LINUX_EXIT_REPORTER;
+        }
+
+        @SuppressWarnings("unused") // jelly
+        public static String defaultWindowsExitReporter() {
+            return DEFAULT_WINDOWS_EXIT_REPORTER;
+        }
+
         private static ComputeClient computeClient(Jenkins context, String credentialsId) throws IOException {
             if (computeClient != null) {
                 return computeClient;

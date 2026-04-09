@@ -1,3 +1,11 @@
+// UX helper for the startup-script exit reporter field:
+//  1. Hides the exit reporter field until a startup script is entered.
+//  2. Auto-fills the platform-appropriate default (curl / Invoke-RestMethod)
+//     the first time a startup script is typed in.
+//  3. Swaps between Linux and Windows defaults when the Windows checkbox toggles,
+//     but only if the current value is still a known default (user edits are preserved).
+// Default strings are passed from Java via data-* attributes on a hidden div in
+// config.jelly, so they are not duplicated here.
 Behaviour.specify('textarea[name="_.startupScript"]', 'startup-script-exit-reporter-toggle', 0, function (el) {
     var container = el.closest('.repeated-chunk') || el.closest('form');
     var exitReporter = container.querySelector('textarea[name="_.startupScriptExitReporter"]');
@@ -7,12 +15,10 @@ Behaviour.specify('textarea[name="_.startupScript"]', 'startup-script-exit-repor
 
     var windowsCheckbox = container.querySelector('input[name="_.windowsConfiguration"]');
 
-    var linuxDefault = 'curl -s -X PUT -H "Metadata-Flavor: Google" \\\n'
-        + '  "http://metadata.google.internal/computeMetadata/v1/instance/guest-attributes/startup-script/status" \\\n'
-        + '  -d "$1"';
-    var windowsDefault = 'Invoke-RestMethod -Method PUT -Body "$($args[0])" `\n'
-        + '  -Headers @{\'Metadata-Flavor\'=\'Google\'} `\n'
-        + '  -Uri "http://metadata.google.internal/computeMetadata/v1/instance/guest-attributes/startup-script/status"';
+    var defaults = container.querySelector('.exit-reporter-defaults');
+    if (!defaults) return;
+    var linuxDefault = defaults.dataset.linuxDefault;
+    var windowsDefault = defaults.dataset.windowsDefault;
 
     function isDefault(value) {
         return value === linuxDefault || value === windowsDefault;
