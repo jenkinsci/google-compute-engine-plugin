@@ -1195,6 +1195,17 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
             return FormValidation.ok();
         }
 
+        public FormValidation doCheckStartupScriptExitReporter(@QueryParameter String value) {
+            if (value == null || value.isEmpty()) {
+                return FormValidation.ok();
+            }
+            if (!value.contains("$1") && !value.contains("$args[0]")) {
+                return FormValidation.warning(
+                        "Exit reporter should include $1 (Linux) or $args[0] (Windows) as the exit code placeholder");
+            }
+            return FormValidation.ok();
+        }
+
         @SuppressWarnings("unused") // jelly
         public List<ProvisioningType.ProvisioningTypeDescriptor> getProvisioningTypes() {
             return ExtensionList.lookup(ProvisioningType.ProvisioningTypeDescriptor.class);

@@ -22,8 +22,6 @@ import static com.google.jenkins.plugins.computeengine.integration.ITUtil.PROJEC
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.TEST_TIMEOUT_MULTIPLIER;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.ZONE;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.getLabel;
-import static com.google.jenkins.plugins.computeengine.integration.ITUtil.initClient;
-import static com.google.jenkins.plugins.computeengine.integration.ITUtil.initCloud;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.initCredentials;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.instanceConfigurationBuilder;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.teardownResources;
@@ -43,6 +41,8 @@ import com.google.jenkins.plugins.computeengine.InstanceConfiguration;
 import com.google.jenkins.plugins.computeengine.WindowsConfiguration;
 import hudson.Util;
 import hudson.model.Node;
+import io.jenkins.plugins.casc.misc.ConfiguredWithCode;
+import io.jenkins.plugins.casc.misc.JenkinsConfiguredWithCodeRule;
 import java.io.IOException;
 import java.util.Map;
 import java.util.Optional;
@@ -58,7 +58,6 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.Timeout;
 import org.jvnet.hudson.test.BuildWatcher;
-import org.jvnet.hudson.test.JenkinsRule;
 
 public class ComputeEngineCloudStartupScriptIT {
     private static final Logger log = Logger.getLogger(ComputeEngineCloudStartupScriptIT.class.getName());
@@ -69,7 +68,7 @@ public class ComputeEngineCloudStartupScriptIT {
     public static Timeout timeout = new Timeout(20L * TEST_TIMEOUT_MULTIPLIER, TimeUnit.MINUTES);
 
     @Rule
-    public JenkinsRule j = new JenkinsRule();
+    public JenkinsConfiguredWithCodeRule j = new JenkinsConfiguredWithCodeRule();
 
     @ClassRule
     public static BuildWatcher bw = new BuildWatcher();
@@ -82,39 +81,28 @@ public class ComputeEngineCloudStartupScriptIT {
     public void init() throws Exception {
         log.info("init");
         initCredentials(j);
-        cloud = initCloud(j);
-        client = initClient(j, label, log);
     }
 
     @After
     public void teardown() throws IOException {
         log.info("teardown");
-        teardownResources(client, label, log);
+        if (client != null) {
+            teardownResources(client, label, log);
+        }
     }
 
     @Test
+    @ConfiguredWithCode("startup-script-wait-casc.yml")
     public void testBuildWaitsForStartupScriptLinux() throws Exception {
-        var startupScript = "#!/bin/bash\n"
-                + "echo 'STARTUP_SCRIPT_BEGIN' >> /tmp/startup-output.txt\n"
-                + "sleep 90\n"
-                + "echo 'STARTUP_COMPLETE' >> /tmp/startup-output.txt\n"
-                + "echo \"Finished at $(date)\" >> /tmp/startup-output.txt\n";
+        cloud = (ComputeEngineCloud) j.jenkins.clouds.getByName(ComputeEngineCloud.CLOUD_PREFIX + ITUtil.CLOUD_NAME);
+        cloud.getConfigurations().get(0).setGoogleLabels(label);
+        client = ITUtil.initClient(j, label, log);
 
         var pipelineScript = "node('" + GCE_LABEL + "') {\n"
                 + "  sh 'cat /tmp/startup-output.txt'\n"
                 + "  sh 'grep STARTUP_COMPLETE /tmp/startup-output.txt'\n"
                 + "  semaphore 'startupWaitLinux'\n"
                 + "}";
-
-        cloud.setConfigurations(ImmutableList.of(instanceConfigurationBuilder()
-                .numExecutorsStr(NUM_EXECUTORS)
-                .labels(GCE_LABEL)
-                .oneShot(true)
-                .createSnapshot(false)
-                .template(NULL_TEMPLATE)
-                .googleLabels(label)
-                .startupScript(startupScript)
-                .build()));
 
         runStartupScriptTest(pipelineScript, "startupWaitLinux");
     }
@@ -126,6 +114,9 @@ public class ComputeEngineCloudStartupScriptIT {
         assumeTrue(
                 "Skipping Windows test: GOOGLE_WINDOWS_USERNAME and GOOGLE_WINDOWS_PASSWORD must be set",
                 windowsUsername != null && windowsPassword != null);
+
+        cloud = ITUtil.initCloud(j);
+        client = ITUtil.initClient(j, label, log);
 
         var passwordCredId = initWindowsPasswordCredential(windowsUsername, windowsPassword);
 
@@ -155,6 +146,7 @@ public class ComputeEngineCloudStartupScriptIT {
                 .template(NULL_TEMPLATE)
                 .googleLabels(label)
                 .startupScript(startupScript)
+                .startupScriptExitReporter(InstanceConfiguration.DEFAULT_WINDOWS_EXIT_REPORTER)
                 .bootDiskSourceImageName(windowsImage)
                 .bootDiskSizeGbStr("50")
                 .remoteFs("C:\\Users\\" + windowsUsername)
@@ -182,7 +174,7 @@ public class ComputeEngineCloudStartupScriptIT {
 
         var build = p.scheduleBuild2(0).waitForStart();
         SemaphoreStep.waitForStart(semaphoreName + "/1", build);
-        var buildLog = JenkinsRule.getLog(build);
+        var buildLog = j.getLog(build);
 
         var workerNodeName = extractWorkerNodeName(buildLog);
         log.info("Build paused on node: " + workerNodeName);

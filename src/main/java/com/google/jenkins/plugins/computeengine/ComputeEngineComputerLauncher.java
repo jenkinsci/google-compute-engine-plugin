@@ -45,6 +45,7 @@ import java.net.SocketTimeoutException;
 import java.time.Duration;
 import java.util.Base64;
 import java.util.Optional;
+import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.LogRecord;
 import java.util.logging.Logger;
@@ -531,13 +532,13 @@ public abstract class ComputeEngineComputerLauncher extends ComputerLauncher {
         var client = cloud.getClient();
         var namespace = InstanceConfiguration.GUEST_ATTRIBUTE_STARTUP_SCRIPT_NAMESPACE + "/";
 
-        long startTime = System.currentTimeMillis();
+        long startNanos = System.nanoTime();
         while (true) {
-            long elapsed = System.currentTimeMillis() - startTime;
-            if (timeoutMillis > 0 && elapsed > timeoutMillis) {
+            long elapsedMillis = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startNanos);
+            if (timeoutMillis > 0 && elapsedMillis > timeoutMillis) {
                 throw new IOException(String.format(
                         "Timed out after %d seconds waiting for startup script to complete (timeout: %d seconds)",
-                        elapsed / 1000, timeoutMillis / 1000));
+                        elapsedMillis / 1000, timeoutMillis / 1000));
             }
 
             try {
