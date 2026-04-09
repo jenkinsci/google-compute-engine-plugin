@@ -128,13 +128,12 @@
                 <f:entry field="startupScript" title="${%Startup script}">
                     <f:textarea/>
                 </f:entry>
-                <f:entry field="startupScriptExitReporter" title="${%Startup script exit reporter}">
-                    <f:textarea/>
-                    <div class="exit-reporter-defaults" style="display:none"
-                         data-linux-default="${descriptor.defaultLinuxExitReporter()}"
-                         data-windows-default="${descriptor.defaultWindowsExitReporter()}"/>
+                <f:entry field="startupScriptExitReporterLinux" title="${%Linux startup script exit reporter}">
+                    <f:textarea default="${descriptor.defaultStartupScriptExitReporterLinux()}"/>
                 </f:entry>
-                <st:adjunct includes="com.google.jenkins.plugins.computeengine.InstanceConfiguration.config-adjunct"/>
+                <f:entry field="startupScriptExitReporterWindows" title="${%Windows startup script exit reporter}">
+                    <f:textarea default="${descriptor.defaultStartupScriptExitReporterWindows()}"/>
+                </f:entry>
                 <f:entry title="${%Custom metadata}" description="${%Additional metadata key-value pairs to set on the instance}">
                     <f:repeatableProperty field="customMetadata" minimum="0" add="${%Add metadata}">
                         <f:block>

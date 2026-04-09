@@ -24,7 +24,7 @@ jenkins:
               sleep 90
               echo 'STARTUP_COMPLETE' >> /tmp/startup-output.txt
               echo "Finished at $(date)" >> /tmp/startup-output.txt
-            startupScriptExitReporter: |
+            startupScriptExitReporterLinux: |
               curl -s -X PUT -H "Metadata-Flavor: Google" \
                 "http://metadata.google.internal/computeMetadata/v1/instance/guest-attributes/startup-script/status" \
                 -d "$1"

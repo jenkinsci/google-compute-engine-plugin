@@ -146,7 +146,7 @@ public class ComputeEngineCloudStartupScriptIT {
                 .template(NULL_TEMPLATE)
                 .googleLabels(label)
                 .startupScript(startupScript)
-                .startupScriptExitReporter(InstanceConfiguration.DEFAULT_WINDOWS_EXIT_REPORTER)
+                .startupScriptExitReporterWindows(InstanceConfiguration.DEFAULT_WINDOWS_EXIT_REPORTER)
                 .bootDiskSourceImageName(windowsImage)
                 .bootDiskSizeGbStr("50")
                 .remoteFs("C:\\Users\\" + windowsUsername)

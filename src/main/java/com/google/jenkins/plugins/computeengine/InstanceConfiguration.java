@@ -135,7 +135,8 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
     private String machineType;
     private String numExecutorsStr;
     private String startupScript;
-    private String startupScriptExitReporter;
+    private String startupScriptExitReporterLinux;
+    private String startupScriptExitReporterWindows;
     private ProvisioningType provisioningType;
     private String minCpuPlatform;
     private String labels;
@@ -542,12 +543,16 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
      * Returns the exit reporter script as-is. A null or empty value means no exit reporting:
      * the startup script will not be wrapped and the launcher will not wait for completion.
      * <p>
-     * New configurations get the platform default populated by the UI (config-adjunct.js).
+     * New configurations get the platform default populated by the form field's default attribute.
      * Existing configurations upgraded from older plugin versions have null here, so they
-     * keep their previous behaviour (no wrapping, no waiting).
+     * keep their previous behaviour (no wrapping, no waiting) until the user saves the config
+     * with the default-filled value, a custom reporter, or blank (which disables waiting).
      */
     private String resolveExitReporter() {
-        return startupScriptExitReporter;
+        if (windowsConfiguration != null) {
+            return startupScriptExitReporterWindows;
+        }
+        return startupScriptExitReporterLinux;
     }
 
     private void configureStartupScript(Instance instance) {
@@ -779,12 +784,12 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
         }
 
         @SuppressWarnings("unused") // jelly
-        public static String defaultLinuxExitReporter() {
+        public static String defaultStartupScriptExitReporterLinux() {
             return DEFAULT_LINUX_EXIT_REPORTER;
         }
 
         @SuppressWarnings("unused") // jelly
-        public static String defaultWindowsExitReporter() {
+        public static String defaultStartupScriptExitReporterWindows() {
             return DEFAULT_WINDOWS_EXIT_REPORTER;
         }
 
@@ -1205,13 +1210,23 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
             return FormValidation.ok();
         }
 
-        public FormValidation doCheckStartupScriptExitReporter(@QueryParameter String value) {
+        public FormValidation doCheckStartupScriptExitReporterLinux(@QueryParameter String value) {
             if (value == null || value.isEmpty()) {
                 return FormValidation.ok();
             }
-            if (!value.contains("$1") && !value.contains("$args[0]")) {
+            if (!value.contains("$1")) {
+                return FormValidation.warning("Linux exit reporter should include $1 as the exit code placeholder");
+            }
+            return FormValidation.ok();
+        }
+
+        public FormValidation doCheckStartupScriptExitReporterWindows(@QueryParameter String value) {
+            if (value == null || value.isEmpty()) {
+                return FormValidation.ok();
+            }
+            if (!value.contains("$args[0]")) {
                 return FormValidation.warning(
-                        "Exit reporter should include $1 (Linux) or $args[0] (Windows) as the exit code placeholder");
+                        "Windows exit reporter should include $args[0] as the exit code placeholder");
             }
             return FormValidation.ok();
         }
@@ -1249,7 +1264,8 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
             instanceConfiguration.setMachineType(this.machineType);
             instanceConfiguration.setNumExecutorsStr(this.numExecutorsStr);
             instanceConfiguration.setStartupScript(this.startupScript);
-            instanceConfiguration.setStartupScriptExitReporter(this.startupScriptExitReporter);
+            instanceConfiguration.setStartupScriptExitReporterLinux(this.startupScriptExitReporterLinux);
+            instanceConfiguration.setStartupScriptExitReporterWindows(this.startupScriptExitReporterWindows);
             instanceConfiguration.setProvisioningType(this.provisioningType);
             instanceConfiguration.setMinCpuPlatform(this.minCpuPlatform);
             instanceConfiguration.setLabelString(this.labels);
