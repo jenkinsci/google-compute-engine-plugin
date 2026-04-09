@@ -14,6 +14,10 @@
         <code>$args[0]</code> (Windows/PowerShell) as the exit code placeholder.
     </p>
     <p><strong>Linux examples:</strong></p>
+    <p>bash /dev/tcp (no external tools):</p>
+    <pre>exec 3&lt;&gt;/dev/tcp/metadata.google.internal/80
+printf "PUT /computeMetadata/v1/instance/guest-attributes/startup-script/status HTTP/1.0\r\nHost: metadata.google.internal\r\nMetadata-Flavor: Google\r\nContent-Length: ${#1}\r\n\r\n$1" &gt;&amp;3
+exec 3&gt;&amp;-</pre>
     <p>wget:</p>
     <pre>wget -q --method=PUT --header="Metadata-Flavor: Google" --body-data="$1" \
   "http://metadata.google.internal/computeMetadata/v1/instance/guest-attributes/startup-script/status" -O /dev/null</pre>
