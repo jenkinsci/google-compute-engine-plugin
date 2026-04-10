@@ -16,6 +16,12 @@
 
 package com.google.jenkins.plugins.computeengine;
 
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.lessThan;
+import static org.hamcrest.Matchers.not;
+import static org.hamcrest.Matchers.startsWith;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
@@ -411,6 +417,86 @@ public class InstanceConfigurationTest {
         var instance = instanceConfigurationBuilder().build().instance();
         assertEquals(1, instance.getDisks().size());
         assertTrue(instance.getDisks().get(0).getBoot());
+    }
+
+    @Test
+    public void testWrapLinuxStartupScriptWithShebang() {
+        var script = "#!/bin/sh\napt-get update\napt-get install -y nginx";
+        var reporter = "curl -s -X PUT http://example.com -d \"$1\"";
+        var wrapped = InstanceConfiguration.wrapLinuxStartupScript(script, reporter);
+
+        assertThat(wrapped, startsWith("#!/bin/sh\n"));
+        assertThat(wrapped, containsString("trap '"));
+        assertThat(wrapped, containsString("__gce_plugin_report_status()"));
+        assertThat(wrapped, containsString(reporter));
+        assertThat(wrapped, containsString("apt-get update"));
+        assertThat(wrapped, containsString("apt-get install -y nginx"));
+        assertEquals("Shebang should appear exactly once", 1, wrapped.split("#!").length - 1);
+    }
+
+    @Test
+    public void testWrapLinuxStartupScriptWithLeadingComments() {
+        var script = "# This is a setup script\n# Author: team\napt-get update";
+        var reporter = "curl -s -X PUT http://example.com -d \"$1\"";
+        var wrapped = InstanceConfiguration.wrapLinuxStartupScript(script, reporter);
+
+        assertThat(wrapped, not(startsWith("#!")));
+        assertThat(
+                "Trap should come before original script",
+                wrapped.indexOf("trap '"),
+                is(lessThan(wrapped.indexOf("# This is a setup script"))));
+        assertThat(wrapped, containsString("# Author: team"));
+        assertThat(wrapped, containsString("apt-get update"));
+    }
+
+    @Test
+    public void testWrapLinuxStartupScriptNoShebang() {
+        var script = "apt-get update\napt-get install -y nginx";
+        var reporter = "curl -s -X PUT http://example.com -d \"$1\"";
+        var wrapped = InstanceConfiguration.wrapLinuxStartupScript(script, reporter);
+
+        assertThat(wrapped, not(startsWith("#!")));
+        assertThat(wrapped, containsString("trap '"));
+        assertThat(wrapped, containsString("apt-get update"));
+    }
+
+    @Test
+    public void testWrapLinuxStartupScriptCustomReporter() {
+        var script = "echo hello";
+        var reporter = "wget -q --method=PUT http://example.com --body-data=\"$1\" -O /dev/null";
+        var wrapped = InstanceConfiguration.wrapLinuxStartupScript(script, reporter);
+
+        assertThat(wrapped, containsString("wget -q"));
+        assertThat(wrapped, not(containsString("curl")));
+        assertThat(wrapped, containsString("echo hello"));
+    }
+
+    @Test
+    public void testWrapLinuxStartupScriptEmptyReporter() {
+        var script = "echo hello";
+        assertThat(InstanceConfiguration.wrapLinuxStartupScript(script, null), is(script));
+        assertThat(InstanceConfiguration.wrapLinuxStartupScript(script, ""), is(script));
+    }
+
+    @Test
+    public void testWrapWindowsStartupScript() {
+        var script = "Install-WindowsFeature -Name Web-Server";
+        var reporter = "Invoke-RestMethod -Method PUT -Body \"$($args[0])\" -Uri http://example.com";
+        var wrapped = InstanceConfiguration.wrapWindowsStartupScript(script, reporter);
+
+        assertThat(wrapped, containsString("try {"));
+        assertThat(wrapped, containsString("} catch {"));
+        assertThat(wrapped, containsString("} finally {"));
+        assertThat(wrapped, containsString("Invoke-RestMethod"));
+        assertThat(wrapped, containsString("Install-WindowsFeature"));
+        assertThat(wrapped, containsString("$LASTEXITCODE"));
+    }
+
+    @Test
+    public void testWrapWindowsStartupScriptEmptyReporter() {
+        var script = "Install-WindowsFeature -Name Web-Server";
+        assertThat(InstanceConfiguration.wrapWindowsStartupScript(script, null), is(script));
+        assertThat(InstanceConfiguration.wrapWindowsStartupScript(script, ""), is(script));
     }
 
     @Test
