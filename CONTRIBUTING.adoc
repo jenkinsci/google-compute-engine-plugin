@@ -33,17 +33,11 @@ To auto-fix formatting on every build (recommended), set this in your `~/.m2/set
 [,xml]
 ----
 <settings>
-  <profiles>
-    <profile>
-      <id>auto-format</id>
-      <activation>
-        <activeByDefault>true</activeByDefault>
-      </activation>
-      <properties>
-        <spotless.apply.skip>false</spotless.apply.skip>
-      </properties>
-    </profile>
-  </profiles>
+  [...]
+  <activeProfiles>
+    [...]
+    <activeProfile>may-spotless-apply</activeProfile>
+  </activeProfiles>
 </settings>
 ----
 
