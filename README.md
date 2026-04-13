@@ -340,7 +340,8 @@ See the [Windows VM Instances](https://cloud.google.com/compute/docs/instances/w
 
 This plugin supports [Jenkins Configuration as Code](https://jenkins.io/projects/jcasc/). For machine-verified configurations used in the plugin's integration tests, see the YAML files in [`src/test/resources/.../integration/`](./src/test/resources/com/google/jenkins/plugins/computeengine/integration/).
 
-> **Note:** Fields like `machineType`, `bootDiskType`, `bootDiskSourceImageName`, `region`, `zone`, `network`, and `subnetwork` accept both short names (e.g. `n1-standard-2`) and full GCP API URLs (e.g. `https://www.googleapis.com/compute/v1/projects/.../machineTypes/n1-standard-2`). The examples below use short names. If you encounter issues with short names, use the full URL.
+> **Important — short names vs full API URLs:**
+> Fields like `machineType`, `bootDiskType`, `bootDiskSourceImageName`, `region`, `zone`, `network`, and `subnetwork` accept both short names (e.g. `n1-standard-2`, `us-central1`) and full GCP API URLs (e.g. `https://www.googleapis.com/compute/v1/projects/my-project/zones/us-central1-a/machineTypes/n1-standard-2`). The examples below use short names for readability. The plugin's own [integration test YAMLs](./src/test/resources/com/google/jenkins/plugins/computeengine/integration/) use full API URLs. If you encounter issues with short names in your environment, switch to full URLs.
 
 #### Basic Linux Agent
 
