@@ -11,16 +11,19 @@ Copyright 2020 Google LLC
  implied. See the License for the specific language governing permissions and limitations under the
  License.
 ////
+[[contributing]]
 = Contributing
 
 We'd love to accept your patches and contributions to this project.
 
+[[prerequisites]]
 == Prerequisites
 
 * JDK 21 or later (Java 17 was dropped from Jenkins weekly in Jan 2026 and from the LTS line in April 2026)
 * Maven 3.9 or later
 * For integration tests: a GCP project with the Compute Engine API enabled and billing active
 
+[[code-style]]
 == Code Style
 
 The project uses https://github.com/diffplug/spotless[Spotless] for code formatting, enforced during the build.
@@ -46,6 +49,7 @@ To auto-fix formatting on every build (recommended), set this in your `~/.m2/set
 
 See https://github.com/jenkinsci/plugin-pom/pull/1017[jenkinsci/plugin-pom#1017] for details. Alternatively, run `mvn spotless:apply` manually.
 
+[[quick-start]]
 == Quick Start
 
 [,bash]
@@ -56,6 +60,7 @@ mvn verify                # compile + unit tests + package (integration tests ar
 mvn hpi:run               # launch Jenkins locally with the plugin at http://localhost:8080/jenkins
 ----
 
+[[contributor-license-agreement]]
 == Contributor License Agreement
 
 Contributions to this project must be accompanied by a Contributor License
@@ -68,6 +73,7 @@ You generally only need to submit a CLA once, so if you've already submitted one
 (even if it was for a different project), you probably don't need to do it
 again.
 
+[[code-reviews]]
 == Code Reviews
 
 All submissions, including submissions by project members, require review. We
@@ -75,8 +81,10 @@ use GitHub pull requests for this purpose. Consult
 https://help.github.com/articles/about-pull-requests/[GitHub Help] for more
 information on using pull requests.
 
+[[testing]]
 == Testing
 
+[[unit-tests]]
 === Unit Tests
 
 [,bash]
@@ -84,6 +92,7 @@ information on using pull requests.
 mvn test
 ----
 
+[[integration-tests]]
 === Integration Tests
 
 Integration tests provision actual GCE instances, run pipelines, and take snapshots. They are disabled by default and expected to be run on a contributor's own machine with a real GCP project.
@@ -95,6 +104,7 @@ Integration test classes must be suffixed `IT.java` (e.g. `ComputeEngineCloudRes
 * Requires a GCP project with billing -- not feasible in public CI.
 * Exposing GCP credentials in CI is a security risk.
 
+[[prepare-vm-images]]
 ==== Prepare VM Images
 
 The agent images need Java pre-installed. Packer scripts create and upload the images to your GCP project.
@@ -127,6 +137,7 @@ bash testimages/windows/setup-gce-image.sh
 
 This creates a Windows Server 2022 image with Java 21 and OpenSSH pre-installed. The Packer image build runs from any platform (macOS, Linux) -- it does not require a Windows machine. Use `--recreate` to rebuild or `--delete` to remove.
 
+[[set-environment-variables]]
 ==== Set Environment Variables
 
 [,bash]
@@ -147,10 +158,12 @@ export GOOGLE_BOOT_DISK_IMAGE_NAME=jenkins-gce-integration-test-windows-jre
 export GOOGLE_JENKINS_PASSWORD=password-from-image-build
 ----
 
+[[create-a-service-account]]
 ==== Create a Service Account
 
-See the link:README.md#create-a-gcp-service-account[IAM Credentials setup] in the user documentation.
+See the link:README.adoc#create-a-gcp-service-account[IAM Credentials setup] in the user documentation.
 
+[[run-integration-tests]]
 ==== Run Integration Tests
 
 Integration tests are disabled by default (`-DskipITs=true` in `pom.xml`). Enable them explicitly with `-DskipITs=false`.
@@ -183,6 +196,7 @@ Run Windows integration tests:
 mvn verify -DskipITs=false -Dit.windows=true
 ----
 
+[[debugging-tests]]
 ==== Debugging Tests
 
 Attach a remote debugger on port 8000.
@@ -203,6 +217,7 @@ mvn verify -DskipTests -DskipITs=false -Dit.test=YourTestClassIT -Dmaven.failsaf
 
 Then connect your remote debug configuration to `localhost:8000`.
 
+[[license]]
 == License
 
 See link:LICENSE[LICENSE]
