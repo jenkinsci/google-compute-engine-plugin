@@ -1,0 +1,26 @@
+<div>
+    <p>
+        Reports startup script exit status to a GCE guest attribute so the controller
+        waits for completion before launching the agent. The snippet receives the exit code
+        as <code>$1</code> and must PUT it to:
+        <br/><code>http://metadata.google.internal/computeMetadata/v1/instance/guest-attributes/startup-script/status</code>
+    </p>
+    <p><strong>Clear this field to disable waiting.</strong></p>
+    <p>
+        The default uses <strong>curl</strong>, which is widely available across Linux environments.
+        Any tool capable of an HTTP PUT to the URL above will work.
+        Keep <code>$1</code> as the exit code placeholder.
+    </p>
+    <p><strong>Alternative examples:</strong></p>
+    <p>bash /dev/tcp (no external tools):</p>
+    <pre>exec 3&lt;&gt;/dev/tcp/metadata.google.internal/80
+printf "PUT /computeMetadata/v1/instance/guest-attributes/startup-script/status HTTP/1.0\r\nHost: metadata.google.internal\r\nMetadata-Flavor: Google\r\nContent-Length: ${#1}\r\n\r\n$1" &gt;&amp;3
+exec 3&gt;&amp;-</pre>
+    <p>wget:</p>
+    <pre>wget -q --method=PUT --header="Metadata-Flavor: Google" --body-data="$1" \
+  "http://metadata.google.internal/computeMetadata/v1/instance/guest-attributes/startup-script/status" -O /dev/null</pre>
+    <p>python3:</p>
+    <pre>python3 -c "import urllib.request; urllib.request.urlopen(urllib.request.Request( \
+  'http://metadata.google.internal/computeMetadata/v1/instance/guest-attributes/startup-script/status', \
+  data=b'$1', headers={'Metadata-Flavor':'Google'}, method='PUT'))"</pre>
+</div>

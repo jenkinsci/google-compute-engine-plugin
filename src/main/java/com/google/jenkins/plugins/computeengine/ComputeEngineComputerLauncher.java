@@ -42,13 +42,16 @@ import java.io.PrintStream;
 import java.net.InetSocketAddress;
 import java.net.Proxy;
 import java.net.SocketTimeoutException;
+import java.time.Duration;
 import java.util.Base64;
 import java.util.Optional;
+import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.LogRecord;
 import java.util.logging.Logger;
 import java.util.logging.SimpleFormatter;
 import jenkins.model.Jenkins;
+import jenkins.util.SystemProperties;
 import lombok.Getter;
 
 public abstract class ComputeEngineComputerLauncher extends ComputerLauncher {
@@ -65,6 +68,29 @@ public abstract class ComputeEngineComputerLauncher extends ComputerLauncher {
     private final String insertOperationId;
     private final String zone;
     private final String cloudName;
+
+    /**
+     * Maximum number of SSH authentication attempts before giving up.
+     * Applies to both Linux and Windows launchers.
+     * <p>
+     * Configurable via system property {@code com.google.jenkins.plugins.computeengine.ComputeEngineComputerLauncher.bootstrapAuthTries}. Default: {@code 30}.
+     *
+     * @see #BOOTSTRAP_AUTH_SLEEP_DURATION
+     */
+    protected static final int BOOTSTRAP_AUTH_TRIES =
+            SystemProperties.getInteger(ComputeEngineComputerLauncher.class.getName() + ".bootstrapAuthTries", 30);
+
+    /**
+     * Delay between SSH authentication retries.
+     * Applies to both Linux and Windows launchers.
+     * <p>
+     * Configurable via system property {@code com.google.jenkins.plugins.computeengine.ComputeEngineComputerLauncher.bootstrapAuthSleepDuration}.
+     * Default: {@code 15s}.
+     *
+     * @see #BOOTSTRAP_AUTH_TRIES
+     */
+    protected static final Duration BOOTSTRAP_AUTH_SLEEP_DURATION = SystemProperties.getDuration(
+            ComputeEngineComputerLauncher.class.getName() + ".bootstrapAuthSleepDuration", Duration.ofSeconds(15));
 
     @Getter
     protected final boolean useInternalAddress;
@@ -198,8 +224,8 @@ public abstract class ComputeEngineComputerLauncher extends ComputerLauncher {
                                 listener,
                                 String.format("Instance %s is being shut down...", computer.getName()));
                         break;
-                        // TODO: Although the plugin doesn't put instances in the STOPPED or SUSPENDED states,
-                        // it should handle them if they are placed in that state out-of-band.
+                    // TODO: Although the plugin doesn't put instances in the STOPPED or SUSPENDED states,
+                    // it should handle them if they are placed in that state out-of-band.
                     case "STOPPED":
                     case "SUSPENDED":
                         cloud.log(
@@ -211,6 +237,44 @@ public abstract class ComputeEngineComputerLauncher extends ComputerLauncher {
                         return;
                 }
                 Thread.sleep(5000);
+            }
+
+            if (node.isWaitForStartupScript()) {
+                cloud.log(
+                        LOGGER,
+                        Level.INFO,
+                        listener,
+                        String.format("Waiting for startup script to complete on %s...", computer.getName()));
+                try {
+                    var exitStatus =
+                            waitForStartupScriptCompletion(cloud, computer, listener, node.getLaunchTimeoutMillis());
+                    cloud.log(
+                            LOGGER,
+                            Level.INFO,
+                            listener,
+                            String.format(
+                                    "Startup script completed on %s with exit status: %s",
+                                    computer.getName(), exitStatus));
+                    if (!"0".equals(exitStatus.trim())) {
+                        cloud.log(
+                                LOGGER,
+                                Level.WARNING,
+                                listener,
+                                String.format(
+                                        "Startup script on %s exited with non-zero status: %s. Proceeding with launch.",
+                                        computer.getName(), exitStatus));
+                    }
+                } catch (IOException e) {
+                    cloud.log(
+                            LOGGER,
+                            Level.SEVERE,
+                            listener,
+                            String.format(
+                                    "Failed waiting for startup script on %s: %s. Terminating instance.",
+                                    computer.getName(), e.getMessage()));
+                    terminateNode(computer, listener);
+                    return;
+                }
             }
 
             // Initiate the next launch phase. This is likely an SSH-based process for Linux hosts.
@@ -446,6 +510,60 @@ public abstract class ComputeEngineComputerLauncher extends ComputerLauncher {
                 logWarning(computer, listener, String.format("An error occured: %s", e.getMessage()));
                 Thread.sleep(SSH_SLEEP_MILLIS);
             }
+        }
+    }
+
+    /**
+     * Waits for startup script to complete by watching the guest attribute status flag.
+     * <p>
+     * Times out after {@code timeoutMillis}, which is the instance's launch timeout — shared with
+     * the SSH connection phase, so long-running startup scripts may require a higher launch timeout.
+     */
+    private String waitForStartupScriptCompletion(
+            ComputeEngineCloud cloud, ComputeEngineComputer computer, TaskListener listener, long timeoutMillis)
+            throws IOException, InterruptedException {
+
+        var instance = computer.getInstance();
+        var ird = ClientUtil.parseInstanceResourceData(instance.getSelfLink());
+        if (ird.isEmpty()) {
+            throw new IOException("Failed to parse instance resource data from selfLink: " + instance.getSelfLink());
+        }
+
+        var client = cloud.getClient();
+        var namespace = InstanceConfiguration.GUEST_ATTRIBUTE_STARTUP_SCRIPT_NAMESPACE + "/";
+
+        long startNanos = System.nanoTime();
+        while (true) {
+            long elapsedMillis = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startNanos);
+            if (timeoutMillis > 0 && elapsedMillis > timeoutMillis) {
+                throw new IOException(String.format(
+                        "Timed out after %d seconds waiting for startup script to complete (timeout: %d seconds)",
+                        elapsedMillis / 1000, timeoutMillis / 1000));
+            }
+
+            try {
+                var attrs = client.getGuestAttributesSync(
+                        ird.get().getProjectId(), ird.get().getZone(), ird.get().getName(), Util.rawEncode(namespace));
+
+                var statusAttr = attrs.stream()
+                        .filter(a -> a.getNamespace()
+                                        .equals(InstanceConfiguration.GUEST_ATTRIBUTE_STARTUP_SCRIPT_NAMESPACE)
+                                && a.getKey().equals(InstanceConfiguration.GUEST_ATTRIBUTE_STARTUP_SCRIPT_STATUS_KEY))
+                        .findFirst();
+
+                if (statusAttr.isPresent()) {
+                    return statusAttr.get().getValue();
+                }
+            } catch (IOException e) {
+                cloud.log(
+                        LOGGER,
+                        Level.FINEST,
+                        listener,
+                        String.format("Waiting for startup script guest attribute: %s", e.getMessage()));
+            }
+
+            // Reuses the SSH sleep interval for polling guest attributes
+            Thread.sleep(SSH_SLEEP_MILLIS);
         }
     }
 

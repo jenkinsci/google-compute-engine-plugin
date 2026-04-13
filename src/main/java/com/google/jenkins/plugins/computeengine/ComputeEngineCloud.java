@@ -293,6 +293,42 @@ public class ComputeEngineCloud extends AbstractCloudImpl {
     }
 
     /**
+     * Provisions the specified number of instances for a given configuration. Used by {@link
+     * MinimumInstanceChecker} to maintain minimum instance counts.
+     *
+     * @param config the instance configuration to provision from
+     * @param numberToProvision the number of instances to provision
+     * @return list of planned nodes
+     */
+    public List<PlannedNode> provisionSpares(InstanceConfiguration config, int numberToProvision) {
+        List<PlannedNode> result = new ArrayList<>();
+        if (Jenkins.get().isQuietingDown() || Jenkins.get().isTerminating()) {
+            return result;
+        }
+        try {
+            log.info("Provisioning spare nodes from config " + config + " for number " + numberToProvision);
+            while (numberToProvision > 0 && availableNodeCapacity() > 0) {
+                final ComputeEngineInstance node = config.provision();
+                if (node == null) {
+                    break;
+                }
+                Jenkins.get().addNode(node);
+                result.add(createPlannedNode(config, node));
+                numberToProvision--;
+            }
+            if (numberToProvision > 0) {
+                log.log(
+                        Level.WARNING,
+                        "Could not provision {0} nodes for minimum instances. Cloud provider {1} has reached its configured capacity of {2}",
+                        new Object[] {numberToProvision, getCloudName(), getInstanceCap()});
+            }
+        } catch (IOException ioe) {
+            log.log(Level.WARNING, "Error provisioning node for minimum instances", ioe);
+        }
+        return result;
+    }
+
+    /**
      * Choose config from list of available configs. Current implementation use round robin strategy
      * starting at semi random element of list. Because most of times arriving requests asks for only
      * 1 new node, we don't want to start every time from 1 element.

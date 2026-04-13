@@ -16,11 +16,9 @@
 
 package com.google.jenkins.plugins.computeengine;
 
-import static com.google.jenkins.plugins.computeengine.ComputeEngineCloud.CLOUD_ID_LABEL_KEY;
-
+import com.google.api.client.googleapis.json.GoogleJsonResponseException;
 import com.google.cloud.graphite.platforms.plugin.client.ComputeClient.OperationException;
 import com.google.common.base.Strings;
-import com.google.common.collect.ImmutableMap;
 import com.google.jenkins.plugins.computeengine.ssh.GoogleKeyCredential;
 import edu.umd.cs.findbugs.annotations.Nullable;
 import hudson.Extension;
@@ -33,7 +31,6 @@ import hudson.slaves.ComputerLauncher;
 import hudson.slaves.RetentionStrategy;
 import java.io.IOException;
 import java.util.Collections;
-import java.util.Map;
 import java.util.Optional;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -54,11 +51,15 @@ public class ComputeEngineInstance extends AbstractCloudSlave {
     private final String sshUser;
     private final WindowsConfiguration windowsConfig;
     private final SshConfiguration sshConfig;
+    private final boolean terminateIdleDuringShutdown;
     private final boolean createSnapshot;
     private final boolean oneShot;
     private final boolean ignoreProxy;
     private final String javaExecPath;
     private final GoogleKeyCredential sshKeyCredential;
+    // Carried from InstanceConfiguration at provision time because the launcher has no access to whether
+    // startup script exit reporting was configured
+    private final boolean waitForStartupScript;
     private Integer launchTimeout; // Seconds
     private Boolean connected;
     private transient ComputeEngineCloud cloud;
@@ -77,6 +78,7 @@ public class ComputeEngineInstance extends AbstractCloudSlave {
             boolean createSnapshot,
             boolean oneShot,
             boolean ignoreProxy,
+            boolean terminateIdleDuringShutdown,
             int numExecutors,
             Mode mode,
             String labelString,
@@ -86,6 +88,7 @@ public class ComputeEngineInstance extends AbstractCloudSlave {
             // NOTE(craigatgoogle): Could not use Optional due to serialization req.
             @Nullable String javaExecPath,
             @Nullable GoogleKeyCredential sshKeyCredential,
+            boolean waitForStartupScript,
             @Nullable ComputeEngineCloud cloud)
             throws Descriptor.FormException, IOException {
         super(
@@ -107,8 +110,10 @@ public class ComputeEngineInstance extends AbstractCloudSlave {
         this.createSnapshot = createSnapshot;
         this.oneShot = oneShot;
         this.ignoreProxy = ignoreProxy;
+        this.terminateIdleDuringShutdown = terminateIdleDuringShutdown;
         this.javaExecPath = javaExecPath;
         this.sshKeyCredential = sshKeyCredential;
+        this.waitForStartupScript = waitForStartupScript;
         this.cloud = cloud;
     }
 
@@ -134,15 +139,15 @@ public class ComputeEngineInstance extends AbstractCloudSlave {
                         .createSnapshotSync(cloud.getProjectId(), this.zone, this.getNodeName(), createSnapshotTimeout);
             }
 
-            Map<String, String> filterLabel = ImmutableMap.of(CLOUD_ID_LABEL_KEY, cloud.getInstanceId());
-            var instanceExistsInCloud =
-                    cloud.getClient().listInstancesWithLabel(cloud.getProjectId(), filterLabel).stream()
-                            .anyMatch(instance -> instance.getName().equals(name));
+            boolean instanceExistsInCloud = instanceExistsInCloud(cloud);
 
             // If the instance exists in the cloud, attempt to terminate it. This is an async call and we
             // return immediately, hoping for the best.
             if (instanceExistsInCloud) {
                 cloud.getClient().terminateInstanceAsync(cloud.getProjectId(), zone, name);
+                LOGGER.finer(() -> "Termination request was made for " + this.getNodeName());
+            } else {
+                LOGGER.fine(() -> "Instance " + name + " not found in GCP, nothing to terminate");
             }
         } catch (CloudNotFoundException cnfe) {
             listener.error(cnfe.getMessage());
@@ -167,6 +172,21 @@ public class ComputeEngineInstance extends AbstractCloudSlave {
     /** @return The configured Linux SSH key pair for this {@link ComputeEngineInstance}. */
     public Optional<GoogleKeyCredential> getSSHKeyCredential() {
         return Optional.ofNullable(sshKeyCredential);
+    }
+
+    private boolean instanceExistsInCloud(ComputeEngineCloud cloud) {
+        try {
+            return cloud.getClient().getInstance(cloud.getProjectId(), zone, name) != null;
+        } catch (GoogleJsonResponseException gjre) {
+            if (gjre.getStatusCode() == 404) {
+                return false;
+            }
+            LOGGER.log(Level.WARNING, "Error checking instance " + name, gjre);
+            return false;
+        } catch (IOException ioe) {
+            LOGGER.log(Level.WARNING, "Error checking instance " + name, ioe);
+            return false;
+        }
     }
 
     public ComputeEngineCloud getCloud() throws CloudNotFoundException {
