@@ -149,7 +149,7 @@ mvn verify -DskipITs=false
 Run a specific test class:
 
 ```bash
-mvn clean test -Dtest=ComputeEngineCloudRestartPreemptedIT
+mvn test -DskipTests -DskipITs=false -Dit.test=ComputeEngineCloudRestartPreemptedIT
 ```
 
 Run a specific test method:
