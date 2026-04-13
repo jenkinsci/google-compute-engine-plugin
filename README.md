@@ -20,55 +20,43 @@
 
 # Google Compute Engine Plugin for Jenkins
 
-The Google Compute Engine (GCE) Plugin provisions GCE virtual machines as Jenkins agents on demand. Agents are launched when builds need them, and terminated when idle. The plugin supports Linux and Windows VMs, Spot and Preemptible instances, startup scripts, GPU acceleration, additional disk attachments, and Configuration as Code.
+The Google Compute Engine (GCE) Plugin provisions GCE virtual machines as Jenkins agents. Agents are launched when builds need them and terminated when idle or when the build completes (one-shot mode). Supports Linux and Windows VMs, Spot and Preemptible instances, startup scripts, GPUs, and secondary disks. Compatible with [Jenkins Configuration as Code](https://jenkins.io/projects/jcasc/).
 
 ## Table of Contents
 
 - [Prerequisites](#prerequisites)
-- [Setup](#setup)
+- [GCP Authentication](#gcp-authentication)
   - [Create a GCP Service Account](#create-a-gcp-service-account)
   - [Add Credentials to Jenkins](#add-credentials-to-jenkins)
+- [Preparing Agent Images](#preparing-agent-images)
+  - [Linux](#linux)
+  - [Windows](#windows)
+- [Configuration](#configuration)
   - [Add a GCE Cloud](#add-a-gce-cloud)
-- [Instance Configuration](#instance-configuration)
-  - [General](#general)
-  - [Launch Configuration](#launch-configuration)
-  - [One-Shot](#one-shot)
-  - [Location](#location)
-  - [Machine Configuration (Advanced)](#machine-configuration-advanced)
-  - [Networking](#networking)
-  - [Boot Disk](#boot-disk)
-  - [Disk Mapping](#disk-mapping)
-  - [IAM](#iam)
-- [Configuration Reference](#configuration-reference)
-- [Configuration as Code (CasC)](#configuration-as-code-casc)
-- [Windows Agents](#windows-agents)
-- [Advanced Features](#advanced-features)
+  - [Instance Configuration](#instance-configuration)
+  - [Windows Configuration](#windows-configuration)
+  - [Configuration as Code (CasC)](#configuration-as-code-casc)
+- [Advanced Usage](#advanced-usage)
   - [Provisioning Types: Standard, Spot, and Preemptible](#provisioning-types-standard-spot-and-preemptible)
+  - [Provisioning Behavior](#provisioning-behavior)
   - [Minimum Instance Scaling](#minimum-instance-scaling)
   - [Startup Script Exit Reporter](#startup-script-exit-reporter)
-  - [Disk Mapping](#disk-mapping-1)
   - [Custom Metadata](#custom-metadata)
-  - [One-Shot Instances and Snapshots](#one-shot-instances-and-snapshots)
-  - [Instance Templates](#instance-templates)
-  - [Custom Java Path](#custom-java-path)
-- [Provisioning Behavior](#provisioning-behavior)
+  - [Secondary Disks](#secondary-disks)
+  - [Networking CasC Examples](#networking-casc-examples)
 - [Troubleshooting](#troubleshooting)
-- [Feature Requests and Bug Reports](#feature-requests-and-bug-reports)
-- [Community](#community)
-- [Contributing](#contributing)
-- [License](#license)
 
 ## Prerequisites
 
 - Jenkins 2.516.3 or later
-- [Google OAuth Credentials plugin](https://github.com/jenkinsci/google-oauth-plugin) 0.9 or later
 - A GCP project with the [Compute Engine API](https://console.cloud.google.com/apis/api/compute.googleapis.com) enabled
 - A GCP service account with these IAM roles:
-  - `roles/compute.instanceAdmin` -- create and manage VMs
-  - `roles/compute.networkAdmin` -- configure networking
-  - `roles/iam.serviceAccountUser` -- attach service accounts to VMs
+  - `roles/compute.instanceAdmin`: create and manage VMs
+  - `roles/compute.networkAdmin`: configure networking
+  - `roles/iam.serviceAccountUser`: attach service accounts to VMs
+- A GCE agent image with Java installed. Java 21 is recommended (Java 17 was dropped from Jenkins weekly in Jan 2026 and from the LTS line in April 2026). See [Preparing Agent Images](#preparing-agent-images).
 
-## Setup
+## GCP Authentication
 
 ### Create a GCP Service Account
 
@@ -87,247 +75,274 @@ gcloud projects add-iam-policy-binding $PROJECT \
   --member serviceAccount:$SA_EMAIL --role roles/iam.serviceAccountUser
 ```
 
-Download a JSON key for the service account:
-
-```bash
-gcloud iam service-accounts keys create \
-  --iam-account $SA_EMAIL jenkins-gce.json
-```
-
 ### Add Credentials to Jenkins
 
-1. Go to **Manage Jenkins > Credentials > System > Global credentials > Add credentials**.
-2. In the **Kind** dropdown, select **Google Service Account from private key**.
-3. Enter your project name and upload the JSON key created above.
-4. Click **OK**.
+Choose one of the following based on where your Jenkins controller runs.
+
+#### Option A: JSON Service Account Key
+
+Use this when Jenkins runs outside GCP (e.g. on-prem, another cloud).
+
+1. Download a JSON key for the service account:
+
+   ```bash
+   gcloud iam service-accounts keys create \
+     --iam-account $SA_EMAIL jenkins-gce.json
+   ```
+
+2. In Jenkins, add a credential of type **Google Service Account from private key** and enter the details.
+
+CasC credential type: `googleRobotPrivateKeyCredentials`.
+
+#### Option B: GCE VM Metadata
+
+Use this when Jenkins runs on a GCE VM. No JSON key is needed. The VM's own service account is used via the metadata server. Assign the required IAM roles (listed in [Prerequisites](#prerequisites)) to the VM's service account.
+
+In Jenkins, add a credential of type **Google Service Account from metadata** and enter the details.
+
+CasC credential type: `googleRobotMetadata`.
+
+#### Option C: Workload Identity (GKE)
+
+Use this when Jenkins runs on GKE. No JSON key is needed. The Kubernetes service account impersonates the GCP service account via [Workload Identity Federation](https://cloud.google.com/kubernetes-engine/docs/concepts/workload-identity).
+
+1. Bind the Kubernetes service account to the GCP service account:
+
+   ```bash
+   gcloud iam service-accounts add-iam-policy-binding $SA_EMAIL \
+     --member "serviceAccount:$PROJECT.svc.id.goog[<namespace>/<k8s-service-account>]" \
+     --role roles/iam.workloadIdentityUser
+   ```
+
+   Replace `<namespace>/<k8s-service-account>` with the namespace and service account of the Jenkins controller pod (e.g. `jenkins/jenkins`).
+
+2. In Jenkins, add a credential of type **Google Service Account from metadata** and enter the details.
+
+CasC credential type: `googleRobotMetadata`.
+
+## Preparing Agent Images
+
+The plugin connects to agents via SSH and requires Java on the agent (Java 21 recommended). Pre-baking Java and other static dependencies into a GCE image reduces agent startup time compared to installing them via startup scripts. The plugin's own integration test images use [Packer](https://www.packer.io/), and you can follow the same approach. Additional tools (Maven, Docker, etc.) can also be added to the Packer provisioner. Startup scripts are better suited for dynamic per-boot configuration.
+
+### Linux
+
+**Image requirements:**
+- Java 21 (or 17) installed. On PATH by default, or configure via **Java Path** (`javaExecPath`).
+- SSH server running (included by default on most Linux images)
+
+The plugin's [`testimages/linux/`](./testimages/linux/) directory contains a working Packer setup that builds a Debian 12 image with Temurin 21 JRE:
+
+```bash
+cd testimages/linux
+bash setup-gce-image.sh
+```
+
+This creates an image named `jenkins-gce-integration-test-jre` in your GCP project. Use `--recreate` to rebuild or `--delete` to remove it. See [`install-java.sh`](./testimages/linux/install-java.sh) for the provisioning steps.
+
+### Windows
+
+**Image requirements:**
+- Java 21 (or 17) installed. On PATH by default, or configure via **Java Path** (`javaExecPath`).
+- OpenSSH Server installed and running
+- Authentication via one of:
+  - **Password**: an administrative user with a known username and password
+  - **SSH key**: the public key placed in the image's `administrators_authorized_keys` file
+
+The plugin's [`testimages/windows/`](./testimages/windows/) directory contains a working Packer setup that builds a Windows Server 2022 image with Temurin 21 JRE, OpenSSH, and a `jenkins` admin user (password-based):
+
+```bash
+export JENKINS_PASSWORD=your-secure-password  # auto-generated if not set
+cd testimages/windows
+bash setup-gce-image.sh
+```
+
+This creates an image named `jenkins-gce-integration-test-windows-jre`. The Packer image build runs from any platform (macOS, Linux) and does not require a Windows machine. See [`install-java.ps1`](./testimages/windows/install-java.ps1) for the provisioning steps.
+
+## Configuration
 
 ### Add a GCE Cloud
 
 Each GCE cloud configuration points to a single GCP project. You can add multiple clouds for different projects.
 
-1. Go to **Manage Jenkins > Nodes and Clouds > Clouds**.
+1. Go to **Manage Jenkins > Clouds**.
 2. Click **Add a new cloud > Google Compute Engine**.
 3. Enter a **Name** for the cloud and the **Project ID**.
 4. Select the credentials you added in the previous step from the **Service Account Credentials** dropdown.
-5. Set the **Instance Cap** to limit the total number of concurrent VMs across all instance configurations.
+5. Optionally, set the **Instance Cap** to limit the total number of concurrent VMs.
 
-## Instance Configuration
+**Cloud fields and their CasC keys:**
 
-Instance configurations define what kind of VM to launch for a given set of Jenkins labels. You can create multiple instance configurations per cloud. Click the **Add** button under Instance Configurations to create one.
+| Field | CasC Key | Description |
+|-------|----------|-------------|
+| **Name** | `cloudName` | Display name for this cloud. *Required.* |
+| **Project ID** | `projectId` | GCP project ID. *Required.* |
+| **Instance Cap** | `instanceCapStr` | Optional. Max concurrent VMs across all instance configurations. If set and the cap is reached, no new agents are provisioned until existing ones terminate. |
+| **Service Account Credentials** | `credentialsId` | Jenkins credential ID for the GCP service account. *Required.* |
+| **No delay provisioning** | `noDelayProvisioning` | Provision immediately without waiting for Jenkins' load estimation cycle. Default: `false`. See [Provisioning Behavior](#provisioning-behavior). |
 
-### General
+### Instance Configuration
 
-| Field | Description |
-|-------|-------------|
-| **Name Prefix** | Prefix for VM names. Must match `[a-z]([-a-z0-9]*[a-z0-9])?`, max 50 characters. A random suffix is appended. |
-| **Description** | Display name for this configuration in the Jenkins UI. |
-| **Node Retention Time** | Minutes to keep an idle agent before termination. Default: 6. |
-| **Usage** | `Use this node as much as possible` (Normal) or `Only build jobs with label expressions matching this node` (Exclusive). |
-| **Labels** | Space-separated labels for matching builds to this configuration. When set to Exclusive mode, only builds requesting these labels will use this agent type. |
-| **Number of Executors** | Parallel build slots per agent. Default: 1. Must be 1 when one-shot is enabled. |
-| **Terminate idle agents during shutdown** | Delete idle agents and their GCE instances when the Jenkins controller stops. |
-| **Minimum Number of Instances** | Total agents (busy + idle) to maintain at all times. The plugin proactively launches agents to meet this count. Default: 0 (disabled). |
-| **Minimum Number of Spare Instances** | Idle agents to keep ready for incoming builds. Works alongside the minimum total. Default: 0 (disabled). |
-| **Time Range** | Optionally restrict minimum instance scaling to specific hours and days of the week. Supports `HH:mm` or `h:mm a` time formats. |
+Instance configurations define what kind of VM to launch for a given set of Jenkins labels. Multiple instance configurations can be added per cloud.
 
-### Launch Configuration
+#### General
 
-| Field | Description |
-|-------|-------------|
-| **Launch Timeout** | Seconds to wait for an agent to connect before giving up. Default: 300. |
-| **Use Internal IP** | Connect to the agent via its internal IP even if an external IP is assigned. Use this when the Jenkins controller is in the same VPC. |
-| **Ignore Jenkins Proxy** | Bypass the Jenkins HTTP proxy when connecting to the agent. |
-| **Run as user** | SSH username on the agent. Default: `jenkins`. |
-| **Custom SSH Private Key** | Authenticate with a custom SSH key pair instead of the auto-generated one. The corresponding public key must be in the agent image's `~/.ssh/authorized_keys` for the configured user. Public key format: `ssh-rsa <key> <credential-id>`. |
-| **Remote Location** | Agent working directory. Default: `/tmp` (Linux) or `C:\` (Windows). |
-| **Java Path** | Path to the Java executable on the agent. Default: `java` (must be on PATH). |
-| **Windows** | Enable for Windows VMs. See [Windows Agents](#windows-agents). |
+| Field | CasC Key | Description |
+|-------|----------|-------------|
+| **Name Prefix** | `namePrefix` | Prefix for VM names. Must match `[a-z]([-a-z0-9]*[a-z0-9])?`, max 50 characters. A random suffix is appended. |
+| **Description** | `description` | Display name for this configuration in the Jenkins UI. |
+| **Node Retention Time** | `retentionTimeMinutesStr` | Minutes to keep an idle agent before termination. Default: 6. |
+| **Usage** | `mode` | `Use this node as much as possible` (NORMAL) or `Only build jobs with label expressions matching this node` (EXCLUSIVE). Default: NORMAL. |
+| **Labels** | `labelString` | Space-separated labels for matching builds to this configuration. When set to Exclusive mode, only builds requesting these labels will use this agent type. |
+| **Number of Executors** | `numExecutorsStr` | Parallel build slots per agent. Default: 1. Must be 1 when one-shot is enabled. |
+| **Terminate idle agents during shutdown** | `terminateIdleDuringShutdown` | Delete idle agents and their GCE instances when the Jenkins controller stops. Default: false. |
+| **Minimum Number of Instances** | `minimumNumberOfInstances` | Total agents (busy + idle) to maintain at all times. Default: 0 (disabled). See [Minimum Instance Scaling](#minimum-instance-scaling). |
+| **Minimum Number of Spare Instances** | `minimumNumberOfSpareInstances` | Idle agents to keep ready for incoming builds. Default: 0 (disabled). See [Minimum Instance Scaling](#minimum-instance-scaling). |
+| **Time Range** | `minimumNumberOfInstancesTimeRangeConfig` | Optionally restrict minimum instance scaling to specific hours and days of the week. Supports `HH:mm` or `h:mm a` time formats. |
 
-### One-Shot
+#### Launch Configuration
 
-| Field | Description |
-|-------|-------------|
-| **Enabled** | Delete the agent after a single build completes. Number of executors must be 1. |
-| **Create snapshot** | Take a disk snapshot when a one-shot instance terminates. Only available when one-shot is enabled. |
+| Field | CasC Key | Description |
+|-------|----------|-------------|
+| **Launch Timeout** | `launchTimeoutSecondsStr` | Seconds to wait for an agent to connect before giving up. Default: 300. |
+| **Use Internal IP** | `useInternalAddress` | Connect to the agent via its internal IP even if an external IP is assigned. Use this when the Jenkins controller is in the same VPC. Default: false. |
+| **Ignore Jenkins Proxy** | `ignoreProxy` | Bypass the Jenkins HTTP proxy when connecting to the agent. Default: false. |
+| **Run as user** | `runAsUser` | SSH username on the agent. Default: `jenkins`. |
+| **Custom SSH Private Key** | `sshConfiguration` | Authenticate with a custom SSH key pair instead of the auto-generated one. The corresponding public key must be in the agent image's `~/.ssh/authorized_keys` for the configured user. Public key format: `ssh-rsa <key> <credential-id>`. |
+| **Remote Location** | `remoteFs` | Agent working directory. Default: `/tmp` (Linux) or `C:\` (Windows). On Windows, ensure the configured user has read/write permissions on this path — `C:\` often causes permission issues; prefer a user-owned directory like `C:\Users\jenkins`. |
+| **Java Path** | `javaExecPath` | Path to the Java executable on the agent (e.g. `/usr/lib/jvm/java-21/bin/java`). Default: `java` (must be on PATH). |
+| **Windows** | `windowsConfiguration` | Enable for Windows VMs. See [Windows Configuration](#windows-configuration). |
 
-### Location
+#### One-Shot
 
-| Field | Description |
-|-------|-------------|
-| **Region** | GCP region (e.g. `us-central1`). Populates from your project. |
-| **Zone** | GCP zone within the region (e.g. `us-central1-a`). |
+| Field | CasC Key | Description |
+|-------|----------|-------------|
+| **Enabled** | `oneShot` | Delete the agent after a single build completes, guaranteeing a clean environment. Number of executors must be 1. Default: false. |
+| **Create snapshot** | `createSnapshot` | Take a disk snapshot when a one-shot instance terminates. Useful for debugging failed builds by inspecting disk state. Only available when one-shot is enabled. Default: false. |
 
-### Machine Configuration (Advanced)
+#### Location
+
+| Field | CasC Key | Description |
+|-------|----------|-------------|
+| **Region** | `region` | GCP region (e.g. `us-central1`). Populates from your project. |
+| **Zone** | `zone` | GCP zone within the region (e.g. `us-central1-a`). |
+
+#### Machine Configuration (Advanced)
 
 These fields are inside the **Advanced** section of Machine Configuration.
 
-| Field | Description |
-|-------|-------------|
-| **Template** | Use a GCE [instance template](https://cloud.google.com/compute/docs/instance-templates/) instead of configuring machine details here. When a template is selected, all other advanced settings are ignored. |
-| **Provisioning Type** | `Standard`, `Spot`, or `Preemptible`. See [Provisioning Types](#provisioning-types-standard-spot-and-preemptible). |
-| **Max Run Duration Seconds** | (Standard and Spot only) GCP automatically deletes the VM after this many seconds. See [Limit VM runtime](https://cloud.google.com/compute/docs/instances/limit-vm-runtime). |
-| **Machine Type** | VM shape (e.g. `n1-standard-1`). Populates from your project and zone. |
-| **Minimum CPU Platform** | Request a specific CPU generation (e.g. Intel Skylake). |
-| **Startup script** | Bash (Linux) or PowerShell (Windows) script that runs before the agent connects. |
-| **Linux startup script exit reporter** | Script that reports startup completion to a GCE guest attribute so the controller waits before launching the agent. Uses `$1` as the exit code placeholder. Default: `curl`. Clear to disable waiting. See [Startup Script Exit Reporter](#startup-script-exit-reporter). |
-| **Windows startup script exit reporter** | Same as above for Windows. Uses `$args[0]` as the exit code placeholder. Default: `Invoke-RestMethod`. |
-| **Custom metadata** | Additional key-value pairs set as instance metadata. Reserved keys (`ssh-keys`, `startup-script`, `windows-startup-script-ps1`, `enable-guest-attributes`) cannot be overridden. |
-| **GPUs** | Attach GPUs by specifying a type (e.g. `nvidia-tesla-t4`) and count. See [GPUs on Compute Engine](https://cloud.google.com/compute/docs/gpus). |
+| Field | CasC Key | Description |
+|-------|----------|-------------|
+| **Template** | `template` | Use a GCE [instance template](https://cloud.google.com/compute/docs/instance-templates/) (GCP docs) instead of configuring machine details here. When a template is selected, all other advanced settings are ignored. The plugin only manages agent lifecycle and SSH keys. |
+| **Provisioning Type** | `provisioningType` | `Standard`, `Spot`, or `Preemptible`. Default: Standard. See [Provisioning Types](#provisioning-types-standard-spot-and-preemptible). |
+| **Max Run Duration Seconds** | `maxRunDurationSeconds` | (Standard and Spot only) GCP automatically deletes the VM after this many seconds. Nested under `provisioningType` in CasC. See [Limit VM runtime](https://cloud.google.com/compute/docs/instances/limit-vm-runtime) (GCP docs). |
+| **Machine Type** | `machineType` | GCE machine type defining vCPUs and memory (e.g. `n1-standard-1`). Populates from your project and zone. |
+| **Minimum CPU Platform** | `minCpuPlatform` | Request a specific CPU generation (e.g. Intel Skylake). |
+| **Startup script** | `startupScript` | Bash (Linux) or PowerShell (Windows) script that runs before the agent connects. |
+| **Linux startup script exit reporter** | `startupScriptExitReporterLinux` | Script that reports startup completion to a GCE guest attribute so the controller waits before launching the agent. Uses `$1` as the exit code placeholder. Default: `curl`. Clear to disable waiting. See [Startup Script Exit Reporter](#startup-script-exit-reporter). |
+| **Windows startup script exit reporter** | `startupScriptExitReporterWindows` | Same as above for Windows. Uses `$args[0]` as the exit code placeholder. Default: `Invoke-RestMethod`. |
+| **Custom metadata** | `customMetadata` | Additional key-value pairs set as instance metadata. Accessible from within the VM via the [metadata server](https://cloud.google.com/compute/docs/metadata/overview) (GCP docs). Values can be multiline (use YAML block scalars in CasC). Reserved keys (`ssh-keys`, `startup-script`, `windows-startup-script-ps1`, `enable-guest-attributes`) cannot be overridden. |
+| **GPUs** | `acceleratorConfiguration` | Attach GPUs by specifying a type (e.g. `nvidia-tesla-t4`) and count. See [GPUs on Compute Engine](https://cloud.google.com/compute/docs/gpus) (GCP docs). |
 
-### Networking
+#### Networking
 
-| Field | Description |
-|-------|-------------|
-| **Network Configuration** | `Autofilled` selects from networks/subnetworks in the current project. `Shared VPC` lets you specify a host project, region, and subnetwork name for cross-project networking. |
-| **Network tags** | Space-delimited tags applied to the VM. Each tag must match `[a-z]([-a-z0-9]*[a-z0-9])?`. Use these to apply [firewall rules](https://cloud.google.com/vpc/docs/firewalls) -- at minimum, allow TCP port 22 from the Jenkins controller to agents. |
-| **IP stack type** | `Single stack` (IPv4 only) or `Dual stack` (IPv4 + IPv6). |
-| **External IPv4 Address** | Attach an external IPv4 address. Without an external IP or a [Cloud NAT](https://cloud.google.com/nat/docs/overview) gateway, the VM cannot reach the internet. |
+| Field | CasC Key | Description |
+|-------|----------|-------------|
+| **Network Configuration** | `networkConfiguration` | `Autofilled` selects from networks/subnetworks in the current project. `Shared VPC` lets you specify a host project, region, and subnetwork name for cross-project networking. |
+| **Network tags** | `networkTags` | Space-delimited tags applied to the VM. Each tag must match `[a-z]([-a-z0-9]*[a-z0-9])?`. Use these to apply [firewall rules](https://cloud.google.com/vpc/docs/firewalls) (GCP docs). At minimum, allow TCP port 22 from the Jenkins controller to agents. |
+| **IP stack type** | `networkInterfaceIpStackMode` | `Single stack` (IPv4 only) or `Dual stack` (IPv4 + IPv6). Default: Single stack. |
+| **External IPv4 Address** | `externalIPV4Address` | Attach an external IPv4 address. Nested under `singleStack` or `dualStack` in CasC. Without an external IP or a [Cloud NAT](https://cloud.google.com/nat/docs/overview) (GCP docs) gateway, the VM cannot reach the internet. Default: false. |
 
-### Boot Disk
+#### Boot Disk
 
-| Field | Description |
-|-------|-------------|
-| **Image project** | GCP project containing the boot image. Your project is listed first, followed by well-known public projects (debian-cloud, ubuntu-os-cloud, windows-cloud, etc.). |
-| **Image name** | The OS image. Must have Java installed and accessible at the configured Java Path. |
-| **Disk Type** | Storage type (e.g. `pd-ssd`, `pd-standard`, `pd-balanced`). Larger disks get higher IOPS and throughput. |
-| **Size** | Boot disk size in GB. Must be at least as large as the image requires. Default: 10. |
-| **Delete on termination** | Delete the boot disk when the instance is terminated. Default: true. |
+| Field | CasC Key | Description |
+|-------|----------|-------------|
+| **Image project** | `bootDiskSourceImageProject` | GCP project containing the boot image. Your project is listed first, followed by well-known public projects (debian-cloud, ubuntu-os-cloud, windows-cloud, etc.). |
+| **Image name** | `bootDiskSourceImageName` | The OS image. Must have Java installed and accessible at the configured Java Path (see [Preparing Agent Images](#preparing-agent-images)). |
+| **Disk Type** | `bootDiskType` | Storage type (e.g. `pd-ssd`, `pd-standard`, `pd-balanced`). |
+| **Size** | `bootDiskSizeGbStr` | Boot disk size in GB. Must be at least as large as the image requires. Default: 10. |
+| **Delete on termination** | `bootDiskAutoDelete` | Delete the boot disk when the instance is terminated. Default: true. |
 
-### Disk Mapping
+#### Disk Mapping
 
-Attach additional disks to the instance. One disk per line, using comma-separated `key=value` pairs. Three modes:
+CasC key: `diskMapping` (String).
 
-1. **Create from snapshot** -- line contains `source-snapshot`:
+Attach additional disks to the instance. One disk per line, using comma-separated `key=value` pairs. The syntax follows the [`gcloud compute instances create`](https://cloud.google.com/sdk/gcloud/reference/compute/instances/create) (GCP docs) CLI semantics. Additional disks are attached but not mounted. Use the startup script to format and mount them. Three modes:
+
+1. **Create from snapshot** ([`--create-disk`](https://cloud.google.com/sdk/gcloud/reference/compute/instances/create#--create-disk) (GCP docs)): line contains `source-snapshot`:
    ```
    source-snapshot=my-data-snapshot,size=100,type=pd-ssd,auto-delete=yes
    ```
 
-2. **Create blank disk** -- line contains `size` or `type` but no `source-snapshot`:
+2. **Create blank disk** ([`--create-disk`](https://cloud.google.com/sdk/gcloud/reference/compute/instances/create#--create-disk) (GCP docs)): line contains `size` or `type` but no `source-snapshot`:
    ```
    size=200,type=pd-ssd,name=scratch-disk,auto-delete=yes
    ```
 
-3. **Attach existing disk** -- line contains only `name`:
+3. **Attach existing disk** ([`--disk`](https://cloud.google.com/sdk/gcloud/reference/compute/instances/create#--disk) (GCP docs)): line contains only `name`:
    ```
    name=shared-data-disk,mode=ro,auto-delete=no
    ```
 
 **Common keys** (all modes): `device-name`, `mode` (`ro` | `rw`, default `rw`), `interface` (`SCSI` | `NVME`), `auto-delete` (`yes` | `no`, default `yes`).
 
-Short names for `source-snapshot`, `type`, and `name` are automatically qualified to the instance's project and zone. For cross-project resources, use a relative path (e.g. `projects/{project}/global/snapshots/{name}`). Mounting disks inside the VM must be done via the startup script.
+Short names for `source-snapshot`, `type`, and `name` are automatically qualified to the instance's project and zone. For cross-project resources, use a relative path (e.g. `projects/{project}/global/snapshots/{name}`).
 
-### IAM
+#### IAM
 
-| Field | Description |
-|-------|-------------|
-| **Service Account E-mail** | GCP service account attached to the VM, controlling what GCP APIs it can access from the metadata server. Scoped to `https://www.googleapis.com/auth/cloud-platform`. |
+| Field | CasC Key | Description |
+|-------|----------|-------------|
+| **Service Account E-mail** | `serviceAccountEmail` | GCP service account attached to the VM, controlling what GCP APIs it can access from the metadata server. Scoped to `https://www.googleapis.com/auth/cloud-platform`. |
 
-## Configuration Reference
+### Windows Configuration
 
-Complete reference of all fields with their CasC keys, types, and defaults.
+Linux agents require no platform-specific configuration. Windows VMs need additional setup.
 
-### Cloud Configuration
+The plugin connects to Windows agents over SSH, the same as Linux. Two authentication methods are supported:
 
-| UI Field | CasC Key | Type | Default | Description |
-|----------|----------|------|---------|-------------|
-| Name | `cloudName` | String | *required* | Display name for this cloud |
-| Project ID | `projectId` | String | *required* | GCP project ID |
-| Instance Cap | `instanceCapStr` | String | - | Max concurrent VMs across all configurations |
-| Service Account Credentials | `credentialsId` | String | *required* | Jenkins credential ID for the GCP service account |
-| No delay provisioning | `noDelayProvisioning` | Boolean | `false` | Provision immediately without waiting for load estimation |
+- **Password**: provide a Username/Password credential in Jenkins. The Windows image must have an admin user with matching credentials.
+- **SSH Private Key**: provide an SSH private key credential in Jenkins. The Windows image must have the corresponding public key in `$env:PROGRAMDATA\ssh\administrators_authorized_keys`.
 
-### Instance Configuration -- General
+**Steps:**
 
-| UI Field | CasC Key | Type | Default |
-|----------|----------|------|---------|
-| Name Prefix | `namePrefix` | String | *required* |
-| Description | `description` | String | *required* |
-| Node Retention Time (minutes) | `retentionTimeMinutesStr` | String | `6` |
-| Usage | `mode` | `NORMAL` / `EXCLUSIVE` | `NORMAL` |
-| Labels | `labelString` | String | `""` |
-| Number of Executors | `numExecutorsStr` | String | `1` |
-| Terminate idle agents during shutdown | `terminateIdleDuringShutdown` | Boolean | `false` |
-| Minimum Number of Instances | `minimumNumberOfInstances` | Integer | `0` |
-| Minimum Number of Spare Instances | `minimumNumberOfSpareInstances` | Integer | `0` |
-| Time Range | `minimumNumberOfInstancesTimeRangeConfig` | Object | *null* |
+1. Enable the **Windows** checkbox in the Launch Configuration section.
+2. Provide either a **Password Credential** or a **Private Key Credential** for authentication. At least one is required.
+3. Set **Run as user** to match the Windows admin username.
 
-### Instance Configuration -- Launch
+![Windows configuration](docs/images/windowsconfig.png)
 
-| UI Field | CasC Key | Type | Default |
-|----------|----------|------|---------|
-| Launch Timeout (seconds) | `launchTimeoutSecondsStr` | String | `300` |
-| Use Internal IP | `useInternalAddress` | Boolean | `false` |
-| Ignore Jenkins Proxy | `ignoreProxy` | Boolean | `false` |
-| Run as user | `runAsUser` | String | `jenkins` |
-| Custom SSH Private Key | `sshConfiguration` | Object | *null* |
-| Remote Location | `remoteFs` | String | `""` |
-| Java Path | `javaExecPath` | String | `java` |
-| Windows | `windowsConfiguration` | Object | *null* |
+![Credential selection](docs/images/credentialsdropdown.png)
 
-### Instance Configuration -- One-Shot
+For password-based authentication, create a Username/Password credential in Jenkins:
 
-| UI Field | CasC Key | Type | Default |
-|----------|----------|------|---------|
-| Enabled | `oneShot` | Boolean | `false` |
-| Create snapshot | `createSnapshot` | Boolean | `false` |
+![Username and password credential](docs/images/usernamepassword.png)
 
-### Instance Configuration -- Location
+For SSH key-based authentication:
 
-| UI Field | CasC Key | Type | Default |
-|----------|----------|------|---------|
-| Region | `region` | String | *required* |
-| Zone | `zone` | String | *required* |
+![SSH credential](docs/images/sshcred.png)
 
-### Instance Configuration -- Machine (Advanced)
+**Example startup script** (dynamic per-boot configuration, not static prerequisites):
 
-| UI Field | CasC Key | Type | Default |
-|----------|----------|------|---------|
-| Template | `template` | String | `""` |
-| Provisioning Type | `provisioningType` | Object | `standard` (maxRunDurationSeconds: 0) |
-| Machine Type | `machineType` | String | *required* |
-| Minimum CPU Platform | `minCpuPlatform` | String | `""` |
-| Startup script | `startupScript` | String | `""` |
-| Linux exit reporter | `startupScriptExitReporterLinux` | String | curl script |
-| Windows exit reporter | `startupScriptExitReporterWindows` | String | Invoke-RestMethod script |
-| Custom metadata | `customMetadata` | List | `[]` |
-| GPUs | `acceleratorConfiguration` | Object | *null* |
+```powershell
+# Pull build tools configuration from a GCS bucket
+gsutil cp gs://my-build-config/settings.xml C:\Users\jenkins\.m2\settings.xml
 
-### Instance Configuration -- Networking
+# Register the agent with an internal package registry
+$token = Invoke-RestMethod -Headers @{'Metadata-Flavor'='Google'} `
+  -Uri "http://metadata.google.internal/computeMetadata/v1/instance/attributes/registry-token"
+nuget sources Add -Name internal -Source https://registry.internal/nuget -UserName deploy -Password $token
+```
 
-| UI Field | CasC Key | Type | Default |
-|----------|----------|------|---------|
-| Network Configuration | `networkConfiguration` | Object | `autofilled` (default/default) |
-| Network tags | `networkTags` | String | `""` |
-| IP stack type | `networkInterfaceIpStackMode` | Object | `singleStack` |
-| External IPv4 Address | (inside singleStack/dualStack) `externalIPV4Address` | Boolean | `true` |
+Java, OpenSSH, and user accounts should be pre-baked into the image (see [Preparing Agent Images](#preparing-agent-images)), not installed via startup scripts.
 
-### Instance Configuration -- Boot Disk
+See the [Windows VM Instances](https://cloud.google.com/compute/docs/instances/windows) on GCP docs for more details.
 
-| UI Field | CasC Key | Type | Default |
-|----------|----------|------|---------|
-| Image project | `bootDiskSourceImageProject` | String | current project |
-| Image name | `bootDiskSourceImageName` | String | *required* |
-| Disk Type | `bootDiskType` | String | *required* |
-| Size (GB) | `bootDiskSizeGbStr` | String | `10` |
-| Delete on termination | `bootDiskAutoDelete` | Boolean | `true` |
+### Configuration as Code (CasC)
 
-### Instance Configuration -- Disk Mapping
+This plugin supports [Jenkins Configuration as Code](https://jenkins.io/projects/jcasc/). For machine-verified configurations used in the plugin's integration tests, see the YAML files in [`src/test/resources/.../integration/`](./src/test/resources/com/google/jenkins/plugins/computeengine/integration/).
 
-| UI Field | CasC Key | Type | Default |
-|----------|----------|------|---------|
-| Disk Mapping | `diskMapping` | String | `""` |
+> **Note:** Fields like `machineType`, `bootDiskType`, `bootDiskSourceImageName`, `region`, `zone`, `network`, and `subnetwork` accept both short names (e.g. `n1-standard-2`) and full GCP API URLs (e.g. `https://www.googleapis.com/compute/v1/projects/.../machineTypes/n1-standard-2`). The examples below use short names. If you encounter issues with short names, use the full URL.
 
-### Instance Configuration -- IAM
-
-| UI Field | CasC Key | Type | Default |
-|----------|----------|------|---------|
-| Service Account E-mail | `serviceAccountEmail` | String | `""` |
-
-## Configuration as Code (CasC)
-
-This plugin fully supports [Jenkins Configuration as Code](https://jenkins.io/projects/jcasc/). Below are annotated examples for common scenarios. For machine-verified configurations used in the plugin's integration tests, see the YAML files in [`src/test/resources/.../integration/`](./src/test/resources/com/google/jenkins/plugins/computeengine/integration/).
-
-### Basic Linux Agent
+#### Basic Linux Agent
 
 ```yaml
 jenkins:
@@ -352,7 +367,7 @@ jenkins:
             zone: us-central1-a
             # Machine
             machineType: n1-standard-2
-            # Networking -- uses project default network
+            # Networking — uses project default network
             networkConfiguration:
               autofilled:
                 network: default
@@ -374,15 +389,20 @@ credentials:
   system:
     domainCredentials:
       - credentials:
+          # Option A: JSON key (Jenkins outside GCP)
           - googleRobotPrivateKeyCredentials:
               id: my-gcp-project
               projectId: my-gcp-project
               serviceAccountConfig:
                 jsonServiceAccountConfig:
                   secretJsonKey: "{base64-encoded-json-key}"
+          # Options B and C: GCE VM metadata or GKE Workload Identity
+          # - googleRobotMetadata:
+          #     id: my-gcp-project
+          #     projectId: my-gcp-project
 ```
 
-### Windows Agent
+#### Windows Agent
 
 ```yaml
 jenkins:
@@ -400,19 +420,14 @@ jenkins:
             numExecutorsStr: "1"
             runAsUser: jenkins
             oneShot: true
-            # Windows requires password or SSH key credentials
+            # Windows: set passwordCredentialsId OR privateKeyCredentialsId (not both)
             windowsConfiguration:
               passwordCredentialsId: windows-password
               privateKeyCredentialsId: ""
-            # Startup script to configure SSH public key auth
+            # Dynamic per-boot configuration (tools should be pre-baked in the image)
             startupScript: |
-              Stop-Service sshd
-              $PublicKey = "jenkins:<your-public-key>"
-              Set-Content -Path $env:PROGRAMDATA\ssh\administrators_authorized_keys -Value $PublicKey
-              icacls $env:PROGRAMDATA\ssh\administrators_authorized_keys /inheritance:r
-              icacls $env:PROGRAMDATA\ssh\administrators_authorized_keys /grant SYSTEM:`(F`)
-              icacls $env:PROGRAMDATA\ssh\administrators_authorized_keys /grant BUILTIN\Administrators:`(F`)
-              Restart-Service sshd
+              # Pull environment-specific build config from GCS
+              gsutil cp gs://my-build-config/nuget.config C:\Users\jenkins\nuget.config
             region: us-central1
             zone: us-central1-a
             machineType: n1-standard-2
@@ -441,173 +456,11 @@ credentials:
               password: "{your-password}"
 ```
 
-### Spot VM with Max Run Duration
+## Advanced Usage
 
-```yaml
-# Use Spot VMs for cost savings with a 3-hour safety net
-configurations:
-  - namePrefix: spot-agent
-    description: Spot build agent
-    labelString: spot gce
-    provisioningType:
-      spotVm:
-        maxRunDurationSeconds: 10800    # 3 hours -- GCP deletes the VM after this
-    machineType: n1-standard-4
-    # ... remaining fields same as basic example
-```
-
-### Minimum Instances with Business-Hours Scheduling
-
-```yaml
-# Keep 3 agents running during business hours, with 1 always idle
-configurations:
-  - namePrefix: jenkins-agent
-    description: Scaled build agent
-    minimumNumberOfInstances: 3
-    minimumNumberOfSpareInstances: 1
-    minimumNumberOfInstancesTimeRangeConfig:
-      activeFrom: "09:00"
-      activeTo: "17:00"
-      monday: true
-      tuesday: true
-      wednesday: true
-      thursday: true
-      friday: true
-      saturday: false
-      sunday: false
-    # ... remaining fields same as basic example
-```
-
-How minimum instance scaling works with the above configuration:
-
-- build#1 starts: agent-1 busy, agent-2 idle, agent-3 idle
-- build#2 starts: agent-1 busy, agent-2 busy, agent-3 idle
-- build#3 starts: agent-1 busy, agent-2 busy, agent-3 busy, agent-4 launched (to maintain 1 spare)
-
-Outside the configured time range, the minimum is not enforced and idle agents are terminated normally.
-
-### Custom Metadata
-
-```yaml
-configurations:
-  - namePrefix: jenkins-agent
-    description: Agent with custom metadata
-    customMetadata:
-      - key: environment
-        value: production
-      - key: setup-script
-        value: |
-          line1
-          line2
-          line3
-    # ... remaining fields same as basic example
-```
-
-Reserved keys that cannot be used: `ssh-keys`, `startup-script`, `windows-startup-script-ps1`, `enable-guest-attributes`.
-
-### Startup Script with Exit Reporter
-
-```yaml
-# Controller waits for the startup script to complete before launching the agent
-configurations:
-  - namePrefix: jenkins-agent
-    description: Agent with startup script
-    startupScript: |
-      #!/bin/bash
-      apt-get update && apt-get install -y build-essential
-      echo "Setup complete"
-    # Default exit reporter uses curl -- override only if curl is not available
-    startupScriptExitReporterLinux: |
-      curl -s -X PUT -H "Metadata-Flavor: Google" \
-        "http://metadata.google.internal/computeMetadata/v1/instance/guest-attributes/startup-script/status" \
-        -d "$1"
-    # ... remaining fields same as basic example
-```
-
-Clear the exit reporter field to disable waiting (the agent will connect as soon as SSH is available, without waiting for the startup script).
-
-### Disk Mapping
-
-```yaml
-configurations:
-  - namePrefix: jenkins-agent
-    description: Agent with additional disks
-    diskMapping: |
-      source-snapshot=build-cache-snap,size=100,type=pd-ssd,auto-delete=yes
-      size=200,type=pd-ssd,name=workspace,auto-delete=yes
-    startupScript: |
-      #!/bin/bash
-      # Mount the additional disks
-      mkfs.ext4 -F /dev/disk/by-id/google-workspace
-      mkdir -p /mnt/workspace && mount /dev/disk/by-id/google-workspace /mnt/workspace
-    # ... remaining fields same as basic example
-```
-
-### Shared VPC
-
-```yaml
-configurations:
-  - namePrefix: jenkins-agent
-    description: Agent in shared VPC
-    networkConfiguration:
-      sharedVpc:
-        projectId: shared-vpc-host-project
-        region: us-central1
-        subnetworkShortName: jenkins-subnet
-    # ... remaining fields same as basic example
-```
-
-## Windows Agents
-
-Windows VMs require additional setup compared to Linux.
-
-**VM image prerequisites:**
-- OpenSSH Server installed and running
-- Java installed and on PATH (or configured via Java Path)
-- An administrative user with a known username and password
-
-**Configuration:**
-
-1. Enable the **Windows** checkbox in the Launch Configuration section.
-2. Provide either a **Password Credential** (username/password) or a **Private Key Credential** (SSH key) for authentication.
-3. Set **Run as user** to match the Windows admin username.
-
-![Windows configuration](docs/images/windowsconfig.png)
-
-![Credential selection](docs/images/credentialsdropdown.png)
-
-For password-based authentication, create a Username/Password credential in Jenkins:
-
-![Username and password credential](docs/images/usernamepassword.png)
-
-For SSH key-based authentication:
-
-![SSH credential](docs/images/sshcred.png)
-
-**Startup script to install prerequisites automatically:**
-
-If your image does not have the prerequisites pre-installed, you can use a startup script. Pre-installing is recommended for faster agent startup.
-
-```powershell
-Set-ExecutionPolicy Bypass -Scope Process -Force
-Invoke-Expression ((New-Object System.Net.WebClient).DownloadString('https://chocolatey.org/install.ps1'))
-RefreshEnv.cmd
-choco install -y openssh -params '"/SSHServerFeature"'
-choco install -y jre8
-
-$username = "jenkins"
-$password = ConvertTo-SecureString "P@ssword2" -AsPlainText -Force
-$cred = New-Object System.Management.Automation.PSCredential -ArgumentList $username, $password
-Start-Process cmd /c -WindowStyle Hidden -Credential $cred -ErrorAction SilentlyContinue
-```
-
-See the [Windows VM Instances](https://cloud.google.com/compute/docs/instances/windows) documentation for more details.
-
-## Advanced Features
+The features in this section are optional. The plugin works with the basic configuration above.
 
 ### Provisioning Types: Standard, Spot, and Preemptible
-
-GCP offers three VM provisioning options with different availability, pricing, and termination policies:
 
 | Type | Pricing | Termination | Max Run Duration |
 |------|---------|-------------|------------------|
@@ -615,10 +468,10 @@ GCP offers three VM provisioning options with different availability, pricing, a
 | **Spot** | Same as Preemptible (up to 60-91% discount) | May be terminated if GCP needs resources; not subject to the 24-hour limit | Supported |
 | **Preemptible** | Same as Spot | May be terminated if GCP needs resources; always terminated after 24 hours | Not supported |
 
-Use the **Max Run Duration Seconds** field (Standard and Spot only) to set a hard time limit after which GCP automatically deletes the VM. This is useful as a safety net to prevent runaway instances.
+The **Max Run Duration Seconds** field (Standard and Spot only) sets a time limit after which GCP deletes the VM.
 
-- [Spot VMs documentation](https://cloud.google.com/compute/docs/instances/spot)
-- [Preemptible VMs documentation](https://cloud.google.com/compute/docs/instances/preemptible)
+- [Spot VMs](https://cloud.google.com/compute/docs/instances/spot) (GCP docs)
+- [Preemptible VMs](https://cloud.google.com/compute/docs/instances/preemptible) (GCP docs)
 
 CasC syntax:
 
@@ -640,37 +493,118 @@ provisioningType:
 
 > **Note:** The legacy CasC field `preemptible: true` still works but is deprecated. Use `provisioningType: preemptibleVm` instead.
 
+### Provisioning Behavior
+
+#### No Delay Provisioning
+
+Jenkins by default estimates load before provisioning cloud nodes. This plugin instead launches a new VM as soon as demand is detected, without waiting for the estimation cycle. This may result in extra VMs that are quickly terminated.
+
+**To disable** this strategy:
+
+- **System property**: set `com.google.jenkins.plugins.computeengine.disableNoDelayProvisioning=true`
+- **UI**: uncheck the **No delay provisioning** checkbox in the cloud configuration.
+
+#### Instance Cap
+
+The **Instance Cap** on the cloud limits total concurrent VMs across all instance configurations. If the cap is reached, no new agents are provisioned until existing ones terminate.
+
+#### Retention and Termination
+
+Idle agents are terminated after the configured **Node Retention Time** (default: 6 minutes). The **Launch Timeout** (default: 300 seconds) controls how long the plugin waits for a new agent to connect before giving up.
+
+If **Terminate idle agents during shutdown** is enabled, idle agents are deleted when the Jenkins controller stops.
+
 ### Minimum Instance Scaling
 
-Keep a pool of agents running proactively so builds don't wait for provisioning.
+Keep a pool of agents running so builds do not wait for provisioning.
 
-**`minimumNumberOfInstances`** -- the total number of agents (busy + idle) to maintain. When the retention strategy would terminate an idle agent, termination is blocked if it would drop below this minimum.
+**`minimumNumberOfInstances`**: the total number of agents (busy + idle) to maintain. When the retention strategy would terminate an idle agent, termination is blocked if it would drop below this minimum.
 
-**`minimumNumberOfSpareInstances`** -- the number of idle agents to keep ready. When all spare agents become busy, new ones are launched.
+**`minimumNumberOfSpareInstances`**: the number of idle agents to keep ready. When all spare agents become busy, new ones are launched.
 
 These two settings combine: set a total minimum of 3 and a spare minimum of 1, and you get 3 agents at rest with 1 always idle. As builds consume agents, new ones are launched to maintain the spare count, but the total can grow beyond 3 as demand requires.
 
 **Time-range scheduling** restricts when minimums are enforced. Outside the window, idle agents are terminated normally. Use this for business-hours-only pools.
 
-### Startup Script Exit Reporter
-
-When a startup script is configured, the plugin can wait for it to complete before connecting the Jenkins agent. This prevents builds from starting on an agent that is still running its initialization.
-
-**How it works:**
-
-1. The plugin wraps your startup script with a trap (Linux) or try/finally (Windows) block.
-2. When the script finishes, the exit reporter sends the exit code to a GCE guest attribute via the instance metadata server.
-3. The controller polls the guest attribute and only launches the agent after the script reports success.
-
-**Linux** -- the default reporter uses `curl`:
-
-```bash
-curl -s -X PUT -H "Metadata-Flavor: Google" \
-  "http://metadata.google.internal/computeMetadata/v1/instance/guest-attributes/startup-script/status" \
-  -d "$1"
+```yaml
+# Keep 3 agents running during business hours, with 1 always idle
+configurations:
+  - namePrefix: jenkins-agent
+    description: Scaled build agent
+    minimumNumberOfInstances: 3
+    minimumNumberOfSpareInstances: 1
+    minimumNumberOfInstancesTimeRangeConfig:
+      activeFrom: "09:00"
+      activeTo: "17:00"
+      monday: true
+      tuesday: true
+      wednesday: true
+      thursday: true
+      friday: true
+      saturday: false
+      sunday: false
+    # ... remaining fields same as basic example
 ```
 
-If `curl` is not available, alternatives:
+How this works at runtime:
+
+- build#1 starts: agent-1 busy, agent-2 idle, agent-3 idle
+- build#2 starts: agent-1 busy, agent-2 busy, agent-3 idle
+- build#3 starts: agent-1 busy, agent-2 busy, agent-3 busy, agent-4 launched (to maintain 1 spare)
+
+Outside the configured time range, the minimum is not enforced and idle agents are terminated normally.
+
+### Startup Script Exit Reporter
+
+When a startup script is configured, the plugin can wait for it to complete before connecting the agent. The plugin wraps the startup script with a trap (Linux) or try/finally (Windows) block. The exit reporter sends the script's exit code to a GCE guest attribute, and the controller polls this attribute before connecting to the agent and scheduling the build.
+
+UI users can see the reporter scripts and alternatives via the field help icons. The sections below cover CasC configuration.
+
+#### CasC Configuration
+
+Each instance configuration is either Linux or Windows, not both. The plugin uses `windowsConfiguration` to determine which exit reporter applies: if `windowsConfiguration` is set, the Windows reporter is used; otherwise the Linux reporter is used.
+
+**Linux instance configuration:**
+
+```yaml
+configurations:
+  - namePrefix: linux-agent
+    startupScript: |
+      #!/bin/bash
+      # Dynamic per-boot setup (tools should be pre-baked in the image)
+      gsutil cp gs://my-build-config/settings.xml /home/jenkins/.m2/settings.xml
+      chown jenkins:jenkins /home/jenkins/.m2/settings.xml
+    # Uses $1 as the exit code placeholder. Default: curl.
+    startupScriptExitReporterLinux: |
+      curl -s -X PUT -H "Metadata-Flavor: Google" \
+        "http://metadata.google.internal/computeMetadata/v1/instance/guest-attributes/startup-script/status" \
+        -d "$1"
+```
+
+**Windows instance configuration:**
+
+```yaml
+configurations:
+  - namePrefix: win-agent
+    windowsConfiguration:
+      passwordCredentialsId: windows-password
+    startupScript: |
+      # Dynamic per-boot setup (tools should be pre-baked in the image)
+      gsutil cp gs://my-build-config/nuget.config C:\Users\jenkins\nuget.config
+    # Uses $args[0] as the exit code placeholder. Default: Invoke-RestMethod.
+    startupScriptExitReporterWindows: |
+      Invoke-RestMethod -Method PUT -Body "$($args[0])" `
+        -Headers @{'Metadata-Flavor'='Google'} `
+        -Uri "http://metadata.google.internal/computeMetadata/v1/instance/guest-attributes/startup-script/status"
+```
+
+#### Disabling Waiting
+
+To have the agent connect as soon as SSH is available without waiting for the startup script to finish, simply omit the exit reporter field from your CasC. The plugin only wraps the startup script when the reporter field is non-empty.
+
+#### Alternative Linux Reporters
+
+The default Linux reporter uses `curl`, which is widely available. If your image does not have `curl` (e.g. minimal container-optimized images), any tool capable of an HTTP PUT to `http://metadata.google.internal/computeMetadata/v1/instance/guest-attributes/startup-script/status` with the `Metadata-Flavor: Google` header will work. Keep `$1` as the exit code placeholder. Some examples:
 
 **bash `/dev/tcp`** (no external tools):
 ```bash
@@ -692,80 +626,134 @@ python3 -c "import urllib.request; urllib.request.urlopen(urllib.request.Request
   data=b'$1', headers={'Metadata-Flavor':'Google'}, method='PUT'))"
 ```
 
-**Windows** -- the default reporter uses `Invoke-RestMethod`:
-
-```powershell
-Invoke-RestMethod -Method PUT -Body "$($args[0])" `
-  -Headers @{'Metadata-Flavor'='Google'} `
-  -Uri "http://metadata.google.internal/computeMetadata/v1/instance/guest-attributes/startup-script/status"
-```
-
-**To disable waiting**, clear the exit reporter field. The agent will connect as soon as SSH is available.
-
-### Disk Mapping
-
-Attach additional disks beyond the boot disk. See the [Disk Mapping](#disk-mapping) section under Instance Configuration for the full syntax reference.
-
-Key points:
-- Additional disks are attached but not mounted. Use the startup script to format and mount them.
-- Three modes: create from snapshot, create blank disk, or attach an existing disk.
-- Short names are auto-qualified to the instance's project and zone.
-- Cross-project resources require a relative path or full URI.
+The Windows default (`Invoke-RestMethod`) is built into PowerShell and does not typically need an alternative.
 
 ### Custom Metadata
 
-Attach arbitrary key-value pairs as GCE instance metadata. Accessible from within the VM via the [metadata server](https://cloud.google.com/compute/docs/metadata/overview).
+Set [instance metadata](https://cloud.google.com/compute/docs/metadata/overview) (GCP docs) key-value pairs on the agent VM. Accessible from within the VM at `http://metadata.google.internal/computeMetadata/v1/instance/attributes/<key>`. Values can be multiline (use YAML block scalars in CasC).
 
-The following keys are reserved and cannot be overridden: `ssh-keys`, `startup-script`, `windows-startup-script-ps1`, `enable-guest-attributes`.
+Reserved keys that cannot be used: `ssh-keys`, `startup-script`, `windows-startup-script-ps1`, `enable-guest-attributes`.
 
-Values can be multiline (use YAML block scalars in CasC).
+Simple key-value pairs:
 
-### One-Shot Instances and Snapshots
+```yaml
+configurations:
+  - namePrefix: jenkins-agent
+    customMetadata:
+      - key: environment
+        value: production
+      - key: cluster
+        value: build-pool
+      - key: tier
+        value: standard
+    # ... remaining fields same as basic example
+```
 
-One-shot mode deletes the agent after a single build completes. This guarantees a clean environment for every build.
+Multiline value (e.g. a config file or script fragment):
 
-When **Create snapshot** is also enabled, the plugin takes a disk snapshot before terminating the instance. This is useful for debugging failed builds -- you can inspect the disk state after the fact.
+```yaml
+configurations:
+  - namePrefix: jenkins-agent
+    customMetadata:
+      - key: allowed-registries
+        value: |
+          https://registry.internal.example.com
+          https://docker.io
+          https://gcr.io/my-project
+    # ... remaining fields same as basic example
+```
 
-Constraints:
-- Number of executors must be 1 when one-shot is enabled.
-- Create snapshot is only available when one-shot is enabled.
+### Secondary Disks
 
-### Instance Templates
+Attach additional disks beyond the boot disk using the `diskMapping` field. The syntax follows the [`gcloud compute instances create`](https://cloud.google.com/sdk/gcloud/reference/compute/instances/create) (GCP docs) CLI semantics. Disks are attached but not mounted. Use `device-name` to set the device path, then mount in the startup script via `/dev/disk/by-id/google-<device-name>`. See the [Disk Mapping](#disk-mapping) field reference for the full syntax.
 
-Instead of configuring machine details (machine type, disks, networking, etc.) in the plugin, you can reference a GCE [instance template](https://cloud.google.com/compute/docs/instance-templates/). The template defines the VM configuration, and the plugin only manages agent lifecycle and SSH keys.
+#### Restore from snapshot
 
-When a template is selected, **all advanced configuration settings are ignored** -- the template takes full control of the VM specification.
+Attach a disk created from an existing snapshot. The filesystem from the snapshot is preserved, so no formatting is needed.
 
-### Custom Java Path
+```yaml
+configurations:
+  - namePrefix: jenkins-agent
+    diskMapping: |
+      source-snapshot=projects/my-project/global/snapshots/build-cache-snap,device-name=cache,auto-delete=yes
+    startupScript: |
+      #!/bin/bash
+      set -euo pipefail
+      mkdir -p /mnt/cache
+      mount /dev/disk/by-id/google-cache /mnt/cache
+    # ... remaining fields same as basic example
+```
 
-If Java is not on the system PATH, set the **Java Path** field to the full path (e.g. `/usr/lib/jvm/java-21/bin/java`). This is useful for custom images where Java is installed in a non-standard location.
+#### Create a blank disk
 
-## Provisioning Behavior
+Create a new empty disk. Requires formatting before use.
 
-### No Delay Provisioning
+```yaml
+configurations:
+  - namePrefix: jenkins-agent
+    diskMapping: |
+      size=200,type=pd-ssd,device-name=workspace,auto-delete=yes
+    startupScript: |
+      #!/bin/bash
+      set -euo pipefail
+      mkfs.ext4 -F /dev/disk/by-id/google-workspace
+      mkdir -p /mnt/workspace
+      mount /dev/disk/by-id/google-workspace /mnt/workspace
+    # ... remaining fields same as basic example
+```
 
-By default, Jenkins estimates load to avoid over-provisioning cloud nodes. This plugin uses its own provisioning strategy that launches a new VM as soon as demand is detected, without waiting for the estimation cycle. In the worst case, this results in some extra VMs that are quickly terminated.
+#### Attach an existing disk
 
-**To disable** this aggressive strategy:
+Attach a pre-existing persistent disk. The filesystem is preserved. Use `auto-delete=no` to keep the disk after the instance is deleted.
 
-- **System property**: set `com.google.jenkins.plugins.computeengine.disableNoDelayProvisioning=true`
-- **UI**: uncheck the **No delay provisioning** checkbox in the cloud configuration.
+```yaml
+configurations:
+  - namePrefix: jenkins-agent
+    diskMapping: |
+      name=projects/my-project/zones/us-central1-a/disks/shared-data,device-name=data,mode=ro,auto-delete=no
+    startupScript: |
+      #!/bin/bash
+      set -euo pipefail
+      mkdir -p /mnt/data
+      mount -o ro /dev/disk/by-id/google-data /mnt/data
+    # ... remaining fields same as basic example
+```
 
-### Instance Cap
+### Networking CasC Examples
 
-The **Instance Cap** on the cloud limits total concurrent VMs across all instance configurations. If the cap is reached, no new agents are provisioned until existing ones terminate.
+#### Private Networking (No External IP)
 
-### Retention and Termination
+```yaml
+# Private networking — requires Cloud NAT or VPN for internet access
+configurations:
+  - namePrefix: private-agent
+    description: Private build agent
+    networkInterfaceIpStackMode:
+      singleStack:
+        externalIPV4Address: false
+    useInternalAddress: true    # controller connects via internal IP
+    # ... remaining fields same as basic example
+```
 
-Idle agents are terminated after the configured **Node Retention Time** (default: 6 minutes). The **Launch Timeout** (default: 300 seconds) controls how long the plugin waits for a new agent to connect before giving up.
+#### Shared VPC
 
-If **Terminate idle agents during shutdown** is enabled, idle agents are deleted when the Jenkins controller stops.
+```yaml
+configurations:
+  - namePrefix: jenkins-agent
+    description: Agent in shared VPC
+    networkConfiguration:
+      sharedVpc:
+        projectId: shared-vpc-host-project
+        region: us-central1
+        subnetworkShortName: jenkins-subnet
+    # ... remaining fields same as basic example
+```
 
 ## Troubleshooting
 
 ### Enable Debug Logging
 
-Add a log recorder in **Manage Jenkins > System Log > Add new log recorder**:
+Add a log recorder in **Manage Jenkins > System Log > Add recorder**:
 
 | Logger | Level |
 |--------|-------|
@@ -789,17 +777,18 @@ Add a log recorder in **Manage Jenkins > System Log > Add new log recorder**:
 
 - **OpenSSH not installed**: the Windows image must have OpenSSH Server installed and the `sshd` service running.
 - **Password credentials**: verify the username/password credential ID matches what is configured.
-- **Firewall rules**: same as Linux -- TCP port 22 from controller to agent.
+- **Firewall rules**: same as Linux. TCP port 22 from controller to agent.
+- **Remote Location permission denied**: the default `C:\` often causes permission errors. Set **Remote Location** (`remoteFs`) to a directory the agent user owns, such as `C:\Users\jenkins`.
 
 ### Startup Script Not Completing
 
-- **Exit reporter cleared**: if the exit reporter field is empty, the controller does not wait for the script. The agent connects as soon as SSH is available, which may be before the script finishes.
+- **Exit reporter not configured**: if the exit reporter field is empty or omitted, the controller does not wait for the script. The agent connects as soon as SSH is available, which may be before the script finishes.
 - **Guest attributes not enabled**: the plugin automatically sets `enable-guest-attributes=TRUE` in instance metadata. If you are using an instance template, ensure this metadata key is set.
 - **curl not available**: on minimal images, `curl` may not be installed. Use one of the alternative reporters (bash `/dev/tcp`, `wget`, or `python3`).
 
 ### Spot/Preemptible VM Terminated Mid-Build
 
-This is expected behavior. Spot and Preemptible VMs can be reclaimed by GCP at any time. Ensure your builds are idempotent and can be retried. Use the **Max Run Duration Seconds** field on Spot VMs to set a predictable upper bound.
+This is expected behavior. Spot and Preemptible VMs can be reclaimed by GCP at any time. Use the [`retry`](https://www.jenkins.io/doc/pipeline/steps/workflow-basic-steps/#retry-retry-the-body-up-to-n-times) step in your pipeline to handle preemptions gracefully. Use the **Max Run Duration Seconds** field on Spot VMs to set a predictable upper bound.
 
 ### Stale Instances
 

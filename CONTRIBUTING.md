@@ -17,7 +17,7 @@ We'd love to accept your patches and contributions to this project.
 
 ## Prerequisites
 
-- JDK 17 or later
+- JDK 21 or later (Java 17 was dropped from Jenkins weekly in Jan 2026 and from the LTS line in April 2026)
 - Maven 3.9 or later
 - (Recommended) IntelliJ IDEA
 - For integration tests: a GCP project with the Compute Engine API enabled and billing active
@@ -84,7 +84,7 @@ mvn test
 Integration tests provision actual GCE instances, run pipelines, and take snapshots. They are disabled by default and expected to be run on a contributor's own machine with a real GCP project.
 
 **Why disabled in CI:**
-- Requires a GCP project with billing -- not feasible in public CI.
+- Requires a GCP project with billing — not feasible in public CI.
 - Exposing GCP credentials in CI is a security risk.
 
 #### Prepare VM Images
@@ -114,7 +114,7 @@ export JENKINS_PASSWORD=your-secure-password  # optional
 bash testimages/windows/setup-gce-image.sh
 ```
 
-This creates a Windows Server 2022 image with Java 21 and OpenSSH pre-installed. The build runs from any platform (macOS, Linux) -- it does not require a Windows machine. Use `--recreate` to rebuild or `--delete` to remove.
+This creates a Windows Server 2022 image with Java 21 and OpenSSH pre-installed. The build runs from any platform (macOS, Linux) — it does not require a Windows machine. Use `--recreate` to rebuild or `--delete` to remove.
 
 #### Set Environment Variables
 
