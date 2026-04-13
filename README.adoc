@@ -464,13 +464,7 @@ size=200,type=pd-ssd,name=scratch-disk,auto-delete=yes
 name=shared-data-disk,mode=ro,auto-delete=no
 ----
 
-[cols=4*]
-|===
-| *Common keys* (all modes): `device-name`, `mode` (`ro`
-| `rw`, default `rw`), `interface` (`SCSI`
-| `NVME`), `auto-delete` (`yes`
-| `no`, default `yes`).
-|===
+*Common keys* (all modes): `device-name`, `mode` (`ro` \| `rw`, default `rw`), `interface` (`SCSI` \| `NVME`), `auto-delete` (`yes` \| `no`, default `yes`).
 
 Short names for `source-snapshot`, `type`, and `name` are automatically qualified to the instance's project and zone. For cross-project resources, use a relative path (e.g. `+projects/{project}/global/snapshots/{name}+`).
 
