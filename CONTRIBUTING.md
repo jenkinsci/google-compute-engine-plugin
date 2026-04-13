@@ -19,37 +19,39 @@ We'd love to accept your patches and contributions to this project.
 
 - JDK 21 or later (Java 17 was dropped from Jenkins weekly in Jan 2026 and from the LTS line in April 2026)
 - Maven 3.9 or later
-- (Recommended) IntelliJ IDEA
 - For integration tests: a GCP project with the Compute Engine API enabled and billing active
+
+## Code Style
+
+The project uses [Spotless](https://github.com/diffplug/spotless) for code formatting, enforced during the build.
+
+To auto-fix formatting on every build (recommended), set this in your `~/.m2/settings.xml`:
+
+```xml
+<settings>
+  <profiles>
+    <profile>
+      <id>auto-format</id>
+      <activation>
+        <activeByDefault>true</activeByDefault>
+      </activation>
+      <properties>
+        <spotless.apply.skip>false</spotless.apply.skip>
+      </properties>
+    </profile>
+  </profiles>
+</settings>
+```
+
+See [jenkinsci/plugin-pom#1017](https://github.com/jenkinsci/plugin-pom/pull/1017) for details. Alternatively, run `mvn spotless:apply` manually.
 
 ## Quick Start
 
 ```bash
 git clone git@github.com:jenkinsci/google-compute-engine-plugin.git
 cd google-compute-engine-plugin
-mvn clean verify          # compile + unit tests
+mvn verify                # compile + unit tests + package (integration tests are off by default)
 mvn hpi:run               # launch Jenkins locally with the plugin at http://localhost:8080/jenkins
-```
-
-## Building from Source
-
-```bash
-mvn clean package         # build the plugin
-mvn hpi:hpi               # produce the .hpi file in target/
-```
-
-To install the built plugin:
-
-1. Go to **Manage Jenkins > Plugins > Advanced**.
-2. Under **Deploy Plugin**, click **Choose File** and select the `.hpi` from `target/`.
-3. Click **Deploy**.
-
-## Code Style
-
-The project uses [Spotless](https://github.com/diffplug/spotless) for code formatting, enforced during the build. If the build fails on formatting:
-
-```bash
-mvn spotless:apply        # auto-fix formatting
 ```
 
 ## Contributor License Agreement
@@ -83,6 +85,8 @@ mvn test
 
 Integration tests provision actual GCE instances, run pipelines, and take snapshots. They are disabled by default and expected to be run on a contributor's own machine with a real GCP project.
 
+Integration test classes must be suffixed `IT.java` (e.g. `ComputeEngineCloudRestartPreemptedIT.java`) to be picked up by Failsafe.
+
 **Why disabled in CI:**
 - Requires a GCP project with billing — not feasible in public CI.
 - Exposing GCP credentials in CI is a security risk.
@@ -114,7 +118,7 @@ export JENKINS_PASSWORD=your-secure-password  # optional
 bash testimages/windows/setup-gce-image.sh
 ```
 
-This creates a Windows Server 2022 image with Java 21 and OpenSSH pre-installed. The build runs from any platform (macOS, Linux) — it does not require a Windows machine. Use `--recreate` to rebuild or `--delete` to remove.
+This creates a Windows Server 2022 image with Java 21 and OpenSSH pre-installed. The Packer image build runs from any platform (macOS, Linux) — it does not require a Windows machine. Use `--recreate` to rebuild or `--delete` to remove.
 
 #### Set Environment Variables
 
@@ -138,7 +142,9 @@ export GOOGLE_JENKINS_PASSWORD=password-from-image-build
 
 See the [IAM Credentials setup](README.md#create-a-gcp-service-account) in the user documentation.
 
-#### Run Tests
+#### Run Integration Tests
+
+Integration tests are disabled by default (`-DskipITs=true` in `pom.xml`). Enable them explicitly with `-DskipITs=false`.
 
 Run all integration tests:
 
@@ -146,33 +152,41 @@ Run all integration tests:
 mvn verify -DskipITs=false
 ```
 
-Run a specific test class:
+Run a specific integration test class:
 
 ```bash
-mvn test -DskipTests -DskipITs=false -Dit.test=ComputeEngineCloudRestartPreemptedIT
+mvn verify -DskipTests -DskipITs=false -Dit.test=ComputeEngineCloudRestartPreemptedIT
 ```
 
-Run a specific test method:
+Run a specific integration test method:
 
 ```bash
-mvn clean test -Dtest=ComputeEngineCloudRestartPreemptedIT#testIfNodeWasPreempted
+mvn verify -DskipTests -DskipITs=false -Dit.test=ComputeEngineCloudRestartPreemptedIT#testIfNodeWasPreempted
 ```
 
 Run Windows integration tests:
 
 ```bash
-mvn verify -Dit.windows=true
+mvn verify -DskipITs=false -Dit.windows=true
 ```
 
 #### Debugging Tests
 
-Attach a remote debugger on port 8000:
+Attach a remote debugger on port 8000.
+
+Unit test (Surefire):
 
 ```bash
-mvn clean test -Dtest=YourTestClass -Dmaven.surefire.debug=true
+mvn test -Dtest=YourTestClass -Dmaven.surefire.debug=true
 ```
 
-Then connect your IDE's remote debug configuration to `localhost:8000`.
+Integration test (Failsafe):
+
+```bash
+mvn verify -DskipTests -DskipITs=false -Dit.test=YourTestClassIT -Dmaven.failsafe.debug=true
+```
+
+Then connect your remote debug configuration to `localhost:8000`.
 
 ## License
 
