@@ -14,8 +14,8 @@ if [ "${1:-}" == "non-standard-java" ]; then
   shift
 fi
 
-# Default password is 'jenkins' if not provided
-JENKINS_PASSWORD=${JENKINS_PASSWORD:-jenkins}
+# Default password is 'Agent007!' if not provided
+JENKINS_PASSWORD=${JENKINS_PASSWORD:-Agent007!}
 
 case "${1:-}" in
   --recreate)

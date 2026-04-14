@@ -25,7 +25,7 @@ variable "agent_image" {
 
 variable "jenkins_password" {
   type      = string
-  default   = "jenkins"
+  default   = "Agent007!"
   sensitive = true
 }
 
@@ -37,6 +37,7 @@ source "googlecompute" "base" {
   source_image_project_id = ["windows-cloud"]
   source_image_family     = "windows-2022"
   image_name              = var.agent_image
+  machine_type            = "e2-standard-4" # Windows provisioning is resource-heavy; smaller VMs significantly slow the build
   disk_size               = 50
   communicator            = "winrm"
   winrm_username          = "packer_user"

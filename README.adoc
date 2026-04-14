@@ -55,7 +55,7 @@ The Google Compute Engine (GCE) Plugin provisions GCE virtual machines as Jenkin
 
 * A GCP project with the https://console.cloud.google.com/apis/api/compute.googleapis.com[Compute Engine API] enabled
 * A GCP service account with the required IAM permissions. See <<create-a-gcp-service-account,Create a GCP Service Account>>.
-* A GCE agent image with Java installed. Java 21 is recommended (Java 17 was dropped from Jenkins weekly in Jan 2026 and from the LTS line in April 2026). See <<preparing-agent-images,Preparing Agent Images>>.
+* A GCE agent image with Java installed. Java 25 is recommended (Java 21 also works; Java 17 was dropped from Jenkins weekly in Jan 2026 and from the LTS line in April 2026). See <<preparing-agent-images,Preparing Agent Images>>.
 
 [[gcp-authentication]]
 == GCP Authentication
@@ -110,7 +110,7 @@ Choose one of the following based on where your Jenkins controller runs.
 [[option-a-json-service-account-key]]
 ==== Option A: JSON Service Account Key
 
-Use this when Jenkins runs outside GCP (e.g. on-prem, another cloud).
+Prefer identity federation (Options B or C) when possible — even on another cloud, https://cloud.google.com/iam/docs/workload-identity-federation[Workload Identity Federation] (GCP docs) avoids managing key files. Use a JSON key only when federation is not an option.
 
 . Download a JSON key for the service account:
 +
@@ -129,7 +129,7 @@ CasC credential type: `googleRobotPrivateKeyCredentials`.
 
 Use this when Jenkins runs on a GCE VM. No JSON key is needed. The VM's own service account is used via the metadata server. Assign the required IAM roles (listed in <<prerequisites,Prerequisites>>) to the VM's service account.
 
-In Jenkins, add a credential of type *Google Service Account from metadata* and enter the details.
+In Jenkins, add a credential of type *Google Service Account from metadata* and enter the Project ID.
 
 CasC credential type: `googleRobotMetadata`.
 
@@ -149,24 +149,24 @@ gcloud iam service-accounts add-iam-policy-binding $SA_EMAIL \
 +
 Replace `<namespace>/<k8s-service-account>` with the namespace and service account of the Jenkins controller pod (e.g. `jenkins/jenkins`).
 
-. In Jenkins, add a credential of type *Google Service Account from metadata* and enter the details.
+. In Jenkins, add a credential of type *Google Service Account from metadata* and enter the Project ID.
 
 CasC credential type: `googleRobotMetadata`.
 
 [[preparing-agent-images]]
 == Preparing Agent Images
 
-The plugin connects to agents via SSH and requires Java on the agent (Java 21 recommended). Pre-baking Java and other static dependencies into a GCE image reduces agent startup time compared to installing them via startup scripts. The plugin's own integration test images use https://www.packer.io/[Packer], and you can follow the same approach. Additional tools (Maven, Docker, etc.) can also be added to the Packer provisioner. Startup scripts are better suited for dynamic per-boot configuration.
+The plugin connects to agents via SSH and requires Java on the agent (Java 25 recommended; Java 21 also works). Pre-baking Java and other static dependencies into a GCE image reduces agent startup time compared to installing them via startup scripts. The plugin's own integration test images use https://www.packer.io/[Packer], and you can follow the same approach. Additional tools (Maven, Docker, etc.) can also be added to the Packer provisioner. Startup scripts are better suited for dynamic per-boot configuration.
 
 [[linux]]
 === Linux
 
 *Image requirements:*
 
-* Java 21 (or 17) installed. On PATH by default, or configure via *Java Path* (`javaExecPath`).
+* Java 25 (or 21) installed. On PATH by default, or configure via *Java Path* (`javaExecPath`).
 * SSH server running (included by default on most Linux images)
 
-The plugin's link:./testimages/linux/[`testimages/linux/`] directory contains a working Packer setup that builds a Debian 12 image with Temurin 21 JRE:
+The plugin's link:./testimages/linux/[`testimages/linux/`] directory contains a working Packer setup that builds a Debian 12 image with Temurin 25 JRE:
 
 [source,bash]
 ----
@@ -181,17 +181,17 @@ This creates an image named `jenkins-gce-integration-test-jre` in your GCP proje
 
 *Image requirements:*
 
-* Java 21 (or 17) installed. On PATH by default, or configure via *Java Path* (`javaExecPath`).
+* Java 25 installed (Java 21 also works). On PATH by default, or configure via *Java Path* (`javaExecPath`).
 * OpenSSH Server installed and running
 * Authentication via one of:
  ** *Password*: an administrative user with a known username and password
  ** *SSH key*: the public key placed in the image's `administrators_authorized_keys` file
 
-The plugin's link:./testimages/windows/[`testimages/windows/`] directory contains a working Packer setup that builds a Windows Server 2022 image with Temurin 21 JRE, OpenSSH, and a `jenkins` admin user (password-based):
+The plugin's link:./testimages/windows/[`testimages/windows/`] directory contains a working Packer setup that builds a Windows Server 2022 image with Temurin 25 JRE (Java 21 also works), OpenSSH, and a `jenkins` admin user (password-based):
 
 [source,bash]
 ----
-export JENKINS_PASSWORD=your-secure-password  # auto-generated if not set
+export JENKINS_PASSWORD=your-secure-password  # default: Agent007!
 cd testimages/windows
 bash setup-gce-image.sh
 ----

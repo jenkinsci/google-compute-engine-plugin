@@ -114,7 +114,7 @@ Use `--recreate` to rebuild or `--delete` to remove images.
 bash testimages/windows/setup-gce-image.sh
 ----
 
-The default username is `jenkins` and the default password is `jenkins`. To use a custom password, set the `JENKINS_PASSWORD` environment variable before running the script:
+The default username is `jenkins` and the default password is `Agent007!`. To use a custom password, set the `JENKINS_PASSWORD` environment variable before running the script:
 
 [source,bash]
 ----
@@ -122,7 +122,7 @@ export JENKINS_PASSWORD=your-secure-password
 bash testimages/windows/setup-gce-image.sh
 ----
 
-This creates a Windows Server 2022 image with Java 21 and OpenSSH pre-installed. The Packer image build runs from any platform (macOS, Linux) -- it does not require a Windows machine. Use `--recreate` to rebuild or `--delete` to remove.
+This creates a Windows Server 2022 image with Java 25 (Java 21 also works) and OpenSSH pre-installed. The Packer image build runs from any platform (macOS, Linux) -- it does not require a Windows machine. Use `--recreate` to rebuild or `--delete` to remove.
 
 [[set-environment-variables]]
 ==== Set Environment Variables
@@ -142,7 +142,7 @@ For Windows tests, also export:
 ----
 export GOOGLE_BOOT_DISK_PROJECT_ID=your-project-id
 export GOOGLE_BOOT_DISK_IMAGE_NAME=jenkins-gce-integration-test-windows-jre
-export GOOGLE_JENKINS_PASSWORD=jenkins  # default; must match the password used during image build
+export GOOGLE_JENKINS_PASSWORD=Agent007!  # default; must match the password used during image build
 ----
 
 [[create-a-service-account]]

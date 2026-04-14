@@ -15,13 +15,50 @@ Invoke-Expression ((New-Object System.Net.WebClient).DownloadString('https://com
 # Refresh PATH to pick up choco
 $env:Path = [System.Environment]::GetEnvironmentVariable("Path", "Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path", "User")
 
-# --- Install Java 21 (Temurin JRE) ---
-Write-Output "Installing Temurin 21 JRE..."
-choco install -y Temurinjre
-if ($LASTEXITCODE -ne 0) { exit 1 }
+# --- Install Java 25 (Temurin JRE) ---
+# Chocolatey only publishes LTS releases (8, 11, 17, 21). Java 25 is a non-LTS
+# release, so we install directly from the Adoptium MSI instead.
+Write-Output "Installing Temurin 25 JRE from Adoptium MSI..."
+$jreMsi = "$env:TEMP\temurin-25-jre.msi"
+$jreUrl = "https://api.adoptium.net/v3/installer/latest/25/ga/windows/x64/jre/hotspot/normal/eclipse"
+Write-Output "Downloading from $jreUrl ..."
+Invoke-WebRequest -Uri $jreUrl -OutFile $jreMsi -UseBasicParsing
+Write-Output "Downloaded MSI: $((Get-Item $jreMsi).Length / 1MB) MB"
+Write-Output "Running msiexec..."
+$msiArgs = "/i `"$jreMsi`" ADDLOCAL=FeatureMain,FeatureEnvironment,FeatureJarFileRunWith,FeatureJavaHome /quiet /norestart /log `"$env:TEMP\temurin-install.log`""
+$proc = Start-Process msiexec.exe -ArgumentList $msiArgs -Wait -NoNewWindow -PassThru
+Write-Output "msiexec exit code: $($proc.ExitCode)"
+if ($proc.ExitCode -ne 0) {
+    Write-Output "MSI install log:"
+    Get-Content "$env:TEMP\temurin-install.log" -Tail 30
+    Write-Error "MSI install failed with exit code $($proc.ExitCode)"
+    exit 1
+}
+Remove-Item $jreMsi -Force
+Write-Output "Listing C:\Program Files for Java directories:"
+Get-ChildItem "C:\Program Files" -Directory | Where-Object { $_.Name -match "(?i)java|jdk|jre|temurin|adoptium|eclipse" } | ForEach-Object { Write-Output "  $_" }
 
-# Refresh PATH to pick up java
+# Refresh PATH — the MSI adds Java to the system PATH via FeatureEnvironment
 $env:Path = [System.Environment]::GetEnvironmentVariable("Path", "Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path", "User")
+
+# Verify java is now on PATH
+$javaCmd = Get-Command java -ErrorAction SilentlyContinue
+if (-not $javaCmd) {
+    # Fallback: find java.exe anywhere under Program Files
+    $javaExe = Get-ChildItem "C:\Program Files" -Recurse -Filter "java.exe" -ErrorAction SilentlyContinue | Select-Object -First 1
+    if ($javaExe) {
+        $binPath = $javaExe.DirectoryName
+        $javaHome = Split-Path $binPath
+        [System.Environment]::SetEnvironmentVariable("Path", $env:Path + ";$binPath", "Machine")
+        [System.Environment]::SetEnvironmentVariable("JAVA_HOME", $javaHome, "Machine")
+        $env:Path += ";$binPath"
+        Write-Output "Added $binPath to PATH (installed at $javaHome)"
+    } else {
+        Write-Error "Could not find java.exe under C:\Program Files"
+        Get-ChildItem "C:\Program Files" -Directory | Write-Output
+        exit 1
+    }
+}
 
 Write-Output "Verifying Java installation..."
 java -version
