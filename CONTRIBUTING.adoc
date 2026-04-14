@@ -124,8 +124,14 @@ Use `--recreate` to rebuild or `--delete` to remove images.
 
 [,bash]
 ----
-# Password is auto-generated if JENKINS_PASSWORD is not set
-export JENKINS_PASSWORD=your-secure-password  # optional
+bash testimages/windows/setup-gce-image.sh
+----
+
+The default username is `jenkins` and the default password is `jenkins`. To use a custom password, set the `JENKINS_PASSWORD` environment variable before running the script:
+
+[,bash]
+----
+export JENKINS_PASSWORD=your-secure-password
 bash testimages/windows/setup-gce-image.sh
 ----
 
@@ -149,7 +155,7 @@ For Windows tests, also export:
 ----
 export GOOGLE_BOOT_DISK_PROJECT_ID=your-project-id
 export GOOGLE_BOOT_DISK_IMAGE_NAME=jenkins-gce-integration-test-windows-jre
-export GOOGLE_JENKINS_PASSWORD=password-from-image-build
+export GOOGLE_JENKINS_PASSWORD=jenkins  # default; must match the password used during image build
 ----
 
 [[create-a-service-account]]

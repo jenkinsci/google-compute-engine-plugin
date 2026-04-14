@@ -25,6 +25,7 @@ variable "agent_image" {
 
 variable "jenkins_password" {
   type      = string
+  default   = "jenkins"
   sensitive = true
 }
 

@@ -55,10 +55,7 @@ The Google Compute Engine (GCE) Plugin provisions GCE virtual machines as Jenkin
 
 * Jenkins 2.516.3 or later
 * A GCP project with the https://console.cloud.google.com/apis/api/compute.googleapis.com[Compute Engine API] enabled
-* A GCP service account with these IAM roles:
- ** `roles/compute.instanceAdmin`: create and manage VMs
- ** `roles/compute.networkAdmin`: configure networking
- ** `roles/iam.serviceAccountUser`: attach service accounts to VMs
+* A GCP service account with the required IAM permissions. See <<create-a-gcp-service-account,Create a GCP Service Account>>.
 * A GCE agent image with Java installed. Java 21 is recommended (Java 17 was dropped from Jenkins weekly in Jan 2026 and from the LTS line in April 2026). See <<preparing-agent-images,Preparing Agent Images>>.
 
 [[gcp-authentication]]
@@ -74,14 +71,37 @@ gcloud iam service-accounts create jenkins-gce
 export PROJECT=$(gcloud info --format='value(config.project)')
 export SA_EMAIL=$(gcloud iam service-accounts list \
   --filter="name:jenkins-gce" --format='value(email)')
+----
+
+[[iam-permissions]]
+==== IAM Permissions
+
+The plugin needs a narrow set of Compute Engine permissions. Create a custom role with only what is required:
+
+[,bash]
+----
+gcloud iam roles create jenkinsGcePlugin --project="$PROJECT" \
+  --title="Jenkins GCE Plugin" \
+  --description="Minimum permissions for the Jenkins GCE plugin" \
+  --permissions="\
+compute.instances.create,compute.instances.delete,compute.instances.get,compute.instances.list,\
+compute.instances.setLabels,compute.instances.setMetadata,compute.instances.setTags,\
+compute.instances.getGuestAttributes,\
+compute.disks.create,compute.disks.use,compute.disks.createSnapshot,\
+compute.snapshots.create,compute.snapshots.delete,compute.snapshots.get,\
+compute.images.get,compute.images.list,compute.images.useReadOnly,\
+compute.subnetworks.list,compute.subnetworks.use,compute.subnetworks.useExternalIp,\
+compute.networks.list,compute.networks.use,compute.networks.useExternalIp,\
+compute.instanceTemplates.get,compute.instanceTemplates.list,compute.instanceTemplates.useReadOnly,\
+compute.machineTypes.list,compute.diskTypes.list,compute.regions.list,compute.zones.list,\
+compute.zoneOperations.get,compute.acceleratorTypes.list"
 
 gcloud projects add-iam-policy-binding $PROJECT \
-  --member serviceAccount:$SA_EMAIL --role roles/compute.instanceAdmin
-gcloud projects add-iam-policy-binding $PROJECT \
-  --member serviceAccount:$SA_EMAIL --role roles/compute.networkAdmin
-gcloud projects add-iam-policy-binding $PROJECT \
-  --member serviceAccount:$SA_EMAIL --role roles/iam.serviceAccountUser
+  --member serviceAccount:$SA_EMAIL \
+  --role "projects/$PROJECT/roles/jenkinsGcePlugin"
 ----
+
+If your builds need to call GCP APIs from inside the agent VM, see <<iam,Service Account E-mail>> for additional IAM setup.
 
 [[add-credentials-to-jenkins]]
 === Add Credentials to Jenkins
@@ -476,8 +496,25 @@ Short names for `source-snapshot`, `type`, and `name` are automatically qualifie
 
 | *Service Account E-mail*
 | `serviceAccountEmail`
-| GCP service account attached to the VM, controlling what GCP APIs it can access from the metadata server. Scoped to `+https://www.googleapis.com/auth/cloud-platform+`.
+| GCP service account attached to the agent VM. Optional. See below.
 |===
+
+Most users can leave this field empty. The https://cloud.google.com/compute/docs/access/service-accounts#default_service_account[default Compute Engine service account] (GCP docs) is attached automatically and is sufficient when your builds do not need to call GCP APIs from inside the VM.
+
+Set this only when your builds need to call GCP APIs using the VM's service account (e.g., push to Artifact Registry, read from Cloud Storage). In that case:
+
+. Create a dedicated agent service account with only the permissions your builds require.
+. Add `compute.instances.setServiceAccount` to the controller SA's custom role.
+. Grant `roles/iam.serviceAccountUser` on the agent SA to the controller SA (this grants `iam.serviceAccounts.actAs`, which GCP requires when attaching a service account to a VM):
++
+[,bash]
+----
+gcloud iam service-accounts add-iam-policy-binding AGENT_SA_EMAIL \
+  --member "serviceAccount:CONTROLLER_SA_EMAIL" \
+  --role roles/iam.serviceAccountUser
+----
+
+IMPORTANT: Do not use the Jenkins controller's service account as the agent service account. A compromised agent VM would inherit the controller's permissions (VM provisioning, deletion, etc.). Always use a separate, least-privilege service account scoped to your build workload.
 
 [[windows-configuration]]
 === Windows Configuration
@@ -576,8 +613,6 @@ jenkins:
             bootDiskType: pd-ssd
             bootDiskSizeGbStr: "50"
             bootDiskAutoDelete: true
-            # IAM
-            serviceAccountEmail: jenkins-agent@my-gcp-project.iam.gserviceaccount.com
 
 credentials:
   system:
@@ -1013,7 +1048,7 @@ Add a log recorder in menu:Manage Jenkins[System Log > Add recorder]:
 === Instance Not Launching
 
 . *Credentials*: verify the service account key is valid and the credential is correctly selected in the cloud configuration.
-. *IAM roles*: the service account needs `compute.instanceAdmin`, `compute.networkAdmin`, and `iam.serviceAccountUser`.
+. *IAM roles*: verify the controller service account has the required permissions. See <<iam-permissions,IAM Permissions>>.
 . *API quota*: check https://console.cloud.google.com/iam-admin/quotas[GCP quotas] for CPU, IP addresses, and SSD storage in your region.
 . *Firewall*: ensure a firewall rule allows TCP port 22 from the Jenkins controller to agent VMs. Apply the rule via network tags.
 . *Boot image*: the image must have Java installed at the configured path.
