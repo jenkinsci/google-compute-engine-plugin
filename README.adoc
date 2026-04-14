@@ -53,7 +53,6 @@ The Google Compute Engine (GCE) Plugin provisions GCE virtual machines as Jenkin
 [[prerequisites]]
 == Prerequisites
 
-* Jenkins 2.516.3 or later
 * A GCP project with the https://console.cloud.google.com/apis/api/compute.googleapis.com[Compute Engine API] enabled
 * A GCP service account with the required IAM permissions. See <<create-a-gcp-service-account,Create a GCP Service Account>>.
 * A GCE agent image with Java installed. Java 21 is recommended (Java 17 was dropped from Jenkins weekly in Jan 2026 and from the LTS line in April 2026). See <<preparing-agent-images,Preparing Agent Images>>.
