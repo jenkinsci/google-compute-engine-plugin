@@ -11,8 +11,13 @@ Copyright 2020 Google LLC
  implied. See the License for the specific language governing permissions and limitations under the
  License.
 ////
+:toc: macro
+:toc-title:
+
 [[contributing]]
 = Contributing
+
+toc::[]
 
 We'd love to accept your patches and contributions to this project.
 

@@ -13,6 +13,8 @@ Copyright 2020 Google LLC
 ////
 :doctype: book
 :experimental:
+:toc: macro
+:toc-title:
 
 image:https://ci.jenkins.io/job/Plugins/job/google-compute-engine-plugin/job/master/badge/icon[Build Status,link=https://ci.jenkins.io/job/Plugins/job/google-compute-engine-plugin/job/develop/]
 image:https://img.shields.io/github/contributors/jenkinsci/google-compute-engine-plugin.svg[Contributors,link=https://github.com/jenkinsci/google-compute-engine-plugin/graphs/contributors]
@@ -25,30 +27,7 @@ image:https://img.shields.io/jenkins/plugin/i/google-compute-engine.svg?color=bl
 
 The Google Compute Engine (GCE) Plugin provisions GCE virtual machines as Jenkins agents. Agents are launched when builds need them and terminated when idle or when the build completes (one-shot mode). Supports Linux and Windows VMs, Spot and Preemptible instances, startup scripts, GPUs, and secondary disks. Compatible with https://jenkins.io/projects/jcasc/[Jenkins Configuration as Code].
 
-[[table-of-contents]]
-== Table of Contents
-
-* <<prerequisites,Prerequisites>>
-* <<gcp-authentication,GCP Authentication>>
- ** <<create-a-gcp-service-account,Create a GCP Service Account>>
- ** <<add-credentials-to-jenkins,Add Credentials to Jenkins>>
-* <<preparing-agent-images,Preparing Agent Images>>
- ** <<linux,Linux>>
- ** <<windows,Windows>>
-* <<configuration,Configuration>>
- ** <<add-a-gce-cloud,Add a GCE Cloud>>
- ** <<instance-configuration,Instance Configuration>>
- ** <<windows-configuration,Windows Configuration>>
- ** <<configuration-as-code-casc,Configuration as Code (CasC)>>
-* <<advanced-usage,Advanced Usage>>
- ** <<provisioning-types-standard-spot-and-preemptible,Provisioning Types: Standard, Spot, and Preemptible>>
- ** <<provisioning-behavior,Provisioning Behavior>>
- ** <<minimum-instance-scaling,Minimum Instance Scaling>>
- ** <<startup-script-exit-reporter,Startup Script Exit Reporter>>
- ** <<custom-metadata,Custom Metadata>>
- ** <<secondary-disks,Secondary Disks>>
- ** <<networking-casc-examples,Networking CasC Examples>>
-* <<troubleshooting,Troubleshooting>>
+toc::[]
 
 [[prerequisites]]
 == Prerequisites
