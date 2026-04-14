@@ -30,7 +30,7 @@ The project uses https://github.com/diffplug/spotless[Spotless] for code formatt
 
 To auto-fix formatting on every build (recommended), set this in your `~/.m2/settings.xml`:
 
-[,xml]
+[source,xml]
 ----
 <settings>
   [...]
@@ -46,7 +46,7 @@ See https://github.com/jenkinsci/plugin-pom/pull/1017[jenkinsci/plugin-pom#1017]
 [[quick-start]]
 == Quick Start
 
-[,bash]
+[source,bash]
 ----
 git clone git@github.com:jenkinsci/google-compute-engine-plugin.git
 cd google-compute-engine-plugin
@@ -81,7 +81,7 @@ information on using pull requests.
 [[unit-tests]]
 === Unit Tests
 
-[,bash]
+[source,bash]
 ----
 mvn test
 ----
@@ -105,7 +105,7 @@ The agent images need Java pre-installed. Packer scripts create and upload the i
 
 *Linux image:*
 
-[,bash]
+[source,bash]
 ----
 cd testimages/linux
 bash setup-gce-image.sh
@@ -113,7 +113,7 @@ bash setup-gce-image.sh
 
 The default image has `java` on PATH. To also create a non-standard-java image (java at `/usr/bin/non-standard-java`) for `ComputeEngineCloudNonStandardJavaIT`:
 
-[,bash]
+[source,bash]
 ----
 bash setup-gce-image.sh non-standard-java
 ----
@@ -122,14 +122,14 @@ Use `--recreate` to rebuild or `--delete` to remove images.
 
 *Windows image:*
 
-[,bash]
+[source,bash]
 ----
 bash testimages/windows/setup-gce-image.sh
 ----
 
 The default username is `jenkins` and the default password is `jenkins`. To use a custom password, set the `JENKINS_PASSWORD` environment variable before running the script:
 
-[,bash]
+[source,bash]
 ----
 export JENKINS_PASSWORD=your-secure-password
 bash testimages/windows/setup-gce-image.sh
@@ -140,7 +140,7 @@ This creates a Windows Server 2022 image with Java 21 and OpenSSH pre-installed.
 [[set-environment-variables]]
 ==== Set Environment Variables
 
-[,bash]
+[source,bash]
 ----
 export GOOGLE_PROJECT_ID=your-project-id
 export GOOGLE_CREDENTIALS_FILE=/path/to/sa-key.json
@@ -151,7 +151,7 @@ export GOOGLE_SA_NAME=jenkins-agent-sa
 
 For Windows tests, also export:
 
-[,bash]
+[source,bash]
 ----
 export GOOGLE_BOOT_DISK_PROJECT_ID=your-project-id
 export GOOGLE_BOOT_DISK_IMAGE_NAME=jenkins-gce-integration-test-windows-jre
@@ -170,28 +170,28 @@ Integration tests are disabled by default (`-DskipITs=true` in `pom.xml`). Enabl
 
 Run all integration tests:
 
-[,bash]
+[source,bash]
 ----
 mvn verify -DskipITs=false
 ----
 
 Run a specific integration test class:
 
-[,bash]
+[source,bash]
 ----
 mvn verify -DskipTests -DskipITs=false -Dit.test=ComputeEngineCloudRestartPreemptedIT
 ----
 
 Run a specific integration test method:
 
-[,bash]
+[source,bash]
 ----
 mvn verify -DskipTests -DskipITs=false -Dit.test=ComputeEngineCloudRestartPreemptedIT#testIfNodeWasPreempted
 ----
 
 Run Windows integration tests:
 
-[,bash]
+[source,bash]
 ----
 mvn verify -DskipITs=false -Dit.windows=true
 ----
@@ -203,14 +203,14 @@ Attach a remote debugger on port 8000.
 
 Unit test (Surefire):
 
-[,bash]
+[source,bash]
 ----
 mvn test -Dtest=YourTestClass -Dmaven.surefire.debug=true
 ----
 
 Integration test (Failsafe):
 
-[,bash]
+[source,bash]
 ----
 mvn verify -DskipTests -DskipITs=false -Dit.test=YourTestClassIT -Dmaven.failsafe.debug=true
 ----

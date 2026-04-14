@@ -64,7 +64,7 @@ The Google Compute Engine (GCE) Plugin provisions GCE virtual machines as Jenkin
 [[create-a-gcp-service-account]]
 === Create a GCP Service Account
 
-[,bash]
+[source,bash]
 ----
 gcloud iam service-accounts create jenkins-gce
 
@@ -78,7 +78,7 @@ export SA_EMAIL=$(gcloud iam service-accounts list \
 
 The plugin needs a narrow set of Compute Engine permissions. Create a custom role with only what is required:
 
-[,bash]
+[source,bash]
 ----
 gcloud iam roles create jenkinsGcePlugin --project="$PROJECT" \
   --title="Jenkins GCE Plugin" \
@@ -115,7 +115,7 @@ Use this when Jenkins runs outside GCP (e.g. on-prem, another cloud).
 
 . Download a JSON key for the service account:
 +
-[,bash]
+[source,bash]
 ----
 gcloud iam service-accounts keys create \
   --iam-account $SA_EMAIL jenkins-gce.json
@@ -141,7 +141,7 @@ Use this when Jenkins runs on GKE. No JSON key is needed. The Kubernetes service
 
 . Bind the Kubernetes service account to the GCP service account:
 +
-[,bash]
+[source,bash]
 ----
 gcloud iam service-accounts add-iam-policy-binding $SA_EMAIL \
   --member "serviceAccount:$PROJECT.svc.id.goog[<namespace>/<k8s-service-account>]" \
@@ -169,7 +169,7 @@ The plugin connects to agents via SSH and requires Java on the agent (Java 21 re
 
 The plugin's link:./testimages/linux/[`testimages/linux/`] directory contains a working Packer setup that builds a Debian 12 image with Temurin 21 JRE:
 
-[,bash]
+[source,bash]
 ----
 cd testimages/linux
 bash setup-gce-image.sh
@@ -190,7 +190,7 @@ This creates an image named `jenkins-gce-integration-test-jre` in your GCP proje
 
 The plugin's link:./testimages/windows/[`testimages/windows/`] directory contains a working Packer setup that builds a Windows Server 2022 image with Temurin 21 JRE, OpenSSH, and a `jenkins` admin user (password-based):
 
-[,bash]
+[source,bash]
 ----
 export JENKINS_PASSWORD=your-secure-password  # auto-generated if not set
 cd testimages/windows
@@ -507,7 +507,7 @@ Set this only when your builds need to call GCP APIs using the VM's service acco
 . Add `compute.instances.setServiceAccount` to the controller SA's custom role.
 . Grant `roles/iam.serviceAccountUser` on the agent SA to the controller SA (this grants `iam.serviceAccounts.actAs`, which GCP requires when attaching a service account to a VM):
 +
-[,bash]
+[source,bash]
 ----
 gcloud iam service-accounts add-iam-policy-binding AGENT_SA_EMAIL \
   --member "serviceAccount:CONTROLLER_SA_EMAIL" \
@@ -546,7 +546,7 @@ image::docs/images/sshcred.png[SSH credential]
 
 *Example startup script* (dynamic per-boot configuration, not static prerequisites):
 
-[,powershell]
+[source,powershell]
 ----
 # Pull build tools configuration from a GCS bucket
 gsutil cp gs://my-build-config/settings.xml C:\Users\jenkins\.m2\settings.xml
@@ -574,7 +574,7 @@ ____
 [[basic-linux-agent]]
 ==== Basic Linux Agent
 
-[,yaml]
+[source,yaml]
 ----
 jenkins:
   clouds:
@@ -634,7 +634,7 @@ credentials:
 [[windows-agent]]
 ==== Windows Agent
 
-[,yaml]
+[source,yaml]
 ----
 jenkins:
   clouds:
@@ -721,7 +721,7 @@ The *Max Run Duration Seconds* field (Standard and Spot only) sets a time limit 
 
 CasC syntax:
 
-[,yaml]
+[source,yaml]
 ----
 # Standard (default)
 provisioningType:
@@ -778,7 +778,7 @@ These two settings combine: set a total minimum of 3 and a spare minimum of 1, a
 
 *Time-range scheduling* restricts when minimums are enforced. Outside the window, idle agents are terminated normally. Use this for business-hours-only pools.
 
-[,yaml]
+[source,yaml]
 ----
 # Keep 3 agents running during business hours, with 1 always idle
 configurations:
@@ -821,7 +821,7 @@ Each instance configuration is either Linux or Windows, not both. The plugin use
 
 *Linux instance configuration:*
 
-[,yaml]
+[source,yaml]
 ----
 configurations:
   - namePrefix: linux-agent
@@ -839,7 +839,7 @@ configurations:
 
 *Windows instance configuration:*
 
-[,yaml]
+[source,yaml]
 ----
 configurations:
   - namePrefix: win-agent
@@ -867,7 +867,7 @@ The default Linux reporter uses `curl`, which is widely available. If your image
 
 *bash `/dev/tcp`* (no external tools):
 
-[,bash]
+[source,bash]
 ----
 exec 3<>/dev/tcp/metadata.google.internal/80
 printf "PUT /computeMetadata/v1/instance/guest-attributes/startup-script/status HTTP/1.0\r\nHost: metadata.google.internal\r\nMetadata-Flavor: Google\r\nContent-Length: ${#1}\r\n\r\n$1" >&3
@@ -876,7 +876,7 @@ exec 3>&-
 
 *wget*:
 
-[,bash]
+[source,bash]
 ----
 wget -q --method=PUT --header="Metadata-Flavor: Google" --body-data="$1" \
   "http://metadata.google.internal/computeMetadata/v1/instance/guest-attributes/startup-script/status" -O /dev/null
@@ -884,7 +884,7 @@ wget -q --method=PUT --header="Metadata-Flavor: Google" --body-data="$1" \
 
 *python3*:
 
-[,bash]
+[source,bash]
 ----
 python3 -c "import urllib.request; urllib.request.urlopen(urllib.request.Request( \
   'http://metadata.google.internal/computeMetadata/v1/instance/guest-attributes/startup-script/status', \
@@ -902,7 +902,7 @@ Reserved keys that cannot be used: `ssh-keys`, `startup-script`, `windows-startu
 
 Simple key-value pairs:
 
-[,yaml]
+[source,yaml]
 ----
 configurations:
   - namePrefix: jenkins-agent
@@ -918,7 +918,7 @@ configurations:
 
 Multiline value (e.g. a config file or script fragment):
 
-[,yaml]
+[source,yaml]
 ----
 configurations:
   - namePrefix: jenkins-agent
@@ -941,7 +941,7 @@ Attach additional disks beyond the boot disk using the `diskMapping` field. The 
 
 Attach a disk created from an existing snapshot. The filesystem from the snapshot is preserved, so no formatting is needed.
 
-[,yaml]
+[source,yaml]
 ----
 configurations:
   - namePrefix: jenkins-agent
@@ -960,7 +960,7 @@ configurations:
 
 Create a new empty disk. Requires formatting before use.
 
-[,yaml]
+[source,yaml]
 ----
 configurations:
   - namePrefix: jenkins-agent
@@ -980,7 +980,7 @@ configurations:
 
 Attach a pre-existing persistent disk. The filesystem is preserved. Use `auto-delete=no` to keep the disk after the instance is deleted.
 
-[,yaml]
+[source,yaml]
 ----
 configurations:
   - namePrefix: jenkins-agent
@@ -1000,7 +1000,7 @@ configurations:
 [[private-networking-no-external-ip]]
 ==== Private Networking (No External IP)
 
-[,yaml]
+[source,yaml]
 ----
 # Private networking — requires Cloud NAT or VPN for internet access
 configurations:
@@ -1016,7 +1016,7 @@ configurations:
 [[shared-vpc]]
 ==== Shared VPC
 
-[,yaml]
+[source,yaml]
 ----
 configurations:
   - namePrefix: jenkins-agent
