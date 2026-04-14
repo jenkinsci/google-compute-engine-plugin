@@ -587,8 +587,8 @@ jenkins:
               singleStack:
                 externalIPV4Address: true
             # Boot disk
-            bootDiskSourceImageProject: ubuntu-os-cloud
-            bootDiskSourceImageName: ubuntu-2404-noble-amd64-v20260401
+            bootDiskSourceImageProject: my-gcp-project
+            bootDiskSourceImageName: jenkins-gce-integration-test-jre  # built by testimages/linux/setup-gce-image.sh
             bootDiskType: pd-ssd
             bootDiskSizeGbStr: "50"
             bootDiskAutoDelete: true
@@ -649,8 +649,8 @@ jenkins:
             networkInterfaceIpStackMode:
               singleStack:
                 externalIPV4Address: true
-            bootDiskSourceImageProject: windows-cloud
-            bootDiskSourceImageName: windows-server-2022-dc-v20260401
+            bootDiskSourceImageProject: my-gcp-project
+            bootDiskSourceImageName: jenkins-gce-integration-test-windows-jre  # built by testimages/windows/setup-gce-image.sh
             bootDiskType: pd-ssd
             bootDiskSizeGbStr: "50"
             bootDiskAutoDelete: true
@@ -731,6 +731,7 @@ Jenkins by default estimates load before provisioning cloud nodes. This plugin i
 
 * *System property*: set `com.google.jenkins.plugins.computeengine.disableNoDelayProvisioning=true`
 * *UI*: uncheck the *No delay provisioning* checkbox in the cloud configuration.
+* *CasC*: set `noDelayProvisioning: false` under the `computeEngine` cloud.
 
 [[instance-cap]]
 ==== Instance Cap
