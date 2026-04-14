@@ -192,7 +192,7 @@ mvn verify -DskipITs=false -Dit.windows=true
 [[debugging-tests]]
 ==== Debugging Tests
 
-Attach a remote debugger on port 8000.
+Attach a remote debugger on port 5005.
 
 Unit test (Surefire):
 
@@ -208,7 +208,7 @@ Integration test (Failsafe):
 mvn verify -DskipTests -DskipITs=false -Dit.test=YourTestClassIT -Dmaven.failsafe.debug=true
 ----
 
-Then connect your remote debug configuration to `localhost:8000`.
+Then connect your remote debug configuration to `localhost:5005`.
 
 [[license]]
 == License
