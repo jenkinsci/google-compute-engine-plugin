@@ -172,14 +172,14 @@ Run a specific integration test class:
 
 [source,bash]
 ----
-mvn verify -DskipTests -DskipITs=false -Dit.test=ComputeEngineCloudRestartPreemptedIT
+mvn verify -Dskip.surefire.tests=true -DskipITs=false -Dit.test=ComputeEngineCloudRestartPreemptedIT
 ----
 
 Run a specific integration test method:
 
 [source,bash]
 ----
-mvn verify -DskipTests -DskipITs=false -Dit.test=ComputeEngineCloudRestartPreemptedIT#testIfNodeWasPreempted
+mvn verify -Dskip.surefire.tests=true -DskipITs=false -Dit.test=ComputeEngineCloudRestartPreemptedIT#testIfNodeWasPreempted
 ----
 
 Run Windows integration tests:
@@ -205,7 +205,7 @@ Integration test (Failsafe):
 
 [source,bash]
 ----
-mvn verify -DskipTests -DskipITs=false -Dit.test=YourTestClassIT -Dmaven.failsafe.debug=true
+mvn verify -Dskip.surefire.tests=true -DskipITs=false -Dit.test=YourTestClassIT -Dmaven.failsafe.debug=true
 ----
 
 Then connect your remote debug configuration to `localhost:5005`.
