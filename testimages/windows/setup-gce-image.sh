@@ -14,14 +14,8 @@ if [ "${1:-}" == "non-standard-java" ]; then
   shift
 fi
 
-# Auto-generate password if not provided
-if [ -z "${JENKINS_PASSWORD:-}" ]; then
-  JENKINS_PASSWORD=$(openssl rand -base64 16)
-  echo "========================================="
-  echo "Generated JENKINS_PASSWORD: $JENKINS_PASSWORD"
-  echo "Use this when running Windows integration tests."
-  echo "========================================="
-fi
+# Default password is 'Agent007!' if not provided
+JENKINS_PASSWORD=${JENKINS_PASSWORD:-Agent007!}
 
 case "${1:-}" in
   --recreate)
