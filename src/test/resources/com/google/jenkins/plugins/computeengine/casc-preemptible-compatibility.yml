@@ -1,0 +1,44 @@
+jenkins:
+  clouds:
+    - computeEngine:
+        cloudName: jenkins-build
+        projectId: gce-jenkins
+        instanceCapStr: 2
+        credentialsId: gce-jenkins
+        noDelayProvisioning: false
+        configurations:
+          - namePrefix:         jenkins-agent-image
+            description:        Jenkins agent
+            launchTimeoutSecondsStr: 6
+            retentionTimeMinutesStr: 300
+            mode:               EXCLUSIVE
+            labelString:        jenkins-agent
+            numExecutorsStr:    1
+            runAsUser:          jenkins
+            remoteFs:           agent
+            javaExecPath:       "java"
+            oneShot:            true
+            createSnapshot:     false
+            region:             "https://www.googleapis.com/compute/v1/projects/gce-jenkins/regions/europe-west1"
+            zone:               "https://www.googleapis.com/compute/v1/projects/gce-jenkins/zones/europe-west1-a"
+            template:           ''
+            machineType:        "https://www.googleapis.com/compute/v1/projects/gce-jenkins/zones/europe-west1-a/machineTypes/n1-standard-2"
+            preemptible:        true
+            minCpuPlatform:     ''
+            startupScript:      ''
+            networkConfiguration:
+              sharedVpc:
+                projectId:      gce-jenkins-cloud-123456
+                region:         europe-west1
+                subnetworkShortName: gce-jenkins-cloud
+            networkTags:        jenkins-agent
+            networkInterfaceIpStackMode:
+              singleStack:
+                externalIPV4Address:    true
+            useInternalAddress: false
+            bootDiskSourceImageProject: gce-jenkins
+            bootDiskSourceImageName: "https://www.googleapis.com/compute/v1/projects/gce-jenkins/global/images/gce-jenkins-build-image"
+            bootDiskType:       "https://www.googleapis.com/compute/v1/projects/gce-jenkins/zones/europe-west1-a/diskTypes/pd-standard"
+            bootDiskSizeGbStr:  50
+            bootDiskAutoDelete: true
+            serviceAccountEmail: 'jenkins-test@gce-jenkins-ops.iam.gserviceaccount.com'

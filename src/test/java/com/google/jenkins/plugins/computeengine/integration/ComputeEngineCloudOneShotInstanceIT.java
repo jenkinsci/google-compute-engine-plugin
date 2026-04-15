@@ -53,6 +53,7 @@ import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.rules.Timeout;
+import org.jvnet.hudson.test.BuildWatcher;
 import org.jvnet.hudson.test.JenkinsRule;
 
 /**
@@ -64,13 +65,16 @@ public class ComputeEngineCloudOneShotInstanceIT {
     private static final int QUIET_PERIOD_SECS = 30;
 
     @ClassRule
-    public static Timeout timeout = new Timeout(10 * TEST_TIMEOUT_MULTIPLIER, TimeUnit.MINUTES);
+    public static Timeout timeout = new Timeout(10L * TEST_TIMEOUT_MULTIPLIER, TimeUnit.MINUTES);
 
     @ClassRule
     public static JenkinsRule jenkinsRule = new JenkinsRule();
 
+    @ClassRule
+    public static BuildWatcher bw = new BuildWatcher();
+
     private static ComputeClient client;
-    private static Map<String, String> label = getLabel(ComputeEngineCloudOneShotInstanceIT.class);
+    private static final Map<String, String> label = getLabel(ComputeEngineCloudOneShotInstanceIT.class);
     private static FreeStyleBuild build;
     private static String nodeName;
     private static Future<FreeStyleBuild> otherBuildFuture;

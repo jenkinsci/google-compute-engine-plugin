@@ -54,18 +54,18 @@ import org.jvnet.hudson.test.JenkinsRule;
  * with multiple Jenkins labels and that these labels are properly provisioned.
  */
 public class ComputeEngineCloudMultipleLabelsIT {
-    private static Logger log = Logger.getLogger(ComputeEngineCloudMultipleLabelsIT.class.getName());
+    private static final Logger log = Logger.getLogger(ComputeEngineCloudMultipleLabelsIT.class.getName());
 
     private static final String MULTIPLE_LABEL = "integration test";
 
     @ClassRule
-    public static Timeout timeout = new Timeout(5 * TEST_TIMEOUT_MULTIPLIER, TimeUnit.MINUTES);
+    public static Timeout timeout = new Timeout(5L * TEST_TIMEOUT_MULTIPLIER, TimeUnit.MINUTES);
 
     @ClassRule
     public static JenkinsRule jenkinsRule = new JenkinsRule();
 
     private static ComputeClient client;
-    private static Map<String, String> label = getLabel(ComputeEngineCloudMultipleLabelsIT.class);
+    private static final Map<String, String> label = getLabel(ComputeEngineCloudMultipleLabelsIT.class);
     private static String name;
 
     @BeforeClass

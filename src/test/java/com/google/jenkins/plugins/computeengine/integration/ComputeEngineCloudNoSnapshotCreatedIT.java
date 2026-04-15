@@ -51,6 +51,7 @@ import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.rules.Timeout;
+import org.jvnet.hudson.test.BuildWatcher;
 import org.jvnet.hudson.test.JenkinsRule;
 
 /**
@@ -59,16 +60,19 @@ import org.jvnet.hudson.test.JenkinsRule;
  * instance is terminated but no snapshot is created.
  */
 public class ComputeEngineCloudNoSnapshotCreatedIT {
-    private static Logger log = Logger.getLogger(ComputeEngineCloudNoSnapshotCreatedIT.class.getName());
+    private static final Logger log = Logger.getLogger(ComputeEngineCloudNoSnapshotCreatedIT.class.getName());
 
     @ClassRule
-    public static Timeout timeout = new Timeout(7 * TEST_TIMEOUT_MULTIPLIER, TimeUnit.MINUTES);
+    public static Timeout timeout = new Timeout(7L * TEST_TIMEOUT_MULTIPLIER, TimeUnit.MINUTES);
 
     @ClassRule
     public static JenkinsRule jenkinsRule = new JenkinsRule();
 
+    @ClassRule
+    public static BuildWatcher bw = new BuildWatcher();
+
     private static ComputeClient client;
-    private static Map<String, String> label = getLabel(ComputeEngineCloudNoSnapshotCreatedIT.class);
+    private static final Map<String, String> label = getLabel(ComputeEngineCloudNoSnapshotCreatedIT.class);
     private static String name;
 
     @BeforeClass

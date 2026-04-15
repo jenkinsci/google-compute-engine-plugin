@@ -57,18 +57,18 @@ import org.jvnet.hudson.test.JenkinsRule;
  * still present on the created instance.
  */
 public class ComputeEngineCloudTemplateNoGoogleLabelsIT {
-    private static Logger log = Logger.getLogger(ComputeEngineCloudTemplateNoGoogleLabelsIT.class.getName());
+    private static final Logger log = Logger.getLogger(ComputeEngineCloudTemplateNoGoogleLabelsIT.class.getName());
 
     private static final String TEMPLATE = format("projects/%s/global/instanceTemplates/test-template-no-labels");
 
     @ClassRule
-    public static Timeout timeout = new Timeout(5 * TEST_TIMEOUT_MULTIPLIER, TimeUnit.MINUTES);
+    public static Timeout timeout = new Timeout(5L * TEST_TIMEOUT_MULTIPLIER, TimeUnit.MINUTES);
 
     @ClassRule
     public static JenkinsRule jenkinsRule = new JenkinsRule();
 
     private static ComputeClient client;
-    private static Map<String, String> label = getLabel(ComputeEngineCloudTemplateNoGoogleLabelsIT.class);
+    private static final Map<String, String> label = getLabel(ComputeEngineCloudTemplateNoGoogleLabelsIT.class);
     private static ComputeEngineCloud cloud;
     private static Instance instance;
 

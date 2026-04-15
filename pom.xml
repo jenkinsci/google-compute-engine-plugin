@@ -17,7 +17,7 @@
   <parent>
     <groupId>org.jenkins-ci.plugins</groupId>
     <artifactId>plugin</artifactId>
-    <version>4.76</version>
+    <version>6.2138.v03274d462c13</version>
     <relativePath />
   </parent>
 
@@ -65,8 +65,9 @@
     <revision>4</revision>
     <changelist>999999-SNAPSHOT</changelist>
     <gitHubRepo>jenkinsci/${project.artifactId}-plugin</gitHubRepo>
-    <jenkins.version>2.426.3</jenkins.version>
-    <jenkinsRuleTimeout>0</jenkinsRuleTimeout>
+    <!-- https://www.jenkins.io/doc/developer/plugin-development/choosing-jenkins-baseline/ -->
+    <jenkins.baseline>2.516</jenkins.baseline>
+    <jenkins.version>${jenkins.baseline}.3</jenkins.version>
     <skip.surefire.tests>${skipTests}</skip.surefire.tests>
     <skipITs>true</skipITs>
     <it.windows>false</it.windows>
@@ -83,14 +84,15 @@
     <lombok.version>1.18.30</lombok.version>
     <delombok.output>${project.build.directory}/delombok</delombok.output>
     <spotless.check.skip>false</spotless.check.skip>
+    <jenkins.test.timeout>600</jenkins.test.timeout>
   </properties>
 
   <dependencyManagement>
     <dependencies>
       <dependency>
         <groupId>io.jenkins.tools.bom</groupId>
-        <artifactId>bom-2.426.x</artifactId>
-        <version>2671.va_73a_b_4c103fb_</version>
+        <artifactId>bom-${jenkins.baseline}.x</artifactId>
+        <version>6166.va_a_8b_5eda_8ef5</version>
         <type>pom</type>
         <scope>import</scope>
       </dependency>
@@ -163,6 +165,11 @@
       <artifactId>google-oauth-client</artifactId>
       <version>${com.google.oauth-client.version}</version>
       <exclusions>
+        <exclusion>
+          <!-- via gson-api plugin -->
+          <groupId>com.google.code.gson</groupId>
+          <artifactId>gson</artifactId>
+        </exclusion>
         <!-- Provided by Jenkins core -->
         <exclusion>
           <groupId>com.google.guava</groupId>
@@ -171,11 +178,6 @@
         <exclusion>
           <groupId>com.google.http-client</groupId>
           <artifactId>google-http-client</artifactId>
-        </exclusion>
-        <exclusion>
-          <!-- via gson-api plugin -->
-          <groupId>om.google.code.gson</groupId>
-          <artifactId>gson</artifactId>
         </exclusion>
       </exclusions>
     </dependency>
@@ -191,11 +193,6 @@
       <groupId>io.opencensus</groupId>
       <artifactId>opencensus-api</artifactId>
       <version>0.31.1</version>
-    </dependency>
-    <dependency>
-      <groupId>net.i2p.crypto</groupId>
-      <artifactId>eddsa</artifactId>
-      <version>0.3.0</version>
     </dependency>
     <!-- gcp-client (abandoned?) actually depends on these libraries in _compile_ scope, so they must be bundled in the plugin. -->
     <!-- See https://github.com/GoogleCloudPlatform/gcp-plugin-core-java/blob/cce07995cf7f060e71bf11da37d7a1f976ea84ef/gcp-client/src/main/java/com/google/cloud/graphite/platforms/plugin/client/ComputeClient.java#L665 -->
@@ -246,14 +243,6 @@
     <dependency>
       <groupId>org.jenkins-ci.plugins</groupId>
       <artifactId>trilead-api</artifactId>
-      <!-- TODO remove when upgrading BOM -->
-      <version>2.84.v72119de229b_7</version>
-      <exclusions>
-        <exclusion>
-          <groupId>net.i2p.crypto</groupId>
-          <artifactId>eddsa</artifactId>
-        </exclusion>
-      </exclusions>
     </dependency>
     <dependency>
       <groupId>org.projectlombok</groupId>
@@ -282,7 +271,33 @@
       <version>${powershell.version}</version>
       <scope>test</scope>
     </dependency>
-    <!-- Test Dependencies -->
+    <!-- https://www.jenkins.io/doc/developer/testing/#working-with-pipeline -->
+    <dependency>
+      <groupId>org.jenkins-ci.plugins.workflow</groupId>
+      <artifactId>workflow-basic-steps</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.jenkins-ci.plugins.workflow</groupId>
+      <artifactId>workflow-cps</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.jenkins-ci.plugins.workflow</groupId>
+      <artifactId>workflow-durable-task-step</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.jenkins-ci.plugins.workflow</groupId>
+      <artifactId>workflow-job</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.jenkins-ci.plugins.workflow</groupId>
+      <artifactId>workflow-support</artifactId>
+      <classifier>tests</classifier>
+      <scope>test</scope>
+    </dependency>
     <dependency>
       <groupId>org.mockito</groupId>
       <artifactId>mockito-core</artifactId>
@@ -368,11 +383,11 @@
             <hudson.agents.NodeProvisioner.MARGIN0>1.0</hudson.agents.NodeProvisioner.MARGIN0>
             <hudson.remoting.Launcher.pingIntervalSec>-1</hudson.remoting.Launcher.pingIntervalSec>
             <com.google.jenkins.plugins.computeengine.integration.ITUtil.windows>${it.windows}</com.google.jenkins.plugins.computeengine.integration.ITUtil.windows>
+            <jenkins.test.timeout>${jenkins.test.timeout}</jenkins.test.timeout>
           </systemPropertyVariables>
           <excludes>
             <exclude>**/ITUtil.java</exclude>
           </excludes>
-          <argLine>-Djenkins.test.timeout=${jenkinsRuleTimeout}</argLine>
           <runOrder>${it.runOrder}</runOrder>
           <reuseForks>false</reuseForks>
         </configuration>
@@ -391,6 +406,9 @@
           <skipTests>${skip.surefire.tests}</skipTests>
           <runOrder>balanced</runOrder>
           <reuseForks>false</reuseForks>
+          <systemPropertyVariables>
+            <jenkins.test.timeout>${jenkins.test.timeout}</jenkins.test.timeout>
+          </systemPropertyVariables>
         </configuration>
       </plugin>
       <plugin>
@@ -408,27 +426,6 @@
             <format>xml</format>
           </formats>
         </configuration>
-      </plugin>
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-shade-plugin</artifactId>
-        <version>3.5.1</version>
-        <executions>
-          <execution>
-            <goals>
-              <goal>shade</goal>
-            </goals>
-            <phase>package</phase>
-            <configuration>
-              <shadedGroupFilter>com.google.cloud.graphite</shadedGroupFilter>
-              <promoteTransitiveDependencies>true</promoteTransitiveDependencies>
-              <createDependencyReducedPom>false</createDependencyReducedPom>
-              <transformers>
-                <transformer implementation="org.apache.maven.plugins.shade.resource.ApacheLicenseResourceTransformer" />
-              </transformers>
-            </configuration>
-          </execution>
-        </executions>
       </plugin>
     </plugins>
   </build>

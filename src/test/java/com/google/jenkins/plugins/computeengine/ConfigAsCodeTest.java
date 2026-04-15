@@ -1,9 +1,14 @@
 package com.google.jenkins.plugins.computeengine;
 
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.instanceOf;
+import static org.hamcrest.Matchers.is;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertThrows;
 
+import com.google.jenkins.plugins.computeengine.config.PreemptibleVm;
 import com.google.jenkins.plugins.credentials.oauth.GoogleRobotPrivateKeyCredentials;
 import hudson.model.Node;
 import io.jenkins.plugins.casc.misc.ConfiguredWithCode;
@@ -40,6 +45,31 @@ public class ConfigAsCodeTest {
         assertEquals("Wrong configurations runAsUser", "jenkins", configuration.getRunAsUser());
         assertEquals("Wrong configurations remoteFs", "agent", configuration.getRemoteFs());
         assertEquals("Wrong configurations javaExecPath", "java", configuration.getJavaExecPath());
+        assertNull("Wrong configuration provisioningType non null", configuration.getProvisioningType());
+        assertEquals("Wrong minimumNumberOfInstances", 2, configuration.getMinimumNumberOfInstances());
+        assertEquals("Wrong minimumNumberOfSpareInstances", 1, configuration.getMinimumNumberOfSpareInstances());
+        assertNotNull("customMetadata should not be null", configuration.getCustomMetadata());
+        assertEquals(
+                "Wrong customMetadata size",
+                2,
+                configuration.getCustomMetadata().size());
+        assertEquals("my-custom-key", configuration.getCustomMetadata().get(0).getKey());
+        assertEquals("my-custom-value", configuration.getCustomMetadata().get(0).getValue());
+        assertEquals(
+                "my-multiline-key", configuration.getCustomMetadata().get(1).getKey());
+        assertEquals(
+                "line1\nline2\nline3", configuration.getCustomMetadata().get(1).getValue());
+        var timeRangeConfig = configuration.getMinimumNumberOfInstancesTimeRangeConfig();
+        assertNotNull("minimumNumberOfInstancesTimeRangeConfig should not be null", timeRangeConfig);
+        assertEquals("09:00", timeRangeConfig.getActiveFrom());
+        assertEquals("17:00", timeRangeConfig.getActiveTo());
+        assertEquals(true, timeRangeConfig.getMonday());
+        assertEquals(true, timeRangeConfig.getTuesday());
+        assertEquals(true, timeRangeConfig.getWednesday());
+        assertEquals(true, timeRangeConfig.getThursday());
+        assertEquals(true, timeRangeConfig.getFriday());
+        assertEquals(false, timeRangeConfig.getSaturday());
+        assertEquals(false, timeRangeConfig.getSunday());
     }
 
     @Test
@@ -50,5 +80,12 @@ public class ConfigAsCodeTest {
         assertNotNull("Cloud by name not found", cloud);
         // Ensure correct exception is thrown
         assertThrows(GoogleRobotPrivateKeyCredentials.PrivateKeyNotSetException.class, cloud::getClient);
+    }
+
+    @Test
+    @ConfiguredWithCode("casc-preemptible-compatibility.yml")
+    public void provisioningTypeShouldBePreemptible() {
+        ComputeEngineCloud cloud = (ComputeEngineCloud) jenkinsRule.jenkins.clouds.getByName("gce-jenkins-build");
+        assertThat(cloud.getConfigurations().get(0).getProvisioningType(), is(instanceOf(PreemptibleVm.class)));
     }
 }

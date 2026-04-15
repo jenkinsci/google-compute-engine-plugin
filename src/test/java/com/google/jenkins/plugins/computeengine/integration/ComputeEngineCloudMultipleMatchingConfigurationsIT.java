@@ -19,15 +19,17 @@ package com.google.jenkins.plugins.computeengine.integration;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.LABEL;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.NULL_TEMPLATE;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.NUM_EXECUTORS;
+import static com.google.jenkins.plugins.computeengine.integration.ITUtil.PROJECT_ID;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.TEST_TIMEOUT_MULTIPLIER;
+import static com.google.jenkins.plugins.computeengine.integration.ITUtil.ZONE;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.getLabel;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.initClient;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.initCloud;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.initCredentials;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.instanceConfigurationBuilder;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.teardownResources;
+import static org.awaitility.Awaitility.await;
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import com.google.cloud.graphite.platforms.plugin.client.ComputeClient;
@@ -52,23 +54,23 @@ import org.jvnet.hudson.test.JenkinsRule;
 
 /**
  * Integration test suite for {@link ComputeEngineCloud}. Verifies that instances can be created
- * with multiple matching {@link InstanceConfiguration} and that these instances are properly
- * provisioned.
+ * with multiple matching {@link InstanceConfiguration} and that these instances are provisioned in round-robin fashion.
  */
 public class ComputeEngineCloudMultipleMatchingConfigurationsIT {
-    private static Logger log = Logger.getLogger(ComputeEngineCloudMultipleMatchingConfigurationsIT.class.getName());
+    private static final Logger log =
+            Logger.getLogger(ComputeEngineCloudMultipleMatchingConfigurationsIT.class.getName());
 
     private static final String DESC_1 = "type_1";
     private static final String DESC_2 = "type_2";
 
     @ClassRule
-    public static Timeout timeout = new Timeout(5 * TEST_TIMEOUT_MULTIPLIER, TimeUnit.MINUTES);
+    public static Timeout timeout = new Timeout(5L * TEST_TIMEOUT_MULTIPLIER, TimeUnit.MINUTES);
 
     @ClassRule
     public static JenkinsRule jenkinsRule = new JenkinsRule();
 
     private static ComputeClient client;
-    private static Map<String, String> label = getLabel(ComputeEngineCloudMultipleMatchingConfigurationsIT.class);
+    private static final Map<String, String> label = getLabel(ComputeEngineCloudMultipleMatchingConfigurationsIT.class);
     private static Collection<PlannedNode> planned;
 
     @BeforeClass
@@ -105,16 +107,18 @@ public class ComputeEngineCloudMultipleMatchingConfigurationsIT {
     }
 
     @Test
-    public void testMultipleLabelsProvisionedWithLabels() {
+    public void testRoundRobinProvisioningWhenMultipleMatchingConfigurations() throws IOException {
         assertEquals(2, planned.size());
 
         final Iterator<PlannedNode> iterator = planned.iterator();
         PlannedNode firstNode = iterator.next();
         PlannedNode secondNode = iterator.next();
         if (checkOneNode(firstNode, DESC_1)) {
-            assertTrue(checkOneNode(secondNode, DESC_2));
+            assertDescription(firstNode, DESC_1);
+            assertDescription(secondNode, DESC_2);
         } else if (checkOneNode(secondNode, DESC_1)) {
-            assertTrue(checkOneNode(firstNode, DESC_2));
+            assertDescription(secondNode, DESC_1);
+            assertDescription(firstNode, DESC_2);
         } else {
             fail("Nodes did not have expected values");
         }
@@ -124,5 +128,23 @@ public class ComputeEngineCloudMultipleMatchingConfigurationsIT {
         String name = plannedNode.displayName;
         Node node = jenkinsRule.jenkins.getNode(name);
         return desc.equals(node.getNodeDescription());
+    }
+
+    private void assertDescription(PlannedNode plannedNode, String agentDesc) throws IOException {
+        String agentName = plannedNode.displayName;
+
+        assertEquals(
+                "Jenkins agent description is incorrect",
+                agentDesc,
+                jenkinsRule.jenkins.getNode(agentName).getNodeDescription());
+
+        // verify the corresponding instance is actually provisioned in GCP
+        // and also has matching description
+        await("Instance is in running status").timeout(2, TimeUnit.MINUTES).until(() -> "RUNNING"
+                .equals(client.getInstance(PROJECT_ID, ZONE, agentName).getStatus()));
+        assertEquals(
+                "Instance description is incorrect",
+                agentDesc,
+                client.getInstance(PROJECT_ID, ZONE, agentName).getDescription());
     }
 }

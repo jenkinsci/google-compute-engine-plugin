@@ -30,9 +30,6 @@ import java.util.logging.Logger;
 public class ComputeEngineLinuxLauncher extends ComputeEngineComputerLauncher {
     private static final Logger LOGGER = Logger.getLogger(ComputeEngineLinuxLauncher.class.getName());
 
-    private static int bootstrapAuthTries = 30;
-    private static int bootstrapAuthSleepMs = 15000;
-
     public ComputeEngineLinuxLauncher(String cloudName, Operation insertOperation, boolean useInternalAddress) {
         super(cloudName, insertOperation.getName(), insertOperation.getZone(), useInternalAddress);
     }
@@ -72,7 +69,7 @@ public class ComputeEngineLinuxLauncher extends ComputeEngineComputerLauncher {
         }
         Connection bootstrapConn = null;
         try {
-            int tries = bootstrapAuthTries;
+            int tries = BOOTSTRAP_AUTH_TRIES;
             boolean isAuthenticated = false;
             if (keyCred instanceof GoogleKeyPair) {
                 logInfo(computer, listener, "Getting keypair...");
@@ -85,6 +82,9 @@ public class ComputeEngineLinuxLauncher extends ComputeEngineComputerLauncher {
                 logInfo(computer, listener, "Authenticating as " + node.getSshUser());
                 try {
                     bootstrapConn = connectToSsh(computer, listener);
+                    if (bootstrapConn == null) {
+                        break;
+                    }
                     isAuthenticated = bootstrapConn.authenticateWithPublicKey(
                             node.getSshUser(),
                             Secret.toString(keyCred.getPrivateKey()).toCharArray(),
@@ -99,7 +99,7 @@ public class ComputeEngineLinuxLauncher extends ComputeEngineComputerLauncher {
                     break;
                 }
                 logWarning(computer, listener, "Authentication failed. Trying again...");
-                Thread.sleep(bootstrapAuthSleepMs);
+                Thread.sleep(BOOTSTRAP_AUTH_SLEEP_DURATION.toMillis());
             }
             if (!isAuthenticated) {
                 logWarning(computer, listener, "Authentication failed");

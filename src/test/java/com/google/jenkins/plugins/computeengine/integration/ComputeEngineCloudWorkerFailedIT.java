@@ -52,16 +52,16 @@ import org.jvnet.hudson.test.JenkinsRule;
  * worker fails upon creation when Java is not installed.
  */
 public class ComputeEngineCloudWorkerFailedIT {
-    private static Logger log = Logger.getLogger(ComputeEngineCloudWorkerFailedIT.class.getName());
+    private static final Logger log = Logger.getLogger(ComputeEngineCloudWorkerFailedIT.class.getName());
 
     @ClassRule
-    public static Timeout timeout = new Timeout(7 * TEST_TIMEOUT_MULTIPLIER, TimeUnit.MINUTES);
+    public static Timeout timeout = new Timeout(7L * TEST_TIMEOUT_MULTIPLIER, TimeUnit.MINUTES);
 
     @ClassRule
     public static JenkinsRule jenkinsRule = new JenkinsRule();
 
     private static ComputeClient client;
-    private static Map<String, String> label = getLabel(ComputeEngineCloudWorkerFailedIT.class);
+    private static final Map<String, String> label = getLabel(ComputeEngineCloudWorkerFailedIT.class);
     private static Collection<PlannedNode> planned;
 
     @BeforeClass
@@ -74,7 +74,8 @@ public class ComputeEngineCloudWorkerFailedIT {
 
         // This configuration creates an instance with no Java installed.
         cloud.setConfigurations(ImmutableList.of(instanceConfigurationBuilder()
-                .startupScript("")
+                .bootDiskSourceImageProject("debian-cloud")
+                .bootDiskSourceImageName("projects/debian-cloud/global/images/family/debian-12")
                 .numExecutorsStr(NUM_EXECUTORS)
                 .labels(LABEL)
                 .oneShot(false)

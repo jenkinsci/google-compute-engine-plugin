@@ -36,9 +36,9 @@ import org.jvnet.hudson.test.JenkinsRule;
 
 /** Integration test suite for {@link ComputeClient}. */
 public class ComputeClientIT {
-    private static Logger log = Logger.getLogger(ComputeClientIT.class.getName());
+    private static final Logger log = Logger.getLogger(ComputeClientIT.class.getName());
 
-    private static Map<String, String> label = getLabel(ComputeClientIT.class);
+    private static final Map<String, String> label = getLabel(ComputeClientIT.class);
     private static ComputeClient client;
 
     @ClassRule
@@ -58,7 +58,7 @@ public class ComputeClientIT {
 
     @Test
     public void testGetImage() throws Exception {
-        Image image = client.getImage("debian-cloud", "debian-9-stretch-v20180820");
+        Image image = client.getImage("debian-cloud", "debian-12-bookworm-v20241210");
         assertNotNull(image);
         assertEquals("READY", image.getStatus());
     }

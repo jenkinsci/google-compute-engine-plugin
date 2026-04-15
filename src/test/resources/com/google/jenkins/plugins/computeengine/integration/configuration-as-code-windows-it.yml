@@ -24,7 +24,6 @@ jenkins:
             zone:               "https://www.googleapis.com/compute/v1/projects/${env.GOOGLE_PROJECT_ID}/zones/${env.GOOGLE_ZONE}"
             template:           '' # tried not setting, added when 'saved' in UI
             machineType:        "https://www.googleapis.com/compute/v1/projects/${env.GOOGLE_PROJECT_ID}/zones/${env.GOOGLE_ZONE}/machineTypes/n1-standard-1"
-            preemptible:        false
             minCpuPlatform:     '' # tried not setting, added when 'saved' in UI
             startupScript:      "Stop-Service sshd\n$ConfiguredPublicKey = \"jenkins:${env.GOOGLE_PUBLIC_KEY}\"\nWrite-Output \"Second phase\"\nSet-Content -Path $env:PROGRAMDATA\\ssh\\administrators_authorized_keys -Value $ConfiguredPublicKey\nicacls $env:PROGRAMDATA\\ssh\\administrators_authorized_keys /inheritance:r\nicacls $env:PROGRAMDATA\\ssh\\administrators_authorized_keys /grant SYSTEM:`(F`)\nicacls $env:PROGRAMDATA\\ssh\\administrators_authorized_keys /grant BUILTIN\\Administrators:`(F`)\nRestart-Service sshd"
             networkConfiguration:

@@ -1,0 +1,42 @@
+jenkins:
+  clouds:
+    - computeEngine:
+        cloudName: integration
+        projectId: ${env.GOOGLE_PROJECT_ID}
+        instanceCapStr: 10
+        credentialsId: ${env.GOOGLE_PROJECT_ID}
+        noDelayProvisioning: true
+        configurations:
+          - namePrefix:         integration
+            description:        integration
+            launchTimeoutSecondsStr: ''
+            retentionTimeMinutesStr: '1'
+            mode:               EXCLUSIVE
+            labelString:        integration
+            numExecutorsStr:    1
+            runAsUser:          jenkins
+            remoteFs:           ''
+            oneShot:            false
+            createSnapshot:     false
+            region:             "https://www.googleapis.com/compute/v1/projects/${env.GOOGLE_PROJECT_ID}/regions/${env.GOOGLE_REGION}"
+            zone:               "https://www.googleapis.com/compute/v1/projects/${env.GOOGLE_PROJECT_ID}/zones/${env.GOOGLE_ZONE}"
+            template:           ''
+            machineType:        "https://www.googleapis.com/compute/v1/projects/${env.GOOGLE_PROJECT_ID}/zones/${env.GOOGLE_ZONE}/machineTypes/n1-standard-1"
+            javaExecPath:       '/usr/bin/java'
+            networkConfiguration:
+              autofilled:
+                network:        default
+                subnetwork:     default
+            networkTags:        "jenkins-agent ssh"
+            networkInterfaceIpStackMode:
+              singleStack:
+                externalIPV4Address:    true
+            useInternalAddress: false
+            bootDiskSourceImageProject: ${env.GOOGLE_PROJECT_ID}
+            bootDiskSourceImageName: "projects/${env.GOOGLE_PROJECT_ID}/global/images/jenkins-gce-integration-test-jre"
+            bootDiskType:       "https://www.googleapis.com/compute/v1/projects/${env.GOOGLE_PROJECT_ID}/zones/${env.GOOGLE_ZONE}/diskTypes/pd-ssd"
+            bootDiskSizeGbStr:  20
+            bootDiskAutoDelete: true
+            serviceAccountEmail: "${env.GOOGLE_SA_NAME}@${env.GOOGLE_PROJECT_ID}.iam.gserviceaccount.com"
+            minimumNumberOfInstances: 2
+            minimumNumberOfSpareInstances: 0

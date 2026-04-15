@@ -16,7 +16,7 @@
 
 package com.google.jenkins.plugins.computeengine;
 
-import static javax.servlet.http.HttpServletResponse.SC_BAD_REQUEST;
+import static jakarta.servlet.http.HttpServletResponse.SC_BAD_REQUEST;
 
 import com.cloudbees.plugins.credentials.CredentialsMatchers;
 import com.cloudbees.plugins.credentials.CredentialsProvider;
@@ -29,6 +29,7 @@ import com.google.cloud.graphite.platforms.plugin.client.ComputeClient;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableMap;
 import com.google.jenkins.plugins.computeengine.client.ClientUtil;
+import com.google.jenkins.plugins.computeengine.client.ComputeClientV2;
 import com.google.jenkins.plugins.credentials.oauth.GoogleOAuth2Credentials;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import hudson.Extension;
@@ -46,8 +47,10 @@ import hudson.slaves.NodeProvisioner.PlannedNode;
 import hudson.util.FormValidation;
 import hudson.util.HttpResponses;
 import hudson.util.ListBoxModel;
+import jakarta.servlet.ServletException;
 import java.io.IOException;
 import java.io.PrintStream;
+import java.security.GeneralSecurityException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Iterator;
@@ -62,7 +65,6 @@ import java.util.logging.LogRecord;
 import java.util.logging.Logger;
 import java.util.logging.SimpleFormatter;
 import java.util.stream.Collectors;
-import javax.servlet.ServletException;
 import jenkins.model.Jenkins;
 import lombok.Getter;
 import lombok.extern.java.Log;
@@ -90,6 +92,7 @@ public class ComputeEngineCloud extends AbstractCloudImpl {
     private List<InstanceConfiguration> configurations;
 
     private transient volatile ComputeClient client;
+    private transient volatile ComputeClientV2 clientV2;
     private boolean noDelayProvisioning;
 
     @DataBoundConstructor
@@ -209,6 +212,17 @@ public class ComputeEngineCloud extends AbstractCloudImpl {
         return client;
     }
 
+    public ComputeClientV2 getClientV2() throws IOException, GeneralSecurityException {
+        if (clientV2 == null) {
+            synchronized (this) {
+                if (clientV2 == null) {
+                    clientV2 = ClientUtil.createComputeClientV2(projectId, credentialsId);
+                }
+            }
+        }
+        return clientV2;
+    }
+
     /**
      * Set configurations for this cloud.
      *
@@ -274,6 +288,42 @@ public class ComputeEngineCloud extends AbstractCloudImpl {
                             "An instance configuration could not be found to provision a node for label %s",
                             label.getName()),
                     nce.getMessage());
+        }
+        return result;
+    }
+
+    /**
+     * Provisions the specified number of instances for a given configuration. Used by {@link
+     * MinimumInstanceChecker} to maintain minimum instance counts.
+     *
+     * @param config the instance configuration to provision from
+     * @param numberToProvision the number of instances to provision
+     * @return list of planned nodes
+     */
+    public List<PlannedNode> provisionSpares(InstanceConfiguration config, int numberToProvision) {
+        List<PlannedNode> result = new ArrayList<>();
+        if (Jenkins.get().isQuietingDown() || Jenkins.get().isTerminating()) {
+            return result;
+        }
+        try {
+            log.info("Provisioning spare nodes from config " + config + " for number " + numberToProvision);
+            while (numberToProvision > 0 && availableNodeCapacity() > 0) {
+                final ComputeEngineInstance node = config.provision();
+                if (node == null) {
+                    break;
+                }
+                Jenkins.get().addNode(node);
+                result.add(createPlannedNode(config, node));
+                numberToProvision--;
+            }
+            if (numberToProvision > 0) {
+                log.log(
+                        Level.WARNING,
+                        "Could not provision {0} nodes for minimum instances. Cloud provider {1} has reached its configured capacity of {2}",
+                        new Object[] {numberToProvision, getCloudName(), getInstanceCap()});
+            }
+        } catch (IOException ioe) {
+            log.log(Level.WARNING, "Error provisioning node for minimum instances", ioe);
         }
         return result;
     }

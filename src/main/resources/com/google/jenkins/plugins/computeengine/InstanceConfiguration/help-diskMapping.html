@@ -1,0 +1,58 @@
+<!--
+ Copyright 2026 CloudBees, Inc.
+
+ Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in
+ compliance with the License. You may obtain a copy of the License at
+
+        https://www.apache.org/licenses/LICENSE-2.0
+
+ Unless required by applicable law or agreed to in writing, software distributed under the License
+ is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
+ implied. See the License for the specific language governing permissions and limitations under the
+ License.
+-->
+<div>
+    <p>
+        Additional disks to attach to the instance. One disk per line, using comma-separated
+        <code>key=value</code> pairs. Three modes are supported:
+    </p>
+
+    <ol>
+        <li><strong>Create from snapshot</strong>
+            (<a href="https://docs.cloud.google.com/sdk/gcloud/reference/compute/instances/create#--create-disk"><code>--create-disk</code></a>)
+            — line contains <code>source-snapshot</code>.
+            Keys: <code>source-snapshot</code> (required), <code>size</code>, <code>type</code>,
+            <code>name</code>, <code>description</code>.</li>
+        <li><strong>Create blank disk</strong>
+            (<a href="https://docs.cloud.google.com/sdk/gcloud/reference/compute/instances/create#--create-disk"><code>--create-disk</code></a>)
+            — line contains <code>size</code> or <code>type</code>
+            but no <code>source-snapshot</code>.
+            Keys: <code>size</code> (required), <code>type</code>, <code>name</code>,
+            <code>description</code>.</li>
+        <li><strong>Attach existing disk</strong>
+            (<a href="https://docs.cloud.google.com/sdk/gcloud/reference/compute/instances/create#--disk"><code>--disk</code></a>)
+            — line contains only <code>name</code>.
+            Keys: <code>name</code> (required).</li>
+    </ol>
+
+    <p>
+        <strong>Common keys</strong> (all modes):
+        <code>device-name</code>,
+        <code>mode</code> (<code>ro</code> | <code>rw</code>, default <code>rw</code>),
+        <code>interface</code> (<code>SCSI</code> | <code>NVME</code>),
+        <code>auto-delete</code> (<code>yes</code> | <code>no</code>, default <code>yes</code>).
+    </p>
+
+    <p><strong>Examples:</strong></p>
+    <pre>source-snapshot=my-data-snapshot,size=100,type=pd-ssd,auto-delete=yes
+size=200,type=pd-ssd,name=scratch-disk,auto-delete=yes
+name=shared-data-disk,mode=ro,auto-delete=no</pre>
+
+    <p>
+        Short names for <code>source-snapshot</code>, <code>type</code>, and <code>name</code> are
+        automatically qualified to the instance's project and zone. For cross-project resources, use a
+        relative path (e.g. <code>projects/{project}/global/snapshots/{name}</code>) or full resource URI
+        (e.g. <code>https://compute.googleapis.com/compute/v1/projects/{project}/global/snapshots/{name}</code>).
+        Mounting disks inside the VM must be done via the startup script.
+    </p>
+</div>

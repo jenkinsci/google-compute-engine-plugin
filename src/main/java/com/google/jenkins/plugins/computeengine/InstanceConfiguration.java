@@ -37,28 +37,36 @@ import com.google.api.services.compute.model.Tags;
 import com.google.api.services.compute.model.Zone;
 import com.google.cloud.graphite.platforms.plugin.client.ClientFactory;
 import com.google.cloud.graphite.platforms.plugin.client.ComputeClient;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Strings;
 import com.google.jenkins.plugins.computeengine.client.ClientUtil;
+import com.google.jenkins.plugins.computeengine.config.PreemptibleVm;
+import com.google.jenkins.plugins.computeengine.config.ProvisioningType;
+import com.google.jenkins.plugins.computeengine.config.Standard;
 import com.google.jenkins.plugins.computeengine.ssh.GoogleKeyCredential;
 import com.google.jenkins.plugins.computeengine.ssh.GoogleKeyPair;
 import com.google.jenkins.plugins.computeengine.ssh.GooglePrivateKey;
+import com.google.jenkins.plugins.computeengine.util.DiskMappingParser;
 import edu.umd.cs.findbugs.annotations.Nullable;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import hudson.Extension;
 import hudson.ExtensionList;
 import hudson.RelativePath;
 import hudson.Util;
+import hudson.XmlFile;
 import hudson.model.Describable;
 import hudson.model.Descriptor;
 import hudson.model.Label;
 import hudson.model.Node;
+import hudson.model.Saveable;
 import hudson.model.labels.LabelAtom;
+import hudson.model.listeners.SaveableListener;
+import hudson.util.ComboBoxModel;
 import hudson.util.FormValidation;
 import hudson.util.ListBoxModel;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -98,20 +106,27 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
     public static final String DEFAULT_RUN_AS_USER = "jenkins";
     public static final String METADATA_LINUX_STARTUP_SCRIPT_KEY = "startup-script";
     public static final String METADATA_WINDOWS_STARTUP_SCRIPT_KEY = "windows-startup-script-ps1";
-    public static final List<String> KNOWN_IMAGE_PROJECTS = Collections.unmodifiableList(new ArrayList<String>() {
-        {
-            add("centos-cloud");
-            add("coreos-cloud");
-            add("cos-cloud");
-            add("debian-cloud");
-            add("rhel-cloud");
-            add("suse-cloud");
-            add("suse-sap-cloud");
-            add("ubuntu-os-cloud");
-            add("windows-cloud");
-            add("windows-sql-cloud");
-        }
-    });
+    public static final String GUEST_ATTRIBUTE_STARTUP_SCRIPT_NAMESPACE = "startup-script";
+    public static final String GUEST_ATTRIBUTE_STARTUP_SCRIPT_STATUS_KEY = "status";
+    public static final String DEFAULT_LINUX_EXIT_REPORTER = """
+            curl -s -X PUT -H "Metadata-Flavor: Google" \\
+              "http://metadata.google.internal/computeMetadata/v1/instance/guest-attributes/startup-script/status" \\
+              -d "$1\"""";
+    public static final String DEFAULT_WINDOWS_EXIT_REPORTER = """
+            Invoke-RestMethod -Method PUT -Body "$($args[0])" `
+              -Headers @{'Metadata-Flavor'='Google'} `
+              -Uri "http://metadata.google.internal/computeMetadata/v1/instance/guest-attributes/startup-script/status\"""";
+    public static final List<String> KNOWN_IMAGE_PROJECTS = List.of(
+            "centos-cloud",
+            "coreos-cloud",
+            "cos-cloud",
+            "debian-cloud",
+            "rhel-cloud",
+            "suse-cloud",
+            "suse-sap-cloud",
+            "ubuntu-os-cloud",
+            "windows-cloud",
+            "windows-sql-cloud");
 
     private String description;
     private String namePrefix;
@@ -120,7 +135,9 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
     private String machineType;
     private String numExecutorsStr;
     private String startupScript;
-    private boolean preemptible;
+    private String startupScriptExitReporterLinux;
+    private String startupScriptExitReporterWindows;
+    private ProvisioningType provisioningType;
     private String minCpuPlatform;
     private String labels;
     private String runAsUser;
@@ -144,6 +161,12 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
     private String launchTimeoutSecondsStr;
     private String bootDiskSizeGbStr;
     private boolean oneShot;
+    private int minimumNumberOfInstances;
+    private int minimumNumberOfSpareInstances;
+
+    @Nullable
+    private MinimumNumberOfInstancesTimeRangeConfig minimumNumberOfInstancesTimeRangeConfig;
+
     private String template;
     // Optional not possible due to serialization requirement
     @Nullable
@@ -152,12 +175,17 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
     @Nullable
     private SshConfiguration sshConfiguration;
 
+    @Nullable
+    private List<CustomMetadataItem> customMetadata;
+
     private boolean createSnapshot;
+    private String diskMapping;
     private String remoteFs;
     private String javaExecPath;
     private GoogleKeyCredential sshKeyCredential;
     private Map<String, String> googleLabels;
     private Integer numExecutors;
+    private boolean terminateIdleDuringShutdown;
     private Integer retentionTimeMinutes;
     private Integer launchTimeoutSeconds;
     private Long bootDiskSizeGb;
@@ -166,6 +194,11 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
     @Getter(AccessLevel.PROTECTED)
     @Setter(AccessLevel.PROTECTED)
     protected transient ComputeEngineCloud cloud;
+
+    /** @deprecated Use {@link #provisioningType} instead. */
+    @SuppressWarnings("DeprecatedIsStillUsed")
+    @Deprecated
+    private transient boolean preemptible;
 
     private static List<Metadata.Items> mergeMetadataItems(List<Metadata.Items> winner, List<Metadata.Items> loser) {
         if (loser == null) {
@@ -234,6 +267,24 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
     @DataBoundSetter
     public void setCreateSnapshot(boolean createSnapshot) {
         this.createSnapshot = createSnapshot && this.oneShot;
+    }
+
+    /**
+     * This setter is kept only to provide JCasC compatibility, don't use for any other.
+     * Although JCasC is not "required" to keep compatibility, but in this case,
+     * as it is very low effort to keep the compatibility, we have decided to keep it.
+     * <p>
+     * Previously, JCasC syntax would be {@code preemptible: true}, going forward instead should be done as,
+     * {@code provisioningType: preemptibleVm}
+     * <p>
+     * Currently only caller is, JCasC configurators if the bundle is having `preemptible` field defined in it.
+     * Consider deleting it in future (perhaps after a year or so)
+     */
+    @DataBoundSetter
+    public void setPreemptible(boolean preemptible) {
+        if (preemptible) {
+            this.provisioningType = new PreemptibleVm();
+        }
     }
 
     public static Integer intOrDefault(String toParse, Integer defaultTo) {
@@ -335,6 +386,7 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
                     .createSnapshot(createSnapshot)
                     .oneShot(oneShot)
                     .ignoreProxy(ignoreProxy)
+                    .terminateIdleDuringShutdown(terminateIdleDuringShutdown)
                     .numExecutors(numExecutors)
                     .mode(mode)
                     .labelString(labels)
@@ -343,6 +395,7 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
                     .launchTimeout(getLaunchTimeoutMillis())
                     .javaExecPath(javaExecPath)
                     .sshKeyCredential(sshKeyCredential)
+                    .waitForStartupScript(notNullOrEmpty(startupScript) && notNullOrEmpty(resolveExitReporter()))
                     .build();
         } catch (Descriptor.FormException fe) {
             log.log(Level.WARNING, "Error provisioning instance: " + fe.getMessage(), fe);
@@ -356,6 +409,10 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
         if (externalAddress != null) {
             this.networkInterfaceIpStackMode = new NetworkInterfaceSingleStack(externalAddress);
             this.externalAddress = null;
+        }
+        /* deprecating `preemptible` in favor of extensible `provisioningType` */
+        if (preemptible && provisioningType == null) {
+            provisioningType = new PreemptibleVm();
         }
         return this;
     }
@@ -378,6 +435,13 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
             }
         }
 
+        Map<String, String> effectiveGoogleLabels = new HashMap<>();
+        if (googleLabels != null) { // some tests don't set the labels, but comes as null
+            effectiveGoogleLabels.putAll(googleLabels);
+        }
+        effectiveGoogleLabels.put(
+                CleanLostNodesWork.NODE_IN_USE_LABEL_KEY, CleanLostNodesWork.getLastRefreshLabelVal());
+
         if (StringUtils.isNotEmpty(template)) {
             InstanceTemplate instanceTemplate =
                     cloud.getClient().getTemplate(nameFromSelfLink(cloud.getProjectId()), nameFromSelfLink(template));
@@ -392,16 +456,15 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
                 instance.getMetadata().setItems(mergeMetadataItems(instanceItems, instanceTemplateItems));
             }
 
-            Map<String, String> mergedLabels = new HashMap<>(googleLabels);
             if (instanceTemplate.getProperties().getLabels() != null) {
                 Map<String, String> templateLabels =
                         instanceTemplate.getProperties().getLabels();
-                mergedLabels.putAll(templateLabels);
+                effectiveGoogleLabels.putAll(templateLabels);
             }
-            instance.setLabels(mergedLabels);
+            instance.setLabels(effectiveGoogleLabels);
         } else {
             configureStartupScript(instance);
-            instance.setLabels(googleLabels);
+            instance.setLabels(effectiveGoogleLabels);
             instance.setMachineType(stripSelfLinkPrefix(machineType));
             instance.setTags(tags());
             instance.setScheduling(scheduling());
@@ -438,6 +501,14 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
         metadata.setItems(new ArrayList<>());
         metadata.getItems()
                 .add(new Metadata.Items().setKey(GUEST_ATTRIBUTES_METADATA_KEY).setValue("TRUE"));
+        if (customMetadata != null) {
+            for (CustomMetadataItem item : customMetadata) {
+                if (item.getKey() != null && !item.getKey().isEmpty()) {
+                    metadata.getItems()
+                            .add(new Metadata.Items().setKey(item.getKey()).setValue(item.getValue()));
+                }
+            }
+        }
         return metadata;
     }
 
@@ -468,19 +539,109 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
         return sshPrivateKey;
     }
 
+    /**
+     * Returns the exit reporter script as-is. A null or empty value means no exit reporting:
+     * the startup script will not be wrapped and the launcher will not wait for completion.
+     * <p>
+     * New configurations get the platform default populated by the form field's default attribute.
+     * Existing configurations upgraded from older plugin versions have null here, so they
+     * keep their previous behaviour (no wrapping, no waiting) until the user saves the config
+     * with the default-filled value, a custom reporter, or blank (which disables waiting).
+     */
+    private String resolveExitReporter() {
+        if (windowsConfiguration != null) {
+            return startupScriptExitReporterWindows;
+        }
+        return startupScriptExitReporterLinux;
+    }
+
     private void configureStartupScript(Instance instance) {
         if (notNullOrEmpty(startupScript)) {
-            List<Metadata.Items> items = instance.getMetadata().getItems();
+            var items = instance.getMetadata().getItems();
+            var reporter = resolveExitReporter();
             if (windowsConfiguration != null) {
+                var effectiveScript = wrapWindowsStartupScript(startupScript, reporter);
+                log.info("Startup script configured"
+                        + (notNullOrEmpty(reporter) ? " with completion reporting" : " without completion reporting"));
+                log.finer("Effective Windows startup script:\n" + effectiveScript);
                 items.add(new Metadata.Items()
                         .setKey(METADATA_WINDOWS_STARTUP_SCRIPT_KEY)
-                        .setValue(startupScript));
+                        .setValue(effectiveScript));
             } else {
+                var effectiveScript = wrapLinuxStartupScript(startupScript, reporter);
+                log.info("Startup script configured"
+                        + (notNullOrEmpty(reporter) ? " with completion reporting" : " without completion reporting"));
+                log.finer("Effective Linux startup script:\n" + effectiveScript);
                 items.add(new Metadata.Items()
                         .setKey(METADATA_LINUX_STARTUP_SCRIPT_KEY)
-                        .setValue(startupScript));
+                        .setValue(effectiveScript));
             }
         }
+    }
+
+    @VisibleForTesting
+    static String wrapLinuxStartupScript(String script, String completionScript) {
+        if (!notNullOrEmpty(completionScript)) {
+            return script;
+        }
+        var sb = new StringBuilder();
+        var scriptBody = script;
+        if (script.startsWith("#!")) {
+            var newlineIdx = script.indexOf('\n');
+            if (newlineIdx >= 0) {
+                sb.append(script, 0, newlineIdx + 1);
+                scriptBody = script.substring(newlineIdx + 1);
+            } else {
+                sb.append(script).append('\n');
+                scriptBody = "";
+            }
+        }
+        sb.append("# --- GCE plugin: exit reporter begin ---\n");
+        sb.append("__gce_plugin_report_status() {\n");
+        sb.append(completionScript).append('\n');
+        sb.append("}\n");
+        sb.append(
+                "trap '__gce_plugin_ec=$?; __gce_plugin_report_status \"$__gce_plugin_ec\" || true; exit $__gce_plugin_ec' EXIT\n");
+        sb.append("# --- GCE plugin: exit reporter end ---\n");
+        sb.append("# --- GCE plugin: user startup script begin ---\n");
+        sb.append(scriptBody);
+        if (!scriptBody.endsWith("\n")) {
+            sb.append('\n');
+        }
+        sb.append("# --- GCE plugin: user startup script end ---\n");
+        return sb.toString();
+    }
+
+    @VisibleForTesting
+    static String wrapWindowsStartupScript(String script, String completionScript) {
+        if (!notNullOrEmpty(completionScript)) {
+            return script;
+        }
+        var sb = new StringBuilder();
+        sb.append("$__gce_plugin_ec = 0\n");
+        sb.append("try {\n");
+        sb.append("# --- GCE plugin: user startup script begin ---\n");
+        sb.append(script);
+        if (!script.endsWith("\n")) {
+            sb.append('\n');
+        }
+        sb.append("# --- GCE plugin: user startup script end ---\n");
+        sb.append("    $__gce_plugin_ec = $LASTEXITCODE\n");
+        sb.append("    if ($null -eq $__gce_plugin_ec) { $__gce_plugin_ec = 0 }\n");
+        sb.append("} catch {\n");
+        sb.append("    $__gce_plugin_ec = 1\n");
+        sb.append("} finally {\n");
+        sb.append("    # --- GCE plugin: exit reporter begin ---\n");
+        sb.append("    $__gce_plugin_exit_args = @($__gce_plugin_ec)\n");
+        sb.append("    try {\n");
+        sb.append("        & {\n");
+        sb.append("            ").append(completionScript).append('\n');
+        sb.append("        } $__gce_plugin_exit_args\n");
+        sb.append("    } catch {}\n");
+        sb.append("    # --- GCE plugin: exit reporter end ---\n");
+        sb.append("    exit $__gce_plugin_ec\n");
+        sb.append("}\n");
+        return sb.toString();
     }
 
     private Tags tags() {
@@ -492,12 +653,18 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
         return null;
     }
 
-    private Scheduling scheduling() {
+    @VisibleForTesting
+    Scheduling scheduling() {
         Scheduling scheduling = new Scheduling();
-        scheduling.setPreemptible(preemptible);
+        if (provisioningType == null) {
+            return scheduling;
+        }
+        provisioningType.configure(scheduling);
         return scheduling;
     }
 
+    /** Builds the list of disks for the instance: the boot disk followed by any additional
+     *  disks parsed from the {@link #diskMapping} field. */
     private List<AttachedDisk> disks() {
         AttachedDisk boot = new AttachedDisk();
         boot.setBoot(true);
@@ -509,6 +676,23 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
 
         List<AttachedDisk> disks = new ArrayList<>();
         disks.add(boot);
+
+        var zoneName = nameFromSelfLink(zone);
+        var projectId = cloud != null ? nameFromSelfLink(cloud.getProjectId()) : null;
+        for (var mapped : DiskMappingParser.parse(diskMapping)) {
+            if (mapped.getInitializeParams() != null) {
+                var params = mapped.getInitializeParams();
+                params.setDiskType(DiskMappingParser.normalizeDiskType(params.getDiskType(), zoneName));
+                if (projectId != null) {
+                    params.setSourceSnapshot(
+                            DiskMappingParser.normalizeSnapshotSource(params.getSourceSnapshot(), projectId));
+                }
+            } else if (projectId != null) {
+                mapped.setSource(DiskMappingParser.normalizeDiskSource(mapped.getSource(), projectId, zoneName));
+            }
+            disks.add(mapped);
+        }
+
         return disks;
     }
 
@@ -590,8 +774,23 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
             return SshConfiguration.builder().customPrivateKeyCredentialsId("").build();
         }
 
+        @SuppressWarnings("unused") // jelly
+        public ProvisioningType defaultProvisioningType() {
+            return new Standard(0);
+        }
+
         public static NetworkConfiguration defaultNetworkConfiguration() {
             return new AutofilledNetworkConfiguration();
+        }
+
+        @SuppressWarnings("unused") // jelly
+        public static String defaultStartupScriptExitReporterLinux() {
+            return DEFAULT_LINUX_EXIT_REPORTER;
+        }
+
+        @SuppressWarnings("unused") // jelly
+        public static String defaultStartupScriptExitReporterWindows() {
+            return DEFAULT_WINDOWS_EXIT_REPORTER;
         }
 
         private static ComputeClient computeClient(Jenkins context, String credentialsId) throws IOException {
@@ -834,16 +1033,12 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
             }
         }
 
-        public ListBoxModel doFillBootDiskSourceImageProjectItems(
-                @AncestorInPath Jenkins context,
+        public ComboBoxModel doFillBootDiskSourceImageProjectItems(
                 @QueryParameter("projectId") @RelativePath("..") final String projectId) {
             checkPermissions(Jenkins.get(), Jenkins.ADMINISTER);
-            ListBoxModel items = new ListBoxModel();
-            items.add("");
+            ComboBoxModel items = new ComboBoxModel();
             items.add(projectId);
-            for (String v : KNOWN_IMAGE_PROJECTS) {
-                items.add(v);
-            }
+            items.addAll(KNOWN_IMAGE_PROJECTS);
             return items;
         }
 
@@ -943,8 +1138,119 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
             return FormValidation.ok();
         }
 
+        private FormValidation validateMinimumInstances(String fieldName, String value, String instanceCapStr) {
+            if (value == null || value.isBlank()) {
+                return FormValidation.ok();
+            }
+            int minimumInstances;
+            try {
+                minimumInstances = Integer.parseInt(value);
+            } catch (NumberFormatException e) {
+                return FormValidation.error("%s must be a non-negative integer", fieldName);
+            }
+            if (minimumInstances < 0) {
+                return FormValidation.error("%s must be a non-negative integer", fieldName);
+            }
+            if (instanceCapStr == null || instanceCapStr.isBlank()) {
+                return FormValidation.ok();
+            }
+            int instanceCap;
+            try {
+                instanceCap = Integer.parseInt(instanceCapStr);
+            } catch (NumberFormatException e) {
+                return FormValidation.error("Instance Cap must be a valid integer");
+            }
+            if (minimumInstances > instanceCap) {
+                return FormValidation.error("%s must not be larger than Instance Cap %d", fieldName, instanceCap);
+            }
+            return FormValidation.ok();
+        }
+
+        public FormValidation doCheckMinimumNumberOfInstances(
+                @QueryParameter String value,
+                @QueryParameter("instanceCapStr") @RelativePath("..") String instanceCapStr) {
+            return validateMinimumInstances("Minimum number of instances", value, instanceCapStr);
+        }
+
+        public FormValidation doCheckMinimumNumberOfSpareInstances(
+                @QueryParameter String value,
+                @QueryParameter("instanceCapStr") @RelativePath("..") String instanceCapStr) {
+            return validateMinimumInstances("Minimum number of spare instances", value, instanceCapStr);
+        }
+
+        private FormValidation validateTimeRange(String value) {
+            try {
+                MinimumNumberOfInstancesTimeRangeConfig.validateLocalTimeString(value);
+                return FormValidation.ok();
+            } catch (IllegalArgumentException e) {
+                return FormValidation.error("Please enter value in format 'h:mm a' or 'HH:mm'");
+            }
+        }
+
+        public FormValidation doCheckActiveFrom(@QueryParameter String value) {
+            return validateTimeRange(value);
+        }
+
+        public FormValidation doCheckActiveTo(@QueryParameter String value) {
+            return validateTimeRange(value);
+        }
+
+        public FormValidation doCheckMonday(
+                @QueryParameter boolean monday,
+                @QueryParameter boolean tuesday,
+                @QueryParameter boolean wednesday,
+                @QueryParameter boolean thursday,
+                @QueryParameter boolean friday,
+                @QueryParameter boolean saturday,
+                @QueryParameter boolean sunday) {
+            if (!(monday || tuesday || wednesday || thursday || friday || saturday || sunday)) {
+                return FormValidation.warning(
+                        "At least one day should be checked or minimum number of instances won't be active");
+            }
+            return FormValidation.ok();
+        }
+
+        public FormValidation doCheckStartupScriptExitReporterLinux(@QueryParameter String value) {
+            if (value == null || value.isEmpty()) {
+                return FormValidation.ok();
+            }
+            if (!value.contains("$1")) {
+                return FormValidation.warning("Linux exit reporter should include $1 as the exit code placeholder");
+            }
+            return FormValidation.ok();
+        }
+
+        public FormValidation doCheckStartupScriptExitReporterWindows(@QueryParameter String value) {
+            if (value == null || value.isEmpty()) {
+                return FormValidation.ok();
+            }
+            if (!value.contains("$args[0]")) {
+                return FormValidation.warning(
+                        "Windows exit reporter should include $args[0] as the exit code placeholder");
+            }
+            return FormValidation.ok();
+        }
+
+        @SuppressWarnings("unused") // jelly
+        public List<ProvisioningType.ProvisioningTypeDescriptor> getProvisioningTypes() {
+            return ExtensionList.lookup(ProvisioningType.ProvisioningTypeDescriptor.class);
+        }
+
         public List<NetworkInterfaceIpStackMode.Descriptor> getNetworkInterfaceIpStackModeDescriptors() {
             return ExtensionList.lookup(NetworkInterfaceIpStackMode.Descriptor.class);
+        }
+    }
+
+    /** Triggers minimum instance check when Jenkins configuration is saved. This ensures any updates to the
+     * values of minimum instances are immediately taken into effect.
+     */
+    @Extension
+    public static final class OnSaveListener extends SaveableListener {
+        @Override
+        public void onChange(Saveable o, XmlFile file) {
+            if (o instanceof Jenkins) {
+                MinimumInstanceChecker.checkForMinimumInstances();
+            }
         }
     }
 
@@ -958,7 +1264,9 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
             instanceConfiguration.setMachineType(this.machineType);
             instanceConfiguration.setNumExecutorsStr(this.numExecutorsStr);
             instanceConfiguration.setStartupScript(this.startupScript);
-            instanceConfiguration.setPreemptible(this.preemptible);
+            instanceConfiguration.setStartupScriptExitReporterLinux(this.startupScriptExitReporterLinux);
+            instanceConfiguration.setStartupScriptExitReporterWindows(this.startupScriptExitReporterWindows);
+            instanceConfiguration.setProvisioningType(this.provisioningType);
             instanceConfiguration.setMinCpuPlatform(this.minCpuPlatform);
             instanceConfiguration.setLabelString(this.labels);
             instanceConfiguration.setRunAsUser(this.runAsUser);
@@ -980,8 +1288,15 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
             instanceConfiguration.setLaunchTimeoutSecondsStr(this.launchTimeoutSecondsStr);
             instanceConfiguration.setBootDiskSizeGbStr(this.bootDiskSizeGbStr);
             instanceConfiguration.setOneShot(this.oneShot);
+            instanceConfiguration.setMinimumNumberOfInstances(this.minimumNumberOfInstances);
+            instanceConfiguration.setMinimumNumberOfSpareInstances(this.minimumNumberOfSpareInstances);
+            instanceConfiguration.setMinimumNumberOfInstancesTimeRangeConfig(
+                    this.minimumNumberOfInstancesTimeRangeConfig);
             instanceConfiguration.setTemplate(this.template);
             instanceConfiguration.setCreateSnapshot(this.createSnapshot);
+            instanceConfiguration.setDiskMapping(this.diskMapping);
+            instanceConfiguration.setTerminateIdleDuringShutdown(this.terminateIdleDuringShutdown);
+            instanceConfiguration.setCustomMetadata(this.customMetadata);
             instanceConfiguration.setRemoteFs(this.remoteFs);
             instanceConfiguration.setJavaExecPath(this.javaExecPath);
             instanceConfiguration.setCloud(this.cloud);

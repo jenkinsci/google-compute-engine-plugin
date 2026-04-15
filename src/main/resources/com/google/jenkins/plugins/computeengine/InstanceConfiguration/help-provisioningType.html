@@ -1,0 +1,43 @@
+<!--
+Copyright 2024 CloudBees, Inc.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+        https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+-->
+
+<div>
+    GCP offers three VM provisioning options, each with different availability, pricing, and termination policies.
+    <ul>
+        <li>
+            <strong>Standard:</strong> Stable provisioning model with guaranteed availability by GCP SLAs.
+            Higher pricing compared to Spot and Preemptible VMs.
+            Use the "<code>Max Run Duration Seconds</code>" field to limit the instance duration and enable automatic deletion.
+        </li>
+        <li>
+            <strong>Spot:</strong> Low-cost instances that may be terminated if resources are needed elsewhere. Availability varies.
+            Unlike Preemptible VMs, they are not always terminated after 24 hours.
+            Spot and Preemptible VMs are priced the same.
+            Use the "<code>Max Run Duration Seconds</code>" field to ensure termination after a specific duration.
+            <p>
+                See <a href="https://cloud.google.com/compute/docs/instances/spot">Spot VMs</a> for more details.
+            </p>
+        </li>
+        <li>
+            <strong>Preemptible:</strong> Low-cost instances that may be terminated if resources are needed for other tasks.
+            Availability varies. Spot and Preemptible VMs are priced the same.
+            The "<code>Max Run Duration Seconds</code>" field does not apply to Preemptible instances.
+            <p>
+                See the <a href="https://cloud.google.com/compute/docs/instances/preemptible">Preemptible VM Instances</a> documentation for more information.
+            </p>
+        </li>
+    </ul>
+</div>

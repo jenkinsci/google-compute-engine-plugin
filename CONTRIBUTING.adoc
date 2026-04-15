@@ -1,0 +1,216 @@
+////
+Copyright 2020 Google LLC
+Copyright 2026 CloudBees, Inc.
+
+ Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in
+ compliance with the License. You may obtain a copy of the License at
+
+        https://www.apache.org/licenses/LICENSE-2.0
+
+ Unless required by applicable law or agreed to in writing, software distributed under the License
+ is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
+ implied. See the License for the specific language governing permissions and limitations under the
+ License.
+////
+:toc: macro
+:toc-title:
+
+[[contributing]]
+= Contributing
+
+toc::[]
+
+We'd love to accept your patches and contributions to this project.
+
+[[prerequisites]]
+== Prerequisites
+
+* JDK 21 or later (Java 17 was dropped from Jenkins weekly in Jan 2026 and from the LTS line in April 2026)
+* Maven 3.9 or later
+* For integration tests: a GCP project with the Compute Engine API enabled and billing active
+
+[[code-style]]
+== Code Style
+
+The project uses https://github.com/diffplug/spotless[Spotless] for code formatting, enforced during the build.
+
+To auto-fix formatting on every build (recommended), set this in your `~/.m2/settings.xml`:
+
+[source,xml]
+----
+<settings>
+  [...]
+  <activeProfiles>
+    [...]
+    <activeProfile>may-spotless-apply</activeProfile>
+  </activeProfiles>
+</settings>
+----
+
+See https://github.com/jenkinsci/plugin-pom/pull/1017[jenkinsci/plugin-pom#1017] for details. Alternatively, run `mvn spotless:apply` manually.
+
+[[quick-start]]
+== Quick Start
+
+[source,bash]
+----
+git clone git@github.com:jenkinsci/google-compute-engine-plugin.git
+cd google-compute-engine-plugin
+mvn verify                # compile + unit tests + package (integration tests are off by default)
+mvn hpi:run               # launch Jenkins locally with the plugin at http://localhost:8080/jenkins
+----
+
+[[code-reviews]]
+== Code Reviews
+
+All submissions, including submissions by project members, require review. We
+use GitHub pull requests for this purpose. Consult
+https://help.github.com/articles/about-pull-requests/[GitHub Help] for more
+information on using pull requests.
+
+[[testing]]
+== Testing
+
+[[unit-tests]]
+=== Unit Tests
+
+[source,bash]
+----
+mvn test
+----
+
+[[integration-tests]]
+=== Integration Tests
+
+Integration tests provision actual GCE instances, run pipelines, and take snapshots. They are disabled by default and expected to be run on a contributor's own machine with a real GCP project.
+
+Integration test classes must be suffixed `IT.java` (e.g. `ComputeEngineCloudRestartPreemptedIT.java`) to be picked up by Failsafe.
+
+*Why disabled in CI:*
+
+* Requires a GCP project with billing -- not feasible in public CI.
+* Exposing GCP credentials in CI is a security risk.
+
+[[prepare-vm-images]]
+==== Prepare VM Images
+
+The agent images need Java pre-installed. Packer scripts create and upload the images to your GCP project.
+
+*Linux image:*
+
+[source,bash]
+----
+cd testimages/linux
+bash setup-gce-image.sh
+----
+
+The default image has `java` on PATH. To also create a non-standard-java image (java at `/usr/bin/non-standard-java`) for `ComputeEngineCloudNonStandardJavaIT`:
+
+[source,bash]
+----
+bash setup-gce-image.sh non-standard-java
+----
+
+Use `--recreate` to rebuild or `--delete` to remove images.
+
+*Windows image:*
+
+[source,bash]
+----
+bash testimages/windows/setup-gce-image.sh
+----
+
+The default username is `jenkins` and the default password is `Agent007!`. To use a custom password, set the `JENKINS_PASSWORD` environment variable before running the script:
+
+[source,bash]
+----
+export JENKINS_PASSWORD=your-secure-password
+bash testimages/windows/setup-gce-image.sh
+----
+
+This creates a Windows Server 2022 image with Java 25 (Java 21 also works) and OpenSSH pre-installed. The Packer image build runs from any platform (macOS, Linux) -- it does not require a Windows machine. Use `--recreate` to rebuild or `--delete` to remove.
+
+[[set-environment-variables]]
+==== Set Environment Variables
+
+[source,bash]
+----
+export GOOGLE_PROJECT_ID=your-project-id
+export GOOGLE_CREDENTIALS_FILE=/path/to/sa-key.json
+export GOOGLE_REGION=us-central1
+export GOOGLE_ZONE=us-central1-a
+export GOOGLE_SA_NAME=jenkins-agent-sa
+----
+
+For Windows tests, also export:
+
+[source,bash]
+----
+export GOOGLE_BOOT_DISK_PROJECT_ID=your-project-id
+export GOOGLE_BOOT_DISK_IMAGE_NAME=jenkins-gce-integration-test-windows-jre
+export GOOGLE_JENKINS_PASSWORD=Agent007!  # default; must match the password used during image build
+----
+
+[[create-a-service-account]]
+==== Create a Service Account
+
+See the link:README.adoc#create-a-gcp-service-account[IAM Credentials setup] in the user documentation.
+
+[[run-integration-tests]]
+==== Run Integration Tests
+
+Integration tests are disabled by default (`-DskipITs=true` in `pom.xml`). Enable them explicitly with `-DskipITs=false`.
+
+Run all integration tests:
+
+[source,bash]
+----
+mvn verify -DskipITs=false
+----
+
+Run a specific integration test class:
+
+[source,bash]
+----
+mvn verify -Dskip.surefire.tests=true -DskipITs=false -Dit.test=ComputeEngineCloudRestartPreemptedIT
+----
+
+Run a specific integration test method:
+
+[source,bash]
+----
+mvn verify -Dskip.surefire.tests=true -DskipITs=false -Dit.test=ComputeEngineCloudRestartPreemptedIT#testIfNodeWasPreempted
+----
+
+Run Windows integration tests:
+
+[source,bash]
+----
+mvn verify -DskipITs=false -Dit.windows=true
+----
+
+[[debugging-tests]]
+==== Debugging Tests
+
+Attach a remote debugger on port 5005.
+
+Unit test (Surefire):
+
+[source,bash]
+----
+mvn test -Dtest=YourTestClass -Dmaven.surefire.debug=true
+----
+
+Integration test (Failsafe):
+
+[source,bash]
+----
+mvn verify -Dskip.surefire.tests=true -DskipITs=false -Dit.test=YourTestClassIT -Dmaven.failsafe.debug=true
+----
+
+Then connect your remote debug configuration to `localhost:5005`.
+
+[[license]]
+== License
+
+See link:LICENSE[LICENSE]

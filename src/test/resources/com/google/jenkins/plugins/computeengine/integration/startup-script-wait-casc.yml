@@ -1,0 +1,49 @@
+jenkins:
+  clouds:
+    - computeEngine:
+        cloudName: integration
+        projectId: ${env.GOOGLE_PROJECT_ID}
+        instanceCapStr: 10
+        credentialsId: ${env.GOOGLE_PROJECT_ID}
+        noDelayProvisioning: true
+        configurations:
+          - namePrefix:         integration
+            description:        integration
+            launchTimeoutSecondsStr: ''
+            retentionTimeMinutesStr: ''
+            mode:               EXCLUSIVE
+            labelString:        gce
+            numExecutorsStr:    1
+            runAsUser:          jenkins
+            remoteFs:           ''
+            oneShot:            true
+            createSnapshot:     false
+            startupScript: |
+              #!/bin/bash
+              echo 'STARTUP_SCRIPT_BEGIN' >> /tmp/startup-output.txt
+              sleep 90
+              echo 'STARTUP_COMPLETE' >> /tmp/startup-output.txt
+              echo "Finished at $(date)" >> /tmp/startup-output.txt
+            startupScriptExitReporterLinux: |
+              curl -s -X PUT -H "Metadata-Flavor: Google" \
+                "http://metadata.google.internal/computeMetadata/v1/instance/guest-attributes/startup-script/status" \
+                -d "$1"
+            region:             "https://www.googleapis.com/compute/v1/projects/${env.GOOGLE_PROJECT_ID}/regions/${env.GOOGLE_REGION}"
+            zone:               "https://www.googleapis.com/compute/v1/projects/${env.GOOGLE_PROJECT_ID}/zones/${env.GOOGLE_ZONE}"
+            template:           ''
+            machineType:        "https://www.googleapis.com/compute/v1/projects/${env.GOOGLE_PROJECT_ID}/zones/${env.GOOGLE_ZONE}/machineTypes/n1-standard-1"
+            networkConfiguration:
+              autofilled:
+                network:        default
+                subnetwork:     default
+            networkTags:        "jenkins-agent ssh"
+            networkInterfaceIpStackMode:
+              singleStack:
+                externalIPV4Address:    true
+            useInternalAddress: false
+            bootDiskSourceImageProject: ${env.GOOGLE_PROJECT_ID}
+            bootDiskSourceImageName: "projects/${env.GOOGLE_PROJECT_ID}/global/images/jenkins-gce-integration-test-jre"
+            bootDiskType:       "https://www.googleapis.com/compute/v1/projects/${env.GOOGLE_PROJECT_ID}/zones/${env.GOOGLE_ZONE}/diskTypes/pd-ssd"
+            bootDiskSizeGbStr:  20
+            bootDiskAutoDelete: true
+            serviceAccountEmail: "${env.GOOGLE_SA_NAME}@${env.GOOGLE_PROJECT_ID}.iam.gserviceaccount.com"

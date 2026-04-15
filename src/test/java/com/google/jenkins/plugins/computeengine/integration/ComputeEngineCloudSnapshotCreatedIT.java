@@ -54,6 +54,7 @@ import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.rules.Timeout;
+import org.jvnet.hudson.test.BuildWatcher;
 import org.jvnet.hudson.test.JenkinsRule;
 
 /**
@@ -62,16 +63,19 @@ import org.jvnet.hudson.test.JenkinsRule;
  * build fails.
  */
 public class ComputeEngineCloudSnapshotCreatedIT {
-    private static Logger log = Logger.getLogger(ComputeEngineCloudSnapshotCreatedIT.class.getName());
+    private static final Logger log = Logger.getLogger(ComputeEngineCloudSnapshotCreatedIT.class.getName());
 
     @ClassRule
-    public static Timeout timeout = new Timeout(15 * TEST_TIMEOUT_MULTIPLIER, TimeUnit.MINUTES);
+    public static Timeout timeout = new Timeout(15L * TEST_TIMEOUT_MULTIPLIER, TimeUnit.MINUTES);
 
     @ClassRule
     public static JenkinsRule jenkinsRule = new JenkinsRule();
 
+    @ClassRule
+    public static BuildWatcher bw = new BuildWatcher();
+
     private static ComputeClient client;
-    private static Map<String, String> label = getLabel(ComputeEngineCloudSnapshotCreatedIT.class);
+    private static final Map<String, String> label = getLabel(ComputeEngineCloudSnapshotCreatedIT.class);
     private static Snapshot createdSnapshot = null;
 
     @BeforeClass
