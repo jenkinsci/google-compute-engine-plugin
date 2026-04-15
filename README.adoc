@@ -664,7 +664,7 @@ credentials:
               scope: SYSTEM
               id: windows-password
               username: jenkins
-              password: "{your-password}"
+              password: "Agent007!"  # default from testimages/windows/setup-gce-image.sh
 ----
 
 [[advanced-usage]]
