@@ -59,7 +59,7 @@ The plugin needs a narrow set of Compute Engine permissions. Create a custom rol
 
 [source,bash]
 ----
-gcloud iam roles create jenkinsGcePlugin --project="$PROJECT" \
+gcloud -q iam roles create jenkinsGcePlugin --project="$PROJECT" \
   --title="Jenkins GCE Plugin" \
   --description="Minimum permissions for the Jenkins GCE plugin" \
   --permissions="\
@@ -77,7 +77,8 @@ compute.zoneOperations.get,compute.acceleratorTypes.list"
 
 gcloud projects add-iam-policy-binding $PROJECT \
   --member serviceAccount:$SA_EMAIL \
-  --role "projects/$PROJECT/roles/jenkinsGcePlugin"
+  --role "projects/$PROJECT/roles/jenkinsGcePlugin" \
+  --condition None
 ----
 
 If your builds need to call GCP APIs from inside the agent VM, see <<iam,Service Account E-mail>> for additional IAM setup.
