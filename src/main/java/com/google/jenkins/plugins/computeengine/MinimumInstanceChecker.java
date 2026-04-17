@@ -261,6 +261,7 @@ public class MinimumInstanceChecker {
         jenkins.clouds.stream()
                 .filter(ComputeEngineCloud.class::isInstance)
                 .map(ComputeEngineCloud.class::cast)
+                .filter(cloud -> cloud.getConfigurations() != null)
                 .forEach(cloud -> cloud.getConfigurations().forEach(config -> {
                     if (isMinimumInstancesInactive(config)) {
                         return;
