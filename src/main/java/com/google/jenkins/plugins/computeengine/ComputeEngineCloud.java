@@ -231,7 +231,7 @@ public class ComputeEngineCloud extends AbstractCloudImpl {
      */
     @DataBoundSetter
     public void setConfigurations(List<InstanceConfiguration> configurations) {
-        this.configurations = configurations;
+        this.configurations = configurations != null ? configurations : new ArrayList<>();
         readResolve();
     }
 
