@@ -154,17 +154,18 @@ public class ComputeEngineCloud extends AbstractCloudImpl {
     }
 
     protected Object readResolve() {
-        if (configurations != null) {
-            for (InstanceConfiguration configuration : configurations) {
-                configuration.setCloud(this);
-                configuration.readResolve();
-                // Apply a label that associates an instance configuration with
-                // this cloud provider
-                configuration.appendLabel(CLOUD_ID_LABEL_KEY, getInstanceId());
+        if (configurations == null) {
+            configurations = new ArrayList<>();
+        }
+        for (InstanceConfiguration configuration : configurations) {
+            configuration.setCloud(this);
+            configuration.readResolve();
+            // Apply a label that associates an instance configuration with
+            // this cloud provider
+            configuration.appendLabel(CLOUD_ID_LABEL_KEY, getInstanceId());
 
-                // Apply a label that identifies the name of this instance configuration
-                configuration.appendLabel(CONFIG_LABEL_KEY, configuration.getNamePrefix());
-            }
+            // Apply a label that identifies the name of this instance configuration
+            configuration.appendLabel(CONFIG_LABEL_KEY, configuration.getNamePrefix());
         }
         setInstanceId(instanceId);
         return this;
@@ -417,7 +418,7 @@ public class ComputeEngineCloud extends AbstractCloudImpl {
 
     /** Gets all instances of {@link InstanceConfiguration} that has the matching {@link Label}. */
     public List<InstanceConfiguration> getInstanceConfigurations(Label label) throws NoConfigurationException {
-        if (configurations == null) {
+        if (configurations.isEmpty()) {
             throw new NoConfigurationException(
                     String.format("Cloud %s does not have any defined instance configurations.", this.getCloudName()));
         }
