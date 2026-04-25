@@ -213,7 +213,7 @@ public class InstanceConfigurationTest {
         r.assertEqualBeans(
                 want,
                 got,
-                "namePrefix,region,zone,machineType,preemptible,windowsConfiguration,minCpuPlatform,startupScript,bootDiskType,bootDiskSourceImageName,bootDiskSourceImageProject,bootDiskSizeGb,diskMapping,acceleratorConfiguration,networkConfiguration,networkInterfaceIpStackMode,networkTags,serviceAccountEmail,minimumNumberOfInstances,minimumNumberOfSpareInstances,shieldedVmConfiguration");
+                "namePrefix,region,zone,machineType,preemptible,windowsConfiguration,minCpuPlatform,startupScript,bootDiskType,bootDiskSourceImageName,bootDiskSourceImageProject,bootDiskSizeGb,diskMapping,acceleratorConfiguration,networkConfiguration,networkInterfaceIpStackMode,networkTags,serviceAccountEmail,minimumNumberOfInstances,minimumNumberOfSpareInstances,shieldedVmConfiguration,sshPort");
     }
 
     @Test
@@ -536,6 +536,62 @@ public class InstanceConfigurationTest {
         var script = "Install-WindowsFeature -Name Web-Server";
         assertThat(InstanceConfiguration.wrapWindowsStartupScript(script, null), is(script));
         assertThat(InstanceConfiguration.wrapWindowsStartupScript(script, ""), is(script));
+    }
+
+    @Test
+    public void testSshPortDefaultValue() {
+        InstanceConfiguration config = new InstanceConfiguration();
+        config.setSshPort(null);
+        assertEquals(InstanceConfiguration.DEFAULT_SSH_PORT, config.getSshPort());
+    }
+
+    @Test
+    public void testSshPortCustomValue() {
+        InstanceConfiguration config = new InstanceConfiguration();
+        config.setSshPort(2222);
+        assertEquals(Integer.valueOf(2222), config.getSshPort());
+    }
+
+    @Test
+    public void testSshPortInvalidValuesFallBackToDefault() {
+        InstanceConfiguration config = new InstanceConfiguration();
+
+        config.setSshPort(0);
+        assertEquals(InstanceConfiguration.DEFAULT_SSH_PORT, config.getSshPort());
+
+        config.setSshPort(-1);
+        assertEquals(InstanceConfiguration.DEFAULT_SSH_PORT, config.getSshPort());
+
+        config.setSshPort(70000);
+        assertEquals(InstanceConfiguration.DEFAULT_SSH_PORT, config.getSshPort());
+    }
+
+    @Test
+    public void testSshPortBoundaryValues() {
+        InstanceConfiguration config = new InstanceConfiguration();
+
+        config.setSshPort(1);
+        assertEquals(Integer.valueOf(1), config.getSshPort());
+
+        config.setSshPort(65535);
+        assertEquals(Integer.valueOf(65535), config.getSshPort());
+    }
+
+    @Test
+    public void descriptorSshPortValidation() {
+        InstanceConfiguration.DescriptorImpl d = new InstanceConfiguration.DescriptorImpl();
+
+        assertEquals(FormValidation.Kind.OK, d.doCheckSshPort(null).kind);
+        assertEquals(FormValidation.Kind.OK, d.doCheckSshPort("").kind);
+        assertEquals(FormValidation.Kind.OK, d.doCheckSshPort("22").kind);
+        assertEquals(FormValidation.Kind.OK, d.doCheckSshPort("1").kind);
+        assertEquals(FormValidation.Kind.OK, d.doCheckSshPort("65535").kind);
+        assertEquals(FormValidation.Kind.OK, d.doCheckSshPort("2222").kind);
+
+        assertEquals(FormValidation.Kind.ERROR, d.doCheckSshPort("0").kind);
+        assertEquals(FormValidation.Kind.ERROR, d.doCheckSshPort("-1").kind);
+        assertEquals(FormValidation.Kind.ERROR, d.doCheckSshPort("65536").kind);
+        assertEquals(FormValidation.Kind.ERROR, d.doCheckSshPort("abc").kind);
     }
 
     @Test
