@@ -103,6 +103,7 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
     public static final Long DEFAULT_BOOT_DISK_SIZE_GB = 10L;
     public static final Integer DEFAULT_NUM_EXECUTORS = 1;
     public static final Integer DEFAULT_LAUNCH_TIMEOUT_SECONDS = 300;
+    public static final Integer DEFAULT_SSH_PORT = 22;
     public static final Integer DEFAULT_RETENTION_TIME_MINUTES = (DEFAULT_LAUNCH_TIMEOUT_SECONDS / 60) + 1;
     public static final String DEFAULT_RUN_AS_USER = "jenkins";
     public static final String METADATA_LINUX_STARTUP_SCRIPT_KEY = "startup-script";
@@ -186,6 +187,7 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
     private String diskMapping;
     private String remoteFs;
     private String javaExecPath;
+    private Integer sshPort;
     private GoogleKeyCredential sshKeyCredential;
     private Map<String, String> googleLabels;
     private Integer numExecutors;
@@ -260,6 +262,11 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
     public void setBootDiskSizeGbStr(String bootDiskSizeGbStr) {
         this.bootDiskSizeGb = longOrDefault(bootDiskSizeGbStr, DEFAULT_BOOT_DISK_SIZE_GB);
         this.bootDiskSizeGbStr = this.bootDiskSizeGb.toString();
+    }
+
+    @DataBoundSetter
+    public void setSshPort(Integer sshPort) {
+        this.sshPort = (sshPort != null && sshPort >= 1 && sshPort <= 65535) ? sshPort : DEFAULT_SSH_PORT;
     }
 
     @DataBoundSetter
@@ -397,6 +404,7 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
                     .launcher(launcher)
                     .retentionStrategy(new ComputeEngineRetentionStrategy(retentionTimeMinutes, oneShot))
                     .launchTimeout(getLaunchTimeoutMillis())
+                    .sshPort(sshPort)
                     .javaExecPath(javaExecPath)
                     .sshKeyCredential(sshKeyCredential)
                     .waitForStartupScript(notNullOrEmpty(startupScript) && notNullOrEmpty(resolveExitReporter()))
@@ -774,6 +782,10 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
             return DEFAULT_RUN_AS_USER;
         }
 
+        public static Integer defaultSshPort() {
+            return DEFAULT_SSH_PORT;
+        }
+
         public static WindowsConfiguration defaultWindowsConfiguration() {
             return WindowsConfiguration.builder()
                     .passwordCredentialsId("")
@@ -872,6 +884,22 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
         public FormValidation doCheckDescription(@QueryParameter String value) {
             if (value == null || value.isEmpty()) {
                 return FormValidation.error("A description is required");
+            }
+            return FormValidation.ok();
+        }
+
+        public FormValidation doCheckSshPort(@QueryParameter String value) {
+            if (value == null || value.isEmpty()) {
+                return FormValidation.ok();
+            }
+            int port;
+            try {
+                port = Integer.parseInt(value);
+            } catch (NumberFormatException e) {
+                return FormValidation.error("SSH port must be a number");
+            }
+            if (port < 1 || port > 65535) {
+                return FormValidation.error("SSH port must be between 1 and 65535");
             }
             return FormValidation.ok();
         }
@@ -1311,6 +1339,7 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
             instanceConfiguration.setCustomMetadata(this.customMetadata);
             instanceConfiguration.setRemoteFs(this.remoteFs);
             instanceConfiguration.setJavaExecPath(this.javaExecPath);
+            instanceConfiguration.setSshPort(this.sshPort);
             instanceConfiguration.setCloud(this.cloud);
             if (googleLabels != null) {
                 instanceConfiguration.appendLabels(this.googleLabels);

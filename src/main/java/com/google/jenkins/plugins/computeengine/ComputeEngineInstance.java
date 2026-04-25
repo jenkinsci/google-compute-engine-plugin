@@ -56,6 +56,7 @@ public class ComputeEngineInstance extends AbstractCloudSlave {
     private final boolean oneShot;
     private final boolean ignoreProxy;
     private final String javaExecPath;
+    private final int sshPort;
     private final GoogleKeyCredential sshKeyCredential;
     // Carried from InstanceConfiguration at provision time because the launcher has no access to whether
     // startup script exit reporting was configured
@@ -85,6 +86,7 @@ public class ComputeEngineInstance extends AbstractCloudSlave {
             ComputerLauncher launcher,
             RetentionStrategy retentionStrategy,
             Integer launchTimeout,
+            int sshPort,
             // NOTE(craigatgoogle): Could not use Optional due to serialization req.
             @Nullable String javaExecPath,
             @Nullable GoogleKeyCredential sshKeyCredential,
@@ -111,6 +113,7 @@ public class ComputeEngineInstance extends AbstractCloudSlave {
         this.oneShot = oneShot;
         this.ignoreProxy = ignoreProxy;
         this.terminateIdleDuringShutdown = terminateIdleDuringShutdown;
+        this.sshPort = sshPort;
         this.javaExecPath = javaExecPath;
         this.sshKeyCredential = sshKeyCredential;
         this.waitForStartupScript = waitForStartupScript;
@@ -162,6 +165,11 @@ public class ComputeEngineInstance extends AbstractCloudSlave {
 
     public long getLaunchTimeoutMillis() {
         return launchTimeout * 1000L;
+    }
+
+    /** @return The configured SSH port, defaulting to 22 for backward compatibility. */
+    public int getSshPort() {
+        return sshPort > 0 ? sshPort : InstanceConfiguration.DEFAULT_SSH_PORT;
     }
 
     /** @return The configured Java executable path, or else the default Java binary. */
