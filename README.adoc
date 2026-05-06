@@ -73,7 +73,7 @@ compute.subnetworks.list,compute.subnetworks.use,compute.subnetworks.useExternal
 compute.networks.list,compute.networks.use,compute.networks.useExternalIp,\
 compute.instanceTemplates.get,compute.instanceTemplates.list,compute.instanceTemplates.useReadOnly,\
 compute.machineTypes.list,compute.diskTypes.list,compute.regions.list,compute.zones.list,\
-compute.zoneOperations.get,compute.acceleratorTypes.list"
+compute.zones.get,compute.zoneOperations.get,compute.acceleratorTypes.list"
 
 gcloud projects add-iam-policy-binding $PROJECT \
   --member serviceAccount:$SA_EMAIL \
