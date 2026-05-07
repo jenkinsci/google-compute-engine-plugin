@@ -12,9 +12,11 @@
  License.
 -->
 <div>
-    Verifies signed boot components. Unsigned out-of-tree kernel modules (commonly GPU drivers) fail to load.
+    A UEFI firmware feature that ensures the VM boots only with authentic, signed software. It verifies
+    the digital signature of boot components such as firmware drivers, the OS bootloader, and the kernel,
+    and halts the boot process if any component lacks a trusted signature.
     <p>
-        See the <a href="https://cloud.google.com/compute/shielded-vm/docs/shielded-vm">Shielded VM
-        documentation</a>.
+        See the <a href="https://cloud.google.com/compute/shielded-vm/docs/shielded-vm#secure-boot">Secure
+        Boot documentation</a>.
     </p>
 </div>
