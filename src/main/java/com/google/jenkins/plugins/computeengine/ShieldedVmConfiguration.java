@@ -20,7 +20,6 @@ import hudson.Extension;
 import hudson.model.Describable;
 import hudson.model.Descriptor;
 import java.io.Serializable;
-import jenkins.model.Jenkins;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.EqualsAndHashCode;
@@ -47,12 +46,6 @@ public class ShieldedVmConfiguration implements Describable<ShieldedVmConfigurat
         this.enableSecureBoot = true;
         this.enableVtpm = true;
         this.enableIntegrityMonitoring = true;
-    }
-
-    @SuppressWarnings("unchecked")
-    @Override
-    public Descriptor<ShieldedVmConfiguration> getDescriptor() {
-        return Jenkins.get().getDescriptor(ShieldedVmConfiguration.class);
     }
 
     @Extension
