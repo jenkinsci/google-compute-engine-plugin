@@ -390,7 +390,7 @@ These fields are inside the *Advanced* section of Machine Configuration.
 
 | *Shielded VM*
 | `shieldedVmConfiguration`
-| Enable https://cloud.google.com/compute/shielded-vm/docs/shielded-vm[Shielded VM] (GCP docs) options (Secure Boot, vTPM, Integrity Monitoring). Optional; when omitted, the boot image's defaults apply. See <<shielded-vm,Shielded VM>>.
+| Enable https://cloud.google.com/compute/shielded-vm/docs/shielded-vm[Shielded VM] (GCP docs) options (Secure Boot, vTPM, Integrity Monitoring). Optional; when omitted, `shieldedInstanceConfig` is not sent in the create request. See <<shielded-vm,Shielded VM>>.
 |===
 
 [[networking]]
@@ -919,7 +919,7 @@ configurations:
 [[shielded-vm]]
 === Shielded VM
 
-Enable https://cloud.google.com/compute/shielded-vm/docs/shielded-vm[Shielded VM] (GCP docs) on the agent. Omit `shieldedVmConfiguration` to let the boot image's defaults apply.
+Enable https://cloud.google.com/compute/shielded-vm/docs/shielded-vm[Shielded VM] (GCP docs) on the agent. Omit `shieldedVmConfiguration` to leave `shieldedInstanceConfig` out of the create request.
 
 [source,yaml]
 ----
