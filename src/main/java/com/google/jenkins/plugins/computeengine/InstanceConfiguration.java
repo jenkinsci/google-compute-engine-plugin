@@ -33,6 +33,7 @@ import com.google.api.services.compute.model.Operation;
 import com.google.api.services.compute.model.Region;
 import com.google.api.services.compute.model.Scheduling;
 import com.google.api.services.compute.model.ServiceAccount;
+import com.google.api.services.compute.model.ShieldedInstanceConfig;
 import com.google.api.services.compute.model.Tags;
 import com.google.api.services.compute.model.Zone;
 import com.google.cloud.graphite.platforms.plugin.client.ClientFactory;
@@ -174,6 +175,9 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
 
     @Nullable
     private SshConfiguration sshConfiguration;
+
+    @Nullable
+    private ShieldedVmConfiguration shieldedVmConfiguration;
 
     @Nullable
     private List<CustomMetadataItem> customMetadata;
@@ -476,6 +480,13 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
             // optional
             if (notNullOrEmpty(minCpuPlatform)) {
                 instance.setMinCpuPlatform(minCpuPlatform);
+            }
+
+            if (shieldedVmConfiguration != null) {
+                instance.setShieldedInstanceConfig(new ShieldedInstanceConfig()
+                        .setEnableSecureBoot(shieldedVmConfiguration.isEnableSecureBoot())
+                        .setEnableVtpm(shieldedVmConfiguration.isEnableVtpm())
+                        .setEnableIntegrityMonitoring(shieldedVmConfiguration.isEnableIntegrityMonitoring()));
             }
         }
 
@@ -1272,6 +1283,7 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
             instanceConfiguration.setRunAsUser(this.runAsUser);
             instanceConfiguration.setWindowsConfiguration(this.windowsConfiguration);
             instanceConfiguration.setSshConfiguration(this.sshConfiguration);
+            instanceConfiguration.setShieldedVmConfiguration(this.shieldedVmConfiguration);
             instanceConfiguration.setBootDiskType(this.bootDiskType);
             instanceConfiguration.setBootDiskAutoDelete(this.bootDiskAutoDelete);
             instanceConfiguration.setBootDiskSourceImageName(this.bootDiskSourceImageName);

@@ -24,6 +24,7 @@ import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.startsWith;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -212,7 +213,7 @@ public class InstanceConfigurationTest {
         r.assertEqualBeans(
                 want,
                 got,
-                "namePrefix,region,zone,machineType,preemptible,windowsConfiguration,minCpuPlatform,startupScript,bootDiskType,bootDiskSourceImageName,bootDiskSourceImageProject,bootDiskSizeGb,diskMapping,acceleratorConfiguration,networkConfiguration,networkInterfaceIpStackMode,networkTags,serviceAccountEmail,minimumNumberOfInstances,minimumNumberOfSpareInstances");
+                "namePrefix,region,zone,machineType,preemptible,windowsConfiguration,minCpuPlatform,startupScript,bootDiskType,bootDiskSourceImageName,bootDiskSourceImageProject,bootDiskSizeGb,diskMapping,acceleratorConfiguration,networkConfiguration,networkInterfaceIpStackMode,networkTags,serviceAccountEmail,minimumNumberOfInstances,minimumNumberOfSpareInstances,shieldedVmConfiguration");
     }
 
     @Test
@@ -377,6 +378,7 @@ public class InstanceConfigurationTest {
                 .acceleratorConfiguration(new AcceleratorConfiguration(ACCELERATOR_NAME, ACCELERATOR_COUNT))
                 .runAsUser(RUN_AS_USER)
                 .oneShot(false)
+                .shieldedVmConfiguration(new ShieldedVmConfiguration(true, true, true))
                 .template(null);
     }
 
@@ -417,6 +419,43 @@ public class InstanceConfigurationTest {
         var instance = instanceConfigurationBuilder().build().instance();
         assertEquals(1, instance.getDisks().size());
         assertTrue(instance.getDisks().get(0).getBoot());
+    }
+
+    @Test
+    public void testShieldedInstanceConfigNotSet() throws Exception {
+        var instance = instanceConfigurationBuilder()
+                .shieldedVmConfiguration(null)
+                .build()
+                .instance();
+        assertNull(instance.getShieldedInstanceConfig());
+    }
+
+    @Test
+    public void testShieldedInstanceConfigAllOn() throws Exception {
+        var instance = instanceConfigurationBuilder()
+                .shieldedVmConfiguration(new ShieldedVmConfiguration(true, true, true))
+                .build()
+                .instance();
+
+        var shielded = instance.getShieldedInstanceConfig();
+        assertNotNull(shielded);
+        assertTrue(shielded.getEnableSecureBoot());
+        assertTrue(shielded.getEnableVtpm());
+        assertTrue(shielded.getEnableIntegrityMonitoring());
+    }
+
+    @Test
+    public void testShieldedInstanceConfigPartialExplicitDisable() throws Exception {
+        var instance = instanceConfigurationBuilder()
+                .shieldedVmConfiguration(new ShieldedVmConfiguration(true, false, false))
+                .build()
+                .instance();
+
+        var shielded = instance.getShieldedInstanceConfig();
+        assertNotNull(shielded);
+        assertTrue(shielded.getEnableSecureBoot());
+        assertFalse(shielded.getEnableVtpm());
+        assertFalse(shielded.getEnableIntegrityMonitoring());
     }
 
     @Test
