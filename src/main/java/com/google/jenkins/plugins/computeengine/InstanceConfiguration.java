@@ -65,6 +65,7 @@ import hudson.util.ComboBoxModel;
 import hudson.util.FormValidation;
 import hudson.util.ListBoxModel;
 import java.io.IOException;
+import java.security.GeneralSecurityException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -1057,13 +1058,14 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
             ListBoxModel items = new ListBoxModel();
             items.add("");
             try {
-                ComputeClient compute = computeClient(context, credentialsId);
-                List<Image> images = compute.listImages(projectId);
-
+                var clientV2 = ClientUtil.createComputeClientV2(projectId, credentialsId);
+                List<Image> images = clientV2.listImages(projectId, Integer.MAX_VALUE);
+                log.info("listImages(maxResults=" + Integer.MAX_VALUE + ") returned " + images.size()
+                        + " images for project " + projectId);
                 for (Image i : images) {
                     items.add(i.getName(), i.getSelfLink());
                 }
-            } catch (IOException ioe) {
+            } catch (IOException | GeneralSecurityException e) {
                 items.clear();
                 items.add("Error retrieving images for project");
             } catch (IllegalArgumentException iae) {
