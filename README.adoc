@@ -387,6 +387,10 @@ These fields are inside the *Advanced* section of Machine Configuration.
 | *GPUs*
 | `acceleratorConfiguration`
 | Attach GPUs by specifying a type (e.g. `nvidia-tesla-t4`) and count. See https://cloud.google.com/compute/docs/gpus[GPUs on Compute Engine] (GCP docs).
+
+| *Shielded VM*
+| `shieldedVmConfiguration`
+| Enable https://cloud.google.com/compute/shielded-vm/docs/shielded-vm[Shielded VM] (GCP docs) options (Secure Boot, vTPM, Integrity Monitoring). Optional; when omitted, `shieldedInstanceConfig` is not sent in the create request. See <<shielded-vm,Shielded VM>>.
 |===
 
 [[networking]]
@@ -909,6 +913,22 @@ configurations:
           https://registry.internal.example.com
           https://docker.io
           https://gcr.io/my-project
+    # ... remaining fields same as basic example
+----
+
+[[shielded-vm]]
+=== Shielded VM
+
+Enable https://cloud.google.com/compute/shielded-vm/docs/shielded-vm[Shielded VM] (GCP docs) on the agent. Omit `shieldedVmConfiguration` to leave `shieldedInstanceConfig` out of the create request.
+
+[source,yaml]
+----
+configurations:
+  - namePrefix: jenkins-agent
+    shieldedVmConfiguration:
+      enableSecureBoot: true
+      enableVtpm: true
+      enableIntegrityMonitoring: true
     # ... remaining fields same as basic example
 ----
 

@@ -59,6 +59,11 @@ public class ConfigAsCodeTest {
                 "my-multiline-key", configuration.getCustomMetadata().get(1).getKey());
         assertEquals(
                 "line1\nline2\nline3", configuration.getCustomMetadata().get(1).getValue());
+        var shieldedVm = configuration.getShieldedVmConfiguration();
+        assertNotNull("shieldedVmConfiguration should not be null", shieldedVm);
+        assertEquals(true, shieldedVm.isEnableSecureBoot());
+        assertEquals(true, shieldedVm.isEnableVtpm());
+        assertEquals(false, shieldedVm.isEnableIntegrityMonitoring());
         var timeRangeConfig = configuration.getMinimumNumberOfInstancesTimeRangeConfig();
         assertNotNull("minimumNumberOfInstancesTimeRangeConfig should not be null", timeRangeConfig);
         assertEquals("09:00", timeRangeConfig.getActiveFrom());

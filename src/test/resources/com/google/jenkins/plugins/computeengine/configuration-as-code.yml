@@ -58,6 +58,10 @@ jenkins:
                 value: "my-custom-value"
               - key: "my-multiline-key"
                 value: "line1\nline2\nline3"
+            shieldedVmConfiguration:
+              enableSecureBoot: true
+              enableVtpm: true
+              enableIntegrityMonitoring: false
 credentials:
   system:
     domainCredentials:

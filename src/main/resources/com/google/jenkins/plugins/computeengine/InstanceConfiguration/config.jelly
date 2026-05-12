@@ -189,6 +189,10 @@
                         <f:textbox/>
                     </f:entry>
                 </f:section>
+
+                <f:section title="Shielded VM">
+                    <f:optionalProperty field="shieldedVmConfiguration" title="${%Enable Shielded VM}"/>
+                </f:section>
             </f:advanced>
         </f:section>
 
