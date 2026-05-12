@@ -76,6 +76,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.logging.Level;
 import jenkins.model.Jenkins;
+import jenkins.util.SystemProperties;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -117,6 +118,19 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
             Invoke-RestMethod -Method PUT -Body "$($args[0])" `
               -Headers @{'Metadata-Flavor'='Google'} `
               -Uri "http://metadata.google.internal/computeMetadata/v1/instance/guest-attributes/startup-script/status\"""";
+    /**
+     * Upper bound on images returned from {@code images.list} when populating the
+     * boot-disk image dropdown. Avoids GCE's default server-side cap of 500 while
+     * staying well under the kind of payload size that would overwhelm Jetty or
+     * the browser for pathological projects.
+     * <p>
+     * Configurable via system property
+     * {@code com.google.jenkins.plugins.computeengine.InstanceConfiguration.listImagesMaxResults}.
+     * Default: {@code 10000}.
+     */
+    public static final int LIST_IMAGES_MAX_RESULTS =
+            SystemProperties.getInteger(InstanceConfiguration.class.getName() + ".listImagesMaxResults", 10_000);
+
     public static final List<String> KNOWN_IMAGE_PROJECTS = List.of(
             "centos-cloud",
             "coreos-cloud",
@@ -1059,8 +1073,8 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
             items.add("");
             try {
                 var clientV2 = ClientUtil.createComputeClientV2(projectId, credentialsId);
-                List<Image> images = clientV2.listImages(projectId, Integer.MAX_VALUE);
-                log.info("listImages(maxResults=" + Integer.MAX_VALUE + ") returned " + images.size()
+                List<Image> images = clientV2.listImages(projectId, LIST_IMAGES_MAX_RESULTS);
+                log.fine(() -> "listImages(maxResults=" + LIST_IMAGES_MAX_RESULTS + ") returned " + images.size()
                         + " images for project " + projectId);
                 for (Image i : images) {
                     items.add(i.getName(), i.getSelfLink());
