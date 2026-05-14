@@ -892,16 +892,7 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
             if (value == null || value.isEmpty()) {
                 return FormValidation.ok();
             }
-            int port;
-            try {
-                port = Integer.parseInt(value);
-            } catch (NumberFormatException e) {
-                return FormValidation.error("SSH port must be a number");
-            }
-            if (port < 1 || port > 65535) {
-                return FormValidation.error("SSH port must be between 1 and 65535");
-            }
-            return FormValidation.ok();
+            return FormValidation.validateIntegerInRange(value, 1, 65535);
         }
 
         public ListBoxModel doFillRegionItems(
