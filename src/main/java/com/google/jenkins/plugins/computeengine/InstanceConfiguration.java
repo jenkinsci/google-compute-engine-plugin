@@ -426,6 +426,9 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
         if (preemptible && provisioningType == null) {
             provisioningType = new PreemptibleVm();
         }
+        if (sshPort == null) {
+            sshPort = DEFAULT_SSH_PORT;
+        }
         return this;
     }
 
