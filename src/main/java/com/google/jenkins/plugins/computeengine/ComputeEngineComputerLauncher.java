@@ -60,8 +60,6 @@ public abstract class ComputeEngineComputerLauncher extends ComputerLauncher {
     private static final String AGENT_JAR = "agent.jar";
     private static final String GUEST_ATTRIBUTE_HOST_KEY_NAMESPACE = "hostkeys";
 
-    // TODO(google-compute-engine-plugin/issues/134): make this configurable
-    private static final int SSH_PORT = 22;
     private static final int SSH_TIMEOUT_MILLIS = 10000;
     private static final int SSH_SLEEP_MILLIS = 5000;
 
@@ -456,7 +454,7 @@ public abstract class ComputeEngineComputerLauncher extends ComputerLauncher {
                     }
                 }
 
-                int port = SSH_PORT;
+                int port = node.getSshPort();
                 logInfo(
                         computer,
                         listener,

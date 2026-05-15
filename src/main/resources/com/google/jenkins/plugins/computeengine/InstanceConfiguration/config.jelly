@@ -72,6 +72,9 @@
             <f:entry title="${%Ignore Jenkins Proxy?}" field="ignoreProxy">
                 <f:checkbox/>
             </f:entry>
+            <f:entry title="${%SSH Port}" field="sshPort">
+                <f:number default="${descriptor.defaultSshPort()}" min="1" max="65535"/>
+            </f:entry>
             <f:entry title="${%Run as user}" field="runAsUser">
                 <f:textbox default="${descriptor.defaultRunAsUser()}"/>
             </f:entry>
