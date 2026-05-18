@@ -66,6 +66,7 @@ import hudson.util.ComboBoxModel;
 import hudson.util.FormValidation;
 import hudson.util.ListBoxModel;
 import java.io.IOException;
+import java.security.GeneralSecurityException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -76,6 +77,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.logging.Level;
 import jenkins.model.Jenkins;
+import jenkins.util.SystemProperties;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -118,6 +120,19 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
             Invoke-RestMethod -Method PUT -Body "$($args[0])" `
               -Headers @{'Metadata-Flavor'='Google'} `
               -Uri "http://metadata.google.internal/computeMetadata/v1/instance/guest-attributes/startup-script/status\"""";
+    /**
+     * Upper bound on images returned from {@code images.list} when populating the
+     * boot-disk image dropdown. Avoids GCE's default server-side cap of 500 while
+     * staying well under the kind of payload size that would overwhelm Jetty or
+     * the browser for pathological projects.
+     * <p>
+     * Configurable via system property
+     * {@code com.google.jenkins.plugins.computeengine.InstanceConfiguration.listImagesMaxResults}.
+     * Default: {@code 10000}.
+     */
+    public static final int LIST_IMAGES_MAX_RESULTS =
+            SystemProperties.getInteger(InstanceConfiguration.class.getName() + ".listImagesMaxResults", 10_000);
+
     public static final List<String> KNOWN_IMAGE_PROJECTS = List.of(
             "centos-cloud",
             "coreos-cloud",
@@ -1090,13 +1105,14 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
             ListBoxModel items = new ListBoxModel();
             items.add("");
             try {
-                ComputeClient compute = computeClient(context, credentialsId);
-                List<Image> images = compute.listImages(projectId);
-
+                var clientV2 = ClientUtil.createComputeClientV2(projectId, credentialsId);
+                List<Image> images = clientV2.listImages(projectId, LIST_IMAGES_MAX_RESULTS);
+                log.fine(() -> "listImages(maxResults=" + LIST_IMAGES_MAX_RESULTS + ") returned " + images.size()
+                        + " images for project " + projectId);
                 for (Image i : images) {
                     items.add(i.getName(), i.getSelfLink());
                 }
-            } catch (IOException ioe) {
+            } catch (IOException | GeneralSecurityException e) {
                 items.clear();
                 items.add("Error retrieving images for project");
             } catch (IllegalArgumentException iae) {

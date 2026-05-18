@@ -1,10 +1,12 @@
 package com.google.jenkins.plugins.computeengine.client;
 
 import com.google.api.services.compute.Compute;
+import com.google.api.services.compute.model.Image;
 import com.google.api.services.compute.model.Instance;
 import com.google.api.services.compute.model.InstancesScopedList;
 import com.google.api.services.compute.model.InstancesSetLabelsRequest;
 import java.io.IOException;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -80,5 +82,19 @@ public class ComputeClientV2 {
                 .filter(Objects::nonNull)
                 .flatMap(List::stream)
                 .collect(Collectors.toList());
+    }
+
+    /**
+     * Lists images in {@code imageProject} with an explicit {@code maxResults}, bypassing the
+     * archived gcp-plugin-core-java {@code ComputeClient#listImages} which silently truncates
+     * at the server default of 500.
+     *
+     * @see <a href="https://docs.cloud.google.com/compute/docs/reference/rest/v1/images/list#query-parameters">
+     *     images.list query parameters</a>
+     */
+    public List<Image> listImages(String imageProject, long maxResults) throws IOException {
+        var resp = compute.images().list(imageProject).setMaxResults(maxResults).execute();
+        List<Image> items = resp.getItems();
+        return items == null ? Collections.emptyList() : items;
     }
 }
