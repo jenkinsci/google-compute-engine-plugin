@@ -146,6 +146,15 @@
                         </f:block>
                     </f:repeatableProperty>
                 </f:entry>
+                <f:entry title="${%Custom labels}" description="${%Additional label key-value pairs to set on the instance}">
+                    <f:repeatableProperty field="customLabels" minimum="0" add="${%Add label}">
+                        <f:block>
+                            <div align="right">
+                                <f:repeatableDeleteButton/>
+                            </div>
+                        </f:block>
+                    </f:repeatableProperty>
+                </f:entry>
                 <f:optionalProperty field="acceleratorConfiguration" title="GPUs">
                     <st:include page="config.jelly" class="${descriptor.clazz}"/>
                 </f:optionalProperty>
