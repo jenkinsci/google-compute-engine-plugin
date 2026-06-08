@@ -28,6 +28,7 @@ import org.kohsuke.stapler.DataBoundConstructor;
 @EqualsAndHashCode
 public class CustomLabelItem implements Describable<CustomLabelItem> {
     @SuppressFBWarnings(value = "HARD_CODE_PASSWORD", justification = "not a password; this is a GCP label key")
+    @SuppressWarnings("lgtm[java/hardcoded-credential-api-call]")
     private final String key;
 
     private final String value;
