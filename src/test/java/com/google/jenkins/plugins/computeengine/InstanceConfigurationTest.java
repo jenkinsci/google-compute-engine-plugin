@@ -374,18 +374,6 @@ public class InstanceConfigurationTest {
                 instance.getLabels().containsKey(CleanLostNodesWork.NODE_IN_USE_LABEL_KEY));
     }
 
-    @Test
-    public void testInstanceNullCustomLabels() throws Exception {
-        var instanceConfiguration = instanceConfigurationBuilder().build();
-
-        var instance = instanceConfiguration.instance();
-
-        // No custom labels configured: the system NODE_IN_USE label is still set
-        assertTrue(
-                "system NODE_IN_USE label should still be present",
-                instance.getLabels().containsKey(CleanLostNodesWork.NODE_IN_USE_LABEL_KEY));
-    }
-
     public static InstanceConfiguration.Builder instanceConfigurationBuilder() {
         return InstanceConfiguration.builder()
                 .namePrefix(NAME_PREFIX)

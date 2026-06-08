@@ -21,10 +21,9 @@ import static com.google.jenkins.plugins.computeengine.integration.ITUtil.PROJEC
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.TEST_TIMEOUT_MULTIPLIER;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.ZONE;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.initCredentials;
-import static org.awaitility.Awaitility.await;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.notNullValue;
 
 import com.google.cloud.graphite.platforms.plugin.client.ComputeClient;
 import com.google.jenkins.plugins.computeengine.client.ClientUtil;
@@ -32,12 +31,12 @@ import hudson.model.Node;
 import io.jenkins.plugins.casc.misc.ConfiguredWithCode;
 import io.jenkins.plugins.casc.misc.JenkinsConfiguredWithCodeRule;
 import java.io.IOException;
-import java.time.Duration;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition;
 import org.jenkinsci.plugins.workflow.job.WorkflowJob;
+import org.jenkinsci.plugins.workflow.test.steps.SemaphoreStep;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.ClassRule;
@@ -90,20 +89,24 @@ public class ComputeEngineCloudCustomLabelsIT {
     @Test
     @ConfiguredWithCode("custom-labels-casc.yml")
     public void testCustomLabelsOnInstance() throws Exception {
-        var p = j.createProject(WorkflowJob.class, "p");
-        p.setDefinition(new CpsFlowDefinition("node('" + LABEL + "') { sh 'sleep 60' }", true));
-        var build = p.scheduleBuild2(0);
-        await("agent should be created").timeout(Duration.ofMinutes(5)).until(j.jenkins::getNodes, hasSize(1));
-        var node = j.jenkins.getNodes().get(0);
-        log.info("Agent provisioned: " + node.getNodeName());
-        await("agent online").timeout(Duration.ofMinutes(5)).until(() -> {
-            var computer = node.toComputer();
-            return computer != null && computer.isOnline();
-        });
-        var instance = client.getInstance(PROJECT_ID, ZONE, node.getNodeName());
+        var pipelineScript = "node('" + LABEL + "') { semaphore 'customLabels' }";
+        var p = j.createProject(WorkflowJob.class, "custom-labels-test");
+        p.setDefinition(new CpsFlowDefinition(pipelineScript, true));
 
+        var build = p.scheduleBuild2(0).waitForStart();
+        SemaphoreStep.waitForStart("customLabels/1", build);
+
+        var buildLog = j.getLog(build);
+        var workerNodeName = j.jenkins.getNodes().stream()
+                .map(Node::getNodeName)
+                .filter(name -> buildLog.contains("Running on " + name))
+                .findFirst()
+                .orElseThrow(() -> new AssertionError("Build log does not contain 'Running on <agent>'"));
+        log.info("Agent provisioned: " + workerNodeName);
+
+        var instance = client.getInstance(PROJECT_ID, ZONE, workerNodeName);
         var labels = instance.getLabels();
-        assertThat("instance should have labels", labels, is(org.hamcrest.Matchers.notNullValue()));
+        assertThat("instance should have labels", labels, notNullValue());
 
         // Assert the custom labels configured via CasC landed on the instance
         assertThat("custom label 'team' should be present", labels.containsKey("team"), is(true));
@@ -111,6 +114,8 @@ public class ComputeEngineCloudCustomLabelsIT {
         assertThat("custom label 'cost-center' should be present", labels.containsKey("cost-center"), is(true));
         assertThat(labels.get("cost-center"), is("ci-1234"));
 
+        SemaphoreStep.success("customLabels/1", null);
+        j.waitForCompletion(build);
         j.assertBuildStatusSuccess(build);
     }
 }

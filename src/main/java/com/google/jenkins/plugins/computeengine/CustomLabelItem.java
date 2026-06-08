@@ -16,6 +16,7 @@
 
 package com.google.jenkins.plugins.computeengine;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import hudson.Extension;
 import hudson.model.Describable;
 import hudson.model.Descriptor;
@@ -26,6 +27,7 @@ import org.kohsuke.stapler.DataBoundConstructor;
 @Getter
 @EqualsAndHashCode
 public class CustomLabelItem implements Describable<CustomLabelItem> {
+    @SuppressFBWarnings(value = "HARD_CODE_PASSWORD", justification = "not a password; this is a GCP label key")
     private final String key;
     private final String value;
 
