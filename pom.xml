@@ -81,7 +81,7 @@
     <hpi.compatibleSinceVersion>4.1.0</hpi.compatibleSinceVersion>
     <concurrency>10</concurrency>
     <it.runOrder>balanced</it.runOrder>
-    <lombok.version>1.18.30</lombok.version>
+    <lombok.version>1.18.46</lombok.version>
     <delombok.output>${project.build.directory}/delombok</delombok.output>
     <spotless.check.skip>false</spotless.check.skip>
     <jenkins.test.timeout>600</jenkins.test.timeout>
