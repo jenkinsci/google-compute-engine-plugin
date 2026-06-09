@@ -384,6 +384,10 @@ These fields are inside the *Advanced* section of Machine Configuration.
 | `customMetadata`
 | Additional key-value pairs set as instance metadata. Accessible from within the VM via the https://cloud.google.com/compute/docs/metadata/overview[metadata server] (GCP docs). Values can be multiline (use YAML block scalars in CasC). Reserved keys (`ssh-keys`, `startup-script`, `windows-startup-script-ps1`, `enable-guest-attributes`) cannot be overridden.
 
+| *Custom labels*
+| `customLabels`
+| Additional https://cloud.google.com/compute/docs/labeling-resources[GCP resource labels] (GCP docs) set on the agent VM. Each entry is a key-value pair. Label values must be a single word (lowercase letters, digits, hyphens; max 63 chars) — GCP rejects invalid values at instance-creation time. Labels are applied after internal plugin labels, so user-defined labels cannot clobber the plugin's system labels.
+
 | *GPUs*
 | `acceleratorConfiguration`
 | Attach GPUs by specifying a type (e.g. `nvidia-tesla-t4`) and count. See https://cloud.google.com/compute/docs/gpus[GPUs on Compute Engine] (GCP docs).
@@ -913,6 +917,25 @@ configurations:
           https://registry.internal.example.com
           https://docker.io
           https://gcr.io/my-project
+    # ... remaining fields same as basic example
+----
+
+[[custom-labels]]
+=== Custom Labels
+
+Set https://cloud.google.com/compute/docs/labeling-resources[GCP resource labels] (GCP docs) on the agent VM. Labels are useful for cost allocation, filtering, and policy enforcement in GCP. Each entry is a key-value pair; label values must be a single word (no spaces). GCP rejects invalid labels at instance-creation time — the plugin does not validate values itself.
+
+Labels are applied after the plugin's internal labels (`jenkins_node_last_refresh`), so user-defined labels cannot clobber them.
+
+[source,yaml]
+----
+configurations:
+  - namePrefix: jenkins-agent
+    customLabels:
+      - key: team
+        value: platform
+      - key: cost-center
+        value: ci-1234
     # ... remaining fields same as basic example
 ----
 

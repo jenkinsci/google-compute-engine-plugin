@@ -59,6 +59,13 @@ public class ConfigAsCodeTest {
                 "my-multiline-key", configuration.getCustomMetadata().get(1).getKey());
         assertEquals(
                 "line1\nline2\nline3", configuration.getCustomMetadata().get(1).getValue());
+        assertNotNull("customLabels should not be null", configuration.getCustomLabels());
+        assertEquals(
+                "Wrong customLabels size", 2, configuration.getCustomLabels().size());
+        assertEquals("team", configuration.getCustomLabels().get(0).getKey());
+        assertEquals("jenkins", configuration.getCustomLabels().get(0).getValue());
+        assertEquals("cost-center", configuration.getCustomLabels().get(1).getKey());
+        assertEquals("ci-1234", configuration.getCustomLabels().get(1).getValue());
         var shieldedVm = configuration.getShieldedVmConfiguration();
         assertNotNull("shieldedVmConfiguration should not be null", shieldedVm);
         assertEquals(true, shieldedVm.isEnableSecureBoot());

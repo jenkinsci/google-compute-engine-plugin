@@ -191,8 +191,10 @@ public class InstanceConfigurationTest {
 
     @Test
     public void testConfigRoundtrip() throws Exception {
-        InstanceConfiguration want =
-                instanceConfigurationBuilder().minCpuPlatform("").build();
+        InstanceConfiguration want = instanceConfigurationBuilder()
+                .minCpuPlatform("")
+                .customLabels(List.of(new CustomLabelItem("team", "jenkins"), new CustomLabelItem("cost-center", "ci")))
+                .build();
 
         InstanceConfiguration.DescriptorImpl.setComputeClient(computeClient);
         AcceleratorConfiguration.DescriptorImpl.setComputeClient(computeClient);
@@ -213,7 +215,7 @@ public class InstanceConfigurationTest {
         r.assertEqualBeans(
                 want,
                 got,
-                "namePrefix,region,zone,machineType,preemptible,windowsConfiguration,minCpuPlatform,startupScript,bootDiskType,bootDiskSourceImageName,bootDiskSourceImageProject,bootDiskSizeGb,diskMapping,acceleratorConfiguration,networkConfiguration,networkInterfaceIpStackMode,networkTags,serviceAccountEmail,minimumNumberOfInstances,minimumNumberOfSpareInstances,shieldedVmConfiguration,sshPort");
+                "namePrefix,region,zone,machineType,preemptible,windowsConfiguration,minCpuPlatform,startupScript,bootDiskType,bootDiskSourceImageName,bootDiskSourceImageProject,bootDiskSizeGb,diskMapping,acceleratorConfiguration,networkConfiguration,networkInterfaceIpStackMode,networkTags,serviceAccountEmail,minimumNumberOfInstances,minimumNumberOfSpareInstances,shieldedVmConfiguration,sshPort,customLabels");
     }
 
     @Test
@@ -346,6 +348,30 @@ public class InstanceConfigurationTest {
                 .map(Metadata.Items::getValue)
                 .findFirst();
         assertTrue("startup script should still be present", startupScript.isPresent());
+    }
+
+    @Test
+    public void testInstanceCustomLabels() throws Exception {
+        List<CustomLabelItem> labels = List.of(
+                new CustomLabelItem("team", "jenkins"),
+                new CustomLabelItem("cost-center", "ci-1234"),
+                new CustomLabelItem("", "skip-me"));
+        var instanceConfiguration =
+                instanceConfigurationBuilder().customLabels(labels).build();
+
+        var instance = instanceConfiguration.instance();
+
+        // Custom labels should be applied to the instance
+        assertEquals("jenkins", instance.getLabels().get("team"));
+        assertEquals("ci-1234", instance.getLabels().get("cost-center"));
+
+        // Entries with an empty key are skipped
+        assertFalse("empty-key label should be skipped", instance.getLabels().containsValue("skip-me"));
+
+        // The system 'in use' label must always survive alongside custom labels
+        assertTrue(
+                "system NODE_IN_USE label should still be present",
+                instance.getLabels().containsKey(CleanLostNodesWork.NODE_IN_USE_LABEL_KEY));
     }
 
     public static InstanceConfiguration.Builder instanceConfigurationBuilder() {

@@ -58,6 +58,11 @@ jenkins:
                 value: "my-custom-value"
               - key: "my-multiline-key"
                 value: "line1\nline2\nline3"
+            customLabels:
+              - key: "team"
+                value: "jenkins"
+              - key: "cost-center"
+                value: "ci-1234"
             shieldedVmConfiguration:
               enableSecureBoot: true
               enableVtpm: true

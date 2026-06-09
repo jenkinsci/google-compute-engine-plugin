@@ -198,6 +198,9 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
     @Nullable
     private List<CustomMetadataItem> customMetadata;
 
+    @Nullable
+    private List<CustomLabelItem> customLabels;
+
     private boolean createSnapshot;
     private String diskMapping;
     private String remoteFs;
@@ -468,6 +471,13 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
         Map<String, String> effectiveGoogleLabels = new HashMap<>();
         if (googleLabels != null) { // some tests don't set the labels, but comes as null
             effectiveGoogleLabels.putAll(googleLabels);
+        }
+        if (customLabels != null) {
+            for (CustomLabelItem item : customLabels) {
+                if (item.getKey() != null && !item.getKey().isEmpty()) {
+                    effectiveGoogleLabels.put(item.getKey(), item.getValue());
+                }
+            }
         }
         effectiveGoogleLabels.put(
                 CleanLostNodesWork.NODE_IN_USE_LABEL_KEY, CleanLostNodesWork.getLastRefreshLabelVal());
@@ -1347,6 +1357,7 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
             instanceConfiguration.setDiskMapping(this.diskMapping);
             instanceConfiguration.setTerminateIdleDuringShutdown(this.terminateIdleDuringShutdown);
             instanceConfiguration.setCustomMetadata(this.customMetadata);
+            instanceConfiguration.setCustomLabels(this.customLabels);
             instanceConfiguration.setRemoteFs(this.remoteFs);
             instanceConfiguration.setJavaExecPath(this.javaExecPath);
             instanceConfiguration.setSshPort(this.sshPort);
