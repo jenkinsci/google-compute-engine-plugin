@@ -33,6 +33,7 @@ import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -48,6 +49,12 @@ public class CleanLostNodesWork extends PeriodicWork {
     public static final String NODE_IN_USE_LABEL_KEY = "jenkins_node_last_refresh";
     public static final long RECURRENCE_PERIOD = Long.parseLong(
             System.getProperty(CleanLostNodesWork.class.getName() + ".recurrencePeriod", String.valueOf(HOUR)));
+
+    public static final String LOST_NODE_CLEANUP_KEY = "jenkins_node_cleanup";
+    private final boolean lostNodeCleanupRestriction = Boolean.parseBoolean(
+            System.getProperty("com.google.jenkins.plugins.computeengine.lostNodeCleanupRestriction", "false"));
+    private final String lostNodeCleanupLabel =
+            System.getProperty("com.google.jenkins.plugins.computeengine.lostNodeCleanupLabel");
 
     @VisibleForTesting
     public static final int LOST_MULTIPLIER = 3;
@@ -107,6 +114,11 @@ public class CleanLostNodesWork extends PeriodicWork {
         String nodeLastRefresh = remote.getLabels().get(NODE_IN_USE_LABEL_KEY);
         if (nodeLastRefresh == null) {
             return false;
+        }
+        if (lostNodeCleanupRestriction) {
+            if (!remote.getLabels().get(LOST_NODE_CLEANUP_KEY).equals(lostNodeCleanupLabel)) {
+                return false;
+            }
         }
         OffsetDateTime lastRefresh =
                 LocalDateTime.parse(nodeLastRefresh, LAST_REFRESH_FORMATTER).atOffset(ZoneOffset.UTC);

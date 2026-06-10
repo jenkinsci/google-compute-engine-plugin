@@ -16,6 +16,7 @@
 
 package com.google.jenkins.plugins.computeengine;
 
+import static com.google.jenkins.plugins.computeengine.CleanLostNodesWork.LOST_NODE_CLEANUP_KEY;
 import static jakarta.servlet.http.HttpServletResponse.SC_BAD_REQUEST;
 
 import com.cloudbees.plugins.credentials.CredentialsMatchers;
@@ -94,6 +95,8 @@ public class ComputeEngineCloud extends AbstractCloudImpl {
     private transient volatile ComputeClient client;
     private transient volatile ComputeClientV2 clientV2;
     private boolean noDelayProvisioning;
+    private boolean lostNodeCleanupRestriction;
+    private String lostNodeCleanupLabel;
 
     @DataBoundConstructor
     public ComputeEngineCloud(String cloudName, String projectId, String credentialsId, String instanceCapStr) {
@@ -153,6 +156,16 @@ public class ComputeEngineCloud extends AbstractCloudImpl {
         this.noDelayProvisioning = noDelayProvisioning;
     }
 
+    @DataBoundSetter
+    public void setLostNodeCleanupRestriction(boolean lostNodeCleanupRestriction) {
+        this.lostNodeCleanupRestriction = lostNodeCleanupRestriction;
+    }
+
+    @DataBoundSetter
+    public void setLostNodeCleanupLabel(String lostNodeCleanupLabel) {
+        this.lostNodeCleanupLabel = lostNodeCleanupLabel;
+    }
+
     protected Object readResolve() {
         if (configurations == null) {
             configurations = new ArrayList<>();
@@ -166,6 +179,11 @@ public class ComputeEngineCloud extends AbstractCloudImpl {
 
             // Apply a label that identifies the name of this instance configuration
             configuration.appendLabel(CONFIG_LABEL_KEY, configuration.getNamePrefix());
+
+            // If lost node cleanup labels are in use, apply the appropriate label.
+            if (lostNodeCleanupRestriction) {
+                configuration.appendLabel(LOST_NODE_CLEANUP_KEY, lostNodeCleanupLabel);
+            }
         }
         setInstanceId(instanceId);
         return this;

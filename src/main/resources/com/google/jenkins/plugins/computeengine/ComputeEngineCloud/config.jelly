@@ -32,6 +32,12 @@
     <f:entry title="${%No delay provisioning}" field="noDelayProvisioning">
       <f:checkbox/>
     </f:entry>
+    <f:entry field="lostNodeCleanupRestriction"  title="${%Lost Node Cleanup Behavior}">
+        <f:checkbox title="Only clean up lost nodes matching specified label"/>
+    </f:entry>
+    <f:entry field="lostNodeCleanupLabel" title="Lost Node Cleanup Label">
+        <f:textbox/>
+    </f:entry>
     <f:entry title="${%Instance Configurations}"
              description="${%List of instance configurations that can be launched as Jenkins agents}">
         <f:repeatable field="configurations">
