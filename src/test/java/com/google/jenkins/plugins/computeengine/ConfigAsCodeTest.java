@@ -82,6 +82,22 @@ public class ConfigAsCodeTest {
         assertEquals(true, timeRangeConfig.getFriday());
         assertEquals(false, timeRangeConfig.getSaturday());
         assertEquals(false, timeRangeConfig.getSunday());
+        assertNotNull("fallbackCandidates should not be null", configuration.getFallbackCandidates());
+        assertEquals(
+                "Wrong fallbackCandidates size",
+                2,
+                configuration.getFallbackCandidates().size());
+        assertEquals("us-west1-b", configuration.getFallbackCandidates().get(0).getZone());
+        assertEquals(
+                "n4d-standard-32", configuration.getFallbackCandidates().get(0).getMachineType());
+        assertEquals(
+                "us-central1-a", configuration.getFallbackCandidates().get(1).getZone());
+        assertEquals(
+                "n2d-standard-32", configuration.getFallbackCandidates().get(1).getMachineType());
+        assertEquals("us-central1", configuration.getFallbackCandidates().get(1).getRegion());
+        assertEquals(
+                "gce-jenkins-central",
+                configuration.getFallbackCandidates().get(1).getSubnetwork());
     }
 
     @Test

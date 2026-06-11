@@ -67,6 +67,13 @@ jenkins:
               enableSecureBoot: true
               enableVtpm: true
               enableIntegrityMonitoring: false
+            fallbackCandidates:
+              - zone: "us-west1-b"
+                machineType: "n4d-standard-32"
+              - zone: "us-central1-a"
+                machineType: "n2d-standard-32"
+                region: "us-central1"
+                subnetwork: "gce-jenkins-central"
 credentials:
   system:
     domainCredentials:
