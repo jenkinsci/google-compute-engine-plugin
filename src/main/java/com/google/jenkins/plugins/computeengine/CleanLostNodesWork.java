@@ -80,6 +80,7 @@ public class CleanLostNodesWork extends PeriodicWork {
     /** {@inheritDoc} */
     @Override
     protected void doRun() {
+        logger.setLevel(Level.FINEST);
         logger.log(Level.FINEST, "Starting clean lost nodes worker");
         getClouds().forEach(this::cleanCloud);
     }
@@ -116,9 +117,14 @@ public class CleanLostNodesWork extends PeriodicWork {
             return false;
         }
         if (lostNodeCleanupRestriction) {
+            logger.info("Lost node cleanup restriction enabled. remote.getLabels().get(NODE_IN_USE_LABEL_KEY) is " +
+                    remote.getLabels().get(NODE_IN_USE_LABEL_KEY) + " and lostNodeCleanupLabel is " + lostNodeCleanupLabel);
             if (!remote.getLabels().get(LOST_NODE_CLEANUP_KEY).equals(lostNodeCleanupLabel)) {
                 return false;
             }
+        }
+        else {
+            logger.info("Lost node cleanup restriction disabled");
         }
         OffsetDateTime lastRefresh =
                 LocalDateTime.parse(nodeLastRefresh, LAST_REFRESH_FORMATTER).atOffset(ZoneOffset.UTC);
@@ -133,13 +139,14 @@ public class CleanLostNodesWork extends PeriodicWork {
     }
 
     private void terminateInstance(Instance remote, ComputeEngineCloud cloud) {
-        String instanceName = remote.getName();
+        logger.log(Level.FINEST, "Would remove instance " + remote.getName());
+/*        String instanceName = remote.getName();
         logger.log(Level.INFO, "Removing orphaned instance: " + instanceName);
         try {
             cloud.getClient().terminateInstanceAsync(cloud.getProjectId(), remote.getZone(), instanceName);
         } catch (IOException ex) {
             logger.log(Level.WARNING, "Error terminating remote instance " + instanceName, ex);
-        }
+        }*/
     }
 
     private List<ComputeEngineCloud> getClouds() {
