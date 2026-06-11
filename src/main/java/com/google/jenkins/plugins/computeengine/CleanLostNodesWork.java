@@ -141,14 +141,13 @@ public class CleanLostNodesWork extends PeriodicWork {
     }
 
     private void terminateInstance(Instance remote, ComputeEngineCloud cloud) {
-        logger.log(Level.FINEST, "Would remove instance " + remote.getName());
-/*        String instanceName = remote.getName();
+        String instanceName = remote.getName();
         logger.log(Level.INFO, "Removing orphaned instance: " + instanceName);
         try {
             cloud.getClient().terminateInstanceAsync(cloud.getProjectId(), remote.getZone(), instanceName);
         } catch (IOException ex) {
             logger.log(Level.WARNING, "Error terminating remote instance " + instanceName, ex);
-        }*/
+        }
     }
 
     private List<ComputeEngineCloud> getClouds() {
