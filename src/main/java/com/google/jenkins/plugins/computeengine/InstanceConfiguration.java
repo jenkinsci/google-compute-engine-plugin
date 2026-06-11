@@ -38,6 +38,7 @@ import com.google.api.services.compute.model.Tags;
 import com.google.api.services.compute.model.Zone;
 import com.google.cloud.graphite.platforms.plugin.client.ClientFactory;
 import com.google.cloud.graphite.platforms.plugin.client.ComputeClient;
+import com.google.cloud.graphite.platforms.plugin.client.ComputeClient.OperationException;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Strings;
 import com.google.jenkins.plugins.computeengine.client.ClientUtil;
@@ -185,6 +186,17 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
     private MinimumNumberOfInstancesTimeRangeConfig minimumNumberOfInstancesTimeRangeConfig;
 
     private String template;
+
+    /**
+     * Ordered list of fallback candidates tried, in order, when the primary
+     * location/machine of this configuration cannot be provisioned due to a capacity-related
+     * error. {@code null}/empty means no fallback (behaviour unchanged from before this feature).
+     *
+     * @see FallbackCandidate
+     */
+    @Nullable
+    private List<FallbackCandidate> fallbackCandidates;
+
     // Optional not possible due to serialization requirement
     @Nullable
     private WindowsConfiguration windowsConfiguration;
@@ -383,12 +395,169 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
     }
 
     public ComputeEngineInstance provision() throws IOException {
+        List<ProvisioningAttempt> attempts = buildProvisioningAttempts();
+        boolean fallbackEnabled = attempts.size() > 1;
+
+        if (fallbackEnabled) {
+            log.info(String.format(
+                    "Provisioning label=%s using %d ordered candidate(s) for config [%s]",
+                    labels, attempts.size(), description));
+        }
+
+        RetryableProvisioningException lastRetryable = null;
+        for (int i = 0; i < attempts.size(); i++) {
+            ProvisioningAttempt attempt = attempts.get(i);
+            if (fallbackEnabled) {
+                log.info(String.format(
+                        "Candidate %d/%d: zone=%s machineType=%s%s (config [%s], label=%s)",
+                        i + 1,
+                        attempts.size(),
+                        shortName(attempt.zone()),
+                        shortName(attempt.machineType()),
+                        notNullOrEmpty(attempt.template()) ? " template=" + shortName(attempt.template()) : "",
+                        description,
+                        labels));
+            }
+            try {
+                ComputeEngineInstance node = provisionAttempt(attempt, fallbackEnabled);
+                if (node != null && fallbackEnabled) {
+                    log.info(String.format(
+                            "Provisioned instance=%s zone=%s machineType=%s (candidate %d/%d, label=%s)",
+                            node.getNodeName(),
+                            shortName(attempt.zone()),
+                            shortName(attempt.machineType()),
+                            i + 1,
+                            attempts.size(),
+                            labels));
+                }
+                return node;
+            } catch (RetryableProvisioningException rpe) {
+                lastRetryable = rpe;
+                boolean moreToTry = i < attempts.size() - 1;
+                log.warning(String.format(
+                        "Candidate %d/%d failed: %s. Retryable=true.%s",
+                        i + 1,
+                        attempts.size(),
+                        rpe.getMessage(),
+                        moreToTry ? " Retrying next fallback candidate." : " No more fallback candidates."));
+            }
+        }
+
+        log.warning(String.format(
+                "All %d candidate(s) failed to provision for label=%s (config [%s]).",
+                attempts.size(), labels, description));
+        if (lastRetryable != null) {
+            throw new IOException(
+                    "Exhausted all fallback candidates for config [" + description + "]; last error: "
+                            + lastRetryable.getMessage(),
+                    lastRetryable);
+        }
+        return null;
+    }
+
+    /**
+     * Builds the ordered list of provisioning attempts: the primary configuration first, followed
+     * by each configured {@link FallbackCandidate} (with blank fields inherited from this
+     * configuration). Candidates with a blank zone are skipped with a warning. The list is capped
+     * at {@link FallbackCandidate#MAX_FALLBACK_CANDIDATES} entries to bound provisioner thread time.
+     */
+    private List<ProvisioningAttempt> buildProvisioningAttempts() {
+        List<ProvisioningAttempt> attempts = new ArrayList<>();
+        attempts.add(new ProvisioningAttempt(zone, machineType, template, null));
+        if (fallbackCandidates != null) {
+            int limit = Math.min(fallbackCandidates.size(), FallbackCandidate.MAX_FALLBACK_CANDIDATES);
+            if (fallbackCandidates.size() > FallbackCandidate.MAX_FALLBACK_CANDIDATES) {
+                log.warning(String.format(
+                        "Config [%s] has %d fallback candidates but maximum is %d; extras will be ignored.",
+                        description, fallbackCandidates.size(), FallbackCandidate.MAX_FALLBACK_CANDIDATES));
+            }
+            for (int i = 0; i < limit; i++) {
+                FallbackCandidate candidate = fallbackCandidates.get(i);
+                if (candidate.getZone() == null || candidate.getZone().trim().isEmpty()) {
+                    log.warning(String.format(
+                            "Skipping fallback candidate %d for config [%s]: zone is blank.", i + 1, description));
+                    continue;
+                }
+                attempts.add(new ProvisioningAttempt(
+                        firstNonEmpty(candidate.getZone(), zone),
+                        firstNonEmpty(candidate.getMachineType(), machineType),
+                        firstNonEmpty(candidate.getTemplate(), template),
+                        Strings.emptyToNull(candidate.getSubnetwork())));
+            }
+        }
+        return attempts;
+    }
+
+    /**
+     * Provisions a single attempt.
+     *
+     * <p>When {@code fallbackEnabled} is {@code false} (no fallback candidates configured) this
+     * behaves exactly as before: it submits the insert and returns immediately, leaving the
+     * launcher to wait on the operation. When {@code fallbackEnabled} is {@code true} it waits for
+     * the insert operation to reach {@code DONE} so that capacity errors — which GCE reports
+     * asynchronously on the zone operation — surface here and can drive the fallback decision.
+     *
+     * @throws RetryableProvisioningException if this attempt failed with a capacity-related error
+     *     and the caller should try the next fallback candidate.
+     * @throws IOException for non-retryable failures (the whole provision should abort).
+     */
+    private ComputeEngineInstance provisionAttempt(ProvisioningAttempt attempt, boolean fallbackEnabled)
+            throws IOException, RetryableProvisioningException {
+        Instance instance = instance(attempt.zone(), attempt.machineType(), attempt.template(), attempt.subnetwork());
+
+        Operation operation;
         try {
-            Instance instance = instance();
             // TODO: JENKINS-55285
-            Operation operation =
-                    cloud.getClient().insertInstance(cloud.getProjectId(), Optional.ofNullable(template), instance);
-            log.info("Sent insert request for instance configuration [" + description + "]");
+            operation = cloud.getClient()
+                    .insertInstance(cloud.getProjectId(), Optional.ofNullable(attempt.template()), instance);
+        } catch (IOException ioe) {
+            // Some capacity shortages are rejected synchronously. Only treat clearly capacity-related
+            // synchronous failures as retryable; everything else aborts.
+            if (fallbackEnabled && ProvisioningErrorClassifier.isRetryable(ioe.getMessage())) {
+                bestEffortTerminate(instance.getName(), nameFromSelfLink(attempt.zone()));
+                throw new RetryableProvisioningException("insert request rejected: " + ioe.getMessage(), ioe);
+            }
+            throw ioe;
+        }
+        log.info("Sent insert request for instance [" + instance.getName() + "] (config [" + description + "])");
+
+        if (fallbackEnabled) {
+            Operation.Error opError = null;
+            try {
+                Operation completed = cloud.getClient()
+                        .waitForOperationCompletion(cloud.getProjectId(), operation, getLaunchTimeoutMillis());
+                opError = completed.getError();
+            } catch (OperationException oe) {
+                opError = oe.getError();
+            } catch (InterruptedException ie) {
+                Thread.currentThread().interrupt();
+                throw new IOException(
+                        "Interrupted while waiting for insert operation of instance [" + instance.getName() + "]", ie);
+            }
+
+            if (ProvisioningErrorClassifier.hasErrors(opError)) {
+                String summary = ProvisioningErrorClassifier.errorSummary(opError);
+                boolean retryable =
+                        ProvisioningErrorClassifier.isRetryable(ProvisioningErrorClassifier.firstErrorCode(opError));
+                log.warning(String.format(
+                        "Insert operation failed for instance [%s]: %s. Retryable=%b.",
+                        instance.getName(), summary, retryable));
+                // Best-effort cleanup so a partially-created VM does not linger as an orphan.
+                bestEffortTerminate(instance.getName(), nameFromSelfLink(attempt.zone()));
+                if (retryable) {
+                    throw new RetryableProvisioningException(summary);
+                }
+                throw new IOException(
+                        "Non-retryable provisioning error for instance [" + instance.getName() + "]: " + summary);
+            }
+        }
+
+        return buildNode(instance, operation);
+    }
+
+    /** Builds the {@link ComputeEngineInstance} node for a successfully-inserted instance. */
+    private ComputeEngineInstance buildNode(Instance instance, Operation operation) throws IOException {
+        try {
             String targetRemoteFs = this.remoteFs;
             ComputeEngineComputerLauncher launcher;
             if (this.windowsConfiguration != null) {
@@ -433,6 +602,63 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
         }
     }
 
+    /**
+     * Best-effort asynchronous delete of an instance that failed to provision, so that a
+     * partially-created VM does not linger as an orphan before the next fallback candidate is
+     * tried. Failures here are logged at FINE and otherwise ignored; the periodic
+     * {@link CleanLostNodesWork} sweep is the backstop.
+     */
+    private void bestEffortTerminate(String instanceName, String zone) {
+        try {
+            cloud.getClient().terminateInstanceAsync(cloud.getProjectId(), zone, instanceName);
+            log.info("Requested cleanup (delete) of failed instance [" + instanceName + "] in zone " + zone);
+        } catch (IOException e) {
+            log.log(
+                    Level.FINE,
+                    "Best-effort cleanup of failed instance [" + instanceName + "] did not complete: "
+                            + e.getMessage());
+        }
+    }
+
+    private static String firstNonEmpty(String preferred, String fallback) {
+        return notNullOrEmpty(preferred) ? preferred : fallback;
+    }
+
+    /**
+     * Null-safe short name for logging. Returns the trailing segment of a GCE self-link, or
+     * {@code "(from template)"} when the value is blank (e.g. a template-based configuration leaves
+     * machineType unset). Never throws, so logging cannot break provisioning.
+     */
+    private static String shortName(String selfLinkOrName) {
+        if (!notNullOrEmpty(selfLinkOrName)) {
+            return "(from template)";
+        }
+        try {
+            return nameFromSelfLink(selfLinkOrName);
+        } catch (RuntimeException e) {
+            return selfLinkOrName;
+        }
+    }
+
+    /** Effective zone/machine/template/subnetwork for a single provisioning attempt. */
+    private record ProvisioningAttempt(String zone, String machineType, String template, String subnetwork) {}
+
+    /**
+     * Internal signal that a provisioning attempt failed with a capacity-related error and the
+     * next configured fallback candidate should be tried.
+     */
+    private static final class RetryableProvisioningException extends Exception {
+        private static final long serialVersionUID = 1L;
+
+        RetryableProvisioningException(String message) {
+            super(message);
+        }
+
+        RetryableProvisioningException(String message, Throwable cause) {
+            super(message, cause);
+        }
+    }
+
     /** Initializes transient properties */
     protected Object readResolve() {
         labelSet = Label.parse(labels);
@@ -451,10 +677,22 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
     }
 
     public Instance instance() throws IOException {
+        return instance(zone, machineType, template, null);
+    }
+
+    /**
+     * Builds the {@link Instance} insert request for a specific attempt. The effective zone,
+     * machine type, instance template and subnetwork may differ from the configured values when a
+     * {@link FallbackCandidate} is being tried, so all zone/region-scoped resources are resolved
+     * against the effective values here.
+     */
+    Instance instance(
+            String effectiveZone, String effectiveMachineType, String effectiveTemplate, String effectiveSubnetwork)
+            throws IOException {
         Instance instance = new Instance();
         instance.setName(uniqueName());
         instance.setDescription(description);
-        instance.setZone(nameFromSelfLink(zone));
+        instance.setZone(nameFromSelfLink(effectiveZone));
         instance.setMetadata(newMetadata());
 
         if (windowsConfiguration == null) {
@@ -482,9 +720,9 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
         effectiveGoogleLabels.put(
                 CleanLostNodesWork.NODE_IN_USE_LABEL_KEY, CleanLostNodesWork.getLastRefreshLabelVal());
 
-        if (StringUtils.isNotEmpty(template)) {
-            InstanceTemplate instanceTemplate =
-                    cloud.getClient().getTemplate(nameFromSelfLink(cloud.getProjectId()), nameFromSelfLink(template));
+        if (StringUtils.isNotEmpty(effectiveTemplate)) {
+            InstanceTemplate instanceTemplate = cloud.getClient()
+                    .getTemplate(nameFromSelfLink(cloud.getProjectId()), nameFromSelfLink(effectiveTemplate));
             /* Since we have to set the metadata to include the autogenerated SSH keypair,
             we need to ensure we include metadata properties which might be set in the template. */
             if (instanceTemplate.getProperties() != null
@@ -505,12 +743,12 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
         } else {
             configureStartupScript(instance);
             instance.setLabels(effectiveGoogleLabels);
-            instance.setMachineType(stripSelfLinkPrefix(machineType));
+            instance.setMachineType(stripSelfLinkPrefix(effectiveMachineType));
             instance.setTags(tags());
             instance.setScheduling(scheduling());
-            instance.setDisks(disks());
+            instance.setDisks(disks(effectiveZone));
             instance.setGuestAccelerators(accelerators());
-            instance.setNetworkInterfaces(networkInterfaces());
+            instance.setNetworkInterfaces(networkInterfaces(effectiveSubnetwork));
             instance.setServiceAccounts(serviceAccounts());
 
             // optional
@@ -710,15 +948,18 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
         return scheduling;
     }
 
-    /** Builds the list of disks for the instance: the boot disk followed by any additional
-     *  disks parsed from the {@link #diskMapping} field. */
-    private List<AttachedDisk> disks() {
+    /**
+     * Builds the list of disks for the instance. The boot disk type is zone-scoped, so when a
+     * {@link FallbackCandidate} targets a different zone the self-link is re-pointed to the
+     * effective zone.
+     */
+    private List<AttachedDisk> disks(String effectiveZone) {
         AttachedDisk boot = new AttachedDisk();
         boot.setBoot(true);
         boot.setAutoDelete(bootDiskAutoDelete);
         boot.setInitializeParams(new AttachedDiskInitializeParams()
                 .setDiskSizeGb(bootDiskSizeGb)
-                .setDiskType(bootDiskType)
+                .setDiskType(rezoneSelfLink(bootDiskType, effectiveZone))
                 .setSourceImage(bootDiskSourceImageName));
 
         List<AttachedDisk> disks = new ArrayList<>();
@@ -743,6 +984,20 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
         return disks;
     }
 
+    /**
+     * Re-points the {@code /zones/<zone>/} segment of a GCE self-link to {@code effectiveZone}. Used
+     * so zone-scoped resources (e.g. the boot disk type) resolve in the zone actually being tried
+     * during fallback. Returns the input unchanged when either argument is blank or the link has no
+     * zone segment.
+     */
+    private static String rezoneSelfLink(String selfLink, String effectiveZone) {
+        if (Strings.isNullOrEmpty(selfLink) || Strings.isNullOrEmpty(effectiveZone)) {
+            return selfLink;
+        }
+        String targetZone = nameFromSelfLink(effectiveZone);
+        return selfLink.replaceAll("/zones/[^/]+/", "/zones/" + targetZone + "/");
+    }
+
     private List<AcceleratorConfig> accelerators() {
         if (acceleratorConfiguration != null
                 && notNullOrEmpty(acceleratorConfiguration.getGpuCount())
@@ -756,14 +1011,19 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
         return null;
     }
 
-    private List<NetworkInterface> networkInterfaces() {
+    private List<NetworkInterface> networkInterfaces(String effectiveSubnetwork) {
         List<NetworkInterface> networkInterfaces = new ArrayList<>();
 
         NetworkInterface networkInterface = networkInterfaceIpStackMode.getNetworkInterface();
 
+        // A fallback candidate may override the subnetwork (required for cross-region fallback);
+        // otherwise use the configured network's subnetwork.
+        String subnetwork =
+                notNullOrEmpty(effectiveSubnetwork) ? effectiveSubnetwork : networkConfiguration.getSubnetwork();
+
         // Don't include subnetwork name if using default
-        if (!networkConfiguration.getSubnetwork().equals("default")) {
-            networkInterface.setSubnetwork(stripSelfLinkPrefix(networkConfiguration.getSubnetwork()));
+        if (!subnetwork.equals("default")) {
+            networkInterface.setSubnetwork(stripSelfLinkPrefix(subnetwork));
         }
 
         networkInterfaces.add(networkInterface);
@@ -1353,6 +1613,7 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
             instanceConfiguration.setMinimumNumberOfInstancesTimeRangeConfig(
                     this.minimumNumberOfInstancesTimeRangeConfig);
             instanceConfiguration.setTemplate(this.template);
+            instanceConfiguration.setFallbackCandidates(this.fallbackCandidates);
             instanceConfiguration.setCreateSnapshot(this.createSnapshot);
             instanceConfiguration.setDiskMapping(this.diskMapping);
             instanceConfiguration.setTerminateIdleDuringShutdown(this.terminateIdleDuringShutdown);

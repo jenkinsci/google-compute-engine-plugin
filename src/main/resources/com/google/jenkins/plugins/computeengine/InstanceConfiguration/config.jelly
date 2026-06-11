@@ -155,6 +155,16 @@
                         </f:block>
                     </f:repeatableProperty>
                 </f:entry>
+                <f:entry title="${%Fallback candidates}" field="fallbackCandidates"
+                         description="${%Ordered zone/machine-type candidates tried when the primary cannot be provisioned due to a capacity error}">
+                    <f:repeatableProperty field="fallbackCandidates" minimum="0" add="${%Add fallback candidate}">
+                        <f:block>
+                            <div align="right">
+                                <f:repeatableDeleteButton/>
+                            </div>
+                        </f:block>
+                    </f:repeatableProperty>
+                </f:entry>
                 <f:optionalProperty field="acceleratorConfiguration" title="GPUs">
                     <st:include page="config.jelly" class="${descriptor.clazz}"/>
                 </f:optionalProperty>
