@@ -96,8 +96,8 @@ public class CleanLostNodesWork extends PeriodicWork {
             updateLocalInstancesLabel(clientV2, localInstances, remoteInstances);
         }
         remoteInstances.stream()
-                .filter(remote -> isOrphaned(remote, localInstances))
                 .filter(remote -> checkLostNodeRestriction(remote, cloud))
+                .filter(remote -> isOrphaned(remote, localInstances))
                 .forEach(remote -> terminateInstance(remote, cloud));
     }
 
@@ -134,8 +134,8 @@ public class CleanLostNodesWork extends PeriodicWork {
             logger.log(Level.FINEST, "Cleanup lost node restriction is enabled");
         }
         logger.log(Level.FINEST, "Lost node cleanup label from cloud: " + cloud.getLostNodeCleanupLabel()
-        + " and remote lost node label: " + remote.getLabels().get(LOST_NODE_CLEANUP_KEY), " which results in "
-        + (cloud.getLostNodeCleanupLabel().equals(remote.getLabels().get(LOST_NODE_CLEANUP_KEY))));
+        + " and remote lost node label: " + remote.getLabels().get(LOST_NODE_CLEANUP_KEY) + " which results in "
+        + (cloud.getLostNodeCleanupLabel().equals(remote.getLabels().get(LOST_NODE_CLEANUP_KEY))) + " for node " + remote.getName());
 
         return cloud.getLostNodeCleanupLabel().equals(remote.getLabels().get(LOST_NODE_CLEANUP_KEY));
     }
