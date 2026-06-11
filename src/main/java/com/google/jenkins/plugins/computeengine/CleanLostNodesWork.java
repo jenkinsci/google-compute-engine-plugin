@@ -51,10 +51,6 @@ public class CleanLostNodesWork extends PeriodicWork {
             System.getProperty(CleanLostNodesWork.class.getName() + ".recurrencePeriod", String.valueOf(HOUR)));
 
     public static final String LOST_NODE_CLEANUP_KEY = "jenkins_node_cleanup";
-    private final boolean lostNodeCleanupRestriction = Boolean.parseBoolean(
-            System.getProperty("com.google.jenkins.plugins.computeengine.lostNodeCleanupRestriction", "false"));
-    private final String lostNodeCleanupLabel =
-            System.getProperty("com.google.jenkins.plugins.computeengine.lostNodeCleanupLabel");
 
     @VisibleForTesting
     public static final int LOST_MULTIPLIER = 3;
@@ -80,8 +76,8 @@ public class CleanLostNodesWork extends PeriodicWork {
     /** {@inheritDoc} */
     @Override
     protected void doRun() {
-        logger.setLevel(Level.FINEST);
         logger.log(Level.FINEST, "Starting clean lost nodes worker");
+        logger.log(Level.FINEST, CleanLostNodesWork.class.getName() + ".lostNodeCleanupLabel");
         getClouds().forEach(this::cleanCloud);
     }
 
@@ -101,6 +97,7 @@ public class CleanLostNodesWork extends PeriodicWork {
         }
         remoteInstances.stream()
                 .filter(remote -> isOrphaned(remote, localInstances))
+                .filter(remote -> checkLostNodeRestriction(remote, cloud))
                 .forEach(remote -> terminateInstance(remote, cloud));
     }
 
@@ -116,16 +113,6 @@ public class CleanLostNodesWork extends PeriodicWork {
         if (nodeLastRefresh == null) {
             return false;
         }
-        if (lostNodeCleanupRestriction) {
-            logger.info("Lost node cleanup restriction enabled. remote.getLabels().get(NODE_IN_USE_LABEL_KEY) is " +
-                    remote.getLabels().get(NODE_IN_USE_LABEL_KEY) + " and lostNodeCleanupLabel is " + lostNodeCleanupLabel);
-            if (!remote.getLabels().get(LOST_NODE_CLEANUP_KEY).equals(lostNodeCleanupLabel)) {
-                return false;
-            }
-        }
-        else {
-            logger.info("Lost node cleanup restriction disabled");
-        }
         OffsetDateTime lastRefresh =
                 LocalDateTime.parse(nodeLastRefresh, LAST_REFRESH_FORMATTER).atOffset(ZoneOffset.UTC);
         boolean isOrphan = lastRefresh
@@ -136,6 +123,21 @@ public class CleanLostNodesWork extends PeriodicWork {
                 () -> "Instance " + remote.getName() + " last_refresh label value: " + nodeLastRefresh + ", isOrphan: "
                         + isOrphan);
         return isOrphan;
+    }
+
+    private boolean checkLostNodeRestriction(Instance remote, ComputeEngineCloud cloud) {
+        if (!cloud.isLostNodeCleanupRestriction()) {
+            logger.log(Level.FINEST, "Cleanup lost node restriction is disabled");
+            return true;
+        }
+        else {
+            logger.log(Level.FINEST, "Cleanup lost node restriction is enabled");
+        }
+        logger.log(Level.FINEST, "Lost node cleanup label from cloud: " + cloud.getLostNodeCleanupLabel()
+        + " and remote lost node label: " + remote.getLabels().get(LOST_NODE_CLEANUP_KEY), " which results in "
+        + (cloud.getLostNodeCleanupLabel().equals(remote.getLabels().get(LOST_NODE_CLEANUP_KEY))));
+
+        return cloud.getLostNodeCleanupLabel().equals(remote.getLabels().get(LOST_NODE_CLEANUP_KEY));
     }
 
     private void terminateInstance(Instance remote, ComputeEngineCloud cloud) {
