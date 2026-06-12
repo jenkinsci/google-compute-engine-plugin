@@ -49,6 +49,7 @@ public class CleanLostNodesWorkIT {
     Based on tests conducted with intervals of 30s, 45s, and 60s, a 60s delay currently proves most effective.
     */
     private static final long CLEAN_LOST_NODES_WORK_RECURRENCE_PERIOD = 60 * 1000;
+    private static final String LOST_NODE_CLEANUP_LABEL = "clean-lost-nodes-work-it";
     private static final Map<String, String> GOOGLE_LABELS = getLabel(CleanLostNodesWorkIT.class);
 
     @Rule
@@ -67,6 +68,8 @@ public class CleanLostNodesWorkIT {
             rj.runRemotely(r -> {
                 initCredentials(r);
                 var cloud = initCloud(r);
+                cloud.setLostNodeCleanupRestriction(true);
+                cloud.setLostNodeCleanupLabel(LOST_NODE_CLEANUP_LABEL);
                 var instanceConfig = instanceConfigurationBuilder()
                         .numExecutorsStr(NUM_EXECUTORS)
                         .labels(LABEL)
@@ -102,14 +105,20 @@ public class CleanLostNodesWorkIT {
                         RECORDER_CLASS_NAME,
                         "Found 1 running remote instances",
                         "Found 1 local instances",
-                        "Updated label for instance");
+                        "Updated label for instance",
+                        "Cleanup lost node restriction is enabled",
+                        "which results in true");
                 RealJenkinsLogUtil.assertLogDoesNotContain(
                         RECORDER_CLASS_NAME, "isOrphan: true", "Removing orphaned instance");
             }
         });
         rj2.runRemotely(j -> {
             RealJenkinsLogUtil.assertLogContains(
-                    RECORDER_CLASS_NAME, "Found 1 running remote instances", "Found 0 local instances");
+                    RECORDER_CLASS_NAME,
+                    "Found 1 running remote instances",
+                    "Found 0 local instances",
+                    "Cleanup lost node restriction is enabled",
+                    "which results in true");
             RealJenkinsLogUtil.assertLogDoesNotContain(
                     RECORDER_CLASS_NAME,
                     "Found 1 local instances",
@@ -131,7 +140,9 @@ public class CleanLostNodesWorkIT {
                         RECORDER_CLASS_NAME,
                         "Found 1 running remote instances",
                         "Found 1 local instances",
-                        "Updated label for instance");
+                        "Updated label for instance",
+                        "Cleanup lost node restriction is enabled",
+                        "which results in true");
                 RealJenkinsLogUtil.assertLogDoesNotContain(
                         RECORDER_CLASS_NAME, "isOrphan: true", "Removing orphaned instance");
             }
@@ -171,6 +182,8 @@ public class CleanLostNodesWorkIT {
                     RECORDER_CLASS_NAME,
                     "Found 1 running remote instances",
                     "Found 0 local instances",
+                    "Cleanup lost node restriction is enabled",
+                    "which results in true",
                     "isOrphan: true",
                     "Removing orphaned instance");
             RealJenkinsLogUtil.assertLogDoesNotContain(
