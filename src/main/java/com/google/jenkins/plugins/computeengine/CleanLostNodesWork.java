@@ -33,7 +33,6 @@ import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
-import java.util.Objects;
 import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -129,13 +128,17 @@ public class CleanLostNodesWork extends PeriodicWork {
         if (!cloud.isLostNodeCleanupRestriction()) {
             logger.log(Level.FINEST, "Cleanup lost node restriction is disabled");
             return true;
-        }
-        else {
+        } else {
             logger.log(Level.FINEST, "Cleanup lost node restriction is enabled");
         }
-        logger.log(Level.FINEST, "Lost node cleanup label from cloud: " + cloud.getLostNodeCleanupLabel()
-        + " and remote lost node label: " + remote.getLabels().get(LOST_NODE_CLEANUP_KEY) + " which results in "
-        + (cloud.getLostNodeCleanupLabel().equals(remote.getLabels().get(LOST_NODE_CLEANUP_KEY))) + " for node " + remote.getName());
+        logger.log(
+                Level.FINEST,
+                "Lost node cleanup label from cloud: " + cloud.getLostNodeCleanupLabel()
+                        + " and remote lost node label: " + remote.getLabels().get(LOST_NODE_CLEANUP_KEY)
+                        + " which results in "
+                        + (cloud.getLostNodeCleanupLabel()
+                                .equals(remote.getLabels().get(LOST_NODE_CLEANUP_KEY))) + " for node "
+                        + remote.getName());
 
         return cloud.getLostNodeCleanupLabel().equals(remote.getLabels().get(LOST_NODE_CLEANUP_KEY));
     }
