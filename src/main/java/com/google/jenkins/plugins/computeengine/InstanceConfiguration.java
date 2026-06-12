@@ -38,6 +38,7 @@ import com.google.api.services.compute.model.Tags;
 import com.google.api.services.compute.model.Zone;
 import com.google.cloud.graphite.platforms.plugin.client.ClientFactory;
 import com.google.cloud.graphite.platforms.plugin.client.ComputeClient;
+import com.google.cloud.graphite.platforms.plugin.client.ComputeClient.OperationException;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Strings;
 import com.google.jenkins.plugins.computeengine.client.ClientUtil;
@@ -185,6 +186,10 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
     private MinimumNumberOfInstancesTimeRangeConfig minimumNumberOfInstancesTimeRangeConfig;
 
     private String template;
+
+    @Nullable
+    private String fallbackZones;
+
     // Optional not possible due to serialization requirement
     @Nullable
     private WindowsConfiguration windowsConfiguration;
@@ -383,54 +388,121 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
     }
 
     public ComputeEngineInstance provision() throws IOException {
+        if (fallbackZones != null && !fallbackZones.isBlank()) {
+            return provisionWithFallback();
+        }
         try {
             Instance instance = instance();
             // TODO: JENKINS-55285
             Operation operation =
                     cloud.getClient().insertInstance(cloud.getProjectId(), Optional.ofNullable(template), instance);
             log.info("Sent insert request for instance configuration [" + description + "]");
-            String targetRemoteFs = this.remoteFs;
-            ComputeEngineComputerLauncher launcher;
-            if (this.windowsConfiguration != null) {
-                launcher = new ComputeEngineWindowsLauncher(cloud.getCloudName(), operation, this.useInternalAddress);
-                if (Strings.isNullOrEmpty(targetRemoteFs)) {
-                    targetRemoteFs = "C:\\";
-                }
-            } else {
-                launcher = new ComputeEngineLinuxLauncher(cloud.getCloudName(), operation, this.useInternalAddress);
-                if (Strings.isNullOrEmpty(targetRemoteFs)) {
-                    targetRemoteFs = "/tmp";
-                }
-            }
-            return ComputeEngineInstance.builder()
-                    .cloud(cloud)
-                    .cloudName(cloud.name)
-                    .name(instance.getName())
-                    .zone(instance.getZone())
-                    .nodeDescription(instance.getDescription())
-                    .sshUser(runAsUser)
-                    .remoteFS(targetRemoteFs)
-                    .windowsConfig(windowsConfiguration)
-                    .sshConfig(sshConfiguration)
-                    .createSnapshot(createSnapshot)
-                    .oneShot(oneShot)
-                    .ignoreProxy(ignoreProxy)
-                    .terminateIdleDuringShutdown(terminateIdleDuringShutdown)
-                    .numExecutors(numExecutors)
-                    .mode(mode)
-                    .labelString(labels)
-                    .launcher(launcher)
-                    .retentionStrategy(new ComputeEngineRetentionStrategy(retentionTimeMinutes, oneShot))
-                    .launchTimeout(getLaunchTimeoutMillis())
-                    .sshPort(sshPort)
-                    .javaExecPath(javaExecPath)
-                    .sshKeyCredential(sshKeyCredential)
-                    .waitForStartupScript(notNullOrEmpty(startupScript) && notNullOrEmpty(resolveExitReporter()))
-                    .build();
+            return buildNode(instance, operation);
         } catch (Descriptor.FormException fe) {
             log.log(Level.WARNING, "Error provisioning instance: " + fe.getMessage(), fe);
             return null;
         }
+    }
+
+    private ComputeEngineInstance buildNode(Instance instance, Operation operation)
+            throws Descriptor.FormException, IOException {
+        var targetRemoteFs = this.remoteFs;
+        ComputeEngineComputerLauncher launcher;
+        if (this.windowsConfiguration != null) {
+            launcher = new ComputeEngineWindowsLauncher(cloud.getCloudName(), operation, this.useInternalAddress);
+            if (Strings.isNullOrEmpty(targetRemoteFs)) {
+                targetRemoteFs = "C:\\";
+            }
+        } else {
+            launcher = new ComputeEngineLinuxLauncher(cloud.getCloudName(), operation, this.useInternalAddress);
+            if (Strings.isNullOrEmpty(targetRemoteFs)) {
+                targetRemoteFs = "/tmp";
+            }
+        }
+        return ComputeEngineInstance.builder()
+                .cloud(cloud)
+                .cloudName(cloud.name)
+                .name(instance.getName())
+                .zone(instance.getZone())
+                .nodeDescription(instance.getDescription())
+                .sshUser(runAsUser)
+                .remoteFS(targetRemoteFs)
+                .windowsConfig(windowsConfiguration)
+                .sshConfig(sshConfiguration)
+                .createSnapshot(createSnapshot)
+                .oneShot(oneShot)
+                .ignoreProxy(ignoreProxy)
+                .terminateIdleDuringShutdown(terminateIdleDuringShutdown)
+                .numExecutors(numExecutors)
+                .mode(mode)
+                .labelString(labels)
+                .launcher(launcher)
+                .retentionStrategy(new ComputeEngineRetentionStrategy(retentionTimeMinutes, oneShot))
+                .launchTimeout(getLaunchTimeoutMillis())
+                .sshPort(sshPort)
+                .javaExecPath(javaExecPath)
+                .sshKeyCredential(sshKeyCredential)
+                .waitForStartupScript(notNullOrEmpty(startupScript) && notNullOrEmpty(resolveExitReporter()))
+                .build();
+    }
+
+    @VisibleForTesting
+    public static volatile boolean simulateCapacityExhaustion = false;
+
+    private ComputeEngineInstance provisionWithFallback() throws IOException {
+        var zones = new ArrayList<String>();
+        zones.add(zone);
+        for (var z : fallbackZones.split("[,\\s]+")) {
+            if (!z.isBlank()) zones.add(z.trim());
+        }
+
+        IOException lastCapacityError = null;
+        for (int i = 0; i < zones.size(); i++) {
+            var z = zones.get(i);
+            var zoneName = nameFromSelfLink(z);
+            var instance = instance(z);
+            try {
+                // only for the integration test ComputeEngineCloudFallbackZoneIT
+                if (i == 0 && simulateCapacityExhaustion) {
+                    simulateCapacityExhaustion = false;
+                    var err = new Operation.Error();
+                    err.setErrors(List.of(new Operation.Error.Errors().setCode("ZONE_RESOURCE_POOL_EXHAUSTED")));
+                    throw new OperationException(err);
+                }
+                var op = cloud.getClient().insertInstance(cloud.getProjectId(), Optional.ofNullable(template), instance);
+                log.info("Sent insert request for instance [" + instance.getName() + "] in zone " + zoneName);
+                var completed = cloud.getClient()
+                        .waitForOperationCompletion(cloud.getProjectId(), op.getName(), zoneName, getLaunchTimeoutMillis());
+                try {
+                    return buildNode(instance, completed);
+                } catch (Descriptor.FormException fe) {
+                    throw new IOException("Failed to build node in zone " + zoneName, fe);
+                }
+            } catch (OperationException oe) {
+                var code = operationErrorCode(oe);
+                if (isCapacityError(code)) {
+                    log.warning("Zone " + zoneName + " has no capacity (" + code + "), trying next");
+                    lastCapacityError = new IOException(code, oe);
+                    continue;
+                }
+                throw new IOException("Provisioning failed in zone " + zoneName, oe);
+            } catch (InterruptedException ie) {
+                Thread.currentThread().interrupt();
+                throw new IOException("Interrupted waiting for instance in zone " + zoneName, ie);
+            }
+        }
+        throw new IOException(
+                "All zones exhausted for [" + description + "]: " + lastCapacityError.getMessage(), lastCapacityError);
+    }
+
+    private static String operationErrorCode(OperationException oe) {
+        var err = oe.getError();
+        if (err == null || err.getErrors() == null || err.getErrors().isEmpty()) return null;
+        return err.getErrors().get(0).getCode();
+    }
+
+    private static boolean isCapacityError(String code) {
+        return "ZONE_RESOURCE_POOL_EXHAUSTED".equals(code) || "ZONE_RESOURCE_POOL_EXHAUSTED_WITH_DETAILS".equals(code);
     }
 
     /** Initializes transient properties */
@@ -451,10 +523,14 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
     }
 
     public Instance instance() throws IOException {
+        return instance(zone);
+    }
+
+    Instance instance(String zoneOverride) throws IOException {
         Instance instance = new Instance();
         instance.setName(uniqueName());
         instance.setDescription(description);
-        instance.setZone(nameFromSelfLink(zone));
+        instance.setZone(nameFromSelfLink(zoneOverride));
         instance.setMetadata(newMetadata());
 
         if (windowsConfiguration == null) {
@@ -508,7 +584,7 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
             instance.setMachineType(stripSelfLinkPrefix(machineType));
             instance.setTags(tags());
             instance.setScheduling(scheduling());
-            instance.setDisks(disks());
+            instance.setDisks(disks(zoneOverride));
             instance.setGuestAccelerators(accelerators());
             instance.setNetworkInterfaces(networkInterfaces());
             instance.setServiceAccounts(serviceAccounts());
@@ -712,7 +788,7 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
 
     /** Builds the list of disks for the instance: the boot disk followed by any additional
      *  disks parsed from the {@link #diskMapping} field. */
-    private List<AttachedDisk> disks() {
+    private List<AttachedDisk> disks(String zoneOverride) {
         AttachedDisk boot = new AttachedDisk();
         boot.setBoot(true);
         boot.setAutoDelete(bootDiskAutoDelete);
@@ -724,7 +800,7 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
         List<AttachedDisk> disks = new ArrayList<>();
         disks.add(boot);
 
-        var zoneName = nameFromSelfLink(zone);
+        var zoneName = nameFromSelfLink(zoneOverride);
         var projectId = cloud != null ? nameFromSelfLink(cloud.getProjectId()) : null;
         for (var mapped : DiskMappingParser.parse(diskMapping)) {
             if (mapped.getInitializeParams() != null) {
