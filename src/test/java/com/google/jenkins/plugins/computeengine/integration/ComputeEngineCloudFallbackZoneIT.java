@@ -20,7 +20,6 @@ import static com.google.cloud.graphite.platforms.plugin.client.util.ClientUtil.
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.LABEL;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.PROJECT_ID;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.TEST_TIMEOUT_MULTIPLIER;
-import static com.google.jenkins.plugins.computeengine.integration.ITUtil.ZONE;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.initCredentials;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
@@ -49,7 +48,8 @@ import org.jvnet.hudson.test.BuildWatcher;
 import org.jvnet.hudson.test.LoggerRule;
 
 public class ComputeEngineCloudFallbackZoneIT {
-    static final String FALLBACK_ZONE = System.getenv().getOrDefault("GOOGLE_FALLBACK_ZONE", "us-east1-b");
+    private static final String PRIMARY_ZONE = "us-east1-b";
+    private static final String FALLBACK_ZONE = "us-east1-c";
 
     private static final Logger log = Logger.getLogger(ComputeEngineCloudFallbackZoneIT.class.getName());
 
@@ -81,7 +81,7 @@ public class ComputeEngineCloudFallbackZoneIT {
         log.info("teardown");
         if (client != null) {
             for (Node node : j.jenkins.getNodes()) {
-                for (var zone : new String[] {FALLBACK_ZONE, nameFromSelfLink(ZONE)}) {
+                for (var zone : new String[] {PRIMARY_ZONE, FALLBACK_ZONE}) {
                     try {
                         client.terminateInstanceAsync(PROJECT_ID, zone, node.getNodeName());
                     } catch (Exception e) {
@@ -116,7 +116,7 @@ public class ComputeEngineCloudFallbackZoneIT {
                 "instance should have landed in the fallback zone, not the primary",
                 nameFromSelfLink(instance.getZone()),
                 is(FALLBACK_ZONE));
-        assertThat(nameFromSelfLink(instance.getZone()), is(not(nameFromSelfLink(ZONE))));
+        assertThat(nameFromSelfLink(instance.getZone()), is(not(PRIMARY_ZONE)));
 
         SemaphoreStep.success("fallbackZone/1", null);
         j.waitForCompletion(build);

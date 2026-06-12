@@ -18,11 +18,11 @@ jenkins:
             remoteFs:           ''
             oneShot:            true
             createSnapshot:     false
-            region:             "https://www.googleapis.com/compute/v1/projects/${env.GOOGLE_PROJECT_ID}/regions/${env.GOOGLE_REGION}"
-            zone:               "https://www.googleapis.com/compute/v1/projects/${env.GOOGLE_PROJECT_ID}/zones/${env.GOOGLE_ZONE}"
-            fallbackZones:      "${env.GOOGLE_FALLBACK_ZONE}"
+            region:             "https://www.googleapis.com/compute/v1/projects/${env.GOOGLE_PROJECT_ID}/regions/us-east1"
+            zone:               "https://www.googleapis.com/compute/v1/projects/${env.GOOGLE_PROJECT_ID}/zones/us-east1-b"
+            fallbackZones:      "us-east1-c, us-east1-d"
             template:           ''
-            machineType:        "https://www.googleapis.com/compute/v1/projects/${env.GOOGLE_PROJECT_ID}/zones/${env.GOOGLE_ZONE}/machineTypes/n1-standard-1"
+            machineType:        "https://www.googleapis.com/compute/v1/projects/${env.GOOGLE_PROJECT_ID}/zones/us-east1-b/machineTypes/n1-standard-1"
             javaExecPath:       '/usr/bin/java'
             networkConfiguration:
               autofilled:
@@ -35,7 +35,7 @@ jenkins:
             useInternalAddress: false
             bootDiskSourceImageProject: ${env.GOOGLE_PROJECT_ID}
             bootDiskSourceImageName: "projects/${env.GOOGLE_PROJECT_ID}/global/images/jenkins-gce-integration-test-jre"
-            bootDiskType:       "https://www.googleapis.com/compute/v1/projects/${env.GOOGLE_PROJECT_ID}/zones/${env.GOOGLE_ZONE}/diskTypes/pd-ssd"
+            bootDiskType:       "https://www.googleapis.com/compute/v1/projects/${env.GOOGLE_PROJECT_ID}/zones/us-east1-b/diskTypes/pd-ssd"
             bootDiskSizeGbStr:  20
             bootDiskAutoDelete: true
             serviceAccountEmail: "${env.GOOGLE_SA_NAME}@${env.GOOGLE_PROJECT_ID}.iam.gserviceaccount.com"

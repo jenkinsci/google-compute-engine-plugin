@@ -469,10 +469,12 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
                     err.setErrors(List.of(new Operation.Error.Errors().setCode("ZONE_RESOURCE_POOL_EXHAUSTED")));
                     throw new OperationException(err);
                 }
-                var op = cloud.getClient().insertInstance(cloud.getProjectId(), Optional.ofNullable(template), instance);
+                var op =
+                        cloud.getClient().insertInstance(cloud.getProjectId(), Optional.ofNullable(template), instance);
                 log.info("Sent insert request for instance [" + instance.getName() + "] in zone " + zoneName);
                 var completed = cloud.getClient()
-                        .waitForOperationCompletion(cloud.getProjectId(), op.getName(), zoneName, getLaunchTimeoutMillis());
+                        .waitForOperationCompletion(
+                                cloud.getProjectId(), op.getName(), zoneName, getLaunchTimeoutMillis());
                 try {
                     return buildNode(instance, completed);
                 } catch (Descriptor.FormException fe) {
