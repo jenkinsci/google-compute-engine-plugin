@@ -49,6 +49,7 @@ import com.google.jenkins.plugins.computeengine.ssh.GoogleKeyCredential;
 import com.google.jenkins.plugins.computeengine.ssh.GoogleKeyPair;
 import com.google.jenkins.plugins.computeengine.ssh.GooglePrivateKey;
 import com.google.jenkins.plugins.computeengine.util.DiskMappingParser;
+import edu.umd.cs.findbugs.annotations.CheckForNull;
 import edu.umd.cs.findbugs.annotations.Nullable;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import hudson.Extension;
@@ -189,6 +190,10 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
 
     @Nullable
     private String fallbackZones;
+
+    /** Set by ComputeEngineCloudFallbackZoneIT only to simulate zone capacity exhaustion on the first attempt. */
+    @VisibleForTesting
+    public static boolean simulateCapacityExhaustionOnFirstAttempt = false;
 
     // Optional not possible due to serialization requirement
     @Nullable
@@ -446,9 +451,6 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
                 .build();
     }
 
-    @VisibleForTesting
-    public static volatile boolean simulateCapacityExhaustion = false;
-
     private ComputeEngineInstance provisionWithFallback() throws IOException {
         var zones = new ArrayList<String>();
         zones.add(zone);
@@ -456,35 +458,35 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
             if (!z.isBlank()) zones.add(z.trim());
         }
 
-        IOException lastCapacityError = null;
-        for (int i = 0; i < zones.size(); i++) {
-            var z = zones.get(i);
+        OperationException lastCapacityError = null;
+        var first = true;
+        for (var z : zones) {
             var zoneName = nameFromSelfLink(z);
             var instance = instance(z);
+            rezoneInstance(instance, zoneName);
             try {
-                // only for the integration test ComputeEngineCloudFallbackZoneIT
-                if (i == 0 && simulateCapacityExhaustion) {
-                    simulateCapacityExhaustion = false;
+                if (first && simulateCapacityExhaustionOnFirstAttempt) {
+                    first = false;
                     var err = new Operation.Error();
                     err.setErrors(List.of(new Operation.Error.Errors().setCode("ZONE_RESOURCE_POOL_EXHAUSTED")));
                     throw new OperationException(err);
                 }
+                first = false;
                 var op =
                         cloud.getClient().insertInstance(cloud.getProjectId(), Optional.ofNullable(template), instance);
                 log.info("Sent insert request for instance [" + instance.getName() + "] in zone " + zoneName);
-                var completed = cloud.getClient()
+                cloud.getClient()
                         .waitForOperationCompletion(
                                 cloud.getProjectId(), op.getName(), zoneName, getLaunchTimeoutMillis());
-                try {
-                    return buildNode(instance, completed);
-                } catch (Descriptor.FormException fe) {
-                    throw new IOException("Failed to build node in zone " + zoneName, fe);
-                }
+                log.info("Instance [" + instance.getName() + "] provisioned in zone " + zoneName);
+                return buildNode(instance, op);
+            } catch (Descriptor.FormException fe) {
+                throw new IOException("Failed to build node in zone " + zoneName, fe);
             } catch (OperationException oe) {
-                var code = operationErrorCode(oe);
-                if (isCapacityError(code)) {
-                    log.warning("Zone " + zoneName + " has no capacity (" + code + "), trying next");
-                    lastCapacityError = new IOException(code, oe);
+                String code = checkCapacityError(oe);
+                if (code != null) {
+                    log.warning("Zone " + zoneName + " has no capacity, " + code + ", trying next");
+                    lastCapacityError = oe;
                     continue;
                 }
                 throw new IOException("Provisioning failed in zone " + zoneName, oe);
@@ -497,14 +499,16 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
                 "All zones exhausted for [" + description + "]: " + lastCapacityError.getMessage(), lastCapacityError);
     }
 
-    private static String operationErrorCode(OperationException oe) {
+    @CheckForNull
+    private String checkCapacityError(OperationException oe) {
         var err = oe.getError();
-        if (err == null || err.getErrors() == null || err.getErrors().isEmpty()) return null;
-        return err.getErrors().get(0).getCode();
-    }
-
-    private static boolean isCapacityError(String code) {
-        return "ZONE_RESOURCE_POOL_EXHAUSTED".equals(code) || "ZONE_RESOURCE_POOL_EXHAUSTED_WITH_DETAILS".equals(code);
+        if (err == null || err.getErrors() == null || err.getErrors().isEmpty()) {
+            return null;
+        }
+        String code = err.getErrors().get(0).getCode();
+        return "ZONE_RESOURCE_POOL_EXHAUSTED".equals(code) || "ZONE_RESOURCE_POOL_EXHAUSTED_WITH_DETAILS".equals(code)
+                ? code
+                : null;
     }
 
     /** Initializes transient properties */
@@ -586,7 +590,7 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
             instance.setMachineType(stripSelfLinkPrefix(machineType));
             instance.setTags(tags());
             instance.setScheduling(scheduling());
-            instance.setDisks(disks(zoneOverride));
+            instance.setDisks(disks());
             instance.setGuestAccelerators(accelerators());
             instance.setNetworkInterfaces(networkInterfaces());
             instance.setServiceAccounts(serviceAccounts());
@@ -790,7 +794,7 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
 
     /** Builds the list of disks for the instance: the boot disk followed by any additional
      *  disks parsed from the {@link #diskMapping} field. */
-    private List<AttachedDisk> disks(String zoneOverride) {
+    private List<AttachedDisk> disks() {
         AttachedDisk boot = new AttachedDisk();
         boot.setBoot(true);
         boot.setAutoDelete(bootDiskAutoDelete);
@@ -802,7 +806,7 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
         List<AttachedDisk> disks = new ArrayList<>();
         disks.add(boot);
 
-        var zoneName = nameFromSelfLink(zoneOverride);
+        var zoneName = nameFromSelfLink(zone);
         var projectId = cloud != null ? nameFromSelfLink(cloud.getProjectId()) : null;
         for (var mapped : DiskMappingParser.parse(diskMapping)) {
             if (mapped.getInitializeParams() != null) {
@@ -819,6 +823,39 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
         }
 
         return disks;
+    }
+
+    private static String rezoneSelfLink(String selfLink, String targetZone) {
+        if (selfLink == null) return null;
+        return selfLink.replaceFirst("(?<=/|^)zones/[^/]+/", "zones/" + targetZone + "/");
+    }
+
+    private void rezoneInstance(Instance instance, String targetZone) {
+        var projectId = cloud != null ? cloud.getProjectId() : null;
+        instance.setZone(targetZone);
+        // machineType is a stripped self-link (projects/p/zones/z/machineTypes/…);
+        // replace the zone segment so it matches the target zone
+        if (instance.getMachineType() != null) {
+            instance.setMachineType(rezoneSelfLink(instance.getMachineType(), targetZone));
+        }
+        if (instance.getDisks() != null) {
+            for (var disk : instance.getDisks()) {
+                var params = disk.getInitializeParams();
+                if (params != null) {
+                    // new disk: rezone the diskType self-link, then normalize bare short names
+                    params.setDiskType(DiskMappingParser.normalizeDiskType(
+                            rezoneSelfLink(params.getDiskType(), targetZone), targetZone));
+                    // sourceSnapshot is global (not zone-scoped); project-qualify bare names only
+                    if (projectId != null) {
+                        params.setSourceSnapshot(
+                                DiskMappingParser.normalizeSnapshotSource(params.getSourceSnapshot(), projectId));
+                    }
+                } else if (projectId != null) {
+                    // existing attached disk: qualify bare names with project + target zone
+                    disk.setSource(DiskMappingParser.normalizeDiskSource(disk.getSource(), projectId, targetZone));
+                }
+            }
+        }
     }
 
     private List<AcceleratorConfig> accelerators() {
@@ -1431,6 +1468,7 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
             instanceConfiguration.setMinimumNumberOfInstancesTimeRangeConfig(
                     this.minimumNumberOfInstancesTimeRangeConfig);
             instanceConfiguration.setTemplate(this.template);
+            instanceConfiguration.setFallbackZones(this.fallbackZones);
             instanceConfiguration.setCreateSnapshot(this.createSnapshot);
             instanceConfiguration.setDiskMapping(this.diskMapping);
             instanceConfiguration.setTerminateIdleDuringShutdown(this.terminateIdleDuringShutdown);

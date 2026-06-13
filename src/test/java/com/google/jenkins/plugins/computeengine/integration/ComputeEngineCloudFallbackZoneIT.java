@@ -71,21 +71,21 @@ public class ComputeEngineCloudFallbackZoneIT {
     @Before
     public void init() throws Exception {
         log.info("init");
+        InstanceConfiguration.simulateCapacityExhaustionOnFirstAttempt = true;
         initCredentials(j);
         client = ClientUtil.getClientFactory(j.jenkins, PROJECT_ID).computeClient();
     }
 
     @After
     public void teardown() throws IOException {
-        InstanceConfiguration.simulateCapacityExhaustion = false;
         log.info("teardown");
+        InstanceConfiguration.simulateCapacityExhaustionOnFirstAttempt = false;
         if (client != null) {
             for (Node node : j.jenkins.getNodes()) {
                 for (var zone : new String[] {PRIMARY_ZONE, FALLBACK_ZONE}) {
                     try {
                         client.terminateInstanceAsync(PROJECT_ID, zone, node.getNodeName());
-                    } catch (Exception e) {
-                        // instance may not be in this zone — ignore
+                    } catch (Exception ignored) {
                     }
                 }
             }
@@ -95,8 +95,6 @@ public class ComputeEngineCloudFallbackZoneIT {
     @Test
     @ConfiguredWithCode("fallback-zone-casc.yml")
     public void testProvisioningFallsBackToSecondZoneOnCapacityExhaustion() throws Exception {
-        InstanceConfiguration.simulateCapacityExhaustion = true;
-
         var p = j.createProject(WorkflowJob.class, "fallback-zone-test");
         p.setDefinition(new CpsFlowDefinition("node('" + LABEL + "') { semaphore 'fallbackZone' }", true));
 
