@@ -193,6 +193,9 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
 
     /** Set by ComputeEngineCloudFallbackZoneIT only to simulate zone capacity exhaustion on the first attempt. */
     @VisibleForTesting
+    @SuppressFBWarnings(
+            value = "MS_SHOULD_BE_FINAL",
+            justification = "intentionally mutable for integration test")
     public static boolean simulateCapacityExhaustionOnFirstAttempt = false;
 
     // Optional not possible due to serialization requirement
