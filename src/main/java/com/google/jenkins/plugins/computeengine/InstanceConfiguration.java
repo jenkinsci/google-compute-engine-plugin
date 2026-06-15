@@ -463,7 +463,7 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
         var attempt = 0;
         for (var z : zones) {
             var zoneName = nameFromSelfLink(z);
-            var instance = instance(z);
+            var instance = instance();
             rezoneInstance(instance, zoneName);
             try {
                 if (attempt++ < simulateCapacityExhaustionForFirstNAttempts) {
@@ -530,14 +530,10 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
     }
 
     public Instance instance() throws IOException {
-        return instance(zone);
-    }
-
-    Instance instance(String zoneOverride) throws IOException {
         Instance instance = new Instance();
         instance.setName(uniqueName());
         instance.setDescription(description);
-        instance.setZone(nameFromSelfLink(zoneOverride));
+        instance.setZone(nameFromSelfLink(zone));
         instance.setMetadata(newMetadata());
 
         if (windowsConfiguration == null) {
