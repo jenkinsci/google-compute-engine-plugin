@@ -504,10 +504,12 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
         if (err == null || err.getErrors() == null || err.getErrors().isEmpty()) {
             return null;
         }
-        String code = err.getErrors().get(0).getCode();
-        return "ZONE_RESOURCE_POOL_EXHAUSTED".equals(code) || "ZONE_RESOURCE_POOL_EXHAUSTED_WITH_DETAILS".equals(code)
-                ? code
-                : null;
+        return err.getErrors().stream()
+                .map(Operation.Error.Errors::getCode)
+                .filter(code -> "ZONE_RESOURCE_POOL_EXHAUSTED".equals(code)
+                        || "ZONE_RESOURCE_POOL_EXHAUSTED_WITH_DETAILS".equals(code))
+                .findFirst()
+                .orElse(null);
     }
 
     /** Initializes transient properties */
@@ -824,7 +826,8 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
         return disks;
     }
 
-    private static String rezoneSelfLink(String selfLink, String targetZone) {
+    @VisibleForTesting
+    static String rezoneSelfLink(String selfLink, String targetZone) {
         if (selfLink == null) return null;
         return selfLink.replaceFirst("(?<=/|^)zones/[^/]+/", "zones/" + targetZone + "/");
     }
@@ -1117,6 +1120,23 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
         public FormValidation doCheckZone(@QueryParameter String value) {
             if (StringUtils.isEmpty(value)) {
                 return FormValidation.error("Please select a zone...");
+            }
+            return FormValidation.ok();
+        }
+
+        public FormValidation doCheckFallbackZones(@QueryParameter String value, @QueryParameter String region) {
+            if (StringUtils.isEmpty(value)) {
+                return FormValidation.ok();
+            }
+            var regionName = nameFromSelfLink(region);
+            if (StringUtils.isEmpty(regionName)) {
+                return FormValidation.ok();
+            }
+            for (var z : value.split("[,\\s]+")) {
+                if (z.isBlank()) continue;
+                if (!z.trim().contains(regionName)) {
+                    return FormValidation.error("Zone [" + z.trim() + "] is not in region [" + regionName + "]");
+                }
             }
             return FormValidation.ok();
         }
