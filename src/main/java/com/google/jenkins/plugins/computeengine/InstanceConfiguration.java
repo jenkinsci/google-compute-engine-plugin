@@ -852,9 +852,8 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
                         params.setSourceSnapshot(
                                 DiskMappingParser.normalizeSnapshotSource(params.getSourceSnapshot(), projectId));
                     }
-                } else if (projectId != null) {
-                    // existing attached disk: qualify bare names with project + target zone
-                    disk.setSource(DiskMappingParser.normalizeDiskSource(disk.getSource(), projectId, targetZone));
+                } else if (disk.getSource() != null) {
+                    disk.setSource(rezoneSelfLink(disk.getSource(), targetZone));
                 }
             }
         }
