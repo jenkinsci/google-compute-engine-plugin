@@ -393,6 +393,11 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
         googleLabels.put(key, value);
     }
 
+    /**
+     * Provisions a node. The insert operation is awaited asynchronously by the launcher
+     * ({@link ComputeEngineComputerLauncher#launch}), not here. With {@code fallbackZones} set,
+     * delegates to {@link #provisionWithFallback()}.
+     */
     public ComputeEngineInstance provision() throws IOException {
         if (fallbackZones != null && !fallbackZones.isBlank()) {
             return provisionWithFallback();
@@ -452,6 +457,15 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
                 .build();
     }
 
+    /**
+     * Tries the primary {@code zone}, then each {@code fallbackZones} entry in order, on a GCE
+     * capacity error ({@code ZONE_RESOURCE_POOL_EXHAUSTED[_WITH_DETAILS]}).
+     *
+     * <p>Awaits each insert synchronously — unlike {@link #provision()} — because the capacity
+     * error only surfaces on the completed operation and the retry must happen before the Jenkins node is
+     * created. The launcher can't do this: it runs after the Jenkins node is bound to a zone and can only
+     * terminate on failure, can't update the zone.
+     */
     private ComputeEngineInstance provisionWithFallback() throws IOException {
         var zones = new ArrayList<String>();
         zones.add(zone);
