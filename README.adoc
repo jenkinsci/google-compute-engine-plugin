@@ -338,6 +338,10 @@ Instance configurations define what kind of VM to launch for a given set of Jenk
 | *Zone*
 | `zone`
 | GCP zone within the region (e.g. `us-central1-a`).
+
+| *Fallback Zones*
+| `fallbackZones`
+| Comma- or space-separated zones to try in order when the primary zone returns a capacity error. All zones must be in the same region. Optional.
 |===
 
 [[machine-configuration-advanced]]
@@ -954,6 +958,25 @@ configurations:
       enableIntegrityMonitoring: true
     # ... remaining fields same as basic example
 ----
+
+[[fallback-zones]]
+=== Fallback Zones
+
+When a GCE zone has no available capacity (`ZONE_RESOURCE_POOL_EXHAUSTED`), the plugin can automatically retry in other zones within the same region.
+
+Set *Fallback Zones* (`fallbackZones`) to a comma- or space-separated list of zones to try in order after the primary zone fails. All zones must be in the same region as the primary zone (subnets are regional; cross-region fallback is rejected at provisioning time).
+
+[source,yaml]
+----
+configurations:
+  - namePrefix: jenkins-agent
+    region: us-central1
+    zone: us-central1-a
+    fallbackZones: us-central1-b, us-central1-c
+    # ... remaining fields same as basic example
+----
+
+The primary zone is always tried first. If it is exhausted, each fallback zone is tried in the listed order. Any other error (e.g. quota, IAM, invalid config) aborts immediately without trying the next zone.
 
 [[secondary-disks]]
 === Secondary Disks
