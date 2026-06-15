@@ -191,10 +191,10 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
     @Nullable
     private String fallbackZones;
 
-    /** Set by ComputeEngineCloudFallbackZoneIT only to simulate zone capacity exhaustion on the first attempt. */
+    /** Number of leading zone attempts to simulate as ZONE_RESOURCE_POOL_EXHAUSTED. Set by integration tests only. */
     @VisibleForTesting
     @SuppressFBWarnings(value = "MS_SHOULD_BE_FINAL", justification = "intentionally mutable for integration test")
-    public static boolean simulateCapacityExhaustionOnFirstAttempt = false;
+    public static int simulateCapacityExhaustionForFirstNAttempts = 0;
 
     // Optional not possible due to serialization requirement
     @Nullable
@@ -460,19 +460,17 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
         }
 
         OperationException lastCapacityError = null;
-        var first = true;
+        var attempt = 0;
         for (var z : zones) {
             var zoneName = nameFromSelfLink(z);
             var instance = instance(z);
             rezoneInstance(instance, zoneName);
             try {
-                if (first && simulateCapacityExhaustionOnFirstAttempt) {
-                    first = false;
+                if (attempt++ < simulateCapacityExhaustionForFirstNAttempts) {
                     var err = new Operation.Error();
                     err.setErrors(List.of(new Operation.Error.Errors().setCode("ZONE_RESOURCE_POOL_EXHAUSTED")));
                     throw new OperationException(err);
                 }
-                first = false;
                 var op =
                         cloud.getClient().insertInstance(cloud.getProjectId(), Optional.ofNullable(template), instance);
                 log.info("Sent insert request for instance [" + instance.getName() + "] in zone " + zoneName);
