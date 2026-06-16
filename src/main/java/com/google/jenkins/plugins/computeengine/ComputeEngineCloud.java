@@ -24,8 +24,10 @@ import com.cloudbees.plugins.credentials.common.StandardCredentials;
 import com.cloudbees.plugins.credentials.common.StandardListBoxModel;
 import com.cloudbees.plugins.credentials.domains.DomainRequirement;
 import com.google.api.services.compute.model.Instance;
+import com.google.api.services.compute.model.Operation;
 import com.google.cloud.graphite.platforms.plugin.client.ClientFactory;
 import com.google.cloud.graphite.platforms.plugin.client.ComputeClient;
+import com.google.cloud.graphite.platforms.plugin.client.ComputeClient.OperationException;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableMap;
 import com.google.jenkins.plugins.computeengine.client.ClientUtil;
@@ -56,6 +58,7 @@ import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
@@ -274,11 +277,19 @@ public class ComputeEngineCloud extends AbstractCloudImpl {
 
                 InstanceConfiguration config = chooseConfigFromList(configs);
 
-                final ComputeEngineInstance node = config.provision();
-                Jenkins.get().addNode(node);
-                result.add(createPlannedNode(config, node));
-                excessWorkload -= node.getNumExecutors();
-                availableCapacity -= node.getNumExecutors();
+                if (config.hasFallbackZones()) {
+                    // don't send VM creation request to GCP from here, just create planned node for now.
+                    // VM creation will be done in PlannedNodeFuture.
+                    String name = config.uniqueName();
+                    var planned = createFallbackPlannedNode(config, name);
+                    result.add(planned);
+                } else {
+                    final ComputeEngineInstance node = config.provision();
+                    Jenkins.get().addNode(node);
+                    result.add(createPlannedNode(config, node));
+                }
+                excessWorkload -= config.getNumExecutors();
+                availableCapacity -= config.getNumExecutors();
             }
         } catch (IOException ioe) {
             log.log(Level.WARNING, "Error provisioning node", ioe);
@@ -309,12 +320,17 @@ public class ComputeEngineCloud extends AbstractCloudImpl {
         try {
             log.info("Provisioning spare nodes from config " + config + " for number " + numberToProvision);
             while (numberToProvision > 0 && availableNodeCapacity() > 0) {
-                final ComputeEngineInstance node = config.provision();
-                if (node == null) {
-                    break;
+                if (config.hasFallbackZones()) {
+                    String name = config.uniqueName();
+                    result.add(createFallbackPlannedNode(config, name));
+                } else {
+                    final ComputeEngineInstance node = config.provision();
+                    if (node == null) {
+                        break;
+                    }
+                    Jenkins.get().addNode(node);
+                    result.add(createPlannedNode(config, node));
                 }
-                Jenkins.get().addNode(node);
-                result.add(createPlannedNode(config, node));
                 numberToProvision--;
             }
             if (numberToProvision > 0) {
@@ -342,7 +358,30 @@ public class ComputeEngineCloud extends AbstractCloudImpl {
     }
 
     private PlannedNode createPlannedNode(InstanceConfiguration config, ComputeEngineInstance node) {
+        // Node already added to Jenkins before this PlannedNode is returned; the Future (of getPlannedNodeFuture below)
+        // only waits
+        // for the agent to connect, doesn't return a Node.
         return new PlannedNode(node.getNodeName(), getPlannedNodeFuture(config, node), node.getNumExecutors());
+    }
+
+    private PlannedNode createFallbackPlannedNode(InstanceConfiguration config, String name) {
+        // Node doesn't exist yet. All inserts and zone retries happen inside
+        // the Future; NodeProvisioner#update calls addNode() on the returned Node. numExecutors is counted
+        // in plannedCapacity while pending, so NodeProvisioner won't over-provision.
+        var zones = config.fallbackZoneNames();
+        Future<Node> future = Computer.threadPoolForRemoting.submit(() -> {
+            try {
+                return waitAndRetryFallback(config, name, zones);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                log.log(Level.WARNING, "Fallback provisioning interrupted for " + name, e);
+                return null;
+            } catch (IOException e) {
+                log.log(Level.WARNING, "Fallback provisioning failed for " + name, e);
+                return null;
+            }
+        });
+        return new PlannedNode(name, future, config.getNumExecutors());
     }
 
     private Future<Node> getPlannedNodeFuture(InstanceConfiguration config, ComputeEngineInstance node) {
@@ -370,6 +409,50 @@ public class ComputeEngineCloud extends AbstractCloudImpl {
             }
             return null;
         });
+    }
+
+    /**
+     * Tries each zone in order, inserting and waiting for the operation.
+     * On {@code ZONE_RESOURCE_POOL_EXHAUSTED[_WITH_DETAILS]}, moves to the next zone.
+     * Any other error aborts immediately.
+     * Runs on {@code Computer.threadPoolForRemoting}, so blocking is safe.
+     */
+    private Node waitAndRetryFallback(InstanceConfiguration config, String name, List<String> zones)
+            throws IOException, InterruptedException {
+        var instance = config.instance(name);
+        OperationException lastCapacityError = null;
+        var attempt = 0;
+        for (var zoneName : zones) {
+            config.rezoneInstance(instance, zoneName);
+            try {
+                if (attempt++ < InstanceConfiguration.simulateCapacityExhaustionForFirstNAttempts) {
+                    var err = new Operation.Error();
+                    err.setErrors(List.of(new Operation.Error.Errors().setCode("ZONE_RESOURCE_POOL_EXHAUSTED")));
+                    throw new OperationException(err);
+                }
+                var op =
+                        getClient().insertInstance(getProjectId(), Optional.ofNullable(config.getTemplate()), instance);
+                log.info("Sent insert request for instance [" + name + "] in zone " + zoneName);
+                getClient()
+                        .waitForOperationCompletion(
+                                getProjectId(), op.getName(), op.getZone(), config.getLaunchTimeoutMillis());
+                log.info("Instance [" + name + "] provisioned in zone " + zoneName);
+                return config.buildNode(instance, op);
+            } catch (Descriptor.FormException fe) {
+                throw new IOException("Failed to build node in zone " + zoneName, fe);
+            } catch (OperationException oe) {
+                String code = InstanceConfiguration.checkCapacityError(oe);
+                if (code != null) {
+                    log.warning("Zone " + zoneName + " has no capacity (" + code + "), trying next");
+                    lastCapacityError = oe;
+                    continue;
+                }
+                throw new IOException("Provisioning failed in zone " + zoneName, oe);
+            }
+        }
+        throw new IOException(
+                "All zones exhausted for [" + config.getDescription() + "]: " + lastCapacityError.getMessage(),
+                lastCapacityError);
     }
 
     /**

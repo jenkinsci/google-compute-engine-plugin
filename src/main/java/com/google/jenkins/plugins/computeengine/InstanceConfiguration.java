@@ -394,14 +394,10 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
     }
 
     /**
-     * Provisions a node. The insert operation is awaited asynchronously by the launcher
-     * ({@link ComputeEngineComputerLauncher#launch}), not here. With {@code fallbackZones} set,
-     * delegates to {@link #provisionWithFallback()}.
+     * Fires the GCE insert and returns immediately. The insert operation is awaited asynchronously
+     * by the launcher ({@link ComputeEngineComputerLauncher#launch}).
      */
     public ComputeEngineInstance provision() throws IOException {
-        if (fallbackZones != null && !fallbackZones.isBlank()) {
-            return provisionWithFallback();
-        }
         try {
             Instance instance = instance();
             // TODO: JENKINS-55285
@@ -415,7 +411,24 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
         }
     }
 
-    private ComputeEngineInstance buildNode(Instance instance, Operation operation)
+    boolean hasFallbackZones() {
+        return fallbackZones != null && !fallbackZones.isBlank();
+    }
+
+    /**
+     * Returns the ordered zone list: primary zone first, then each fallback zone.
+     * Only meaningful when {@link #hasFallbackZones()} is true.
+     */
+    List<String> fallbackZoneNames() {
+        var zones = new ArrayList<String>();
+        zones.add(nameFromSelfLink(zone));
+        for (var z : fallbackZones.split("[,\\s]+")) {
+            if (!z.isBlank()) zones.add(nameFromSelfLink(z.trim()));
+        }
+        return zones;
+    }
+
+    ComputeEngineInstance buildNode(Instance instance, Operation operation)
             throws Descriptor.FormException, IOException {
         var targetRemoteFs = this.remoteFs;
         ComputeEngineComputerLauncher launcher;
@@ -457,63 +470,8 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
                 .build();
     }
 
-    /**
-     * Tries the primary {@code zone}, then each {@code fallbackZones} entry in order, on a GCE
-     * capacity error ({@code ZONE_RESOURCE_POOL_EXHAUSTED[_WITH_DETAILS]}).
-     *
-     * <p>Awaits each insert synchronously — unlike {@link #provision()} — because the capacity
-     * error only surfaces on the completed operation and the retry must happen before the Jenkins node is
-     * created. The launcher can't do this: it runs after the Jenkins node is bound to a zone and can only
-     * terminate on failure, can't update the zone.
-     */
-    private ComputeEngineInstance provisionWithFallback() throws IOException {
-        var zones = new ArrayList<String>();
-        zones.add(zone);
-        for (var z : fallbackZones.split("[,\\s]+")) {
-            if (!z.isBlank()) zones.add(z.trim());
-        }
-
-        OperationException lastCapacityError = null;
-        var attempt = 0;
-        for (var z : zones) {
-            var zoneName = nameFromSelfLink(z);
-            var instance = instance();
-            rezoneInstance(instance, zoneName);
-            try {
-                if (attempt++ < simulateCapacityExhaustionForFirstNAttempts) {
-                    var err = new Operation.Error();
-                    err.setErrors(List.of(new Operation.Error.Errors().setCode("ZONE_RESOURCE_POOL_EXHAUSTED")));
-                    throw new OperationException(err);
-                }
-                var op =
-                        cloud.getClient().insertInstance(cloud.getProjectId(), Optional.ofNullable(template), instance);
-                log.info("Sent insert request for instance [" + instance.getName() + "] in zone " + zoneName);
-                cloud.getClient()
-                        .waitForOperationCompletion(
-                                cloud.getProjectId(), op.getName(), zoneName, getLaunchTimeoutMillis());
-                log.info("Instance [" + instance.getName() + "] provisioned in zone " + zoneName);
-                return buildNode(instance, op);
-            } catch (Descriptor.FormException fe) {
-                throw new IOException("Failed to build node in zone " + zoneName, fe);
-            } catch (OperationException oe) {
-                String code = checkCapacityError(oe);
-                if (code != null) {
-                    log.warning("Zone " + zoneName + " has no capacity, " + code + ", trying next");
-                    lastCapacityError = oe;
-                    continue;
-                }
-                throw new IOException("Provisioning failed in zone " + zoneName, oe);
-            } catch (InterruptedException ie) {
-                Thread.currentThread().interrupt();
-                throw new IOException("Interrupted waiting for instance in zone " + zoneName, ie);
-            }
-        }
-        throw new IOException(
-                "All zones exhausted for [" + description + "]: " + lastCapacityError.getMessage(), lastCapacityError);
-    }
-
     @CheckForNull
-    private String checkCapacityError(OperationException oe) {
+    static String checkCapacityError(OperationException oe) {
         var err = oe.getError();
         if (err == null || err.getErrors() == null || err.getErrors().isEmpty()) {
             return null;
@@ -544,8 +502,12 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
     }
 
     public Instance instance() throws IOException {
+        return instance(uniqueName());
+    }
+
+    Instance instance(String name) throws IOException {
         Instance instance = new Instance();
-        instance.setName(uniqueName());
+        instance.setName(name);
         instance.setDescription(description);
         instance.setZone(nameFromSelfLink(zone));
         instance.setMetadata(newMetadata());
@@ -622,7 +584,7 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
         return instance;
     }
 
-    private String uniqueName() {
+    String uniqueName() {
         char[][] pairs = {{'a', 'z'}, {'0', '9'}};
         RandomStringGenerator generator =
                 new RandomStringGenerator.Builder().withinRange(pairs).build();
@@ -842,7 +804,7 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
         return selfLink.replaceFirst("(?<=/|^)zones/[^/]+/", "zones/" + targetZone + "/");
     }
 
-    private void rezoneInstance(Instance instance, String targetZone) {
+    void rezoneInstance(Instance instance, String targetZone) {
         var projectId = cloud != null ? cloud.getProjectId() : null;
         instance.setZone(targetZone);
         // machineType is a stripped self-link (projects/p/zones/z/machineTypes/…);
@@ -1143,7 +1105,7 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
             }
             for (var z : value.split("[,\\s]+")) {
                 if (z.isBlank()) continue;
-                if (!z.trim().contains(regionName)) {
+                if (!z.trim().startsWith(regionName + "-")) {
                     return FormValidation.error("Zone [" + z.trim() + "] is not in region [" + regionName + "]");
                 }
             }
