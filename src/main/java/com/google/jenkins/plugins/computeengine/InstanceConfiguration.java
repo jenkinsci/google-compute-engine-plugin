@@ -396,10 +396,10 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
         try {
             var iwc = instanceWithCredential(uniqueName());
             // TODO: JENKINS-55285
-            Operation operation =
-                    cloud.getClient().insertInstance(cloud.getProjectId(), Optional.ofNullable(template), iwc.instance);
+            Operation operation = cloud.getClient()
+                    .insertInstance(cloud.getProjectId(), Optional.ofNullable(template), iwc.instance());
             log.info("Sent insert request for instance configuration [" + description + "]");
-            return buildNode(iwc.instance, operation, iwc.credential);
+            return buildNode(iwc.instance(), operation, iwc.credential());
         } catch (Descriptor.FormException fe) {
             log.log(Level.WARNING, "Error provisioning instance: " + fe.getMessage(), fe);
             return null;
@@ -418,7 +418,7 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
         var zones = new ArrayList<String>();
         zones.add(nameFromSelfLink(zone));
         for (var z : fallbackZones.split("[,\\s]+")) {
-            if (!z.isBlank()) zones.add(nameFromSelfLink(z.trim()));
+            if (!z.isBlank()) zones.add(z.trim());
         }
         return zones;
     }
@@ -480,15 +480,7 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
     }
 
     /** Pairs a built {@link Instance} with its SSH credential, keeping both local to the call. */
-    static final class InstanceWithCredential {
-        final Instance instance;
-        final GoogleKeyCredential credential;
-
-        InstanceWithCredential(Instance instance, GoogleKeyCredential credential) {
-            this.instance = instance;
-            this.credential = credential;
-        }
-    }
+    record InstanceWithCredential(Instance instance, GoogleKeyCredential credential) {}
 
     /** Initializes transient properties */
     protected Object readResolve() {

@@ -417,7 +417,7 @@ public class ComputeEngineCloud extends AbstractCloudImpl {
         IOException lastError = null;
         var attempt = 0;
         for (var zoneName : zones) {
-            config.rezoneInstance(iwc.instance, zoneName);
+            config.rezoneInstance(iwc.instance(), zoneName);
             try {
                 if (attempt++ < InstanceConfiguration.simulateCapacityExhaustionForFirstNAttempts) {
                     var err = new Operation.Error();
@@ -425,13 +425,13 @@ public class ComputeEngineCloud extends AbstractCloudImpl {
                     throw new OperationException(err);
                 }
                 var op = getClient()
-                        .insertInstance(getProjectId(), Optional.ofNullable(config.getTemplate()), iwc.instance);
+                        .insertInstance(getProjectId(), Optional.ofNullable(config.getTemplate()), iwc.instance());
                 log.info("Sent insert request for instance [" + name + "] in zone " + zoneName);
                 getClient()
                         .waitForOperationCompletion(
                                 getProjectId(), op.getName(), op.getZone(), config.getLaunchTimeoutMillis());
                 log.info("Instance [" + name + "] provisioned in zone " + zoneName);
-                return config.buildNode(iwc.instance, op, iwc.credential);
+                return config.buildNode(iwc.instance(), op, iwc.credential());
             } catch (Descriptor.FormException fe) {
                 throw new IOException("Failed to build node in zone " + zoneName, fe);
             } catch (InterruptedException ie) {
