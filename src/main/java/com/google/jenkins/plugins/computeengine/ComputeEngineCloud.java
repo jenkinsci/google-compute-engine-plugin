@@ -278,8 +278,6 @@ public class ComputeEngineCloud extends AbstractCloudImpl {
                 InstanceConfiguration config = chooseConfigFromList(configs);
 
                 if (config.hasFallbackZones()) {
-                    // don't send VM creation request to GCP from here, just create planned node for now.
-                    // VM creation will be done in PlannedNodeFuture.
                     String name = config.uniqueName();
                     var planned = createFallbackPlannedNode(config, name);
                     result.add(planned);
@@ -358,28 +356,24 @@ public class ComputeEngineCloud extends AbstractCloudImpl {
     }
 
     private PlannedNode createPlannedNode(InstanceConfiguration config, ComputeEngineInstance node) {
-        // Node already added to Jenkins before this PlannedNode is returned; the Future (of getPlannedNodeFuture below)
-        // only waits
-        // for the agent to connect, doesn't return a Node.
+        // Node already added to Jenkins before this PlannedNode is returned; the Future only waits for the agent to
+        // connect.
         return new PlannedNode(node.getNodeName(), getPlannedNodeFuture(config, node), node.getNumExecutors());
     }
 
     private PlannedNode createFallbackPlannedNode(InstanceConfiguration config, String name) {
-        // Node doesn't exist yet. All inserts and zone retries happen inside
-        // the Future; NodeProvisioner#update calls addNode() on the returned Node. numExecutors is counted
-        // in plannedCapacity while pending, so NodeProvisioner won't over-provision.
+        // Node doesn't exist yet in Jenkins. VM insert to GCP and zone retries happen inside the Future.
+        // addNode() is called explicitly (like the single-zone path). numExecutors is already counted in
+        // plannedCapacity earlier, so the delay here waiting for VM to fully up won't cause excess provisioning.
         var zones = config.fallbackZoneNames();
         Future<Node> future = Computer.threadPoolForRemoting.submit(() -> {
             try {
-                return waitAndRetryFallback(config, name, zones);
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-                log.log(Level.WARNING, "Fallback provisioning interrupted for " + name, e);
-                return null;
+                ComputeEngineInstance node = waitAndRetryFallback(config, name, zones);
+                Jenkins.get().addNode(node);
             } catch (IOException e) {
                 log.log(Level.WARNING, "Fallback provisioning failed for " + name, e);
-                return null;
             }
+            return null;
         });
         return new PlannedNode(name, future, config.getNumExecutors());
     }
@@ -413,46 +407,50 @@ public class ComputeEngineCloud extends AbstractCloudImpl {
 
     /**
      * Tries each zone in order, inserting and waiting for the operation.
-     * On {@code ZONE_RESOURCE_POOL_EXHAUSTED[_WITH_DETAILS]}, moves to the next zone.
+     * On {@code ZONE_RESOURCE_POOL_EXHAUSTED[_WITH_DETAILS]} or a per-zone timeout, moves to the next zone.
      * Any other error aborts immediately.
      * Runs on {@code Computer.threadPoolForRemoting}, so blocking is safe.
      */
-    private Node waitAndRetryFallback(InstanceConfiguration config, String name, List<String> zones)
-            throws IOException, InterruptedException {
-        var instance = config.instance(name);
-        OperationException lastCapacityError = null;
+    private ComputeEngineInstance waitAndRetryFallback(InstanceConfiguration config, String name, List<String> zones)
+            throws IOException {
+        var iwc = config.instanceWithCredential(name);
+        IOException lastError = null;
         var attempt = 0;
         for (var zoneName : zones) {
-            config.rezoneInstance(instance, zoneName);
+            config.rezoneInstance(iwc.instance, zoneName);
             try {
                 if (attempt++ < InstanceConfiguration.simulateCapacityExhaustionForFirstNAttempts) {
                     var err = new Operation.Error();
                     err.setErrors(List.of(new Operation.Error.Errors().setCode("ZONE_RESOURCE_POOL_EXHAUSTED")));
                     throw new OperationException(err);
                 }
-                var op =
-                        getClient().insertInstance(getProjectId(), Optional.ofNullable(config.getTemplate()), instance);
+                var op = getClient()
+                        .insertInstance(getProjectId(), Optional.ofNullable(config.getTemplate()), iwc.instance);
                 log.info("Sent insert request for instance [" + name + "] in zone " + zoneName);
                 getClient()
                         .waitForOperationCompletion(
                                 getProjectId(), op.getName(), op.getZone(), config.getLaunchTimeoutMillis());
                 log.info("Instance [" + name + "] provisioned in zone " + zoneName);
-                return config.buildNode(instance, op);
+                return config.buildNode(iwc.instance, op, iwc.credential);
             } catch (Descriptor.FormException fe) {
                 throw new IOException("Failed to build node in zone " + zoneName, fe);
+            } catch (InterruptedException ie) {
+                // waitForOperationCompletion wraps an Awaitility timeout as InterruptedException;
+                // treat it as a per-zone timeout and try the next zone.
+                log.warning("Zone " + zoneName + " timed out waiting for operation, trying next");
+                lastError = new IOException("Timed out in zone " + zoneName, ie);
             } catch (OperationException oe) {
                 String code = InstanceConfiguration.checkCapacityError(oe);
                 if (code != null) {
                     log.warning("Zone " + zoneName + " has no capacity (" + code + "), trying next");
-                    lastCapacityError = oe;
+                    lastError = new IOException(code, oe);
                     continue;
                 }
                 throw new IOException("Provisioning failed in zone " + zoneName, oe);
             }
         }
         throw new IOException(
-                "All zones exhausted for [" + config.getDescription() + "]: " + lastCapacityError.getMessage(),
-                lastCapacityError);
+                "All zones exhausted for [" + config.getDescription() + "]: " + lastError.getMessage(), lastError);
     }
 
     /**
