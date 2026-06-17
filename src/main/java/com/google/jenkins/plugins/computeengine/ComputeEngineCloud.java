@@ -264,7 +264,11 @@ public class ComputeEngineCloud extends AbstractCloudImpl {
                             + label
                             + "'");
             int availableCapacity = availableNodeCapacity();
-            while (excessWorkload > 0) {
+            // Configs still worth trying this round. A config that reports exhaustion (all its zones in
+            // cooldown) is dropped so we move on to the next matching config; when none remain we stop,
+            // return empty list, so that NodeProvisioner tries another matching cloud if any.
+            List<InstanceConfiguration> candidates = new ArrayList<>(configs);
+            while (excessWorkload > 0 && !candidates.isEmpty()) {
                 if (availableCapacity <= 0) {
                     log.warning(String.format(
                             "Could not provision new nodes to meet excess workload demand (%d). Cloud provider %s has reached its configured capacity of %d",
@@ -272,9 +276,13 @@ public class ComputeEngineCloud extends AbstractCloudImpl {
                     break;
                 }
 
-                InstanceConfiguration config = chooseConfigFromList(configs);
+                InstanceConfiguration config = chooseConfigFromList(candidates);
 
                 final ComputeEngineInstance node = config.provision();
+                if (node == null) {
+                    candidates.remove(config);
+                    continue;
+                }
                 Jenkins.get().addNode(node);
                 result.add(createPlannedNode(config, node));
                 excessWorkload -= node.getNumExecutors();

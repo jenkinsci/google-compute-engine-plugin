@@ -32,7 +32,6 @@ import com.trilead.ssh2.Connection;
 import com.trilead.ssh2.HTTPProxyData;
 import com.trilead.ssh2.SCPClient;
 import com.trilead.ssh2.Session;
-import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import hudson.ProxyConfiguration;
 import hudson.Util;
 import hudson.model.TaskListener;
@@ -71,9 +70,12 @@ public abstract class ComputeEngineComputerLauncher extends ComputerLauncher {
      * error instead of waiting on the real insert operation. Set by integration tests only to exercise
      * the zone-fallback path end to end.
      */
+    private static int simulateCapacityExhaustionForFirstNAttempts = 0;
+
     @VisibleForTesting
-    @SuppressFBWarnings(value = "MS_SHOULD_BE_FINAL", justification = "intentionally mutable for integration test")
-    public static int simulateCapacityExhaustionForFirstNAttempts = 0;
+    public static void setSimulateCapacityExhaustionForFirstNAttempts(int attempts) {
+        simulateCapacityExhaustionForFirstNAttempts = attempts;
+    }
 
     private final String insertOperationId;
     private final String zone;
@@ -199,7 +201,7 @@ public abstract class ComputeEngineComputerLauncher extends ComputerLauncher {
                         insertOperationId, opError.getErrors().get(0).getMessage()));
                 if (isCapacityError(opError)) {
                     var config = cloud.getInstanceConfigurationByDescription(node.getNodeDescription());
-                    if (config != null && config.hasFallbackZones()) {
+                    if (config != null) {
                         config.markExhausted(ClientUtil.nameFromSelfLink(zone));
                     }
                 }

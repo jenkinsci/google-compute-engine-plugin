@@ -78,6 +78,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.logging.Level;
 import jenkins.model.Jenkins;
 import jenkins.util.SystemProperties;
@@ -192,11 +193,17 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
     @Nullable
     private String fallbackZones;
 
+    /**
+     * How long to skip a zone after capacity-exhaustion error before it is retried. GCP gives no
+     * recommended interval for {@code ZONE_RESOURCE_POOL_EXHAUSTED}, a conservative default.
+     */
     static final Duration ZONE_EXHAUSTION_COOLDOWN_DURATION = SystemProperties.getDuration(
-            InstanceConfiguration.class.getName() + ".zoneExhaustionCooldownDuration", Duration.ofMinutes(10));
+            InstanceConfiguration.class.getName() + ".zoneExhaustionCooldownDuration", Duration.ofMinutes(2));
 
     /** Records the instant each zone was last exhausted. Transient — lost on restart, which is acceptable. */
     private final transient ConcurrentHashMap<String, Instant> exhaustedAt = new ConcurrentHashMap<>();
+
+    private final transient AtomicReference<Instant> allZonesExhaustedLoggedAt = new AtomicReference<>();
 
     // Optional not possible due to serialization requirement
     @Nullable
@@ -398,23 +405,25 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
     public ComputeEngineInstance provision() throws IOException {
         try {
             Instance instance = instance();
-            if (hasFallbackZones()) {
-                var zones = candidateZones();
-                var primaryZone = zones.get(0);
-                var selectedZone =
-                        zones.stream().filter(z -> !isExhausted(z)).findFirst().orElse(null);
-                if (selectedZone == null) {
-                    // Every zone is currently marked exhausted; fall back to the primary even if it fails
+            var zones = candidateZones();
+            var primaryZone = zones.get(0);
+            var selectedZone =
+                    zones.stream().filter(z -> !isExhausted(z)).findFirst().orElse(null);
+            if (selectedZone == null) {
+                if (shouldLogAllZonesExhausted()) {
                     log.info("All zones " + zones + " are exhausted for [" + description
-                            + "]; retrying in primary zone [" + primaryZone + "]");
-                    selectedZone = primaryZone;
-                } else if (!selectedZone.equals(primaryZone)) {
-                    log.info("Primary zone [" + primaryZone + "] is exhausted for [" + description
-                            + "]; provisioning in fallback zone [" + selectedZone + "]");
+                            + "]; skipping provisioning until a zone cooldown (" + ZONE_EXHAUSTION_COOLDOWN_DURATION
+                            + ") lapses. Ideas: add more fallback zones, or define another GCP cloud (e.g. a different "
+                            + "project or region) sharing the same label so Jenkins can provision there instead");
                 }
-                if (!selectedZone.equals(primaryZone)) {
-                    rezoneInstance(instance, selectedZone);
-                }
+                // if any other instance-config exists, they will be tried;
+                // if no instance-config can, NodeProvisioner will try other matching cloud.
+                return null;
+            }
+            if (!selectedZone.equals(primaryZone)) {
+                log.info("Primary zone [" + primaryZone + "] is exhausted for [" + description
+                        + "]; provisioning in fallback zone [" + selectedZone + "]");
+                rezoneInstance(instance, selectedZone);
             }
             // TODO: JENKINS-55285
             Operation operation =
@@ -427,13 +436,9 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
         }
     }
 
-    boolean hasFallbackZones() {
-        return fallbackZones != null && !fallbackZones.isBlank();
-    }
-
     /**
      * Returns the ordered zone list to attempt: the primary zone first, then each configured fallback zone.
-     * Only meaningful when {@link #hasFallbackZones()} is true.
+     * With no fallback zones configured this is just the primary zone.
      */
     List<String> candidateZones() {
         var zones = new ArrayList<String>();
@@ -450,7 +455,7 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
         exhaustedAt.put(zone, Instant.now());
         log.info(String.format(
                 "Marking zone [%s] exhausted for machine type [%s] in config [%s] until %s; "
-                        + "will try the next fallback zone on the next provisioning cycle",
+                        + "the next provisioning cycle will skip this zone and try the next candidate zone",
                 zone,
                 nameFromSelfLink(machineType),
                 description,
@@ -467,6 +472,15 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
         }
         exhaustedAt.remove(zone, at);
         return false;
+    }
+
+    private boolean shouldLogAllZonesExhausted() {
+        var now = Instant.now();
+        var last = allZonesExhaustedLoggedAt.get();
+        if (last != null && now.isBefore(last.plus(ZONE_EXHAUSTION_COOLDOWN_DURATION))) {
+            return false;
+        }
+        return allZonesExhaustedLoggedAt.compareAndSet(last, now);
     }
 
     ComputeEngineInstance buildNode(Instance instance, Operation operation)

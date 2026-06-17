@@ -55,7 +55,7 @@ public class ComputeEngineCloudFallbackZoneIT {
     @Before
     public void init() throws Exception {
         log.info("init");
-        ComputeEngineComputerLauncher.simulateCapacityExhaustionForFirstNAttempts = 2;
+        ComputeEngineComputerLauncher.setSimulateCapacityExhaustionForFirstNAttempts(2);
         initCredentials(j);
         client = ClientUtil.getClientFactory(j.jenkins, PROJECT_ID).computeClient();
     }
@@ -63,7 +63,7 @@ public class ComputeEngineCloudFallbackZoneIT {
     @After
     public void teardown() throws IOException {
         log.info("teardown");
-        ComputeEngineComputerLauncher.simulateCapacityExhaustionForFirstNAttempts = 0;
+        ComputeEngineComputerLauncher.setSimulateCapacityExhaustionForFirstNAttempts(0);
         if (client != null) {
             for (Node node : j.jenkins.getNodes()) {
                 for (var zone : new String[] {PRIMARY_ZONE, FIRST_FALLBACK_ZONE, SECOND_FALLBACK_ZONE}) {
