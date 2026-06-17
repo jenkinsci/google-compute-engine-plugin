@@ -26,11 +26,13 @@ import com.google.cloud.graphite.platforms.plugin.client.ComputeClient.Operation
 import com.google.cloud.graphite.platforms.plugin.client.model.GuestAttribute;
 import com.google.cloud.graphite.platforms.plugin.client.model.InstanceResourceData;
 import com.google.cloud.graphite.platforms.plugin.client.util.ClientUtil;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 import com.trilead.ssh2.Connection;
 import com.trilead.ssh2.HTTPProxyData;
 import com.trilead.ssh2.SCPClient;
 import com.trilead.ssh2.Session;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import hudson.ProxyConfiguration;
 import hudson.Util;
 import hudson.model.TaskListener;
@@ -44,6 +46,7 @@ import java.net.Proxy;
 import java.net.SocketTimeoutException;
 import java.time.Duration;
 import java.util.Base64;
+import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
@@ -62,6 +65,15 @@ public abstract class ComputeEngineComputerLauncher extends ComputerLauncher {
 
     private static final int SSH_TIMEOUT_MILLIS = 10000;
     private static final int SSH_SLEEP_MILLIS = 5000;
+
+    /**
+     * Number of leading launch attempts to fail with a synthetic {@code ZONE_RESOURCE_POOL_EXHAUSTED}
+     * error instead of waiting on the real insert operation. Set by integration tests only to exercise
+     * the zone-fallback path end to end.
+     */
+    @VisibleForTesting
+    @SuppressFBWarnings(value = "MS_SHOULD_BE_FINAL", justification = "intentionally mutable for integration test")
+    public static int simulateCapacityExhaustionForFirstNAttempts = 0;
 
     private final String insertOperationId;
     private final String zone;
@@ -168,20 +180,29 @@ public abstract class ComputeEngineComputerLauncher extends ComputerLauncher {
         try {
             LOGGER.info(String.format(
                     "Launch will wait %d for operation %s to complete...", node.getLaunchTimeout(), insertOperationId));
-            /* This call will log a null error when the operation is complete, or a relevant error if it
-             * fails. */
-            try {
-                Operation operation = cloud.getClient()
-                        .waitForOperationCompletion(
-                                cloud.getProjectId(), insertOperationId, zone, node.getLaunchTimeoutMillis());
-                opError = operation.getError();
-            } catch (OperationException e) {
-                opError = e.getError();
+
+            if (simulateCapacityExhaustionForFirstNAttempts > 0) {
+                opError = simulateCapacityExhaustion();
+            } else {
+                try {
+                    Operation operation = cloud.getClient()
+                            .waitForOperationCompletion(
+                                    cloud.getProjectId(), insertOperationId, zone, node.getLaunchTimeoutMillis());
+                    opError = operation.getError();
+                } catch (OperationException e) {
+                    opError = e.getError();
+                }
             }
             if (opError != null) {
                 LOGGER.info(String.format(
                         "Launch failed while waiting for operation %s to complete. Operation error was %s. Terminating instance.",
                         insertOperationId, opError.getErrors().get(0).getMessage()));
+                if (isCapacityError(opError)) {
+                    var config = cloud.getInstanceConfigurationByDescription(node.getNodeDescription());
+                    if (config != null && config.hasFallbackZones()) {
+                        config.markExhausted(ClientUtil.nameFromSelfLink(zone));
+                    }
+                }
                 terminateNode(computer, listener);
                 return;
             }
@@ -309,6 +330,27 @@ public abstract class ComputeEngineComputerLauncher extends ComputerLauncher {
             throws IOException, InterruptedException {
         logInfo(computer, listener, "Verifying: " + checkCommand);
         return conn.exec(checkCommand, logger) == 0;
+    }
+
+    /**
+     * Used by integration tests to drive the zone-fallback path.
+     */
+    private Operation.Error simulateCapacityExhaustion() {
+        simulateCapacityExhaustionForFirstNAttempts--;
+        LOGGER.info(String.format(
+                "Simulating ZONE_RESOURCE_POOL_EXHAUSTED for operation %s in zone %s", insertOperationId, zone));
+        return new Operation.Error()
+                .setErrors(List.of(new Operation.Error.Errors().setCode("ZONE_RESOURCE_POOL_EXHAUSTED")));
+    }
+
+    private static boolean isCapacityError(Operation.Error err) {
+        if (err == null || err.getErrors() == null) {
+            return false;
+        }
+        return err.getErrors().stream()
+                .map(Operation.Error.Errors::getCode)
+                .anyMatch(code -> "ZONE_RESOURCE_POOL_EXHAUSTED".equals(code)
+                        || "ZONE_RESOURCE_POOL_EXHAUSTED_WITH_DETAILS".equals(code));
     }
 
     protected abstract Optional<Connection> setupConnection(

@@ -38,7 +38,6 @@ import com.google.api.services.compute.model.Tags;
 import com.google.api.services.compute.model.Zone;
 import com.google.cloud.graphite.platforms.plugin.client.ClientFactory;
 import com.google.cloud.graphite.platforms.plugin.client.ComputeClient;
-import com.google.cloud.graphite.platforms.plugin.client.ComputeClient.OperationException;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Strings;
 import com.google.jenkins.plugins.computeengine.client.ClientUtil;
@@ -49,7 +48,6 @@ import com.google.jenkins.plugins.computeengine.ssh.GoogleKeyCredential;
 import com.google.jenkins.plugins.computeengine.ssh.GoogleKeyPair;
 import com.google.jenkins.plugins.computeengine.ssh.GooglePrivateKey;
 import com.google.jenkins.plugins.computeengine.util.DiskMappingParser;
-import edu.umd.cs.findbugs.annotations.CheckForNull;
 import edu.umd.cs.findbugs.annotations.Nullable;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import hudson.Extension;
@@ -69,6 +67,8 @@ import hudson.util.FormValidation;
 import hudson.util.ListBoxModel;
 import java.io.IOException;
 import java.security.GeneralSecurityException;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -77,6 +77,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Level;
 import jenkins.model.Jenkins;
 import jenkins.util.SystemProperties;
@@ -191,10 +192,11 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
     @Nullable
     private String fallbackZones;
 
-    /** Number of leading zone attempts to simulate as ZONE_RESOURCE_POOL_EXHAUSTED. Set by integration tests only. */
-    @VisibleForTesting
-    @SuppressFBWarnings(value = "MS_SHOULD_BE_FINAL", justification = "intentionally mutable for integration test")
-    public static int simulateCapacityExhaustionForFirstNAttempts = 0;
+    static final Duration ZONE_EXHAUSTION_COOLDOWN_DURATION = SystemProperties.getDuration(
+            InstanceConfiguration.class.getName() + ".zoneExhaustionCooldownDuration", Duration.ofMinutes(10));
+
+    /** Records the instant each zone was last exhausted. Transient — lost on restart, which is acceptable. */
+    private final transient ConcurrentHashMap<String, Instant> exhaustedAt = new ConcurrentHashMap<>();
 
     // Optional not possible due to serialization requirement
     @Nullable
@@ -217,6 +219,7 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
     private String remoteFs;
     private String javaExecPath;
     private Integer sshPort;
+    private GoogleKeyCredential sshKeyCredential;
     private Map<String, String> googleLabels;
     private Integer numExecutors;
     private boolean terminateIdleDuringShutdown;
@@ -394,12 +397,30 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
 
     public ComputeEngineInstance provision() throws IOException {
         try {
-            var iwc = instanceWithCredential(uniqueName());
+            Instance instance = instance();
+            if (hasFallbackZones()) {
+                var zones = candidateZones();
+                var primaryZone = zones.get(0);
+                var selectedZone =
+                        zones.stream().filter(z -> !isExhausted(z)).findFirst().orElse(null);
+                if (selectedZone == null) {
+                    // Every zone is currently marked exhausted; fall back to the primary even if it fails
+                    log.info("All zones " + zones + " are exhausted for [" + description
+                            + "]; retrying in primary zone [" + primaryZone + "]");
+                    selectedZone = primaryZone;
+                } else if (!selectedZone.equals(primaryZone)) {
+                    log.info("Primary zone [" + primaryZone + "] is exhausted for [" + description
+                            + "]; provisioning in fallback zone [" + selectedZone + "]");
+                }
+                if (!selectedZone.equals(primaryZone)) {
+                    rezoneInstance(instance, selectedZone);
+                }
+            }
             // TODO: JENKINS-55285
-            Operation operation = cloud.getClient()
-                    .insertInstance(cloud.getProjectId(), Optional.ofNullable(template), iwc.instance());
+            Operation operation =
+                    cloud.getClient().insertInstance(cloud.getProjectId(), Optional.ofNullable(template), instance);
             log.info("Sent insert request for instance configuration [" + description + "]");
-            return buildNode(iwc.instance(), operation, iwc.credential());
+            return buildNode(instance, operation);
         } catch (Descriptor.FormException fe) {
             log.log(Level.WARNING, "Error provisioning instance: " + fe.getMessage(), fe);
             return null;
@@ -411,19 +432,44 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
     }
 
     /**
-     * Returns the ordered zone list: primary zone first, then each fallback zone.
+     * Returns the ordered zone list to attempt: the primary zone first, then each configured fallback zone.
      * Only meaningful when {@link #hasFallbackZones()} is true.
      */
-    List<String> fallbackZoneNames() {
+    List<String> candidateZones() {
         var zones = new ArrayList<String>();
         zones.add(nameFromSelfLink(zone));
-        for (var z : fallbackZones.split("[,\\s]+")) {
-            if (!z.isBlank()) zones.add(z.trim());
+        if (fallbackZones != null) {
+            for (var z : fallbackZones.split("[,\\s]+")) {
+                if (!z.isBlank()) zones.add(z.trim());
+            }
         }
         return zones;
     }
 
-    ComputeEngineInstance buildNode(Instance instance, Operation operation, GoogleKeyCredential credential)
+    void markExhausted(String zone) {
+        exhaustedAt.put(zone, Instant.now());
+        log.info(String.format(
+                "Marking zone [%s] exhausted for machine type [%s] in config [%s] until %s; "
+                        + "will try the next fallback zone on the next provisioning cycle",
+                zone,
+                nameFromSelfLink(machineType),
+                description,
+                Instant.now().plus(ZONE_EXHAUSTION_COOLDOWN_DURATION)));
+    }
+
+    boolean isExhausted(String zone) {
+        var at = exhaustedAt.get(zone);
+        if (at == null) {
+            return false;
+        }
+        if (Instant.now().isBefore(at.plus(ZONE_EXHAUSTION_COOLDOWN_DURATION))) {
+            return true;
+        }
+        exhaustedAt.remove(zone, at);
+        return false;
+    }
+
+    ComputeEngineInstance buildNode(Instance instance, Operation operation)
             throws Descriptor.FormException, IOException {
         var targetRemoteFs = this.remoteFs;
         ComputeEngineComputerLauncher launcher;
@@ -460,27 +506,10 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
                 .launchTimeout(getLaunchTimeoutMillis())
                 .sshPort(sshPort)
                 .javaExecPath(javaExecPath)
-                .sshKeyCredential(credential)
+                .sshKeyCredential(sshKeyCredential)
                 .waitForStartupScript(notNullOrEmpty(startupScript) && notNullOrEmpty(resolveExitReporter()))
                 .build();
     }
-
-    @CheckForNull
-    static String checkCapacityError(OperationException oe) {
-        var err = oe.getError();
-        if (err == null || err.getErrors() == null || err.getErrors().isEmpty()) {
-            return null;
-        }
-        return err.getErrors().stream()
-                .map(Operation.Error.Errors::getCode)
-                .filter(code -> "ZONE_RESOURCE_POOL_EXHAUSTED".equals(code)
-                        || "ZONE_RESOURCE_POOL_EXHAUSTED_WITH_DETAILS".equals(code))
-                .findFirst()
-                .orElse(null);
-    }
-
-    /** Pairs a built {@link Instance} with its SSH credential, keeping both local to the call. */
-    record InstanceWithCredential(Instance instance, GoogleKeyCredential credential) {}
 
     /** Initializes transient properties */
     protected Object readResolve() {
@@ -500,25 +529,20 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
     }
 
     public Instance instance() throws IOException {
-        return instanceWithCredential(uniqueName()).instance;
-    }
-
-    InstanceWithCredential instanceWithCredential(String name) throws IOException {
         Instance instance = new Instance();
-        instance.setName(name);
+        instance.setName(uniqueName());
         instance.setDescription(description);
         instance.setZone(nameFromSelfLink(zone));
         instance.setMetadata(newMetadata());
 
-        GoogleKeyCredential localCredential = null;
         if (windowsConfiguration == null) {
             if (sshConfiguration != null) {
                 log.info("User selected to use a custom ssh private key");
-                localCredential =
+                sshKeyCredential =
                         configureSSHPrivateKey(sshConfiguration.getCustomPrivateKeyCredentialsId(), runAsUser);
             } else {
                 log.info("User selected to use an autogenerated ssh key pair");
-                localCredential = configureSSHKeyPair(instance, runAsUser);
+                sshKeyCredential = configureSSHKeyPair(instance, runAsUser);
             }
         }
 
@@ -580,7 +604,7 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
             }
         }
 
-        return new InstanceWithCredential(instance, localCredential);
+        return instance;
     }
 
     String uniqueName() {

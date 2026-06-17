@@ -9,7 +9,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
 
 import com.google.cloud.graphite.platforms.plugin.client.ComputeClient;
-import com.google.jenkins.plugins.computeengine.InstanceConfiguration;
+import com.google.jenkins.plugins.computeengine.ComputeEngineComputerLauncher;
 import com.google.jenkins.plugins.computeengine.client.ClientUtil;
 import hudson.model.Node;
 import io.jenkins.plugins.casc.misc.ConfiguredWithCode;
@@ -55,7 +55,7 @@ public class ComputeEngineCloudFallbackZoneIT {
     @Before
     public void init() throws Exception {
         log.info("init");
-        InstanceConfiguration.simulateCapacityExhaustionForFirstNAttempts = 2;
+        ComputeEngineComputerLauncher.simulateCapacityExhaustionForFirstNAttempts = 2;
         initCredentials(j);
         client = ClientUtil.getClientFactory(j.jenkins, PROJECT_ID).computeClient();
     }
@@ -63,7 +63,7 @@ public class ComputeEngineCloudFallbackZoneIT {
     @After
     public void teardown() throws IOException {
         log.info("teardown");
-        InstanceConfiguration.simulateCapacityExhaustionForFirstNAttempts = 0;
+        ComputeEngineComputerLauncher.simulateCapacityExhaustionForFirstNAttempts = 0;
         if (client != null) {
             for (Node node : j.jenkins.getNodes()) {
                 for (var zone : new String[] {PRIMARY_ZONE, FIRST_FALLBACK_ZONE, SECOND_FALLBACK_ZONE}) {
