@@ -621,7 +621,7 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
         return instance;
     }
 
-    String uniqueName() {
+    private String uniqueName() {
         char[][] pairs = {{'a', 'z'}, {'0', '9'}};
         RandomStringGenerator generator =
                 new RandomStringGenerator.Builder().withinRange(pairs).build();
