@@ -60,6 +60,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
@@ -370,8 +371,7 @@ public class ComputeEngineCloud extends AbstractCloudImpl {
             try {
                 ComputeEngineInstance node = waitAndRetryFallback(config, name, zones);
                 Jenkins.get().addNode(node);
-                // Keep this Future pending until the agent connects, same as the single-zone path.
-                getPlannedNodeFuture(config, node).get();
+                waitForConnect(config, node);
             } catch (IOException e) {
                 log.log(Level.WARNING, "Fallback provisioning failed for " + name, e);
             } catch (Exception e) {
@@ -384,29 +384,33 @@ public class ComputeEngineCloud extends AbstractCloudImpl {
 
     private Future<Node> getPlannedNodeFuture(InstanceConfiguration config, ComputeEngineInstance node) {
         return Computer.threadPoolForRemoting.submit(() -> {
-            long startTime = System.currentTimeMillis();
-            log.log(
-                    Level.INFO,
-                    String.format(
-                            "Waiting %dms for node %s to connect",
-                            config.getLaunchTimeoutMillis(), node.getNodeName()));
             try {
-                Computer c = node.toComputer();
-                if (c != null) {
-                    c.connect(false).get(config.getLaunchTimeoutMillis(), TimeUnit.MILLISECONDS);
-                    log.log(
-                            Level.INFO,
-                            String.format(
-                                    "%dms elapsed waiting for node %s to connect",
-                                    System.currentTimeMillis() - startTime, node.getNodeName()));
-                } else {
-                    log.log(Level.WARNING, String.format("No computer for node %s found", node.getNodeName()));
-                }
+                waitForConnect(config, node);
             } catch (TimeoutException e) {
                 log.log(Level.WARNING, String.format("Timeout waiting for node %s to connect", node.getNodeName()), e);
             }
             return null;
         });
+    }
+
+    private void waitForConnect(InstanceConfiguration config, ComputeEngineInstance node)
+            throws InterruptedException, ExecutionException, TimeoutException {
+        long startTime = System.currentTimeMillis();
+        log.log(
+                Level.INFO,
+                String.format(
+                        "Waiting %dms for node %s to connect", config.getLaunchTimeoutMillis(), node.getNodeName()));
+        Computer c = node.toComputer();
+        if (c != null) {
+            c.connect(false).get(config.getLaunchTimeoutMillis(), TimeUnit.MILLISECONDS);
+            log.log(
+                    Level.INFO,
+                    String.format(
+                            "%dms elapsed waiting for node %s to connect",
+                            System.currentTimeMillis() - startTime, node.getNodeName()));
+        } else {
+            log.log(Level.WARNING, String.format("No computer for node %s found", node.getNodeName()));
+        }
     }
 
     /**
