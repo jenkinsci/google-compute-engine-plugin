@@ -370,8 +370,12 @@ public class ComputeEngineCloud extends AbstractCloudImpl {
             try {
                 ComputeEngineInstance node = waitAndRetryFallback(config, name, zones);
                 Jenkins.get().addNode(node);
+                // Keep this Future pending until the agent connects, same as the single-zone path.
+                getPlannedNodeFuture(config, node).get();
             } catch (IOException e) {
                 log.log(Level.WARNING, "Fallback provisioning failed for " + name, e);
+            } catch (Exception e) {
+                log.log(Level.WARNING, "Fallback node connect wait failed for " + name, e);
             }
             return null;
         });
@@ -439,6 +443,14 @@ public class ComputeEngineCloud extends AbstractCloudImpl {
                 // treat it as a per-zone timeout and try the next zone.
                 log.warning("Zone " + zoneName + " timed out waiting for operation, trying next");
                 lastError = new IOException("Timed out in zone " + zoneName, ie);
+                try {
+                    getClient().terminateInstanceAsync(getProjectId(), zoneName, name);
+                } catch (IOException cleanupEx) {
+                    log.log(
+                            Level.WARNING,
+                            "Failed to clean up timed-out instance [" + name + "] in zone " + zoneName,
+                            cleanupEx);
+                }
             } catch (OperationException oe) {
                 String code = InstanceConfiguration.checkCapacityError(oe);
                 if (code != null) {

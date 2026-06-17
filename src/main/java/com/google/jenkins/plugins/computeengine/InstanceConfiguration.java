@@ -804,7 +804,7 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
     }
 
     void rezoneInstance(Instance instance, String targetZone) {
-        var projectId = cloud != null ? cloud.getProjectId() : null;
+        var projectId = cloud != null ? nameFromSelfLink(cloud.getProjectId()) : null;
         instance.setZone(targetZone);
         // machineType is a stripped self-link (projects/p/zones/z/machineTypes/…);
         // replace the zone segment so it matches the target zone
