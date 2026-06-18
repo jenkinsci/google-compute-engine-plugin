@@ -1086,7 +1086,7 @@ A complete working CasC example is available at link:src/test/resources/com/goog
 [[fallback-configurations]]
 === Fallback across instance configurations
 
-A configuration whose zones are all in cooldown steps aside for that cycle, letting another instance configuration that matches the same label provision instead. This applies even if neither configuration sets `fallbackZones` — defining a second configuration with the same label is enough to get fallback across, for example, different machine types or zones.
+A configuration whose zones are all in cooldown steps aside for that cycle, letting another instance configuration that matches the same label provision instead. This applies even if neither configuration sets `fallbackZones` — defining a second configuration with the same label is enough to get fallback across, for example, different machine types or region.
 
 A complete working CasC example is available at link:src/test/resources/com/google/jenkins/plugins/computeengine/integration/fallback-config-casc.yml[fallback-config-casc.yml].
 
