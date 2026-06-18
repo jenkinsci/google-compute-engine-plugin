@@ -662,4 +662,14 @@ public class InstanceConfigurationTest {
         // null input — returned as null
         assertNull(InstanceConfiguration.rezoneSelfLink(null, "us-east1-d"));
     }
+
+    @Test
+    public void testCandidateZonesNormalizesToShortNames() {
+        var config = instanceConfigurationBuilder()
+                .zone("https://www.googleapis.com/compute/v1/projects/my-project/zones/us-west1-a")
+                .fallbackZones("us-west1-b, https://www.googleapis.com/compute/v1/projects/my-project/zones/us-west1-c")
+                .build();
+
+        assertEquals(List.of("us-west1-a", "us-west1-b", "us-west1-c"), config.candidateZones());
+    }
 }

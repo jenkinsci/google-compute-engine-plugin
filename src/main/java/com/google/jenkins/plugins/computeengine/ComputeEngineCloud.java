@@ -264,9 +264,8 @@ public class ComputeEngineCloud extends AbstractCloudImpl {
                             + label
                             + "'");
             int availableCapacity = availableNodeCapacity();
-            // Configs still worth trying this round. A config that reports exhaustion (all its zones in
-            // cooldown) is dropped so we move on to the next matching config; when none remain we stop,
-            // return empty list, so that NodeProvisioner tries another matching cloud if any.
+            // An exhausted config (all zones in cooldown) is dropped so we try the next matching config;
+            // when none remain we return empty list, NodeProvisioner checks another cloud.
             List<InstanceConfiguration> candidates = new ArrayList<>(configs);
             while (excessWorkload > 0 && !candidates.isEmpty()) {
                 if (availableCapacity <= 0) {

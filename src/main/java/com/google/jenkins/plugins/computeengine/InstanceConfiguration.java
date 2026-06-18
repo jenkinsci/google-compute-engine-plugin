@@ -416,8 +416,6 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
                             + ") lapses. Ideas: add more fallback zones, or define another GCP cloud (e.g. a different "
                             + "project or region) sharing the same label so Jenkins can provision there instead");
                 }
-                // if any other instance-config exists, they will be tried;
-                // if no instance-config can, NodeProvisioner will try other matching cloud.
                 return null;
             }
             if (!selectedZone.equals(primaryZone)) {
@@ -445,7 +443,8 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
         zones.add(nameFromSelfLink(zone));
         if (fallbackZones != null) {
             for (var z : fallbackZones.split("[,\\s]+")) {
-                if (!z.isBlank()) zones.add(z.trim());
+                // normalize so tokens match the short-name keys used by markExhausted() and rezoneInstance()
+                if (!z.isBlank()) zones.add(nameFromSelfLink(z.trim()));
             }
         }
         return zones;
@@ -1149,8 +1148,12 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
             }
             for (var z : value.split("[,\\s]+")) {
                 if (z.isBlank()) continue;
-                if (!z.trim().startsWith(regionName + "-")) {
-                    return FormValidation.error("Zone [" + z.trim() + "] is not in region [" + regionName + "]");
+                var zoneName = nameFromSelfLink(z.trim());
+                if (!zoneName.startsWith(regionName + "-")) {
+                    return FormValidation.warning("Zone [" + zoneName + "] is not in region [" + regionName
+                            + "]. Fallback zones are recommended to be in the same region; it may or may not provision"
+                            + " depending on the subnetwork configuration. To reliably provision in a different"
+                            + " region, create a separate instance configuration instead.");
                 }
             }
             return FormValidation.ok();

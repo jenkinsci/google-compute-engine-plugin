@@ -341,7 +341,7 @@ Instance configurations define what kind of VM to launch for a given set of Jenk
 
 | *Fallback Zones*
 | `fallbackZones`
-| Comma- or space-separated zones to try in order when the primary zone returns a capacity error. All zones must be in the same region. Optional.
+| Optional. Comma- or space-separated zones to try, in order, when the primary zone returns a capacity error. Zones are normally in the primary zone's region (see <<fallback-zones>>).
 |===
 
 [[machine-configuration-advanced]]
@@ -962,9 +962,9 @@ configurations:
 [[fallback-zones]]
 === Fallback Zones
 
-When a GCE zone has no available capacity (`ZONE_RESOURCE_POOL_EXHAUSTED`), the plugin can automatically retry in other zones within the same region.
+When a GCE zone has no available capacity (`ZONE_RESOURCE_POOL_EXHAUSTED`), the plugin can automatically provision in another zone instead.
 
-Set *Fallback Zones* (`fallbackZones`) to a comma- or space-separated list of zones to try in order after the primary zone fails. All zones must be in the same region as the primary zone (subnets are regional; cross-region fallback is rejected at provisioning time).
+Set *Fallback Zones* (`fallbackZones`) to a comma- or space-separated list of zones to try, in order, when the primary zone is exhausted. Zones are recommended to be in the same region as the primary zone, since a configuration's subnetwork is region-scoped. A zone in a different region may or may not provision depending on the subnetwork configuration; to reliably provision in a different region, create a separate instance configuration instead.
 
 [source,yaml]
 ----
@@ -976,7 +976,7 @@ configurations:
     # ... remaining fields same as basic example
 ----
 
-The primary zone is always tried first. If it is exhausted, each fallback zone is tried in the listed order. Any other error (e.g. quota, IAM, invalid config) aborts immediately without trying the next zone.
+The primary zone is always tried first. When a zone returns a capacity error, it is skipped for a short cooldown (2 minutes by default) and the next provisioning cycle tries the next zone in the list. Once every zone is in cooldown, the configuration provisions nothing for that cycle, letting another configuration or cloud serve the label. Other errors (for example, quota, IAM, or an invalid configuration) do not trigger fallback.
 
 [[secondary-disks]]
 === Secondary Disks
