@@ -200,10 +200,15 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
     static final Duration ZONE_EXHAUSTION_COOLDOWN_DURATION = SystemProperties.getDuration(
             InstanceConfiguration.class.getName() + ".zoneExhaustionCooldownDuration", Duration.ofMinutes(2));
 
-    /** Records the instant each zone was last exhausted. Transient — lost on restart, which is acceptable. */
-    private final transient ConcurrentHashMap<String, Instant> exhaustedAt = new ConcurrentHashMap<>();
+    /**
+     * Records the instant each zone was last exhausted. Transient — lost on restart, which is acceptable.
+     * Reinitialized in {@link #readResolve()} since field initializers don't run on the deserialization path.
+     */
+    @Getter(AccessLevel.NONE)
+    private transient ConcurrentHashMap<String, Instant> exhaustedAt = new ConcurrentHashMap<>();
 
-    private final transient AtomicReference<Instant> allZonesExhaustedLoggedAt = new AtomicReference<>();
+    @Getter(AccessLevel.NONE)
+    private transient AtomicReference<Instant> allZonesExhaustedLoggedAt = new AtomicReference<>();
 
     // Optional not possible due to serialization requirement
     @Nullable
@@ -532,6 +537,12 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
         }
         if (sshPort == null) {
             sshPort = DEFAULT_SSH_PORT;
+        }
+        if (exhaustedAt == null) {
+            exhaustedAt = new ConcurrentHashMap<>();
+        }
+        if (allZonesExhaustedLoggedAt == null) {
+            allZonesExhaustedLoggedAt = new AtomicReference<>();
         }
         return this;
     }

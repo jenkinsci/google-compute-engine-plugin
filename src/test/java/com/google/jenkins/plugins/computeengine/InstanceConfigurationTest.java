@@ -52,6 +52,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import jenkins.model.Jenkins;
 import org.htmlunit.html.HtmlPage;
 import org.junit.Before;
 import org.junit.Rule;
@@ -671,5 +672,17 @@ public class InstanceConfigurationTest {
                 .build();
 
         assertEquals(List.of("us-west1-a", "us-west1-b", "us-west1-c"), config.candidateZones());
+    }
+
+    @Test
+    public void testTransientZoneStateSurvivesDeserialization() {
+        var config = instanceConfigurationBuilder().fallbackZones("us-west1-b").build();
+
+        var xml = Jenkins.XSTREAM2.toXML(config);
+        var restored = (InstanceConfiguration) Jenkins.XSTREAM2.fromXML(xml);
+
+        assertFalse(restored.isExhausted(ZONE));
+        restored.markExhausted(ZONE);
+        assertTrue(restored.isExhausted(ZONE));
     }
 }
