@@ -52,13 +52,13 @@ import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-import jenkins.model.Jenkins;
 import org.htmlunit.html.HtmlPage;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.jvnet.hudson.test.JenkinsRule;
+import org.jvnet.hudson.test.recipes.LocalData;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.junit.MockitoJUnitRunner;
@@ -675,14 +675,13 @@ public class InstanceConfigurationTest {
     }
 
     @Test
-    public void testTransientZoneStateSurvivesDeserialization() {
-        var config = instanceConfigurationBuilder().fallbackZones("us-west1-b").build();
+    @LocalData
+    public void testZoneExhaustionStateTransientFieldInitializedAfterLoad() {
+        var cloud = (ComputeEngineCloud) r.jenkins.clouds.getByName("gce-unit-tests");
+        var config = cloud.getConfigurations().get(0);
 
-        var xml = Jenkins.XSTREAM2.toXML(config);
-        var restored = (InstanceConfiguration) Jenkins.XSTREAM2.fromXML(xml);
-
-        assertFalse(restored.isExhausted(ZONE));
-        restored.markExhausted(ZONE);
-        assertTrue(restored.isExhausted(ZONE));
+        assertFalse(config.isExhausted(ZONE));
+        config.markExhausted(ZONE);
+        assertTrue(config.isExhausted(ZONE));
     }
 }
