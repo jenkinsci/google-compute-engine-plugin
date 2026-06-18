@@ -959,25 +959,6 @@ configurations:
     # ... remaining fields same as basic example
 ----
 
-[[fallback-zones]]
-=== Fallback Zones
-
-When a GCE zone has no available capacity (`ZONE_RESOURCE_POOL_EXHAUSTED`), the plugin can automatically provision in another zone instead.
-
-Set *Fallback Zones* (`fallbackZones`) to a comma- or space-separated list of zones to try, in order, when the primary zone is exhausted. Zones are recommended to be in the same region as the primary zone, since a configuration's subnetwork is region-scoped. A zone in a different region may or may not provision depending on the subnetwork configuration; to reliably provision in a different region, create a separate instance configuration instead.
-
-[source,yaml]
-----
-configurations:
-  - namePrefix: jenkins-agent
-    region: us-central1
-    zone: us-central1-a
-    fallbackZones: us-central1-b, us-central1-c
-    # ... remaining fields same as basic example
-----
-
-The primary zone is always tried first. When a zone returns a capacity error, it is skipped for a short cooldown (2 minutes by default) and the next provisioning cycle tries the next zone in the list. Once every zone is in cooldown, the configuration provisions nothing for that cycle, letting another configuration or cloud serve the label. Other errors (for example, quota, IAM, or an invalid configuration) do not trigger fallback.
-
 [[secondary-disks]]
 === Secondary Disks
 
@@ -1075,6 +1056,60 @@ configurations:
         subnetworkShortName: jenkins-subnet
     # ... remaining fields same as basic example
 ----
+
+[[capacity-fallback]]
+== Capacity Fallback
+
+When a GCE zone has no available capacity (`ZONE_RESOURCE_POOL_EXHAUSTED`), the plugin can provision elsewhere instead of failing the build. This works at three levels, which combine automatically.
+
+Common to all levels: a capacity error puts that zone into a short cooldown (2 minutes by default, configurable via the `com.google.jenkins.plugins.computeengine.InstanceConfiguration.zoneExhaustionCooldownDuration` system property) during which it is skipped. Other errors (for example, quota, IAM, or an invalid configuration) do not trigger fallback. Jenkins re-attempts provisioning on its next cycle, so fallback progresses one step per cycle rather than all at once.
+
+[[fallback-zones]]
+=== Fallback zones within one configuration
+
+Set *Fallback Zones* (`fallbackZones`) to a comma- or space-separated list of zones to try when this configuration's primary zone is exhausted.
+
+[source,yaml]
+----
+configurations:
+  - namePrefix: jenkins-agent
+    region: us-central1
+    zone: us-central1-a
+    fallbackZones: us-central1-b, us-central1-c
+    # ... remaining fields same as basic example
+----
+
+The primary zone is always tried first, then each fallback zone in the order listed. Zones are recommended to be in the same region as the primary zone, since a configuration's subnetwork is region-scoped. A zone in a different region may or may not provision depending on the subnetwork configuration; to reliably provision in a different region, use a separate instance configuration (below).
+
+[[fallback-configurations]]
+=== Fallback across instance configurations
+
+A configuration whose zones are all in cooldown steps aside for that cycle, letting another instance configuration that matches the same label provision instead. This applies even if neither configuration sets `fallbackZones` — defining a second configuration with the same label is enough to get fallback across, for example, different machine types or zones.
+
+[source,yaml]
+----
+configurations:
+  - namePrefix: jenkins-agent-a
+    labelString: linux-agent
+    region: us-central1
+    zone: us-central1-a
+    # ... machine type / disk / etc.
+  - namePrefix: jenkins-agent-b
+    labelString: linux-agent
+    region: us-west1
+    zone: us-west1-a
+    # ... possibly a different machine type
+----
+
+[[fallback-clouds]]
+=== Fallback across clouds
+
+Define a second GCE cloud — for example one pointing at a different GCP project — with an instance configuration that shares the same label. When every matching configuration in a cloud is in cooldown, that cloud provisions nothing for the cycle and Jenkins offers the label to another cloud.
+
+[NOTE]
+====
+Only the order of fallback zones within a single configuration is guaranteed. The order in which instance configurations and clouds are selected for a label resembles round-robin but is not guaranteed — due to concurrent provisioning calls we opt not to enforce strict ordering.
+====
 
 [[troubleshooting]]
 == Troubleshooting
