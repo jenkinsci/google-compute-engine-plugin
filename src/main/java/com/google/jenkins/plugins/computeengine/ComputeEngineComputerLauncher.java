@@ -45,8 +45,11 @@ import java.net.Proxy;
 import java.net.SocketTimeoutException;
 import java.time.Duration;
 import java.util.Base64;
+import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.LogRecord;
@@ -66,15 +69,15 @@ public abstract class ComputeEngineComputerLauncher extends ComputerLauncher {
     private static final int SSH_SLEEP_MILLIS = 5000;
 
     /**
-     * Number of leading launch attempts to fail with a synthetic {@code ZONE_RESOURCE_POOL_EXHAUSTED}
-     * error instead of waiting on the real insert operation. Set by integration tests only to exercise
-     * the zone-fallback path end to end.
+     * Zones that should fail with a synthetic {@code ZONE_RESOURCE_POOL_EXHAUSTED} error instead of
+     * waiting on the real insert operation. Set by integration tests only to exercise the fallback path.
      */
-    private static int simulateCapacityExhaustionForFirstNAttempts = 0;
+    private static final Set<String> simulateExhaustedZones = new HashSet<>();
 
     @VisibleForTesting
-    public static void setSimulateCapacityExhaustionForFirstNAttempts(int attempts) {
-        simulateCapacityExhaustionForFirstNAttempts = attempts;
+    public static void setSimulateExhaustedZones(String... zones) {
+        simulateExhaustedZones.clear();
+        Collections.addAll(simulateExhaustedZones, zones);
     }
 
     private final String insertOperationId;
@@ -183,7 +186,7 @@ public abstract class ComputeEngineComputerLauncher extends ComputerLauncher {
             LOGGER.info(String.format(
                     "Launch will wait %d for operation %s to complete...", node.getLaunchTimeout(), insertOperationId));
 
-            if (simulateCapacityExhaustionForFirstNAttempts > 0) {
+            if (simulateExhaustedZones.contains(ClientUtil.nameFromSelfLink(zone))) {
                 opError = simulateCapacityExhaustion();
             } else {
                 try {
@@ -338,7 +341,6 @@ public abstract class ComputeEngineComputerLauncher extends ComputerLauncher {
      * Used by integration tests to drive the zone-fallback path.
      */
     private Operation.Error simulateCapacityExhaustion() {
-        simulateCapacityExhaustionForFirstNAttempts--;
         LOGGER.info(String.format(
                 "Simulating ZONE_RESOURCE_POOL_EXHAUSTED for operation %s in zone %s", insertOperationId, zone));
         return new Operation.Error()

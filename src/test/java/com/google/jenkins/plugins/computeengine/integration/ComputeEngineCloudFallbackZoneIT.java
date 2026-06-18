@@ -20,6 +20,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition;
 import org.jenkinsci.plugins.workflow.job.WorkflowJob;
+import org.jenkinsci.plugins.workflow.job.WorkflowRun;
 import org.jenkinsci.plugins.workflow.test.steps.SemaphoreStep;
 import org.junit.After;
 import org.junit.Before;
@@ -34,6 +35,8 @@ public class ComputeEngineCloudFallbackZoneIT {
     private static final String PRIMARY_ZONE = "us-east1-b";
     private static final String FIRST_FALLBACK_ZONE = "us-east1-c";
     private static final String SECOND_FALLBACK_ZONE = "us-east1-d";
+    private static final String FALLBACK_CONFIG_ZONE = "us-west1-a";
+    private static final String FALLBACK_CLOUD_ZONE = "us-central1-a";
 
     private static final Logger log = Logger.getLogger(ComputeEngineCloudFallbackZoneIT.class.getName());
 
@@ -55,7 +58,6 @@ public class ComputeEngineCloudFallbackZoneIT {
     @Before
     public void init() throws Exception {
         log.info("init");
-        ComputeEngineComputerLauncher.setSimulateCapacityExhaustionForFirstNAttempts(2);
         initCredentials(j);
         client = ClientUtil.getClientFactory(j.jenkins, PROJECT_ID).computeClient();
     }
@@ -63,10 +65,12 @@ public class ComputeEngineCloudFallbackZoneIT {
     @After
     public void teardown() throws IOException {
         log.info("teardown");
-        ComputeEngineComputerLauncher.setSimulateCapacityExhaustionForFirstNAttempts(0);
+        ComputeEngineComputerLauncher.setSimulateExhaustedZones();
         if (client != null) {
             for (Node node : j.jenkins.getNodes()) {
-                for (var zone : new String[] {PRIMARY_ZONE, FIRST_FALLBACK_ZONE, SECOND_FALLBACK_ZONE}) {
+                for (var zone : new String[] {
+                    PRIMARY_ZONE, FIRST_FALLBACK_ZONE, SECOND_FALLBACK_ZONE, FALLBACK_CONFIG_ZONE, FALLBACK_CLOUD_ZONE
+                }) {
                     try {
                         client.terminateInstanceAsync(PROJECT_ID, zone, node.getNodeName());
                     } catch (Exception ignored) {
@@ -79,12 +83,54 @@ public class ComputeEngineCloudFallbackZoneIT {
     @Test
     @ConfiguredWithCode("fallback-zone-casc.yml")
     public void testProvisioningFallsBackToThirdZoneOnCapacityExhaustion() throws Exception {
-        var p = j.createProject(WorkflowJob.class, "fallback-zone-test");
-        p.setDefinition(new CpsFlowDefinition("node('" + LABEL + "') { semaphore 'fallbackZone' }", true));
+        ComputeEngineComputerLauncher.setSimulateExhaustedZones(PRIMARY_ZONE, FIRST_FALLBACK_ZONE);
+        var build = startBuildAndWaitForAgent();
+        var workerNodeName = getWorkerNodeName(build);
+        var instance = client.getInstance(PROJECT_ID, SECOND_FALLBACK_ZONE, workerNodeName);
+        assertThat(
+                "instance should have landed in the second fallback zone after two exhausted zones",
+                nameFromSelfLink(instance.getZone()),
+                is(SECOND_FALLBACK_ZONE));
+        completeBuild(build);
+    }
 
+    @Test
+    @ConfiguredWithCode("fallback-config-casc.yml")
+    public void testProvisioningFallsBackToSecondInstanceConfigOnCapacityExhaustion() throws Exception {
+        ComputeEngineComputerLauncher.setSimulateExhaustedZones(PRIMARY_ZONE);
+        var build = startBuildAndWaitForAgent();
+        var workerNodeName = getWorkerNodeName(build);
+        var instance = client.getInstance(PROJECT_ID, FALLBACK_CONFIG_ZONE, workerNodeName);
+        assertThat(
+                "instance should have landed in the second instance configuration's zone",
+                nameFromSelfLink(instance.getZone()),
+                is(FALLBACK_CONFIG_ZONE));
+        completeBuild(build);
+    }
+
+    @Test
+    @ConfiguredWithCode("fallback-cloud-casc.yml")
+    public void testProvisioningFallsBackToSecondCloudOnCapacityExhaustion() throws Exception {
+        ComputeEngineComputerLauncher.setSimulateExhaustedZones(PRIMARY_ZONE);
+        var build = startBuildAndWaitForAgent();
+        var workerNodeName = getWorkerNodeName(build);
+        var instance = client.getInstance(PROJECT_ID, FALLBACK_CLOUD_ZONE, workerNodeName);
+        assertThat(
+                "instance should have landed in the fallback cloud's zone",
+                nameFromSelfLink(instance.getZone()),
+                is(FALLBACK_CLOUD_ZONE));
+        completeBuild(build);
+    }
+
+    private WorkflowRun startBuildAndWaitForAgent() throws Exception {
+        var p = j.createProject(WorkflowJob.class, "fallback-test");
+        p.setDefinition(new CpsFlowDefinition("node('" + LABEL + "') { semaphore 'fallback' }", true));
         var build = p.scheduleBuild2(0).waitForStart();
-        SemaphoreStep.waitForStart("fallbackZone/1", build);
+        SemaphoreStep.waitForStart("fallback/1", build);
+        return build;
+    }
 
+    private String getWorkerNodeName(WorkflowRun build) throws Exception {
         var buildLog = j.getLog(build);
         var workerNodeName = j.jenkins.getNodes().stream()
                 .map(Node::getNodeName)
@@ -92,14 +138,11 @@ public class ComputeEngineCloudFallbackZoneIT {
                 .findFirst()
                 .orElseThrow(() -> new AssertionError("Build log does not contain 'Running on <agent>'"));
         log.info("Agent provisioned: " + workerNodeName);
+        return workerNodeName;
+    }
 
-        var instance = client.getInstance(PROJECT_ID, SECOND_FALLBACK_ZONE, workerNodeName);
-        assertThat(
-                "instance should have landed in the second fallback zone after two exhausted zones",
-                nameFromSelfLink(instance.getZone()),
-                is(SECOND_FALLBACK_ZONE));
-
-        SemaphoreStep.success("fallbackZone/1", null);
+    private void completeBuild(WorkflowRun build) throws Exception {
+        SemaphoreStep.success("fallback/1", null);
         j.waitForCompletion(build);
         j.assertBuildStatusSuccess(build);
     }
