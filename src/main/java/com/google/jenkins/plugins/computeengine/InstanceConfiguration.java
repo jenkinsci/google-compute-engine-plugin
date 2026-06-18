@@ -427,7 +427,44 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
             Operation operation =
                     cloud.getClient().insertInstance(cloud.getProjectId(), Optional.ofNullable(template), instance);
             log.info("Sent insert request for instance configuration [" + description + "]");
-            return buildNode(instance, operation);
+            String targetRemoteFs = this.remoteFs;
+            ComputeEngineComputerLauncher launcher;
+            if (this.windowsConfiguration != null) {
+                launcher = new ComputeEngineWindowsLauncher(cloud.getCloudName(), operation, this.useInternalAddress);
+                if (Strings.isNullOrEmpty(targetRemoteFs)) {
+                    targetRemoteFs = "C:\\";
+                }
+            } else {
+                launcher = new ComputeEngineLinuxLauncher(cloud.getCloudName(), operation, this.useInternalAddress);
+                if (Strings.isNullOrEmpty(targetRemoteFs)) {
+                    targetRemoteFs = "/tmp";
+                }
+            }
+            return ComputeEngineInstance.builder()
+                    .cloud(cloud)
+                    .cloudName(cloud.name)
+                    .name(instance.getName())
+                    .zone(instance.getZone())
+                    .nodeDescription(instance.getDescription())
+                    .sshUser(runAsUser)
+                    .remoteFS(targetRemoteFs)
+                    .windowsConfig(windowsConfiguration)
+                    .sshConfig(sshConfiguration)
+                    .createSnapshot(createSnapshot)
+                    .oneShot(oneShot)
+                    .ignoreProxy(ignoreProxy)
+                    .terminateIdleDuringShutdown(terminateIdleDuringShutdown)
+                    .numExecutors(numExecutors)
+                    .mode(mode)
+                    .labelString(labels)
+                    .launcher(launcher)
+                    .retentionStrategy(new ComputeEngineRetentionStrategy(retentionTimeMinutes, oneShot))
+                    .launchTimeout(getLaunchTimeoutMillis())
+                    .sshPort(sshPort)
+                    .javaExecPath(javaExecPath)
+                    .sshKeyCredential(sshKeyCredential)
+                    .waitForStartupScript(notNullOrEmpty(startupScript) && notNullOrEmpty(resolveExitReporter()))
+                    .build();
         } catch (Descriptor.FormException fe) {
             log.log(Level.WARNING, "Error provisioning instance: " + fe.getMessage(), fe);
             return null;
@@ -480,48 +517,6 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
             return false;
         }
         return allZonesExhaustedLoggedAt.compareAndSet(last, now);
-    }
-
-    ComputeEngineInstance buildNode(Instance instance, Operation operation)
-            throws Descriptor.FormException, IOException {
-        var targetRemoteFs = this.remoteFs;
-        ComputeEngineComputerLauncher launcher;
-        if (this.windowsConfiguration != null) {
-            launcher = new ComputeEngineWindowsLauncher(cloud.getCloudName(), operation, this.useInternalAddress);
-            if (Strings.isNullOrEmpty(targetRemoteFs)) {
-                targetRemoteFs = "C:\\";
-            }
-        } else {
-            launcher = new ComputeEngineLinuxLauncher(cloud.getCloudName(), operation, this.useInternalAddress);
-            if (Strings.isNullOrEmpty(targetRemoteFs)) {
-                targetRemoteFs = "/tmp";
-            }
-        }
-        return ComputeEngineInstance.builder()
-                .cloud(cloud)
-                .cloudName(cloud.name)
-                .name(instance.getName())
-                .zone(instance.getZone())
-                .nodeDescription(instance.getDescription())
-                .sshUser(runAsUser)
-                .remoteFS(targetRemoteFs)
-                .windowsConfig(windowsConfiguration)
-                .sshConfig(sshConfiguration)
-                .createSnapshot(createSnapshot)
-                .oneShot(oneShot)
-                .ignoreProxy(ignoreProxy)
-                .terminateIdleDuringShutdown(terminateIdleDuringShutdown)
-                .numExecutors(numExecutors)
-                .mode(mode)
-                .labelString(labels)
-                .launcher(launcher)
-                .retentionStrategy(new ComputeEngineRetentionStrategy(retentionTimeMinutes, oneShot))
-                .launchTimeout(getLaunchTimeoutMillis())
-                .sshPort(sshPort)
-                .javaExecPath(javaExecPath)
-                .sshKeyCredential(sshKeyCredential)
-                .waitForStartupScript(notNullOrEmpty(startupScript) && notNullOrEmpty(resolveExitReporter()))
-                .build();
     }
 
     /** Initializes transient properties */
