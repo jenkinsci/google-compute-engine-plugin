@@ -55,6 +55,7 @@ import java.util.logging.Level;
 import java.util.logging.LogRecord;
 import java.util.logging.Logger;
 import java.util.logging.SimpleFormatter;
+import java.util.stream.Collectors;
 import jenkins.model.Jenkins;
 import jenkins.util.SystemProperties;
 import lombok.Getter;
@@ -200,8 +201,8 @@ public abstract class ComputeEngineComputerLauncher extends ComputerLauncher {
             }
             if (opError != null) {
                 LOGGER.info(String.format(
-                        "Launch failed while waiting for operation %s to complete. Operation error was %s. Terminating instance.",
-                        insertOperationId, opError.getErrors().get(0).getMessage()));
+                        "Launch failed while waiting for operation %s to complete. Operation errors were %s. Terminating instance.",
+                        insertOperationId, formatErrors(opError)));
                 if (isCapacityError(opError)) {
                     var config = cloud.getInstanceConfigurationByDescription(node.getNodeDescription());
                     if (config != null) {
@@ -213,8 +214,8 @@ public abstract class ComputeEngineComputerLauncher extends ComputerLauncher {
             }
         } catch (InterruptedException e) {
             LOGGER.info(String.format(
-                    "Launch failed while waiting for operation %s to complete. Operation error was %s. Terminating instance",
-                    insertOperationId, opError.getErrors().get(0).getMessage()));
+                    "Launch failed while waiting for operation %s to complete. Operation errors were %s. Terminating instance",
+                    insertOperationId, formatErrors(opError)));
             terminateNode(computer, listener);
             return;
         }
@@ -344,7 +345,20 @@ public abstract class ComputeEngineComputerLauncher extends ComputerLauncher {
         LOGGER.info(String.format(
                 "Simulating ZONE_RESOURCE_POOL_EXHAUSTED for operation %s in zone %s", insertOperationId, zone));
         return new Operation.Error()
-                .setErrors(List.of(new Operation.Error.Errors().setCode("ZONE_RESOURCE_POOL_EXHAUSTED")));
+                .setErrors(List.of(new Operation.Error.Errors()
+                        .setCode("ZONE_RESOURCE_POOL_EXHAUSTED")
+                        .setMessage(String.format(
+                                "Fake error - the zone '%s' does not have enough resources available to fulfill the request. Try a different zone, or try again later.",
+                                zone))));
+    }
+
+    private static String formatErrors(Operation.Error err) {
+        if (err == null || err.getErrors() == null || err.getErrors().isEmpty()) {
+            return "none";
+        }
+        return err.getErrors().stream()
+                .map(e -> String.format("[%s] %s", e.getCode(), e.getMessage()))
+                .collect(Collectors.joining(", "));
     }
 
     private static boolean isCapacityError(Operation.Error err) {
