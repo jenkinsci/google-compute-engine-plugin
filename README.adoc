@@ -1081,14 +1081,14 @@ configurations:
 
 The primary zone is always tried first, then each fallback zone in the order listed. Zones are recommended to be in the same region as the primary zone, since a configuration's subnetwork is region-scoped. A zone in a different region may or may not provision depending on the subnetwork configuration; to reliably provision in a different region, use a separate instance configuration (below).
 
-A complete working CasC example is available at link:src/test/resources/com/google/jenkins/plugins/computeengine/integration/fallback-zone-casc.yml[fallback-zone-casc.yml].
+Example CasC: link:src/test/resources/com/google/jenkins/plugins/computeengine/integration/fallback-zone-casc.yml[fallback-zone-casc.yml].
 
 [[fallback-configurations]]
 === Fallback across instance configurations
 
 A configuration whose zones are all in cooldown steps aside for that cycle, letting another instance configuration that matches the same label provision instead. This applies even if neither configuration sets `fallbackZones` — defining a second configuration with the same label is enough to get fallback across, for example, different machine types or region.
 
-A complete working CasC example is available at link:src/test/resources/com/google/jenkins/plugins/computeengine/integration/fallback-config-casc.yml[fallback-config-casc.yml].
+Example CasC: link:src/test/resources/com/google/jenkins/plugins/computeengine/integration/fallback-config-casc.yml[fallback-config-casc.yml].
 
 [source,yaml]
 ----
@@ -1110,7 +1110,7 @@ configurations:
 
 Define a second GCE cloud — for example one pointing at a different GCP project — with an instance configuration that shares the same label. When every matching configuration in a cloud is in cooldown, that cloud provisions nothing for the cycle and Jenkins offers the label to another cloud.
 
-A complete working CasC example is available at link:src/test/resources/com/google/jenkins/plugins/computeengine/integration/fallback-cloud-casc.yml[fallback-cloud-casc.yml].
+Example CasC: link:src/test/resources/com/google/jenkins/plugins/computeengine/integration/fallback-cloud-casc.yml[fallback-cloud-casc.yml].
 
 [NOTE]
 ====
