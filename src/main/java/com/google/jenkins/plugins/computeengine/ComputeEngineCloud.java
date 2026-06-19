@@ -280,6 +280,8 @@ public class ComputeEngineCloud extends AbstractCloudImpl {
                 final ComputeEngineInstance node = config.provision();
                 if (node == null) {
                     candidates.remove(config);
+                    log.fine(() -> "Config [" + config.getDescription() + "] skipped: all zones in cooldown - "
+                            + config.candidateZones());
                     continue;
                 }
                 Jenkins.get().addNode(node);
@@ -296,6 +298,10 @@ public class ComputeEngineCloud extends AbstractCloudImpl {
                             "An instance configuration could not be found to provision a node for label %s",
                             label.getName()),
                     nce.getMessage());
+        }
+        if (result.isEmpty()) {
+            log.fine(() -> "Unable to provision agent for label [" + label + "] in cloud [" + getCloudName()
+                    + "]; returning empty so another cloud can handle the label");
         }
         return result;
     }
