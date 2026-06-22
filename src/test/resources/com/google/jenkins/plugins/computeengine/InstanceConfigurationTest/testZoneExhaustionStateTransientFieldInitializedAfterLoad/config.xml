@@ -1,0 +1,19 @@
+<?xml version='1.1' encoding='UTF-8'?>
+<hudson>
+    <version>2.452.3</version>
+    <authorizationStrategy class="hudson.security.AuthorizationStrategy$Unsecured"/>
+    <securityRealm class="hudson.security.SecurityRealm$None"/>
+    <clouds>
+        <com.google.jenkins.plugins.computeengine.ComputeEngineCloud>
+            <name>gce-unit-tests</name>
+            <projectId>my-project</projectId>
+            <configurations>
+                <com.google.jenkins.plugins.computeengine.InstanceConfiguration>
+                    <zone>us-west1-a</zone>
+                    <fallbackZones>us-west1-b</fallbackZones>
+                    <machineType>type-1</machineType>
+                </com.google.jenkins.plugins.computeengine.InstanceConfiguration>
+            </configurations>
+        </com.google.jenkins.plugins.computeengine.ComputeEngineCloud>
+    </clouds>
+</hudson>
