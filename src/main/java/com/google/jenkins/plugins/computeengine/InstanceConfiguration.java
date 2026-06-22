@@ -67,6 +67,8 @@ import hudson.util.FormValidation;
 import hudson.util.ListBoxModel;
 import java.io.IOException;
 import java.security.GeneralSecurityException;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -75,6 +77,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.logging.Level;
 import jenkins.model.Jenkins;
 import jenkins.util.SystemProperties;
@@ -185,6 +189,27 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
     private MinimumNumberOfInstancesTimeRangeConfig minimumNumberOfInstancesTimeRangeConfig;
 
     private String template;
+
+    @Nullable
+    private String fallbackZones;
+
+    /**
+     * How long to skip a zone after capacity-exhaustion error before it is retried. GCP gives no
+     * recommended interval for {@code ZONE_RESOURCE_POOL_EXHAUSTED}, a conservative default.
+     */
+    static final Duration ZONE_EXHAUSTION_COOLDOWN_DURATION = SystemProperties.getDuration(
+            InstanceConfiguration.class.getName() + ".zoneExhaustionCooldownDuration", Duration.ofMinutes(2));
+
+    /**
+     * Records the instant each zone was last exhausted. Transient — lost on restart, which is acceptable.
+     * Reinitialized in {@link #readResolve()} since field initializers don't run on the deserialization path.
+     */
+    @Getter(AccessLevel.NONE)
+    private transient ConcurrentHashMap<String, Instant> exhaustedAt = new ConcurrentHashMap<>();
+
+    @Getter(AccessLevel.NONE)
+    private transient AtomicReference<Instant> allZonesExhaustedLoggedAt = new AtomicReference<>();
+
     // Optional not possible due to serialization requirement
     @Nullable
     private WindowsConfiguration windowsConfiguration;
@@ -385,6 +410,24 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
     public ComputeEngineInstance provision() throws IOException {
         try {
             Instance instance = instance();
+            var zones = candidateZones();
+            var primaryZone = zones.get(0);
+            var selectedZone =
+                    zones.stream().filter(z -> !isExhausted(z)).findFirst().orElse(null);
+            if (selectedZone == null) {
+                if (shouldLogAllZonesExhausted()) {
+                    log.info("All zones " + zones + " are exhausted for [" + description
+                            + "]; skipping provisioning until a zone cooldown (" + ZONE_EXHAUSTION_COOLDOWN_DURATION
+                            + ") lapses. Ideas: add more fallback zones, or define another GCP cloud (e.g. a different "
+                            + "project or region) sharing the same label so Jenkins can provision there instead");
+                }
+                return null;
+            }
+            if (!selectedZone.equals(primaryZone)) {
+                log.info("Primary zone [" + primaryZone + "] is exhausted for [" + description
+                        + "]; provisioning in fallback zone [" + selectedZone + "]");
+                rezoneInstance(instance, selectedZone);
+            }
             // TODO: JENKINS-55285
             Operation operation =
                     cloud.getClient().insertInstance(cloud.getProjectId(), Optional.ofNullable(template), instance);
@@ -433,6 +476,54 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
         }
     }
 
+    /**
+     * Returns the ordered zone list to attempt: the primary zone first, then each configured fallback zone.
+     * With no fallback zones configured this is just the primary zone.
+     */
+    List<String> candidateZones() {
+        var zones = new ArrayList<String>();
+        zones.add(nameFromSelfLink(zone));
+        if (fallbackZones != null) {
+            for (var z : fallbackZones.split("[,\\s]+")) {
+                // normalize so tokens match the short-name keys used by markExhausted() and rezoneInstance()
+                if (!z.isBlank()) zones.add(nameFromSelfLink(z.trim()));
+            }
+        }
+        return zones;
+    }
+
+    void markExhausted(String zone) {
+        exhaustedAt.put(zone, Instant.now());
+        log.info(String.format(
+                "Marking zone [%s] exhausted for machine type [%s] in config [%s] until %s; "
+                        + "the next provisioning cycle will skip this zone and try the next candidate zone",
+                zone,
+                nameFromSelfLink(machineType),
+                description,
+                Instant.now().plus(ZONE_EXHAUSTION_COOLDOWN_DURATION)));
+    }
+
+    boolean isExhausted(String zone) {
+        var at = exhaustedAt.get(zone);
+        if (at == null) {
+            return false;
+        }
+        if (Instant.now().isBefore(at.plus(ZONE_EXHAUSTION_COOLDOWN_DURATION))) {
+            return true;
+        }
+        exhaustedAt.remove(zone, at);
+        return false;
+    }
+
+    private boolean shouldLogAllZonesExhausted() {
+        var now = Instant.now();
+        var last = allZonesExhaustedLoggedAt.get();
+        if (last != null && now.isBefore(last.plus(ZONE_EXHAUSTION_COOLDOWN_DURATION))) {
+            return false;
+        }
+        return allZonesExhaustedLoggedAt.compareAndSet(last, now);
+    }
+
     /** Initializes transient properties */
     protected Object readResolve() {
         labelSet = Label.parse(labels);
@@ -446,6 +537,12 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
         }
         if (sshPort == null) {
             sshPort = DEFAULT_SSH_PORT;
+        }
+        if (exhaustedAt == null) {
+            exhaustedAt = new ConcurrentHashMap<>();
+        }
+        if (allZonesExhaustedLoggedAt == null) {
+            allZonesExhaustedLoggedAt = new AtomicReference<>();
         }
         return this;
     }
@@ -743,6 +840,46 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
         return disks;
     }
 
+    @VisibleForTesting
+    static String rezoneSelfLink(String selfLink, String targetZone) {
+        if (selfLink == null) return null;
+        return selfLink.replaceFirst("(?<=/|^)zones/[^/]+/", "zones/" + targetZone + "/");
+    }
+
+    void rezoneInstance(Instance instance, String targetZone) {
+        var projectId = cloud != null ? nameFromSelfLink(cloud.getProjectId()) : null;
+        instance.setZone(targetZone);
+        // machineType is a stripped self-link (projects/p/zones/z/machineTypes/…);
+        // replace the zone segment so it matches the target zone
+        if (instance.getMachineType() != null) {
+            instance.setMachineType(rezoneSelfLink(instance.getMachineType(), targetZone));
+        }
+        if (instance.getDisks() != null) {
+            for (var disk : instance.getDisks()) {
+                var params = disk.getInitializeParams();
+                if (params != null) {
+                    // new disk: rezone the diskType self-link, then normalize bare short names
+                    params.setDiskType(DiskMappingParser.normalizeDiskType(
+                            rezoneSelfLink(params.getDiskType(), targetZone), targetZone));
+                    // sourceSnapshot is global (not zone-scoped); project-qualify bare names only
+                    if (projectId != null) {
+                        params.setSourceSnapshot(
+                                DiskMappingParser.normalizeSnapshotSource(params.getSourceSnapshot(), projectId));
+                    }
+                } else if (disk.getSource() != null) {
+                    disk.setSource(rezoneSelfLink(disk.getSource(), targetZone));
+                }
+            }
+        }
+        if (instance.getGuestAccelerators() != null) {
+            for (var acc : instance.getGuestAccelerators()) {
+                if (acc.getAcceleratorType() != null) {
+                    acc.setAcceleratorType(rezoneSelfLink(acc.getAcceleratorType(), targetZone));
+                }
+            }
+        }
+    }
+
     private List<AcceleratorConfig> accelerators() {
         if (acceleratorConfiguration != null
                 && notNullOrEmpty(acceleratorConfiguration.getGpuCount())
@@ -1003,6 +1140,27 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
         public FormValidation doCheckZone(@QueryParameter String value) {
             if (StringUtils.isEmpty(value)) {
                 return FormValidation.error("Please select a zone...");
+            }
+            return FormValidation.ok();
+        }
+
+        public FormValidation doCheckFallbackZones(@QueryParameter String value, @QueryParameter String region) {
+            if (StringUtils.isEmpty(value)) {
+                return FormValidation.ok();
+            }
+            var regionName = nameFromSelfLink(region);
+            if (StringUtils.isEmpty(regionName)) {
+                return FormValidation.ok();
+            }
+            for (var z : value.split("[,\\s]+")) {
+                if (z.isBlank()) continue;
+                var zoneName = nameFromSelfLink(z.trim());
+                if (!zoneName.startsWith(regionName + "-")) {
+                    return FormValidation.warning("Zone [" + zoneName + "] is not in region [" + regionName
+                            + "]. Fallback zones are recommended to be in the same region; it may or may not provision"
+                            + " depending on the subnetwork configuration. To reliably provision in a different"
+                            + " region, create a separate instance configuration instead.");
+                }
             }
             return FormValidation.ok();
         }
@@ -1353,6 +1511,7 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
             instanceConfiguration.setMinimumNumberOfInstancesTimeRangeConfig(
                     this.minimumNumberOfInstancesTimeRangeConfig);
             instanceConfiguration.setTemplate(this.template);
+            instanceConfiguration.setFallbackZones(this.fallbackZones);
             instanceConfiguration.setCreateSnapshot(this.createSnapshot);
             instanceConfiguration.setDiskMapping(this.diskMapping);
             instanceConfiguration.setTerminateIdleDuringShutdown(this.terminateIdleDuringShutdown);

@@ -282,7 +282,10 @@ public class ComputeEngineCloud extends AbstractCloudImpl {
                             + label
                             + "'");
             int availableCapacity = availableNodeCapacity();
-            while (excessWorkload > 0) {
+            // An exhausted config (all zones in cooldown) is dropped so we try the next matching config;
+            // when none remain we return empty list, NodeProvisioner checks another cloud.
+            List<InstanceConfiguration> candidates = new ArrayList<>(configs);
+            while (excessWorkload > 0 && !candidates.isEmpty()) {
                 if (availableCapacity <= 0) {
                     log.warning(String.format(
                             "Could not provision new nodes to meet excess workload demand (%d). Cloud provider %s has reached its configured capacity of %d",
@@ -290,9 +293,15 @@ public class ComputeEngineCloud extends AbstractCloudImpl {
                     break;
                 }
 
-                InstanceConfiguration config = chooseConfigFromList(configs);
+                InstanceConfiguration config = chooseConfigFromList(candidates);
 
                 final ComputeEngineInstance node = config.provision();
+                if (node == null) {
+                    candidates.remove(config);
+                    log.fine(() -> "Config [" + config.getDescription() + "] skipped: all zones in cooldown - "
+                            + config.candidateZones());
+                    continue;
+                }
                 Jenkins.get().addNode(node);
                 result.add(createPlannedNode(config, node));
                 excessWorkload -= node.getNumExecutors();
@@ -307,6 +316,10 @@ public class ComputeEngineCloud extends AbstractCloudImpl {
                             "An instance configuration could not be found to provision a node for label %s",
                             label.getName()),
                     nce.getMessage());
+        }
+        if (result.isEmpty()) {
+            log.fine(() -> "Unable to provision agent for label [" + label + "] in cloud [" + getCloudName()
+                    + "]; returning empty so another cloud can handle the label");
         }
         return result;
     }

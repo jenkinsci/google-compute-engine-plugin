@@ -58,6 +58,7 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.jvnet.hudson.test.JenkinsRule;
+import org.jvnet.hudson.test.recipes.LocalData;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.junit.MockitoJUnitRunner;
@@ -638,5 +639,49 @@ public class InstanceConfigurationTest {
 
         fv = d.doCheckBootDiskSizeGbStr(r.jenkins, String.valueOf(BOOT_DISK_SIZE_GB + 1L), "", "", "");
         assertEquals(FormValidation.Kind.OK, fv.kind);
+    }
+
+    @Test
+    public void testRezoneSelfLink() {
+        // full self-link URL
+        assertEquals(
+                "https://www.googleapis.com/compute/v1/projects/my-project/zones/us-east1-d/machineTypes/n1-standard-1",
+                InstanceConfiguration.rezoneSelfLink(
+                        "https://www.googleapis.com/compute/v1/projects/my-project/zones/us-east1-b/machineTypes/n1-standard-1",
+                        "us-east1-d"));
+        // relative path without leading slash
+        assertEquals(
+                "zones/us-east1-d/diskTypes/pd-ssd",
+                InstanceConfiguration.rezoneSelfLink("zones/us-east1-b/diskTypes/pd-ssd", "us-east1-d"));
+        // stripped self-link (projects/... without https prefix)
+        assertEquals(
+                "projects/my-project/zones/us-east1-d/diskTypes/pd-ssd",
+                InstanceConfiguration.rezoneSelfLink(
+                        "projects/my-project/zones/us-east1-b/diskTypes/pd-ssd", "us-east1-d"));
+        // bare short name — no /zones/ segment, returned unchanged
+        assertEquals("pd-ssd", InstanceConfiguration.rezoneSelfLink("pd-ssd", "us-east1-d"));
+        // null input — returned as null
+        assertNull(InstanceConfiguration.rezoneSelfLink(null, "us-east1-d"));
+    }
+
+    @Test
+    public void testCandidateZonesNormalizesToShortNames() {
+        var config = instanceConfigurationBuilder()
+                .zone("https://www.googleapis.com/compute/v1/projects/my-project/zones/us-west1-a")
+                .fallbackZones("us-west1-b, https://www.googleapis.com/compute/v1/projects/my-project/zones/us-west1-c")
+                .build();
+
+        assertEquals(List.of("us-west1-a", "us-west1-b", "us-west1-c"), config.candidateZones());
+    }
+
+    @Test
+    @LocalData
+    public void testZoneExhaustionStateTransientFieldInitializedAfterLoad() {
+        var cloud = (ComputeEngineCloud) r.jenkins.clouds.getByName("gce-unit-tests");
+        var config = cloud.getConfigurations().get(0);
+
+        assertFalse(config.isExhausted(ZONE));
+        config.markExhausted(ZONE);
+        assertTrue(config.isExhausted(ZONE));
     }
 }

@@ -108,6 +108,9 @@
             <f:entry field="zone" title="${%Zone}">
                 <f:select/>
             </f:entry>
+            <f:entry field="fallbackZones" title="${%Fallback Zones}">
+                <f:textbox/>
+            </f:entry>
         </f:section>
 
 
