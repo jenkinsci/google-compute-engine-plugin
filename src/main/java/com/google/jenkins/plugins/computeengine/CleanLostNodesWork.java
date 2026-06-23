@@ -50,11 +50,10 @@ public class CleanLostNodesWork extends PeriodicWork {
             System.getProperty(CleanLostNodesWork.class.getName() + ".recurrencePeriod", String.valueOf(HOUR)));
 
     public static final String LOST_NODE_CLEANUP_KEY = "jenkins_node_cleanup";
-
-    private final boolean lostNodeCleanupRestriction = Boolean.parseBoolean(System.getProperty(
-            "com.google.jenkins.plugins.computeengine.lostNodeCleanupRestriction", "false"));
-    private final String lostNodeCleanupLabel = System.getProperty(
-            "com.google.jenkins.plugins.computeengine.lostNodeCleanupLabel");
+    public static final String LOST_NODE_CLEANUP_LABEL =
+            System.getProperty(CleanLostNodesWork.class.getName() + ".lostNodeCleanupLabel");
+    public static final boolean LOST_NODE_CLEANUP_RESTRICTION =
+            (LOST_NODE_CLEANUP_LABEL != null && !LOST_NODE_CLEANUP_LABEL.isBlank());
 
     @VisibleForTesting
     public static final int LOST_MULTIPLIER = 3;
@@ -129,7 +128,7 @@ public class CleanLostNodesWork extends PeriodicWork {
     }
 
     private boolean checkLostNodeRestriction(Instance remote) {
-        if (!lostNodeCleanupRestriction) {
+        if (!LOST_NODE_CLEANUP_RESTRICTION) {
             logger.log(Level.FINEST, "Cleanup lost node restriction is disabled");
             return true;
         } else {
@@ -137,13 +136,13 @@ public class CleanLostNodesWork extends PeriodicWork {
         }
         logger.log(
                 Level.FINEST,
-                "Lost node cleanup label from properties: " + lostNodeCleanupLabel
+                "Lost node cleanup label from properties: " + LOST_NODE_CLEANUP_LABEL
                         + " and remote lost node label: " + remote.getLabels().get(LOST_NODE_CLEANUP_KEY)
                         + " which results in "
-                        + (lostNodeCleanupLabel.equals(remote.getLabels().get(LOST_NODE_CLEANUP_KEY))) + " for node "
+                        + (LOST_NODE_CLEANUP_LABEL.equals(remote.getLabels().get(LOST_NODE_CLEANUP_KEY))) + " for node "
                         + remote.getName());
 
-        return lostNodeCleanupLabel.equals(remote.getLabels().get(LOST_NODE_CLEANUP_KEY));
+        return LOST_NODE_CLEANUP_LABEL.equals(remote.getLabels().get(LOST_NODE_CLEANUP_KEY));
     }
 
     private void terminateInstance(Instance remote, ComputeEngineCloud cloud) {

@@ -17,6 +17,8 @@
 package com.google.jenkins.plugins.computeengine;
 
 import static com.google.jenkins.plugins.computeengine.CleanLostNodesWork.LOST_NODE_CLEANUP_KEY;
+import static com.google.jenkins.plugins.computeengine.CleanLostNodesWork.LOST_NODE_CLEANUP_LABEL;
+import static com.google.jenkins.plugins.computeengine.CleanLostNodesWork.LOST_NODE_CLEANUP_RESTRICTION;
 import static jakarta.servlet.http.HttpServletResponse.SC_BAD_REQUEST;
 
 import com.cloudbees.plugins.credentials.CredentialsMatchers;
@@ -67,7 +69,6 @@ import java.util.logging.Logger;
 import java.util.logging.SimpleFormatter;
 import java.util.stream.Collectors;
 import jenkins.model.Jenkins;
-import jenkins.util.SystemProperties;
 import lombok.Getter;
 import lombok.extern.java.Log;
 import org.kohsuke.stapler.AncestorInPath;
@@ -96,12 +97,6 @@ public class ComputeEngineCloud extends AbstractCloudImpl {
     private transient volatile ComputeClient client;
     private transient volatile ComputeClientV2 clientV2;
     private boolean noDelayProvisioning;
-    private final boolean lostNodeCleanupRestriction = Boolean.parseBoolean(System.getProperty(
-            "com.google.jenkins.plugins.computeengine.lostNodeCleanupRestriction", "false"));
-    private final String lostNodeCleanupLabel = System.getProperty(
-            "com.google.jenkins.plugins.computeengine.lostNodeCleanupLabel");
-
-
 
     @DataBoundConstructor
     public ComputeEngineCloud(String cloudName, String projectId, String credentialsId, String instanceCapStr) {
@@ -176,8 +171,8 @@ public class ComputeEngineCloud extends AbstractCloudImpl {
             configuration.appendLabel(CONFIG_LABEL_KEY, configuration.getNamePrefix());
 
             // If lost node cleanup labels are in use, apply the appropriate label.
-            if (lostNodeCleanupRestriction) {
-                configuration.appendLabel(LOST_NODE_CLEANUP_KEY, lostNodeCleanupLabel);
+            if (LOST_NODE_CLEANUP_RESTRICTION) {
+                configuration.appendLabel(LOST_NODE_CLEANUP_KEY, LOST_NODE_CLEANUP_LABEL);
             }
         }
         setInstanceId(instanceId);

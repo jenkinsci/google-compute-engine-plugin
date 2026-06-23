@@ -64,8 +64,7 @@ public class CleanLostNodesWorkIT {
             rj.javaOptions(
                             "-D" + CleanLostNodesWork.class.getName() + ".recurrencePeriod="
                                     + CLEAN_LOST_NODES_WORK_RECURRENCE_PERIOD,
-                            "-Dcom.google.jenkins.plugins.computeengine.lostNodeCleanupRestriction=true",
-                            "-Dcom.google.jenkins.plugins.computeengine.lostNodeCleanupLabel="
+                            "-D" + CleanLostNodesWork.class.getName() + ".lostNodeCleanupLabel="
                                     + LOST_NODE_CLEANUP_LABEL)
                     .withLogger(CleanLostNodesWork.class, Level.FINEST);
             rj.startJenkins();
@@ -145,9 +144,8 @@ public class CleanLostNodesWorkIT {
         rj2.javaOptions(
                         "-D" + CleanLostNodesWork.class.getName() + ".recurrencePeriod="
                                 + CLEAN_LOST_NODES_WORK_RECURRENCE_PERIOD,
-                        "-Dcom.google.jenkins.plugins.computeengine.lostNodeCleanupRestriction=true",
-                        "-Dcom.google.jenkins.plugins.computeengine.lostNodeCleanupLabel="
-                                + LOST_NODE_CLEANUP_LABEL + "-other-controller")
+                        "-D" + CleanLostNodesWork.class.getName() + ".lostNodeCleanupLabel=" + LOST_NODE_CLEANUP_LABEL
+                                + "-other-controller")
                 .withLogger(CleanLostNodesWork.class, Level.FINEST);
         rj2.startJenkins();
         rj2.runRemotely(r -> {
