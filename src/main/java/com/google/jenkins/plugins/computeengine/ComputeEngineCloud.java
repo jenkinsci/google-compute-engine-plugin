@@ -67,6 +67,7 @@ import java.util.logging.Logger;
 import java.util.logging.SimpleFormatter;
 import java.util.stream.Collectors;
 import jenkins.model.Jenkins;
+import jenkins.util.SystemProperties;
 import lombok.Getter;
 import lombok.extern.java.Log;
 import org.kohsuke.stapler.AncestorInPath;
@@ -95,8 +96,12 @@ public class ComputeEngineCloud extends AbstractCloudImpl {
     private transient volatile ComputeClient client;
     private transient volatile ComputeClientV2 clientV2;
     private boolean noDelayProvisioning;
-    private boolean lostNodeCleanupRestriction;
-    private String lostNodeCleanupLabel;
+    private final boolean lostNodeCleanupRestriction = Boolean.parseBoolean(System.getProperty(
+            "com.google.jenkins.plugins.computeengine.lostNodeCleanupRestriction", "false"));
+    private final String lostNodeCleanupLabel = System.getProperty(
+            "com.google.jenkins.plugins.computeengine.lostNodeCleanupLabel");
+
+
 
     @DataBoundConstructor
     public ComputeEngineCloud(String cloudName, String projectId, String credentialsId, String instanceCapStr) {
@@ -154,16 +159,6 @@ public class ComputeEngineCloud extends AbstractCloudImpl {
     @DataBoundSetter
     public void setNoDelayProvisioning(boolean noDelayProvisioning) {
         this.noDelayProvisioning = noDelayProvisioning;
-    }
-
-    @DataBoundSetter
-    public void setLostNodeCleanupRestriction(boolean lostNodeCleanupRestriction) {
-        this.lostNodeCleanupRestriction = lostNodeCleanupRestriction;
-    }
-
-    @DataBoundSetter
-    public void setLostNodeCleanupLabel(String lostNodeCleanupLabel) {
-        this.lostNodeCleanupLabel = lostNodeCleanupLabel;
     }
 
     protected Object readResolve() {

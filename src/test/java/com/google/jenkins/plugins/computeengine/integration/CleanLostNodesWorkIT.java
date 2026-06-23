@@ -61,15 +61,17 @@ public class CleanLostNodesWorkIT {
     @Before
     public void init() throws Throwable {
         for (var rj : List.of(rj1, rj2)) {
-            rj.javaOptions("-D" + CleanLostNodesWork.class.getName() + ".recurrencePeriod="
-                            + CLEAN_LOST_NODES_WORK_RECURRENCE_PERIOD)
+            rj.javaOptions(
+                            "-D" + CleanLostNodesWork.class.getName() + ".recurrencePeriod="
+                                    + CLEAN_LOST_NODES_WORK_RECURRENCE_PERIOD,
+                            "-Dcom.google.jenkins.plugins.computeengine.lostNodeCleanupRestriction=true",
+                            "-Dcom.google.jenkins.plugins.computeengine.lostNodeCleanupLabel="
+                                    + LOST_NODE_CLEANUP_LABEL)
                     .withLogger(CleanLostNodesWork.class, Level.FINEST);
             rj.startJenkins();
             rj.runRemotely(r -> {
                 initCredentials(r);
                 var cloud = initCloud(r);
-                cloud.setLostNodeCleanupRestriction(true);
-                cloud.setLostNodeCleanupLabel(LOST_NODE_CLEANUP_LABEL);
                 var instanceConfig = instanceConfigurationBuilder()
                         .numExecutorsStr(NUM_EXECUTORS)
                         .labels(LABEL)
@@ -139,10 +141,33 @@ public class CleanLostNodesWorkIT {
             }
         });
         rj1.stopJenkins();
+        rj2.stopJenkins();
+        rj2.javaOptions(
+                        "-D" + CleanLostNodesWork.class.getName() + ".recurrencePeriod="
+                                + CLEAN_LOST_NODES_WORK_RECURRENCE_PERIOD,
+                        "-Dcom.google.jenkins.plugins.computeengine.lostNodeCleanupRestriction=true",
+                        "-Dcom.google.jenkins.plugins.computeengine.lostNodeCleanupLabel="
+                                + LOST_NODE_CLEANUP_LABEL + "-other-controller")
+                .withLogger(CleanLostNodesWork.class, Level.FINEST);
+        rj2.startJenkins();
+        rj2.runRemotely(r -> {
+            initCredentials(r);
+            var cloud = initCloud(r);
+            var instanceConfig = instanceConfigurationBuilder()
+                    .numExecutorsStr(NUM_EXECUTORS)
+                    .labels(LABEL)
+                    .oneShot(true)
+                    .createSnapshot(false)
+                    .template(NULL_TEMPLATE)
+                    .googleLabels(GOOGLE_LABELS)
+                    .cloud(cloud)
+                    .build();
+            cloud.setConfigurations(ImmutableList.of(instanceConfig));
+            RealJenkinsLogUtil.setupLogRecorder(RECORDER_CLASS_NAME);
+        });
 
         rj2.runRemotely(j -> {
             var cloud = (ComputeEngineCloud) j.jenkins.clouds.getByName("gce-integration");
-            cloud.setLostNodeCleanupLabel(LOST_NODE_CLEANUP_LABEL + "-other-controller");
 
             assertEquals(
                     "VM is still there",
