@@ -129,6 +129,50 @@ public class CleanLostNodesWorkIT {
     }
 
     @Test
+    public void testSecondControllerDoesNotCleanUpLostNodeWhenRestrictionEnabled() throws Throwable {
+        rj1.runRemotely(j -> {
+            var p1 = createPipeline(j);
+            try (var tail = new TailLog(j, "p1", 1).withColor(PrefixedOutputStream.Color.MAGENTA)) {
+                var run = p1.scheduleBuild2(0).waitForStart();
+                await().timeout(4, TimeUnit.MINUTES).until(() -> run.getLog().contains("first sleep done"));
+                LOGGER.info("Build is already running, can proceed to stopping jenkins to make the agent a lost VM");
+            }
+        });
+        rj1.stopJenkins();
+
+        rj2.runRemotely(j -> {
+            var cloud = (ComputeEngineCloud) j.jenkins.clouds.getByName("gce-integration");
+            cloud.setLostNodeCleanupLabel(LOST_NODE_CLEANUP_LABEL + "-other-controller");
+
+            assertEquals(
+                    "VM is still there",
+                    1,
+                    cloud.getClient()
+                            .listInstancesWithLabel(cloud.getProjectId(), GOOGLE_LABELS)
+                            .size());
+
+            LOGGER.info("test sleeps for " + getSleepSeconds() + " seconds; so that cleanup runs multiple times");
+            TimeUnit.SECONDS.sleep(getSleepSeconds());
+            LOGGER.info("proceeding after sleep");
+
+            assertEquals(
+                    "VM should not be removed when restriction labels don't match",
+                    1,
+                    cloud.getClient()
+                            .listInstancesWithLabel(cloud.getProjectId(), GOOGLE_LABELS)
+                            .size());
+            RealJenkinsLogUtil.assertLogContains(
+                    RECORDER_CLASS_NAME,
+                    "Found 1 running remote instances",
+                    "Found 0 local instances",
+                    "Cleanup lost node restriction is enabled",
+                    "which results in false");
+            RealJenkinsLogUtil.assertLogDoesNotContain(
+                    RECORDER_CLASS_NAME, "isOrphan: true", "Removing orphaned instance");
+        });
+    }
+
+    @Test
     public void testLostNodeCleanedUpBySecondController() throws Throwable {
         rj1.runRemotely(j -> {
             var p1 = createPipeline(j);

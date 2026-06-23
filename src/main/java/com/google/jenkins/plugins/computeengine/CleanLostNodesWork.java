@@ -76,7 +76,6 @@ public class CleanLostNodesWork extends PeriodicWork {
     @Override
     protected void doRun() {
         logger.log(Level.FINEST, "Starting clean lost nodes worker");
-        logger.log(Level.FINEST, CleanLostNodesWork.class.getName() + ".lostNodeCleanupLabel");
         getClouds().forEach(this::cleanCloud);
     }
 
