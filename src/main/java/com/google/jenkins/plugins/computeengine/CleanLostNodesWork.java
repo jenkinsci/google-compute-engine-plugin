@@ -52,8 +52,10 @@ public class CleanLostNodesWork extends PeriodicWork {
     public static final String LOST_NODE_CLEANUP_KEY = "jenkins_node_cleanup";
     public static final String LOST_NODE_CLEANUP_LABEL =
             System.getProperty(CleanLostNodesWork.class.getName() + ".lostNodeCleanupLabel");
-    public static final boolean LOST_NODE_CLEANUP_RESTRICTION =
-            (LOST_NODE_CLEANUP_LABEL != null && !LOST_NODE_CLEANUP_LABEL.isBlank());
+
+    public static boolean isLostNodeCleanupRestriction() {
+        return (LOST_NODE_CLEANUP_LABEL != null && !LOST_NODE_CLEANUP_LABEL.isBlank());
+    }
 
     @VisibleForTesting
     public static final int LOST_MULTIPLIER = 3;
@@ -128,21 +130,21 @@ public class CleanLostNodesWork extends PeriodicWork {
     }
 
     private boolean checkLostNodeRestriction(Instance remote) {
-        if (!LOST_NODE_CLEANUP_RESTRICTION) {
+        if (!isLostNodeCleanupRestriction()) {
             logger.log(Level.FINEST, "Cleanup lost node restriction is disabled");
             return true;
-        } else {
-            logger.log(Level.FINEST, "Cleanup lost node restriction is enabled");
         }
+        logger.log(Level.FINEST, "Cleanup lost node restriction is enabled");
+
+        String remoteLabel = remote.getLabels().get(LOST_NODE_CLEANUP_KEY);
+        boolean isOurs = LOST_NODE_CLEANUP_LABEL.equals(remoteLabel);
         logger.log(
                 Level.FINEST,
                 "Lost node cleanup label from properties: " + LOST_NODE_CLEANUP_LABEL
-                        + " and remote lost node label: " + remote.getLabels().get(LOST_NODE_CLEANUP_KEY)
-                        + " which results in "
-                        + (LOST_NODE_CLEANUP_LABEL.equals(remote.getLabels().get(LOST_NODE_CLEANUP_KEY))) + " for node "
-                        + remote.getName());
+                        + " and remote lost node label: " + remoteLabel + " which results in " + isOurs
+                        + " for node " + remote.getName());
 
-        return LOST_NODE_CLEANUP_LABEL.equals(remote.getLabels().get(LOST_NODE_CLEANUP_KEY));
+        return isOurs;
     }
 
     private void terminateInstance(Instance remote, ComputeEngineCloud cloud) {

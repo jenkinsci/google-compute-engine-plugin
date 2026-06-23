@@ -18,7 +18,7 @@ package com.google.jenkins.plugins.computeengine;
 
 import static com.google.jenkins.plugins.computeengine.CleanLostNodesWork.LOST_NODE_CLEANUP_KEY;
 import static com.google.jenkins.plugins.computeengine.CleanLostNodesWork.LOST_NODE_CLEANUP_LABEL;
-import static com.google.jenkins.plugins.computeengine.CleanLostNodesWork.LOST_NODE_CLEANUP_RESTRICTION;
+import static com.google.jenkins.plugins.computeengine.CleanLostNodesWork.isLostNodeCleanupRestriction;
 import static jakarta.servlet.http.HttpServletResponse.SC_BAD_REQUEST;
 
 import com.cloudbees.plugins.credentials.CredentialsMatchers;
@@ -170,8 +170,7 @@ public class ComputeEngineCloud extends AbstractCloudImpl {
             // Apply a label that identifies the name of this instance configuration
             configuration.appendLabel(CONFIG_LABEL_KEY, configuration.getNamePrefix());
 
-            // If lost node cleanup labels are in use, apply the appropriate label.
-            if (LOST_NODE_CLEANUP_RESTRICTION) {
+            if (isLostNodeCleanupRestriction()) {
                 configuration.appendLabel(LOST_NODE_CLEANUP_KEY, LOST_NODE_CLEANUP_LABEL);
             }
         }
