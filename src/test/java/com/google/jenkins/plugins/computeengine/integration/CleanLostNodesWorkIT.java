@@ -149,19 +149,10 @@ public class CleanLostNodesWorkIT {
                 .withLogger(CleanLostNodesWork.class, Level.FINEST);
         rj2.startJenkins();
         rj2.runRemotely(r -> {
-            initCredentials(r);
-            var cloud = initCloud(r);
-            var instanceConfig = instanceConfigurationBuilder()
-                    .numExecutorsStr(NUM_EXECUTORS)
-                    .labels(LABEL)
-                    .oneShot(true)
-                    .createSnapshot(false)
-                    .template(NULL_TEMPLATE)
-                    .googleLabels(GOOGLE_LABELS)
-                    .cloud(cloud)
-                    .build();
-            cloud.setConfigurations(ImmutableList.of(instanceConfig));
             RealJenkinsLogUtil.setupLogRecorder(RECORDER_CLASS_NAME);
+            assertEquals(1, r.jenkins.clouds.size());
+            var cloud = (ComputeEngineCloud) r.jenkins.clouds.getByName("gce-integration");
+            assertEquals("gce-integration", cloud.getCloudName());
         });
 
         rj2.runRemotely(j -> {
