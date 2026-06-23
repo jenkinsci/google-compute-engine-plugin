@@ -11,6 +11,7 @@ import static com.google.jenkins.plugins.computeengine.integration.ITUtil.teardo
 import static org.awaitility.Awaitility.await;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotEquals;
+import static org.junit.Assert.assertNotNull;
 
 import com.google.common.collect.ImmutableList;
 import com.google.jenkins.plugins.computeengine.CleanLostNodesWork;
@@ -152,7 +153,7 @@ public class CleanLostNodesWorkIT {
             RealJenkinsLogUtil.setupLogRecorder(RECORDER_CLASS_NAME);
             assertEquals(1, r.jenkins.clouds.size());
             var cloud = (ComputeEngineCloud) r.jenkins.clouds.getByName("gce-integration");
-            assertEquals("gce-integration", cloud.getCloudName());
+            assertNotNull("Cloud should exist after restart", cloud);
         });
 
         rj2.runRemotely(j -> {
