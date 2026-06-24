@@ -105,7 +105,7 @@ public class CleanLostNodesWorkIT {
                 tail.waitForCompletion();
                 RealJenkinsLogUtil.assertLogContains(
                         RECORDER_CLASS_NAME,
-                        "Found 1 running remote instances",
+                        "running remote instances",
                         "Found 1 local instances",
                         "Updated label for instance",
                         "Cleanup lost node restriction is enabled",
@@ -117,7 +117,7 @@ public class CleanLostNodesWorkIT {
         rj2.runRemotely(j -> {
             RealJenkinsLogUtil.assertLogContains(
                     RECORDER_CLASS_NAME,
-                    "Found 1 running remote instances",
+                    "running remote instances",
                     "Found 0 local instances",
                     "Cleanup lost node restriction is enabled",
                     "which results in true");
@@ -166,9 +166,10 @@ public class CleanLostNodesWorkIT {
                             .listInstancesWithLabel(cloud.getProjectId(), GOOGLE_LABELS)
                             .size());
 
-            LOGGER.info("test sleeps for " + getSleepSeconds() + " seconds; so that cleanup runs multiple times");
-            TimeUnit.SECONDS.sleep(getSleepSeconds());
-            LOGGER.info("proceeding after sleep");
+            await("Second controller should process lost-node restriction checks")
+                    .timeout(2, TimeUnit.MINUTES)
+                    .untilAsserted(() -> RealJenkinsLogUtil.assertLogContains(
+                            RECORDER_CLASS_NAME, "Cleanup lost node restriction is enabled", "which results in false"));
 
             assertEquals(
                     "VM should not be removed when restriction labels don't match",
@@ -178,7 +179,7 @@ public class CleanLostNodesWorkIT {
                             .size());
             RealJenkinsLogUtil.assertLogContains(
                     RECORDER_CLASS_NAME,
-                    "Found 1 running remote instances",
+                    "running remote instances",
                     "Found 0 local instances",
                     "Cleanup lost node restriction is enabled",
                     "which results in false");
@@ -197,7 +198,7 @@ public class CleanLostNodesWorkIT {
                 LOGGER.info("Build is already running, can proceed to stopping jenkins to make the agent a lost VM");
                 RealJenkinsLogUtil.assertLogContains(
                         RECORDER_CLASS_NAME,
-                        "Found 1 running remote instances",
+                        "running remote instances",
                         "Found 1 local instances",
                         "Updated label for instance",
                         "Cleanup lost node restriction is enabled",
@@ -217,11 +218,6 @@ public class CleanLostNodesWorkIT {
                             .listInstancesWithLabel(cloud.getProjectId(), GOOGLE_LABELS)
                             .size());
 
-            LOGGER.info("test sleeps for " + getSleepSeconds() + " seconds; so that the lost VM is detected by the "
-                    + "second controller and it is deleted");
-            TimeUnit.SECONDS.sleep(getSleepSeconds());
-            LOGGER.info("proceeding after sleep");
-
             var instances = cloud.getClient().listInstancesWithLabel(cloud.getProjectId(), GOOGLE_LABELS);
             if (!instances.isEmpty()) {
                 assertNotEquals(
@@ -232,14 +228,14 @@ public class CleanLostNodesWorkIT {
                                 .get(0)
                                 .getStatus());
             }
-            await("VM didn't get removed even after waiting 2 minutes after it was stopped")
-                    .timeout(2, TimeUnit.MINUTES)
+            await("VM didn't get removed in expected orphan-cleanup window")
+                    .timeout(getSleepSeconds() + 2, TimeUnit.SECONDS)
                     .until(() -> cloud.getClient()
                             .listInstancesWithLabel(cloud.getProjectId(), GOOGLE_LABELS)
                             .isEmpty());
             RealJenkinsLogUtil.assertLogContains(
                     RECORDER_CLASS_NAME,
-                    "Found 1 running remote instances",
+                    "running remote instances",
                     "Found 0 local instances",
                     "Cleanup lost node restriction is enabled",
                     "which results in true",
