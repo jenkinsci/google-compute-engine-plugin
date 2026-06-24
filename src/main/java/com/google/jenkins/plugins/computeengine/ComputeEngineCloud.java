@@ -16,9 +16,6 @@
 
 package com.google.jenkins.plugins.computeengine;
 
-import static com.google.jenkins.plugins.computeengine.CleanLostNodesWork.LOST_NODE_CLEANUP_KEY;
-import static com.google.jenkins.plugins.computeengine.CleanLostNodesWork.LOST_NODE_CLEANUP_LABEL;
-import static com.google.jenkins.plugins.computeengine.CleanLostNodesWork.isLostNodeCleanupRestriction;
 import static jakarta.servlet.http.HttpServletResponse.SC_BAD_REQUEST;
 
 import com.cloudbees.plugins.credentials.CredentialsMatchers;
@@ -84,6 +81,7 @@ public class ComputeEngineCloud extends AbstractCloudImpl {
     public static final String CLOUD_PREFIX = "gce-";
     public static final String CONFIG_LABEL_KEY = "jenkins_config_name";
     public static final String CLOUD_ID_LABEL_KEY = "jenkins_cloud_id";
+    public static final String JENKINS_INSTANCE_ID_LABEL_KEY = "jenkins_instance_id";
 
     private static final SimpleFormatter sf = new SimpleFormatter();
     private static int configsNext;
@@ -169,10 +167,8 @@ public class ComputeEngineCloud extends AbstractCloudImpl {
 
             // Apply a label that identifies the name of this instance configuration
             configuration.appendLabel(CONFIG_LABEL_KEY, configuration.getNamePrefix());
-
-            if (isLostNodeCleanupRestriction()) {
-                configuration.appendLabel(LOST_NODE_CLEANUP_KEY, LOST_NODE_CLEANUP_LABEL);
-            }
+            configuration.appendLabel(
+                    JENKINS_INSTANCE_ID_LABEL_KEY, Jenkins.get().getLegacyInstanceId());
         }
         setInstanceId(instanceId);
         return this;

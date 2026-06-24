@@ -16,6 +16,7 @@
 
 package com.google.jenkins.plugins.computeengine;
 
+import static com.google.jenkins.plugins.computeengine.ComputeEngineCloud.JENKINS_INSTANCE_ID_LABEL_KEY;
 import static java.util.Collections.emptyList;
 
 import com.google.api.services.compute.model.Instance;
@@ -38,6 +39,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
 import jenkins.model.Jenkins;
+import jenkins.util.SystemProperties;
 import org.jenkinsci.Symbol;
 
 /** Periodically checks if there are no lost nodes in GCP. If it finds any they are deleted. */
@@ -48,14 +50,8 @@ public class CleanLostNodesWork extends PeriodicWork {
     public static final String NODE_IN_USE_LABEL_KEY = "jenkins_node_last_refresh";
     public static final long RECURRENCE_PERIOD = Long.parseLong(
             System.getProperty(CleanLostNodesWork.class.getName() + ".recurrencePeriod", String.valueOf(HOUR)));
-
-    public static final String LOST_NODE_CLEANUP_KEY = "jenkins_node_cleanup";
-    public static final String LOST_NODE_CLEANUP_LABEL =
-            System.getProperty(CleanLostNodesWork.class.getName() + ".lostNodeCleanupLabel");
-
-    public static boolean isLostNodeCleanupRestriction() {
-        return (LOST_NODE_CLEANUP_LABEL != null && !LOST_NODE_CLEANUP_LABEL.isBlank());
-    }
+    public static final boolean RESTRICT_TO_THIS_CONTROLLER =
+            SystemProperties.getBoolean(CleanLostNodesWork.class.getName() + ".restrictToThisController");
 
     @VisibleForTesting
     public static final int LOST_MULTIPLIER = 3;
@@ -130,20 +126,15 @@ public class CleanLostNodesWork extends PeriodicWork {
     }
 
     private boolean checkLostNodeRestriction(Instance remote) {
-        if (!isLostNodeCleanupRestriction()) {
+        if (RESTRICT_TO_THIS_CONTROLLER) {
             logger.log(Level.FINEST, "Cleanup lost node restriction is disabled");
             return true;
         }
         logger.log(Level.FINEST, "Cleanup lost node restriction is enabled");
-
-        String remoteLabel = remote.getLabels().get(LOST_NODE_CLEANUP_KEY);
-        boolean isOurs = LOST_NODE_CLEANUP_LABEL.equals(remoteLabel);
-        logger.log(
-                Level.FINEST,
-                "Lost node cleanup label from properties: " + LOST_NODE_CLEANUP_LABEL
-                        + " and remote lost node label: " + remoteLabel + " which results in " + isOurs
-                        + " for node " + remote.getName());
-
+        String controllerId = remote.getLabels().get(JENKINS_INSTANCE_ID_LABEL_KEY);
+        boolean isOurs = controllerId.equals(Jenkins.get().getLegacyInstanceId());
+        logger.fine(() -> "Lost node cleanup restricted to this controller; " + remote.getName()
+                + " marked with controller id " + controllerId + " is ours=" + isOurs);
         return isOurs;
     }
 
