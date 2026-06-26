@@ -126,7 +126,7 @@ public class CleanLostNodesWork extends PeriodicWork {
     }
 
     private boolean checkLostNodeRestriction(Instance remote) {
-        if (RESTRICT_TO_THIS_CONTROLLER) {
+        if (!RESTRICT_TO_THIS_CONTROLLER) {
             logger.log(Level.FINEST, "Cleanup lost node restriction is disabled");
             return true;
         }
