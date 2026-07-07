@@ -132,7 +132,8 @@ public class CleanLostNodesWork extends PeriodicWork {
         }
         logger.log(Level.FINEST, "Cleanup lost node restriction is enabled");
         String controllerId = remote.getLabels().get(JENKINS_INSTANCE_ID_LABEL_KEY);
-        boolean isOurs = controllerId != null && controllerId.equals(Jenkins.get().getLegacyInstanceId());
+        boolean isOurs =
+                controllerId != null && controllerId.equals(Jenkins.get().getLegacyInstanceId());
         logger.fine(() -> "Lost node cleanup restricted to this controller; " + remote.getName()
                 + " marked with controller id " + controllerId + " is ours=" + isOurs);
         return isOurs;
