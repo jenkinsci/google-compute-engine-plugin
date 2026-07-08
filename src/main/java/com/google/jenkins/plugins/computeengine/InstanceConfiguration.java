@@ -497,10 +497,22 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
         log.info(String.format(
                 "Marking zone [%s] exhausted for machine type [%s] in config [%s] until %s; "
                         + "the next provisioning cycle will skip this zone and try the next candidate zone",
-                zone,
-                nameFromSelfLink(machineType),
-                description,
-                Instant.now().plus(ZONE_EXHAUSTION_COOLDOWN_DURATION)));
+                zone, machineTypeDisplayName(), description, Instant.now().plus(ZONE_EXHAUSTION_COOLDOWN_DURATION)));
+    }
+
+    /**
+     * Human-readable machine type for log messages. Template-based configurations leave {@code machineType}
+     * unset (it is only used when no template is configured), so fall back to the template name there;
+     * {@code ClientUtil.nameFromSelfLink} rejects empty input.
+     */
+    private String machineTypeDisplayName() {
+        if (!Strings.isNullOrEmpty(machineType)) {
+            return nameFromSelfLink(machineType);
+        }
+        if (!Strings.isNullOrEmpty(template)) {
+            return "template " + nameFromSelfLink(template);
+        }
+        return "unknown";
     }
 
     boolean isExhausted(String zone) {
