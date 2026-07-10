@@ -177,14 +177,17 @@ public class CleanLostNodesWorkIT {
         TimeUnit.SECONDS.sleep(PERIODIC_TASK_4_EXECUTIONS.toSeconds());
 
         rj2.runRemotely(j -> {
+            assertOtherControllerDidNotFindOrDeleteVm();
+
+            // check GCP directly via available client to see 1 VM is present.
+            // this doesn't mean the CleanLostNodesWork of rj2 can see the VM.
             var cloud = (ComputeEngineCloud) j.jenkins.clouds.getByName("gce-integration");
             assertEquals(
-                    "rj2 does not see or delete the VM that belonged to rj1, VM still exists",
+                    "GCP has 1 VM",
                     1,
                     cloud.getClient()
                             .listInstancesWithLabel(cloud.getProjectId(), GOOGLE_LABELS)
                             .size());
-            assertOtherControllerDidNotFindOrDeleteVm();
         });
     }
 
