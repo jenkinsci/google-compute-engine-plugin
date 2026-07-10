@@ -3,31 +3,37 @@ package com.google.jenkins.plugins.computeengine.integration;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.LABEL;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.NULL_TEMPLATE;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.NUM_EXECUTORS;
+import static com.google.jenkins.plugins.computeengine.integration.ITUtil.PROJECT_ID;
+import static com.google.jenkins.plugins.computeengine.integration.ITUtil.ZONE;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.getLabel;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.initCloud;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.initCredentials;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.instanceConfigurationBuilder;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.teardownResources;
 import static org.awaitility.Awaitility.await;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.containsString;
 import static org.junit.Assert.assertEquals;
 
+import com.google.api.client.googleapis.json.GoogleJsonResponseException;
 import com.google.common.collect.ImmutableList;
 import com.google.jenkins.plugins.computeengine.CleanLostNodesWork;
 import com.google.jenkins.plugins.computeengine.ComputeEngineCloud;
+import com.google.jenkins.plugins.computeengine.ComputeEngineInstance;
 import hudson.ExtensionList;
 import java.time.Duration;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import java.util.stream.Stream;
+import jenkins.model.Jenkins;
 import org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition;
 import org.jenkinsci.plugins.workflow.job.WorkflowJob;
 import org.jenkinsci.plugins.workflow.steps.StepDescriptor;
 import org.jenkinsci.plugins.workflow.test.steps.SemaphoreStep;
 import org.junit.After;
+import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.jvnet.hudson.test.JenkinsRule;
@@ -46,8 +52,6 @@ public class CleanLostNodesWorkIT {
     private static final Duration PERIODIC_TASK_4_EXECUTIONS =
             Duration.ofSeconds(CLEAN_LOST_NODE_WORK_RECURRENCE_SECONDS * 4);
 
-    private static final String RESTRICT_TO_THIS_CONTROLLER_PROP =
-            "-D" + CleanLostNodesWork.class.getName() + ".restrictToThisController=true";
     private static final Map<String, String> GOOGLE_LABELS = getLabel(CleanLostNodesWorkIT.class);
 
     @Rule
@@ -56,11 +60,10 @@ public class CleanLostNodesWorkIT {
     @Rule
     public RealJenkinsRule rj2 = new RealJenkinsRule().withColor(PrefixedOutputStream.Color.RED);
 
-    private void init(String... extraProps) throws Throwable {
-        var allProps = Stream.concat(Stream.of(RECURRENCE_PERIOD_PROP), Arrays.stream(extraProps))
-                .toArray(String[]::new);
+    @Before
+    public void init() throws Throwable {
         for (var rj : List.of(rj1, rj2)) {
-            rj.javaOptions(allProps).withLogger(CleanLostNodesWork.class, Level.FINEST);
+            rj.javaOptions(RECURRENCE_PERIOD_PROP).withLogger(CleanLostNodesWork.class, Level.FINEST);
             rj.startJenkins();
             rj.runRemotely(r -> {
                 ExtensionList.lookup(StepDescriptor.class).add(new SemaphoreStep.DescriptorImpl());
@@ -92,8 +95,46 @@ public class CleanLostNodesWorkIT {
     }
 
     @Test
+    public void testOrphanedVmDeletedByOwningController() throws Throwable {
+        rj1.runRemotely(j -> {
+            var p1 = createPipeline(j);
+            var run = p1.scheduleBuild2(0).waitForStart();
+            SemaphoreStep.waitForStart("agentRunning/1", run);
+            await("CleanLostNodesWork should see and label the local instance")
+                    .timeout(PERIODIC_TASK_2_EXECUTIONS)
+                    .untilAsserted(CleanLostNodesWorkIT::assertLocalControllerKnowsAgent);
+
+            assertEquals("Expecting only 1 agent node", 1, j.jenkins.getNodes().size());
+            var agentNode = (ComputeEngineInstance) Jenkins.get().getNodes().get(0);
+            var agentName = agentNode.getNodeName();
+
+            // make the VM orphan
+            agentNode.skipGcpTerminateForTesting = true;
+            Jenkins.get().removeNode(agentNode);
+
+            var cloud = (ComputeEngineCloud) Jenkins.get().clouds.getByName("gce-integration");
+            var instance = cloud.getClient().getInstance(PROJECT_ID, ZONE, agentName);
+            LOGGER.info("Labels on the VM are: " + instance.getLabels());
+
+            TimeUnit.SECONDS.sleep(PERIODIC_TASK_4_EXECUTIONS.toSeconds());
+            assertOwningControllerDeletedOrphan();
+
+            // wait for max 2 minutes and verify instance is not there in gcp
+            await().timeout(2, TimeUnit.MINUTES).until(() -> {
+                try {
+                    cloud.getClient().getInstance(PROJECT_ID, ZONE, agentName);
+                    return false;
+                } catch (GoogleJsonResponseException e) {
+                    assertThat(e.getMessage(), containsString("404 Not Found"));
+                    LOGGER.info("error message is: " + e.getMessage());
+                    return true;
+                }
+            });
+        });
+    }
+
+    @Test
     public void testNodeInUseWontDeleteByOtherController() throws Throwable {
-        init();
         rj1.runRemotely(j -> {
             var p1 = createPipeline(j);
             var run = p1.scheduleBuild2(0).waitForStart();
@@ -106,7 +147,7 @@ public class CleanLostNodesWorkIT {
         rj2.runRemotely(j -> {
             await("rj2 CleanLostNodesWork should have seen the running VM")
                     .timeout(PERIODIC_TASK_2_EXECUTIONS)
-                    .untilAsserted(CleanLostNodesWorkIT::assertOtherControllerDidNotDeleteVm);
+                    .untilAsserted(CleanLostNodesWorkIT::assertOtherControllerDidNotFindOrDeleteVm);
         });
 
         // complete the build normally.
@@ -119,49 +160,7 @@ public class CleanLostNodesWorkIT {
     }
 
     @Test
-    public void testSecondControllerDoesNotCleanUpLostNodeWhenRestrictionEnabled() throws Throwable {
-        init(RESTRICT_TO_THIS_CONTROLLER_PROP);
-        rj1.runRemotely(j -> {
-            var p1 = createPipeline(j);
-            var run = p1.scheduleBuild2(0).waitForStart();
-            SemaphoreStep.waitForStart("agentRunning/1", run);
-            LOGGER.info("Agent is running, waiting for CleanLostNodesWork to recognize it as this controller's own");
-            await("rj1 CleanLostNodesWork should recognize the instance as its own")
-                    .timeout(PERIODIC_TASK_2_EXECUTIONS)
-                    .untilAsserted(CleanLostNodesWorkIT::assertLocalControllerOwnsAgentUnderRestriction);
-        });
-
-        // second controller ignores the orphan evaluation for the agents of other controller,
-        // the agent is still in use in a build
-        assertRj2SkipsRestrictedVm();
-
-        // kill rj1 forcefully, make the agent orphan
-        rj1.stopJenkinsForcibly();
-
-        // wait for 4 cycles of CleanLostNodesWork, the orphan is never touched by rj2 as restriction is enabled
-        TimeUnit.SECONDS.sleep(PERIODIC_TASK_4_EXECUTIONS.toSeconds());
-        assertRj2SkipsRestrictedVm();
-    }
-
-    /** rj2 sees the instance but the restriction marks it as not its own, so the VM survives untouched. */
-    private void assertRj2SkipsRestrictedVm() throws Throwable {
-        rj2.runRemotely(j -> {
-            await("rj2 should have evaluated the restriction and skipped the VM")
-                    .timeout(PERIODIC_TASK_2_EXECUTIONS)
-                    .untilAsserted(CleanLostNodesWorkIT::assertOtherControllerSkippedRestrictedVm);
-            var cloud = (ComputeEngineCloud) j.jenkins.clouds.getByName("gce-integration");
-            assertEquals(
-                    "VM should not be removed when owned by a different controller",
-                    1,
-                    cloud.getClient()
-                            .listInstancesWithLabel(cloud.getProjectId(), GOOGLE_LABELS)
-                            .size());
-        });
-    }
-
-    @Test
-    public void testLostNodeCleanedUpBySecondController() throws Throwable {
-        init();
+    public void testOtherControllerDoesNotCleanOrphanedVm() throws Throwable {
         rj1.runRemotely(j -> {
             var p1 = createPipeline(j);
             var run = p1.scheduleBuild2(0).waitForStart();
@@ -174,27 +173,18 @@ public class CleanLostNodesWorkIT {
         // forcefully kill rj1 to make the agent orphan
         rj1.stopJenkinsForcibly();
 
-        // VM is still in the cloud
+        // wait for more than 3x periodic work execution
+        TimeUnit.SECONDS.sleep(PERIODIC_TASK_4_EXECUTIONS.toSeconds());
+
         rj2.runRemotely(j -> {
             var cloud = (ComputeEngineCloud) j.jenkins.clouds.getByName("gce-integration");
             assertEquals(
-                    "VM is still there",
+                    "rj2 see or delete the VM that belongs to rj1",
                     1,
                     cloud.getClient()
                             .listInstancesWithLabel(cloud.getProjectId(), GOOGLE_LABELS)
                             .size());
-        });
-
-        // wait for 4 cycle of clean lost node work, agent should be marked as orphan and deleted by then
-        TimeUnit.SECONDS.sleep(PERIODIC_TASK_4_EXECUTIONS.toSeconds());
-        rj2.runRemotely(j -> {
-            assertOtherControllerCleanedUpOrphan();
-
-            var cloud = (ComputeEngineCloud) j.jenkins.clouds.getByName("gce-integration");
-            // deletion of VM in cloud may take time, so wait for 2 minutes max.
-            await("No VMs in the cloud").timeout(Duration.ofMinutes(2)).until(() -> cloud.getClient()
-                    .listInstancesWithLabel(cloud.getProjectId(), GOOGLE_LABELS)
-                    .isEmpty());
+            assertOtherControllerDidNotFindOrDeleteVm();
         });
     }
 
@@ -204,61 +194,27 @@ public class CleanLostNodesWorkIT {
         return p1;
     }
 
-    /** rj1 (or the controller running the agent) sees its own instance and labels it; no orphan logic fires. */
+    private static void assertOwningControllerDeletedOrphan() {
+        RealJenkinsLogUtil.assertLogContains(RECORDER_CLASS_NAME, "isOrphan: true", "Removing orphaned instance");
+    }
+
     private static void assertLocalControllerKnowsAgent() {
         RealJenkinsLogUtil.assertLogContains(
                 RECORDER_CLASS_NAME,
                 "running remote instances",
                 "Found 1 local instances",
-                "Updated label for instance",
-                "Cleanup lost node restriction is disabled");
+                "Updated label for instance");
         RealJenkinsLogUtil.assertLogDoesNotContain(RECORDER_CLASS_NAME, "isOrphan: true", "Removing orphaned instance");
     }
 
-    /** Same as {@link #assertLocalControllerKnowsAgent}, but with the restriction enabled and matching this controller. */
-    private static void assertLocalControllerOwnsAgentUnderRestriction() {
+    private static void assertOtherControllerDidNotFindOrDeleteVm() {
         RealJenkinsLogUtil.assertLogContains(
-                RECORDER_CLASS_NAME,
-                "running remote instances",
-                "Found 1 local instances",
-                "Updated label for instance",
-                "Cleanup lost node restriction is enabled",
-                "is ours=true");
-        RealJenkinsLogUtil.assertLogDoesNotContain(RECORDER_CLASS_NAME, "isOrphan: true", "Removing orphaned instance");
-    }
-
-    /** The other controller sees the instance but the restriction marks it as not its own, so it's left alone. */
-    private static void assertOtherControllerSkippedRestrictedVm() {
-        RealJenkinsLogUtil.assertLogContains(
-                RECORDER_CLASS_NAME, "Cleanup lost node restriction is enabled", "is ours=false");
-        RealJenkinsLogUtil.assertLogDoesNotContain(RECORDER_CLASS_NAME, "isOrphan: true", "Removing orphaned instance");
-    }
-
-    /** The other controller has no local node for the instance, but it's still in use, so it doesn't delete it. */
-    private static void assertOtherControllerDidNotDeleteVm() {
-        RealJenkinsLogUtil.assertLogContains(
-                RECORDER_CLASS_NAME,
-                "running remote instances",
-                "Found 0 local instances",
-                "Cleanup lost node restriction is disabled");
+                RECORDER_CLASS_NAME, "Found 0 running remote instances", "Found 0 local instances");
         RealJenkinsLogUtil.assertLogDoesNotContain(
                 RECORDER_CLASS_NAME,
                 "Found 1 local instances",
                 "Updated label for instance",
                 "isOrphan: true",
                 "Removing orphaned instance");
-    }
-
-    /** The other controller has no local node for the instance, and it's stale, so it deletes it as an orphan. */
-    private static void assertOtherControllerCleanedUpOrphan() {
-        RealJenkinsLogUtil.assertLogContains(
-                RECORDER_CLASS_NAME,
-                "running remote instances",
-                "Found 0 local instances",
-                "Cleanup lost node restriction is disabled",
-                "isOrphan: true",
-                "Removing orphaned instance");
-        RealJenkinsLogUtil.assertLogDoesNotContain(
-                RECORDER_CLASS_NAME, "Found 1 local instances", "Updated label for instance");
     }
 }
