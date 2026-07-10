@@ -11,14 +11,15 @@ import static com.google.jenkins.plugins.computeengine.integration.ITUtil.initCr
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.instanceConfigurationBuilder;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.teardownResources;
 import static org.awaitility.Awaitility.await;
-import static org.junit.Assert.assertEquals;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.containsInAnyOrder;
 
 import com.google.api.services.compute.model.Instance;
 import com.google.jenkins.plugins.computeengine.ComputeEngineCloud;
 import com.google.jenkins.plugins.computeengine.client.ComputeClientV2;
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.TimeUnit;
@@ -41,15 +42,20 @@ public class ComputeClientV2IT {
     @Rule
     public JenkinsRule j = new JenkinsRule();
 
+    private static final String RUNNING = "RUNNING";
+    private static final String STOPPING = "STOPPING";
+    private static final String CLOUD_A = "cloud-a";
+    private static final String CLOUD_B = "cloud-b";
+
     private static final Map<String, String> GOOGLE_LABELS = getLabel(ComputeClientV2IT.class);
     private static final Map<String, String> GOOGLE_LABELS_NON_JENKINS =
             Map.of("non-jenkins-label", "non-jenkins-value");
     private static final Map<String, String> GOOGLE_LABELS_NEW_LABELS = Map.of("new-key", "new-value");
-    // Two instances that share a presence key but will differ in their cloud-name label value
-    // (instanceB is patched after creation) to verify labelFilters value-equality excludes non-matching instances.
     private static final String LABEL_FILTER_PRESENCE_KEY = "label-filter-test-key";
-    private static final Map<String, String> GOOGLE_LABELS_FILTER_TEST =
-            Map.of(LABEL_FILTER_PRESENCE_KEY, "delete", ComputeEngineCloud.JENKINS_CLOUD_NAME_LABEL_KEY, "cloud-a");
+    private static final Map<String, String> GOOGLE_LABELS_CLOUD_A =
+            Map.of(LABEL_FILTER_PRESENCE_KEY, "delete", ComputeEngineCloud.JENKINS_CLOUD_NAME_LABEL_KEY, CLOUD_A);
+    private static final Map<String, String> GOOGLE_LABELS_CLOUD_B =
+            Map.of(LABEL_FILTER_PRESENCE_KEY, "delete", ComputeEngineCloud.JENKINS_CLOUD_NAME_LABEL_KEY, CLOUD_B);
 
     @Before
     public void setUp() throws Exception {
@@ -66,7 +72,8 @@ public class ComputeClientV2IT {
         allLabels.putAll(GOOGLE_LABELS);
         allLabels.putAll(GOOGLE_LABELS_NEW_LABELS);
         teardownResources(getCloud(j).getClient(), allLabels, LOGGER);
-        teardownResources(getCloud(j).getClient(), GOOGLE_LABELS_FILTER_TEST, LOGGER);
+        teardownResources(getCloud(j).getClient(), GOOGLE_LABELS_CLOUD_A, LOGGER);
+        teardownResources(getCloud(j).getClient(), GOOGLE_LABELS_CLOUD_B, LOGGER);
     }
 
     public ComputeEngineCloud getCloud(JenkinsRule j) {
@@ -92,56 +99,67 @@ public class ComputeClientV2IT {
     @Test
     public void testRetrieveInstancesByLabelAndStatus() throws Exception {
         ComputeClientV2 clientV2 = getCloud(j).getClientV2();
-        String instance1 = createOneInstance(clientV2, GOOGLE_LABELS);
-        String instance2 = createOneInstance(clientV2, GOOGLE_LABELS_NON_JENKINS);
-        // instanceA and instanceB start with the same labels (cloud-a); instanceB is patched to cloud-b
-        // after both are RUNNING, to verify labelFilters value-equality excludes non-matching instances.
-        String instanceA = createOneInstance(clientV2, GOOGLE_LABELS_FILTER_TEST);
-        String instanceB = createOneInstance(clientV2, GOOGLE_LABELS_FILTER_TEST);
-        await().atMost(2, TimeUnit.MINUTES)
-                .until(
-                        () -> List.of(
-                                getInstance(clientV2, instance1),
-                                getInstance(clientV2, instance2),
-                                getInstance(clientV2, instanceA),
-                                getInstance(clientV2, instanceB)),
-                        Every.everyItem(instanceIsRunning()));
-        clientV2.updateInstanceLabels(
-                getInstance(clientV2, instanceB), Map.of(ComputeEngineCloud.JENKINS_CLOUD_NAME_LABEL_KEY, "cloud-b"));
+        String jenkinsVm = createOneInstance(clientV2, GOOGLE_LABELS);
+        String nonJenkinsVm = createOneInstance(clientV2, GOOGLE_LABELS_NON_JENKINS);
+        String cloudAVm = createOneInstance(clientV2, GOOGLE_LABELS_CLOUD_A);
+        String cloudBVm = createOneInstance(clientV2, GOOGLE_LABELS_CLOUD_B);
+        awaitRunning(clientV2, jenkinsVm, nonJenkinsVm, cloudAVm, cloudBVm);
+
         String jenkinsKey = GOOGLE_LABELS.keySet().iterator().next();
         String nonJenkinsKey = GOOGLE_LABELS_NON_JENKINS.keySet().iterator().next();
-        var matchingInstances = clientV2.retrieveInstanceByLabelKeyAndStatus(jenkinsKey, Map.of(), "RUNNING");
-        assertEquals(1, matchingInstances.size());
-        assertEquals(instance1, matchingInstances.get(0).getName());
-        // stop the instance and see 0 matching instances for jenkins label in RUNNING state
-        clientV2.getCompute().instances().stop(PROJECT_ID, ZONE, instance1).execute();
-        await().timeout(5, TimeUnit.SECONDS)
-                .until(() -> clientV2.retrieveInstanceByLabelKeyAndStatus(jenkinsKey, Map.of(), "RUNNING")
-                        .isEmpty());
-        await().timeout(30, TimeUnit.SECONDS)
-                .until(() -> clientV2.retrieveInstanceByLabelKeyAndStatus(jenkinsKey, Map.of(), "STOPPING").stream()
-                        .map(Instance::getName)
-                        .collect(Collectors.toList())
-                        .contains(instance1));
-        // non-jenkins instance can also be filtered by label and status
-        await().timeout(5, TimeUnit.SECONDS)
-                .until(() -> clientV2.retrieveInstanceByLabelKeyAndStatus(nonJenkinsKey, Map.of(), "RUNNING").stream()
-                        .map(Instance::getName)
-                        .collect(Collectors.toList())
-                        .contains(instance2));
-        // value-equality filter: cloud-a filter returns only instanceA, cloud-b returns only instanceB
-        var cloudAInstances = clientV2.retrieveInstanceByLabelKeyAndStatus(
-                LABEL_FILTER_PRESENCE_KEY,
-                Map.of(ComputeEngineCloud.JENKINS_CLOUD_NAME_LABEL_KEY, "cloud-a"),
-                "RUNNING");
-        assertEquals(1, cloudAInstances.size());
-        assertEquals(instanceA, cloudAInstances.get(0).getName());
-        var cloudBInstances = clientV2.retrieveInstanceByLabelKeyAndStatus(
-                LABEL_FILTER_PRESENCE_KEY,
-                Map.of(ComputeEngineCloud.JENKINS_CLOUD_NAME_LABEL_KEY, "cloud-b"),
-                "RUNNING");
-        assertEquals(1, cloudBInstances.size());
-        assertEquals(instanceB, cloudBInstances.get(0).getName());
+
+        // presenceKey filter on the jenkins key returns only the jenkins VM.
+        assertRetrieved(clientV2, jenkinsKey, Map.of(), RUNNING, jenkinsVm);
+
+        // Once stopped, the jenkins VM leaves RUNNING and shows up under STOPPING.
+        clientV2.getCompute().instances().stop(PROJECT_ID, ZONE, jenkinsVm).execute();
+        awaitRetrieved(clientV2, jenkinsKey, RUNNING /* none */);
+        awaitRetrieved(clientV2, jenkinsKey, STOPPING, jenkinsVm);
+
+        // presenceKey filter works for any key (nothing hardcoded)
+        awaitRetrieved(clientV2, nonJenkinsKey, RUNNING, nonJenkinsVm);
+
+        // cloud-a returns only cloudAVm, cloud-b returns only cloudBVm.
+        assertRetrieved(clientV2, LABEL_FILTER_PRESENCE_KEY, cloudNameFilter(CLOUD_A), RUNNING, cloudAVm);
+        assertRetrieved(clientV2, LABEL_FILTER_PRESENCE_KEY, cloudNameFilter(CLOUD_B), RUNNING, cloudBVm);
+    }
+
+    private static Map<String, String> cloudNameFilter(String cloudName) {
+        return Map.of(ComputeEngineCloud.JENKINS_CLOUD_NAME_LABEL_KEY, cloudName);
+    }
+
+    private void awaitRunning(ComputeClientV2 clientV2, String... instanceNames) {
+        await().atMost(2, TimeUnit.MINUTES)
+                .until(
+                        () -> Arrays.stream(instanceNames)
+                                .map(name -> getInstanceUnchecked(clientV2, name))
+                                .collect(Collectors.toList()),
+                        Every.everyItem(instanceIsRunning()));
+    }
+
+    /** Asserts filter retrieves exactly {@code expectedNames} VMs from GCP. */
+    private static void assertRetrieved(
+            ComputeClientV2 clientV2,
+            String presenceKey,
+            Map<String, String> labelFilters,
+            String status,
+            String... expectedNames)
+            throws IOException {
+        var actual = clientV2.retrieveInstanceByLabelKeyAndStatus(presenceKey, labelFilters, status).stream()
+                .map(Instance::getName)
+                .collect(Collectors.toList());
+        assertThat(actual, containsInAnyOrder(expectedNames));
+    }
+
+    /** Waits until finding {@code expectedNames} VMs within 30s timeout. */
+    private static void awaitRetrieved(
+            ComputeClientV2 clientV2, String presenceKey, String status, String... expectedNames) {
+        await().atMost(30, TimeUnit.SECONDS).untilAsserted(() -> {
+            var actual = clientV2.retrieveInstanceByLabelKeyAndStatus(presenceKey, Map.of(), status).stream()
+                    .map(Instance::getName)
+                    .collect(Collectors.toList());
+            assertThat(actual, containsInAnyOrder(expectedNames));
+        });
     }
 
     @Test
@@ -163,6 +181,15 @@ public class ComputeClientV2IT {
                 .instances()
                 .get(PROJECT_ID, ZONE, instanceName)
                 .execute();
+    }
+
+    /** {@link #getInstance} wrapper for use inside lambdas that cannot throw a checked {@link IOException}. */
+    private static Instance getInstanceUnchecked(ComputeClientV2 clientV2, String instanceName) {
+        try {
+            return getInstance(clientV2, instanceName);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     private static void assertLabel(ComputeClientV2 clientV2, String instanceName, String key, String value) {

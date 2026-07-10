@@ -179,7 +179,7 @@ public class CleanLostNodesWorkIT {
         rj2.runRemotely(j -> {
             var cloud = (ComputeEngineCloud) j.jenkins.clouds.getByName("gce-integration");
             assertEquals(
-                    "rj2 see or delete the VM that belongs to rj1",
+                    "rj2 does not see or delete the VM that belonged to rj1, VM still exists",
                     1,
                     cloud.getClient()
                             .listInstancesWithLabel(cloud.getProjectId(), GOOGLE_LABELS)
