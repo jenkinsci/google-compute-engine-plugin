@@ -1117,6 +1117,23 @@ Example CasC: link:src/test/resources/com/google/jenkins/plugins/computeengine/i
 Only the order of fallback zones within a single configuration is guaranteed. The order in which instance configurations and clouds are selected for a label resembles round-robin but is not guaranteed — due to concurrent provisioning calls we opt not to enforce strict ordering.
 ====
 
+[[orphan-agent-cleanup]]
+== Orphan Agent Cleanup
+
+An orphaned agent is a running GCE VM whose Jenkins node no longer exists on the owning controller — for example due to a network or API error during termination. The plugin runs `CleanLostNodesWork` hourly (configurable via `-Dcom.google.jenkins.plugins.computeengine.CleanLostNodesWork.recurrencePeriod=<ISO-8601 duration or ms>`, e.g. `PT30M`) and deletes a VM once its `jenkins_node_last_refresh` label is stale for more than 3× the interval (~3 hours by default), providing a grace period for normal restarts.
+
+At provision time the plugin stamps `jenkins_server_url` and `jenkins_cloud_name` labels on every agent VM. The cleanup task filters by both labels so that controllers sharing a GCP project only evaluate their own VMs and do not interfere with each other.
+
+If a controller is decommissioned or a cloud configuration is deleted, the VMs it provisioned retain their ownership labels indefinitely and will not be cleaned up automatically. Delete them manually:
+
+[source,bash]
+----
+gcloud compute instances list \
+  --filter="labels.jenkins_server_url=<value> AND labels.jenkins_cloud_name=<cloud-name>"
+----
+
+If the Jenkins URL (`Manage Jenkins → System → Jenkins URL`) is blank, the cleanup task skips all clouds for that pass and logs a warning — configure it before provisioning agents.
+
 [[troubleshooting]]
 == Troubleshooting
 
