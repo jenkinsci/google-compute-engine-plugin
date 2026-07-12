@@ -27,6 +27,7 @@ import hudson.model.PeriodicWork;
 import hudson.model.Slave;
 import java.io.IOException;
 import java.security.GeneralSecurityException;
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
@@ -40,6 +41,7 @@ import java.util.logging.Logger;
 import java.util.stream.Collectors;
 import jenkins.model.Jenkins;
 import jenkins.model.JenkinsLocationConfiguration;
+import jenkins.util.SystemProperties;
 import org.jenkinsci.Symbol;
 
 /** Periodically checks if there are no lost nodes in GCP. If it finds any they are deleted. */
@@ -48,8 +50,8 @@ import org.jenkinsci.Symbol;
 public class CleanLostNodesWork extends PeriodicWork {
     protected final Logger logger = Logger.getLogger(getClass().getName());
     public static final String NODE_IN_USE_LABEL_KEY = "jenkins_node_last_refresh";
-    public static final long RECURRENCE_PERIOD = Long.parseLong(
-            System.getProperty(CleanLostNodesWork.class.getName() + ".recurrencePeriod", String.valueOf(HOUR)));
+    public static final Duration RECURRENCE_PERIOD = SystemProperties.getDuration(
+            CleanLostNodesWork.class.getName() + ".recurrencePeriod", ChronoUnit.MILLIS, Duration.ofMillis(HOUR));
 
     @VisibleForTesting
     public static final int LOST_MULTIPLIER = 3;
@@ -65,7 +67,7 @@ public class CleanLostNodesWork extends PeriodicWork {
     /** {@inheritDoc} */
     @Override
     public long getRecurrencePeriod() {
-        return RECURRENCE_PERIOD;
+        return RECURRENCE_PERIOD.toMillis();
     }
 
     public static String getLastRefreshLabelVal() {
@@ -120,7 +122,7 @@ public class CleanLostNodesWork extends PeriodicWork {
         OffsetDateTime lastRefresh =
                 LocalDateTime.parse(nodeLastRefresh, LAST_REFRESH_FORMATTER).atOffset(ZoneOffset.UTC);
         boolean isOrphan = lastRefresh
-                .plus(RECURRENCE_PERIOD * LOST_MULTIPLIER, ChronoUnit.MILLIS)
+                .plus(RECURRENCE_PERIOD.multipliedBy(LOST_MULTIPLIER))
                 .isBefore(OffsetDateTime.now(ZoneOffset.UTC));
         logger.log(
                 Level.FINEST,
