@@ -279,7 +279,7 @@ Instance configurations define what kind of VM to launch for a given set of Jenk
 
 | *Launch Timeout*
 | `launchTimeoutSecondsStr`
-| Seconds to wait for an agent to connect before giving up. Default: 300.
+| Seconds to wait for an agent to connect before giving up. Agents that never come online within this time are removed from Jenkins (and any corresponding VM is deleted). Default: 300.
 
 | *Use Internal IP*
 | `useInternalAddress`
@@ -754,7 +754,7 @@ The *Instance Cap* on the cloud limits total concurrent VMs across all instance 
 [[retention-and-termination]]
 ==== Retention and Termination
 
-Idle agents are terminated after the configured *Node Retention Time* (default: 6 minutes). The *Launch Timeout* (default: 300 seconds) controls how long the plugin waits for a new agent to connect before giving up.
+Idle agents are terminated after the configured *Node Retention Time* (default: 6 minutes). The *Launch Timeout* (default: 300 seconds) controls how long the plugin waits for a new agent to connect before giving up. Agents that never come online within the launch timeout are removed from Jenkins, and any corresponding GCP VM is deleted if still present.
 
 If *Terminate idle agents during shutdown* is enabled, idle agents are deleted when the Jenkins controller stops.
 

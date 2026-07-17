@@ -19,6 +19,7 @@ import com.google.common.collect.ImmutableList;
 import hudson.model.Action;
 import hudson.model.Cause;
 import hudson.model.CauseAction;
+import hudson.model.Computer;
 import hudson.model.Executor;
 import hudson.model.ExecutorListener;
 import hudson.model.Job;
@@ -56,10 +57,31 @@ public class ComputeEngineRetentionStrategy extends RetentionStrategy<ComputeEng
 
     @Override
     public long check(ComputeEngineComputer c) {
+        ComputeEngineInstance node = c.getNode();
+        if (shouldTerminateNeverOnline(node)) {
+            node.terminateNeverOnline("launch timeout");
+            return 1;
+        }
         if (MinimumInstanceChecker.shouldPreserve(c)) {
             return 1;
         }
         return delegate.check(c);
+    }
+
+    /**
+     * Agents that never came online do not count toward the min pool and should be removed once past
+     * the launch timeout. Skips agents whose age is unknown or that are already online.
+     */
+    static boolean shouldTerminateNeverOnline(ComputeEngineInstance node) {
+        return shouldTerminateNeverOnline(node, System.currentTimeMillis());
+    }
+
+    static boolean shouldTerminateNeverOnline(ComputeEngineInstance node, long nowMillis) {
+        if (node == null || node.hasEverConnected() || !node.isPastLaunchTimeout(nowMillis)) {
+            return false;
+        }
+        Computer computer = node.toComputer();
+        return computer == null || !computer.isOnline();
     }
 
     @Override

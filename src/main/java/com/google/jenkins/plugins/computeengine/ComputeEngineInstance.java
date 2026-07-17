@@ -63,6 +63,9 @@ public class ComputeEngineInstance extends AbstractCloudSlave {
     private final boolean waitForStartupScript;
     private Integer launchTimeout; // Seconds
     private Boolean connected;
+    /** Wall-clock time when this node was provisioned; used for never-online cleanup. */
+    private final long provisionedAtMillis;
+
     private transient ComputeEngineCloud cloud;
 
     @Builder
@@ -103,7 +106,8 @@ public class ComputeEngineInstance extends AbstractCloudSlave {
                 launcher,
                 retentionStrategy,
                 Collections.emptyList());
-        this.launchTimeout = launchTimeout;
+        this.launchTimeout =
+                launchTimeout != null ? launchTimeout : InstanceConfiguration.DEFAULT_LAUNCH_TIMEOUT_SECONDS;
         this.zone = zone;
         this.cloudName = cloudName;
         this.sshUser = sshUser;
@@ -118,6 +122,7 @@ public class ComputeEngineInstance extends AbstractCloudSlave {
         this.sshKeyCredential = sshKeyCredential;
         this.waitForStartupScript = waitForStartupScript;
         this.cloud = cloud;
+        this.provisionedAtMillis = System.currentTimeMillis();
     }
 
     @Override
@@ -161,6 +166,40 @@ public class ComputeEngineInstance extends AbstractCloudSlave {
 
     public void onConnected() {
         this.connected = true;
+    }
+
+    /** Initializes fields that may be missing after deserialization. */
+    protected Object readResolve() {
+        if (launchTimeout == null) {
+            launchTimeout = InstanceConfiguration.DEFAULT_LAUNCH_TIMEOUT_SECONDS;
+        }
+        return super.readResolve();
+    }
+
+    /** @return true if this agent has successfully come online at least once. */
+    boolean hasEverConnected() {
+        return Boolean.TRUE.equals(connected);
+    }
+
+    /**
+     * @return true if this node has been waiting longer than the configured launch timeout without
+     *     coming online. Returns false when provision time is unknown (e.g. pre-upgrade deserialize).
+     */
+    boolean isPastLaunchTimeout(long nowMillis) {
+        if (provisionedAtMillis <= 0) {
+            return false;
+        }
+        return nowMillis - provisionedAtMillis > getLaunchTimeoutMillis();
+    }
+
+    /** Terminates this node (and any corresponding GCP VM) after it failed to ever come online. */
+    void terminateNeverOnline(String reason) {
+        LOGGER.log(Level.WARNING, "Terminating never-online node {0} ({1})", new Object[] {getNodeName(), reason});
+        try {
+            terminate();
+        } catch (Exception e) {
+            LOGGER.log(Level.WARNING, "Failed to terminate never-online node " + getNodeName(), e);
+        }
     }
 
     public long getLaunchTimeoutMillis() {
