@@ -23,6 +23,7 @@ import static com.google.jenkins.plugins.computeengine.InstanceConfiguration.MET
 import static com.google.jenkins.plugins.computeengine.InstanceConfiguration.METADATA_WINDOWS_STARTUP_SCRIPT_KEY;
 import static com.google.jenkins.plugins.computeengine.NetworkInterfaceIpStackMode.NAT_NAME;
 import static com.google.jenkins.plugins.computeengine.NetworkInterfaceIpStackMode.NAT_TYPE;
+import static hudson.Functions.isWindows;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
@@ -79,7 +80,6 @@ import java.util.Map;
 import java.util.logging.Logger;
 import jenkins.util.SystemProperties;
 import lombok.extern.java.Log;
-import org.apache.commons.lang.SystemUtils;
 import org.jvnet.hudson.test.JenkinsRule;
 
 /** Common logic and constants used throughout the integration tests. */
@@ -125,7 +125,7 @@ class ITUtil {
     static final int SNAPSHOT_TIMEOUT = windows ? 600 : 300;
     private static final GoogleKeyCredential SSH_KEY = GoogleKeyPair.generate(RUN_AS_USER);
     static final String SSH_PRIVATE_KEY = Secret.toString(SSH_KEY.getPrivateKey());
-    static final int TEST_TIMEOUT_MULTIPLIER = (SystemUtils.IS_OS_WINDOWS || windows) ? 3 : 1;
+    static final int TEST_TIMEOUT_MULTIPLIER = isWindows() || windows ? 3 : 1;
     static final String CONFIG_AS_CODE_PATH =
             windows ? "configuration-as-code-windows-it.yml" : "configuration-as-code-it.yml";
     private static String windowsPrivateKeyCredentialsId;
