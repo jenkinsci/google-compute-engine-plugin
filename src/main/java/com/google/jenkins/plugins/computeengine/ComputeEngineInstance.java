@@ -18,6 +18,7 @@ package com.google.jenkins.plugins.computeengine;
 
 import com.google.api.client.googleapis.json.GoogleJsonResponseException;
 import com.google.cloud.graphite.platforms.plugin.client.ComputeClient.OperationException;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Strings;
 import com.google.jenkins.plugins.computeengine.ssh.GoogleKeyCredential;
 import edu.umd.cs.findbugs.annotations.Nullable;
@@ -64,6 +65,9 @@ public class ComputeEngineInstance extends AbstractCloudSlave {
     private Integer launchTimeout; // Seconds
     private Boolean connected;
     private transient ComputeEngineCloud cloud;
+
+    @VisibleForTesting
+    public transient boolean skipGcpTerminateForTesting;
 
     @Builder
     private ComputeEngineInstance(
@@ -127,6 +131,10 @@ public class ComputeEngineInstance extends AbstractCloudSlave {
 
     @Override
     protected void _terminate(TaskListener listener) throws IOException, InterruptedException {
+        if (skipGcpTerminateForTesting) { // used by integration test - CleanLostNodesWorkIT
+            LOGGER.fine(() -> "skipGcpTerminateForTesting set; skipping GCP termination for " + this.getNodeName());
+            return;
+        }
         try {
             ComputeEngineCloud cloud = getCloud();
 

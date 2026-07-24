@@ -121,12 +121,13 @@ public class ComputeEngineCloudWorkerCreatedIT {
                 .getInstance(PROJECT_ID, ZONE, planned.iterator().next().displayName);
 
         assertEquals("one instance should be provisioned", 1, planned.size());
-        /* There are 5 labels,
+        /* There are 7 labels,
          * actual code: jenkins_cloud_id, jenkins_config_name, jenkins_node_last_refresh
+         *  jenkins_server_url, jenkins_cloud_name
          * test code: <current class name>, user
-         * Total 5 labels here.
+         * Total 7 labels here.
          * */
-        assertEquals("GCP VM should have 5 labels", 5, instance.getLabels().size());
+        assertEquals("GCP VM should have 7 labels", 7, instance.getLabels().size());
         assertEquals(
                 "GCP VM name starts with the prefix configured",
                 instanceConfiguration.getNamePrefix(),

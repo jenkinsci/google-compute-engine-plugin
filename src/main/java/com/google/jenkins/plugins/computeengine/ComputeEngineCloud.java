@@ -66,6 +66,7 @@ import java.util.logging.Logger;
 import java.util.logging.SimpleFormatter;
 import java.util.stream.Collectors;
 import jenkins.model.Jenkins;
+import jenkins.model.JenkinsLocationConfiguration;
 import lombok.Getter;
 import lombok.extern.java.Log;
 import org.kohsuke.stapler.AncestorInPath;
@@ -81,6 +82,8 @@ public class ComputeEngineCloud extends AbstractCloudImpl {
     public static final String CLOUD_PREFIX = "gce-";
     public static final String CONFIG_LABEL_KEY = "jenkins_config_name";
     public static final String CLOUD_ID_LABEL_KEY = "jenkins_cloud_id";
+    public static final String JENKINS_SERVER_URL_LABEL_KEY = "jenkins_server_url";
+    public static final String JENKINS_CLOUD_NAME_LABEL_KEY = "jenkins_cloud_name";
 
     private static final SimpleFormatter sf = new SimpleFormatter();
     private static int configsNext;
@@ -119,6 +122,18 @@ public class ComputeEngineCloud extends AbstractCloudImpl {
 
     private static String createCloudId(String name) {
         return CLOUD_PREFIX + name.trim();
+    }
+
+    /**
+     * Sanitizes the value -
+     * as per <a href="https://docs.cloud.google.com/compute/docs/labeling-resources#requirements">GCP Doc</a>
+     */
+    public static String toGcpLabelValue(String value) {
+        if (value == null) {
+            return "";
+        }
+        var sanitized = value.toLowerCase().replaceAll("[^a-z0-9_-]", "_");
+        return sanitized.length() <= 63 ? sanitized : sanitized.substring(0, 63);
     }
 
     public static void log(Logger logger, Level level, TaskListener listener, String message) {
@@ -166,6 +181,10 @@ public class ComputeEngineCloud extends AbstractCloudImpl {
 
             // Apply a label that identifies the name of this instance configuration
             configuration.appendLabel(CONFIG_LABEL_KEY, configuration.getNamePrefix());
+            configuration.appendLabel(
+                    JENKINS_SERVER_URL_LABEL_KEY,
+                    toGcpLabelValue(JenkinsLocationConfiguration.get().getUrl()));
+            configuration.appendLabel(JENKINS_CLOUD_NAME_LABEL_KEY, toGcpLabelValue(getCloudName()));
         }
         setInstanceId(instanceId);
         return this;
