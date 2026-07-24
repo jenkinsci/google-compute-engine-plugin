@@ -396,9 +396,22 @@ public class ComputeEngineCloud extends AbstractCloudImpl {
                                     System.currentTimeMillis() - startTime, node.getNodeName()));
                 } else {
                     log.log(Level.WARNING, String.format("No computer for node %s found", node.getNodeName()));
+                    node.terminateNeverOnline("no computer found");
                 }
             } catch (TimeoutException e) {
                 log.log(Level.WARNING, String.format("Timeout waiting for node %s to connect", node.getNodeName()), e);
+                node.terminateNeverOnline("connect timeout");
+            } catch (InterruptedException e) {
+                // Interruption says nothing about whether the VM will come online; leave cleanup of a
+                // node that never connects to the retention strategy.
+                log.log(
+                        Level.WARNING,
+                        String.format("Interrupted waiting for node %s to connect", node.getNodeName()),
+                        e);
+                Thread.currentThread().interrupt();
+            } catch (Exception e) {
+                log.log(Level.WARNING, String.format("Error waiting for node %s to connect", node.getNodeName()), e);
+                node.terminateNeverOnline("connect error");
             }
             return null;
         });
