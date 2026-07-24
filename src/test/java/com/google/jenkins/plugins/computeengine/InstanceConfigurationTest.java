@@ -27,6 +27,7 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 
 import com.google.api.services.compute.model.AcceleratorType;
@@ -38,6 +39,7 @@ import com.google.api.services.compute.model.InstanceTemplate;
 import com.google.api.services.compute.model.MachineType;
 import com.google.api.services.compute.model.Metadata;
 import com.google.api.services.compute.model.Network;
+import com.google.api.services.compute.model.Operation;
 import com.google.api.services.compute.model.Region;
 import com.google.api.services.compute.model.Subnetwork;
 import com.google.api.services.compute.model.Zone;
@@ -683,5 +685,22 @@ public class InstanceConfigurationTest {
         assertFalse(config.isExhausted(ZONE));
         config.markExhausted(ZONE);
         assertTrue(config.isExhausted(ZONE));
+    }
+
+    @Test
+    public void testProvisionedNodeLaunchTimeoutIsInSeconds() throws Exception {
+        Mockito.when(cloud.getClient()).thenReturn(computeClient);
+        Mockito.when(computeClient.insertInstance(anyString(), any(Optional.class), any()))
+                .thenReturn(new Operation());
+        var config = instanceConfigurationBuilder().cloud(cloud).build();
+
+        ComputeEngineInstance node = config.provision();
+
+        // launchTimeoutSeconds must be carried into the node as seconds; passing millis here
+        // made getLaunchTimeoutMillis() multiply by 1000 twice (300s became ~3.5 days)
+        assertEquals(
+                Long.parseLong(LAUNCH_TIMEOUT_SECONDS_STR),
+                node.getLaunchTimeout().longValue());
+        assertEquals(Long.parseLong(LAUNCH_TIMEOUT_SECONDS_STR) * 1000L, node.getLaunchTimeoutMillis());
     }
 }
