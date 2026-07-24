@@ -675,6 +675,20 @@ public class InstanceConfigurationTest {
     }
 
     @Test
+    public void testMarkExhaustedDoesNotThrowForTemplateBasedConfiguration() {
+        // Template-based configurations leave machineType empty; markExhausted's log message
+        // used to call nameFromSelfLink(machineType) and threw IllegalArgumentException
+        var config = instanceConfigurationBuilder()
+                .machineType("")
+                .template(TEMPLATE_NAME)
+                .build();
+
+        config.markExhausted(ZONE);
+
+        assertTrue(config.isExhausted(ZONE));
+    }
+
+    @Test
     @LocalData
     public void testZoneExhaustionStateTransientFieldInitializedAfterLoad() {
         var cloud = (ComputeEngineCloud) r.jenkins.clouds.getByName("gce-unit-tests");
