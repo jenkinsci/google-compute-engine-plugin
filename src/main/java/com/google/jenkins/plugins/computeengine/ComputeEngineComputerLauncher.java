@@ -242,23 +242,24 @@ public abstract class ComputeEngineComputerLauncher extends ComputerLauncher {
                         break OUTER;
                     case "STOPPING":
                     case "SUSPENDING":
-                    case "TERMINATED":
                         cloud.log(
                                 LOGGER,
                                 Level.FINEST,
                                 listener,
                                 String.format("Instance %s is being shut down...", computer.getName()));
                         break;
-                    // TODO: Although the plugin doesn't put instances in the STOPPED or SUSPENDED states,
+                    // TODO: Although the plugin doesn't put instances in the STOPPED, SUSPENDED or TERMINATED states,
                     // it should handle them if they are placed in that state out-of-band.
                     case "STOPPED":
                     case "SUSPENDED":
+                    case "TERMINATED":
                         cloud.log(
                                 LOGGER,
                                 Level.FINEST,
                                 listener,
                                 String.format(
-                                        "Instance %s was unexpectedly stopped or suspended...", computer.getName()));
+                                        "Instance %s was unexpectedly stopped, suspended or terminated...",
+                                        computer.getName()));
                         return;
                 }
                 Thread.sleep(5000);
