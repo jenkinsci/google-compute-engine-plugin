@@ -18,6 +18,7 @@ package com.google.jenkins.plugins.computeengine;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.lessThan;
 import static org.hamcrest.Matchers.not;
@@ -50,6 +51,7 @@ import hudson.util.FormValidation;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.logging.Level;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.htmlunit.html.HtmlPage;
@@ -58,6 +60,7 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.jvnet.hudson.test.JenkinsRule;
+import org.jvnet.hudson.test.LoggerRule;
 import org.jvnet.hudson.test.recipes.LocalData;
 import org.mockito.Mock;
 import org.mockito.Mockito;
@@ -103,6 +106,10 @@ public class InstanceConfigurationTest {
 
     @Rule
     public JenkinsRule r = new JenkinsRule();
+
+    @Rule
+    public LoggerRule logs =
+            new LoggerRule().record(InstanceConfiguration.class, Level.INFO).capture(20);
 
     @Before
     public void init() throws Exception {
@@ -675,17 +682,56 @@ public class InstanceConfigurationTest {
     }
 
     @Test
-    public void testMarkExhaustedDoesNotThrowForTemplateBasedConfiguration() {
-        // Template-based configurations leave machineType empty; markExhausted's log message
-        // used to call nameFromSelfLink(machineType) and threw IllegalArgumentException
-        var config = instanceConfigurationBuilder()
-                .machineType("")
-                .template(TEMPLATE_NAME)
-                .build();
+    public void testMarkExhaustedLogsMachineTypeForInstanceBasedConfiguration() {
+        for (String template : new String[] {null, "", " "}) {
+            var config = instanceConfigurationBuilder()
+                    .machineType("projects/" + PROJECT_ID + "/zones/" + ZONE + "/machineTypes/" + MACHINE_TYPE)
+                    .template(template)
+                    .build();
+
+            int messageCount = logs.getMessages().size();
+            config.markExhausted(ZONE);
+
+            assertTrue(config.isExhausted(ZONE));
+            assertThat(
+                    logs.getMessages().get(messageCount),
+                    startsWith("Marking zone [" + ZONE + "] exhausted for machine type [" + MACHINE_TYPE
+                            + "] in config [" + CONFIG_DESC + "] until "));
+        }
+        assertThat(logs.getMessages(), not(hasItem(containsString("instance template"))));
+    }
+
+    @Test
+    public void testMarkExhaustedLogsTemplateForTemplateBasedConfiguration() {
+        for (String machineType : new String[] {null, "", MACHINE_TYPE}) {
+            var config = instanceConfigurationBuilder()
+                    .machineType(machineType)
+                    .template("projects/" + PROJECT_ID + "/global/instanceTemplates/" + TEMPLATE_NAME)
+                    .build();
+
+            int messageCount = logs.getMessages().size();
+            config.markExhausted(ZONE);
+
+            assertTrue(config.isExhausted(ZONE));
+            assertThat(
+                    logs.getMessages().get(messageCount),
+                    startsWith("Marking zone [" + ZONE + "] exhausted for instance template [" + TEMPLATE_NAME
+                            + "] in config [" + CONFIG_DESC + "] until "));
+        }
+        assertThat(logs.getMessages(), not(hasItem(containsString("machine type"))));
+    }
+
+    @Test
+    public void testMarkExhaustedLogsUnknownForMissingProvisioningSource() {
+        var config = instanceConfigurationBuilder().machineType(null).build();
 
         config.markExhausted(ZONE);
 
         assertTrue(config.isExhausted(ZONE));
+        assertThat(
+                logs.getMessages(),
+                hasItem(startsWith("Marking zone [" + ZONE + "] exhausted for machine type [unknown] in config ["
+                        + CONFIG_DESC + "] until ")));
     }
 
     @Test
