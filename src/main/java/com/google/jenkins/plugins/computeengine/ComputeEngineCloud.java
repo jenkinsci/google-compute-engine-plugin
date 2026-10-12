@@ -390,9 +390,11 @@ public class ComputeEngineCloud extends AbstractCloudImpl {
                         String.format("Interrupted waiting for node %s to connect", node.getNodeName()),
                         e);
                 Thread.currentThread().interrupt();
+                throw e;
             } catch (Exception e) {
                 log.log(Level.WARNING, String.format("Error waiting for node %s to connect", node.getNodeName()), e);
                 node.terminateNeverOnline("connect error");
+                throw e;
             }
             return null;
         });
