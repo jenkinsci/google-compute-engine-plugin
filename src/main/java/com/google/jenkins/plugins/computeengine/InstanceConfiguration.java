@@ -462,7 +462,7 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
                     .labelString(labels)
                     .launcher(launcher)
                     .retentionStrategy(new ComputeEngineRetentionStrategy(retentionTimeMinutes, oneShot))
-                    .launchTimeout(getLaunchTimeoutMillis())
+                    .launchTimeout(launchTimeoutSeconds)
                     .sshPort(sshPort)
                     .javaExecPath(javaExecPath)
                     .sshKeyCredential(sshKeyCredential)
