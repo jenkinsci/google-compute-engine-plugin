@@ -59,20 +59,28 @@ public class ComputeClientV2 {
     }
 
     /**
-     * Fetches instances by label key existence and status.
+     * Fetches instances that have {@code presenceKey} set (any value), match all entries in {@code labelFilters}
+     * exactly, and are in the given {@code status}.
      * <p>Applies Google Compute Engine aggregated list syntax for filtering:
      * <a href="https://cloud.google.com/compute/docs/reference/rest/v1/instances/aggregatedList">aggregatedList API</a>.
      *
-     * @param key the non-empty label key to filter by.
-     * @param status the instance status (RUNNING, STOPPING, etc.) as defined in:
-     * <a href="https://cloud.google.com/compute/docs/instances/instance-lifecycle#instance-states">Instance States</a>.
-     * @return List of {@link Instance} matching criteria, or empty list if none.
+     * @param presenceKey  label key that must be present (any value).
+     * @param labelFilters additional label key=value pairs that must all match.
+     * @param status       the instance status ({@code RUNNING}, {@code STOPPING}, etc.) as defined in:
+     *                     <a href="https://cloud.google.com/compute/docs/instances/instance-lifecycle#instance-states">Instance States</a>.
+     * @return list of matching instances, or an empty list if none.
      * @throws IOException for communication issues with Compute Engine API.
      */
-    public List<Instance> retrieveInstanceByLabelKeyAndStatus(String key, String status) throws IOException {
-        String filter = "labels." + key + ":*" + " AND status=" + status;
-        var response =
-                compute.instances().aggregatedList(projectId).setFilter(filter).execute();
+    public List<Instance> retrieveInstanceByLabelKeyAndStatus(
+            String presenceKey, Map<String, String> labelFilters, String status) throws IOException {
+        var sb = new StringBuilder("labels.").append(presenceKey).append(":*");
+        labelFilters.forEach(
+                (k, v) -> sb.append(" AND labels.").append(k).append("=").append(v));
+        sb.append(" AND status=").append(status);
+        var response = compute.instances()
+                .aggregatedList(projectId)
+                .setFilter(sb.toString())
+                .execute();
         var items = response.getItems();
         if (items == null) {
             return List.of();

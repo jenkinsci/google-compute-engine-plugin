@@ -169,4 +169,41 @@ public class ComputeEngineCloudTest {
         fv = d.doCheckProjectId(PROJECT_ID);
         assertEquals(FormValidation.Kind.OK, fv.kind);
     }
+
+    @Test
+    public void toGcpLabelValue_nullReturnsEmpty() {
+        assertEquals("", ComputeEngineCloud.toGcpLabelValue(null));
+    }
+
+    @Test
+    public void toGcpLabelValue_alreadyValidPassesThrough() {
+        assertEquals("my-cloud_1", ComputeEngineCloud.toGcpLabelValue("my-cloud_1"));
+    }
+
+    @Test
+    public void toGcpLabelValue_urlSanitized() {
+        // slashes, colons, dots all become underscores
+        assertEquals(
+                "http___jenkins_example_com_8080_",
+                ComputeEngineCloud.toGcpLabelValue("http://jenkins.example.com:8080/"));
+    }
+
+    @Test
+    public void toGcpLabelValue_uppercaseLowered() {
+        assertEquals("my-jenkins", ComputeEngineCloud.toGcpLabelValue("My-Jenkins"));
+    }
+
+    @Test
+    public void toGcpLabelValue_truncatedAt63Chars() {
+        var input = "a".repeat(70);
+        var result = ComputeEngineCloud.toGcpLabelValue(input);
+        assertEquals(63, result.length());
+        assertEquals("a".repeat(63), result);
+    }
+
+    @Test
+    public void toGcpLabelValue_exactly63CharsNotTruncated() {
+        var input = "a".repeat(63);
+        assertEquals(input, ComputeEngineCloud.toGcpLabelValue(input));
+    }
 }
