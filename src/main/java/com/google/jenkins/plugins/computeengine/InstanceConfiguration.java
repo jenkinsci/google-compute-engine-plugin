@@ -493,12 +493,23 @@ public class InstanceConfiguration implements Describable<InstanceConfiguration>
     void markExhausted(String zone) {
         exhaustedAt.put(zone, Instant.now());
         log.info(String.format(
-                "Marking zone [%s] exhausted for machine type [%s] in config [%s] until %s; "
+                "Marking zone [%s] exhausted for %s in config [%s] until %s; "
                         + "the next provisioning cycle will skip this zone and try the next candidate zone",
                 zone,
-                nameFromSelfLink(machineType),
+                provisioningSourceDisplayName(),
                 description,
                 Instant.now().plus(ZONE_EXHAUSTION_COOLDOWN_DURATION)));
+    }
+
+    private String provisioningSourceDisplayName() {
+        // When a template is configured, provisioning ignores machineType.
+        if (template != null && !template.isBlank()) {
+            return "instance template [" + nameFromSelfLink(template) + "]";
+        }
+        if (machineType != null && !machineType.isEmpty()) {
+            return "machine type [" + nameFromSelfLink(machineType) + "]";
+        }
+        return "machine type [unknown]";
     }
 
     boolean isExhausted(String zone) {
