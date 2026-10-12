@@ -29,7 +29,6 @@ import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import jenkins.model.Jenkins;
-import org.apache.commons.lang.StringUtils;
 import org.kohsuke.stapler.AncestorInPath;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.QueryParameter;
@@ -78,7 +77,7 @@ public class AutofilledNetworkConfiguration extends NetworkConfiguration {
         }
 
         public FormValidation doCheckNetwork(@QueryParameter String value) {
-            if (StringUtils.isEmpty(value)) {
+            if (value == null || value.isBlank()) {
                 return FormValidation.error("Please select a network...");
             }
             return FormValidation.ok();

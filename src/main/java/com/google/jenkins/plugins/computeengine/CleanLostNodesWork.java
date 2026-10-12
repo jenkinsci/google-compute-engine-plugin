@@ -27,17 +27,21 @@ import hudson.model.PeriodicWork;
 import hudson.model.Slave;
 import java.io.IOException;
 import java.security.GeneralSecurityException;
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
 import jenkins.model.Jenkins;
+import jenkins.model.JenkinsLocationConfiguration;
+import jenkins.util.SystemProperties;
 import org.jenkinsci.Symbol;
 
 /** Periodically checks if there are no lost nodes in GCP. If it finds any they are deleted. */
@@ -46,8 +50,8 @@ import org.jenkinsci.Symbol;
 public class CleanLostNodesWork extends PeriodicWork {
     protected final Logger logger = Logger.getLogger(getClass().getName());
     public static final String NODE_IN_USE_LABEL_KEY = "jenkins_node_last_refresh";
-    public static final long RECURRENCE_PERIOD = Long.parseLong(
-            System.getProperty(CleanLostNodesWork.class.getName() + ".recurrencePeriod", String.valueOf(HOUR)));
+    public static final Duration RECURRENCE_PERIOD = SystemProperties.getDuration(
+            CleanLostNodesWork.class.getName() + ".recurrencePeriod", ChronoUnit.MILLIS, Duration.ofMillis(HOUR));
 
     @VisibleForTesting
     public static final int LOST_MULTIPLIER = 3;
@@ -63,7 +67,7 @@ public class CleanLostNodesWork extends PeriodicWork {
     /** {@inheritDoc} */
     @Override
     public long getRecurrencePeriod() {
-        return RECURRENCE_PERIOD;
+        return RECURRENCE_PERIOD.toMillis();
     }
 
     public static String getLastRefreshLabelVal() {
@@ -79,6 +83,13 @@ public class CleanLostNodesWork extends PeriodicWork {
 
     private void cleanCloud(ComputeEngineCloud cloud) {
         logger.log(Level.FINEST, "Cleaning cloud " + cloud.getCloudName());
+        String jenkinsUrl = JenkinsLocationConfiguration.get().getUrl();
+        if (jenkinsUrl == null || jenkinsUrl.isBlank()) {
+            logger.log(
+                    Level.WARNING,
+                    "Jenkins URL is not configured; skipping lost node cleanup for cloud " + cloud.getCloudName());
+            return;
+        }
         ComputeClientV2 clientV2;
         try {
             clientV2 = cloud.getClientV2();
@@ -86,7 +97,7 @@ public class CleanLostNodesWork extends PeriodicWork {
             logger.log(Level.WARNING, "Error getting clientV2 for cloud " + cloud.getCloudName(), ex);
             return;
         }
-        List<Instance> remoteInstances = findRunningRemoteInstances(clientV2);
+        List<Instance> remoteInstances = findRunningRemoteInstances(clientV2, cloud);
         Set<String> localInstances = findLocalInstances(cloud);
         if (!(localInstances.isEmpty() || remoteInstances.isEmpty())) {
             updateLocalInstancesLabel(clientV2, localInstances, remoteInstances);
@@ -111,7 +122,7 @@ public class CleanLostNodesWork extends PeriodicWork {
         OffsetDateTime lastRefresh =
                 LocalDateTime.parse(nodeLastRefresh, LAST_REFRESH_FORMATTER).atOffset(ZoneOffset.UTC);
         boolean isOrphan = lastRefresh
-                .plus(RECURRENCE_PERIOD * LOST_MULTIPLIER, ChronoUnit.MILLIS)
+                .plus(RECURRENCE_PERIOD.multipliedBy(LOST_MULTIPLIER))
                 .isBefore(OffsetDateTime.now(ZoneOffset.UTC));
         logger.log(
                 Level.FINEST,
@@ -148,9 +159,16 @@ public class CleanLostNodesWork extends PeriodicWork {
         return localInstances;
     }
 
-    private List<Instance> findRunningRemoteInstances(ComputeClientV2 clientV2) {
+    private List<Instance> findRunningRemoteInstances(ComputeClientV2 clientV2, ComputeEngineCloud cloud) {
         try {
-            var remoteInstances = clientV2.retrieveInstanceByLabelKeyAndStatus(NODE_IN_USE_LABEL_KEY, "RUNNING");
+            var labelFilters = Map.of(
+                    ComputeEngineCloud.JENKINS_SERVER_URL_LABEL_KEY,
+                    ComputeEngineCloud.toGcpLabelValue(
+                            JenkinsLocationConfiguration.get().getUrl()),
+                    ComputeEngineCloud.JENKINS_CLOUD_NAME_LABEL_KEY,
+                    ComputeEngineCloud.toGcpLabelValue(cloud.getCloudName()));
+            var remoteInstances =
+                    clientV2.retrieveInstanceByLabelKeyAndStatus(NODE_IN_USE_LABEL_KEY, labelFilters, "RUNNING");
             logger.log(Level.FINEST, () -> "Found " + remoteInstances.size() + " running remote instances");
             return remoteInstances;
         } catch (IOException ex) {
