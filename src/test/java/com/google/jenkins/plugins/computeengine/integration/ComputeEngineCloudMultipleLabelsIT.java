@@ -20,7 +20,6 @@ import static com.google.jenkins.plugins.computeengine.integration.ITUtil.LABEL;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.NULL_TEMPLATE;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.NUM_EXECUTORS;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.PROJECT_ID;
-import static com.google.jenkins.plugins.computeengine.integration.ITUtil.TEST_TIMEOUT_MULTIPLIER;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.ZONE;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.getLabel;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.initClient;
@@ -28,8 +27,8 @@ import static com.google.jenkins.plugins.computeengine.integration.ITUtil.initCl
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.initCredentials;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.instanceConfigurationBuilder;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.teardownResources;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 import com.google.cloud.graphite.platforms.plugin.client.ComputeClient;
 import com.google.common.collect.ImmutableList;
@@ -42,35 +41,34 @@ import java.util.Collection;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.rules.Timeout;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.jvnet.hudson.test.JenkinsRule;
+import org.jvnet.hudson.test.junit.jupiter.WithJenkins;
 
 /**
  * Integration test suite for {@link ComputeEngineCloud}. Verifies that instances can be created
  * with multiple Jenkins labels and that these labels are properly provisioned.
  */
-public class ComputeEngineCloudMultipleLabelsIT {
+@WithJenkins
+@Timeout(value = 15, unit = TimeUnit.MINUTES)
+class ComputeEngineCloudMultipleLabelsIT {
     private static final Logger log = Logger.getLogger(ComputeEngineCloudMultipleLabelsIT.class.getName());
 
     private static final String MULTIPLE_LABEL = "integration test";
 
-    @ClassRule
-    public static Timeout timeout = new Timeout(5L * TEST_TIMEOUT_MULTIPLIER, TimeUnit.MINUTES);
-
-    @ClassRule
-    public static JenkinsRule jenkinsRule = new JenkinsRule();
+    private static JenkinsRule jenkinsRule;
 
     private static ComputeClient client;
     private static final Map<String, String> label = getLabel(ComputeEngineCloudMultipleLabelsIT.class);
     private static String name;
 
-    @BeforeClass
-    public static void init() throws Exception {
+    @BeforeAll
+    static void init(JenkinsRule rule) throws Exception {
         log.info("init");
+        jenkinsRule = rule;
         initCredentials(jenkinsRule);
         ComputeEngineCloud cloud = initCloud(jenkinsRule);
         client = initClient(jenkinsRule, label, log);
@@ -89,13 +87,13 @@ public class ComputeEngineCloudMultipleLabelsIT {
         planned.iterator().next().future.get();
     }
 
-    @AfterClass
-    public static void teardown() throws IOException {
+    @AfterAll
+    static void teardown() throws IOException {
         teardownResources(client, label, log);
     }
 
     @Test
-    public void testMultipleLabelsProvisionedWithLabels() {
+    void testMultipleLabelsProvisionedWithLabels() {
         Node node = jenkinsRule.jenkins.getNode(name);
         assertNotNull(node);
         String provisionedLabels = node.getLabelString();
@@ -103,7 +101,7 @@ public class ComputeEngineCloudMultipleLabelsIT {
     }
 
     @Test
-    public void testMultipleLabelsWorkerStatusRunning() throws Exception {
+    void testMultipleLabelsWorkerStatusRunning() throws Exception {
         assertEquals("RUNNING", client.getInstance(PROJECT_ID, ZONE, name).getStatus());
     }
 }

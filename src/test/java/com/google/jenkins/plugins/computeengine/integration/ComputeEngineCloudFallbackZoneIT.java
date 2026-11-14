@@ -3,7 +3,6 @@ package com.google.jenkins.plugins.computeengine.integration;
 import static com.google.cloud.graphite.platforms.plugin.client.util.ClientUtil.nameFromSelfLink;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.LABEL;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.PROJECT_ID;
-import static com.google.jenkins.plugins.computeengine.integration.ITUtil.TEST_TIMEOUT_MULTIPLIER;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.initCredentials;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
@@ -14,7 +13,7 @@ import com.google.jenkins.plugins.computeengine.client.ClientUtil;
 import hudson.model.Node;
 import io.jenkins.plugins.casc.misc.ConfiguredWithCode;
 import io.jenkins.plugins.casc.misc.JenkinsConfiguredWithCodeRule;
-import java.io.IOException;
+import io.jenkins.plugins.casc.misc.junit.jupiter.WithJenkinsConfiguredWithCode;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -22,16 +21,18 @@ import org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition;
 import org.jenkinsci.plugins.workflow.job.WorkflowJob;
 import org.jenkinsci.plugins.workflow.job.WorkflowRun;
 import org.jenkinsci.plugins.workflow.test.steps.SemaphoreStep;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.Timeout;
-import org.jvnet.hudson.test.BuildWatcher;
-import org.jvnet.hudson.test.LoggerRule;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.AutoClose;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
+import org.junit.jupiter.api.extension.RegisterExtension;
+import org.jvnet.hudson.test.LogRecorder;
+import org.jvnet.hudson.test.junit.jupiter.BuildWatcherExtension;
 
-public class ComputeEngineCloudFallbackZoneIT {
+@WithJenkinsConfiguredWithCode
+@Timeout(value = 45, unit = TimeUnit.MINUTES)
+class ComputeEngineCloudFallbackZoneIT {
     private static final String PRIMARY_ZONE = "us-east1-b";
     private static final String FIRST_FALLBACK_ZONE = "us-east1-c";
     private static final String SECOND_FALLBACK_ZONE = "us-east1-d";
@@ -40,30 +41,26 @@ public class ComputeEngineCloudFallbackZoneIT {
 
     private static final Logger log = Logger.getLogger(ComputeEngineCloudFallbackZoneIT.class.getName());
 
-    @ClassRule
-    public static Timeout timeout = new Timeout(15L * TEST_TIMEOUT_MULTIPLIER, TimeUnit.MINUTES);
+    private static JenkinsConfiguredWithCodeRule j;
 
-    @Rule
-    public JenkinsConfiguredWithCodeRule j = new JenkinsConfiguredWithCodeRule();
+    @AutoClose
+    private static final LogRecorder logRule =
+            new LogRecorder().record("com.google.jenkins.plugins.computeengine", Level.FINEST);
 
-    @ClassRule
-    public static LoggerRule logRule =
-            new LoggerRule().record("com.google.jenkins.plugins.computeengine", Level.FINEST);
-
-    @ClassRule
-    public static BuildWatcher bw = new BuildWatcher();
+    @RegisterExtension
+    private static final BuildWatcherExtension bw = new BuildWatcherExtension();
 
     private ComputeClient client;
 
-    @Before
-    public void init() throws Exception {
+    @BeforeEach
+    void init() throws Exception {
         log.info("init");
         initCredentials(j);
         client = ClientUtil.getClientFactory(j.jenkins, PROJECT_ID).computeClient();
     }
 
-    @After
-    public void teardown() throws IOException {
+    @AfterEach
+    void teardown() {
         log.info("teardown");
         ComputeEngineComputerLauncher.setSimulateExhaustedZones();
         if (client != null) {
@@ -82,7 +79,7 @@ public class ComputeEngineCloudFallbackZoneIT {
 
     @Test
     @ConfiguredWithCode("fallback-zone-casc.yml")
-    public void testProvisioningFallsBackToThirdZoneOnCapacityExhaustion() throws Exception {
+    void testProvisioningFallsBackToThirdZoneOnCapacityExhaustion() throws Exception {
         ComputeEngineComputerLauncher.setSimulateExhaustedZones(PRIMARY_ZONE, FIRST_FALLBACK_ZONE);
         var build = startBuildAndWaitForAgent();
         var workerNodeName = getWorkerNodeName(build);
@@ -96,7 +93,7 @@ public class ComputeEngineCloudFallbackZoneIT {
 
     @Test
     @ConfiguredWithCode("fallback-config-casc.yml")
-    public void testProvisioningFallsBackToSecondInstanceConfigOnCapacityExhaustion() throws Exception {
+    void testProvisioningFallsBackToSecondInstanceConfigOnCapacityExhaustion() throws Exception {
         ComputeEngineComputerLauncher.setSimulateExhaustedZones(PRIMARY_ZONE);
         var build = startBuildAndWaitForAgent();
         var workerNodeName = getWorkerNodeName(build);
@@ -110,7 +107,7 @@ public class ComputeEngineCloudFallbackZoneIT {
 
     @Test
     @ConfiguredWithCode("fallback-cloud-casc.yml")
-    public void testProvisioningFallsBackToSecondCloudOnCapacityExhaustion() throws Exception {
+    void testProvisioningFallsBackToSecondCloudOnCapacityExhaustion() throws Exception {
         ComputeEngineComputerLauncher.setSimulateExhaustedZones(PRIMARY_ZONE);
         var build = startBuildAndWaitForAgent();
         var workerNodeName = getWorkerNodeName(build);

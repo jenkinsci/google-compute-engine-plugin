@@ -18,7 +18,6 @@ package com.google.jenkins.plugins.computeengine.integration;
 
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.LABEL;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.PROJECT_ID;
-import static com.google.jenkins.plugins.computeengine.integration.ITUtil.TEST_TIMEOUT_MULTIPLIER;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.ZONE;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.initCredentials;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -30,49 +29,47 @@ import com.google.jenkins.plugins.computeengine.client.ClientUtil;
 import hudson.model.Node;
 import io.jenkins.plugins.casc.misc.ConfiguredWithCode;
 import io.jenkins.plugins.casc.misc.JenkinsConfiguredWithCodeRule;
-import java.io.IOException;
+import io.jenkins.plugins.casc.misc.junit.jupiter.WithJenkinsConfiguredWithCode;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition;
 import org.jenkinsci.plugins.workflow.job.WorkflowJob;
 import org.jenkinsci.plugins.workflow.test.steps.SemaphoreStep;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.Timeout;
-import org.jvnet.hudson.test.BuildWatcher;
-import org.jvnet.hudson.test.LoggerRule;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.AutoClose;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
+import org.junit.jupiter.api.extension.RegisterExtension;
+import org.jvnet.hudson.test.LogRecorder;
+import org.jvnet.hudson.test.junit.jupiter.BuildWatcherExtension;
 
-public class ComputeEngineCloudShieldedVmIT {
+@WithJenkinsConfiguredWithCode
+@Timeout(value = 45, unit = TimeUnit.MINUTES)
+class ComputeEngineCloudShieldedVmIT {
     private static final Logger log = Logger.getLogger(ComputeEngineCloudShieldedVmIT.class.getName());
 
-    @ClassRule
-    public static Timeout timeout = new Timeout(15L * TEST_TIMEOUT_MULTIPLIER, TimeUnit.MINUTES);
+    private static JenkinsConfiguredWithCodeRule j;
 
-    @Rule
-    public JenkinsConfiguredWithCodeRule j = new JenkinsConfiguredWithCodeRule();
+    @AutoClose
+    private static final LogRecorder logRule =
+            new LogRecorder().record("com.google.jenkins.plugins.computeengine", Level.FINEST);
 
-    @ClassRule
-    public static LoggerRule logRule =
-            new LoggerRule().record("com.google.jenkins.plugins.computeengine", Level.FINEST);
-
-    @ClassRule
-    public static BuildWatcher bw = new BuildWatcher();
+    @RegisterExtension
+    private static final BuildWatcherExtension bw = new BuildWatcherExtension();
 
     private ComputeClient client;
 
-    @Before
-    public void init() throws Exception {
+    @BeforeEach
+    void init() throws Exception {
         log.info("init");
         initCredentials(j);
         client = ClientUtil.getClientFactory(j.jenkins, PROJECT_ID).computeClient();
     }
 
-    @After
-    public void teardown() throws IOException {
+    @AfterEach
+    void teardown() {
         log.info("teardown");
         if (client != null) {
             for (var node : j.jenkins.getNodes()) {
@@ -88,7 +85,7 @@ public class ComputeEngineCloudShieldedVmIT {
 
     @Test
     @ConfiguredWithCode("shielded-vm-casc.yml")
-    public void testShieldedVmOnInstance() throws Exception {
+    void testShieldedVmOnInstance() throws Exception {
         var pipelineScript = "node('" + LABEL + "') { semaphore 'shieldedVm' }";
         var p = j.createProject(WorkflowJob.class, "shielded-vm-test");
         p.setDefinition(new CpsFlowDefinition(pipelineScript, true));

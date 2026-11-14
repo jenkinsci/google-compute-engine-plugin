@@ -20,7 +20,6 @@ import static com.google.jenkins.plugins.computeengine.integration.ITUtil.LABEL;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.NULL_TEMPLATE;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.NUM_EXECUTORS;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.PROJECT_ID;
-import static com.google.jenkins.plugins.computeengine.integration.ITUtil.TEST_TIMEOUT_MULTIPLIER;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.execute;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.getLabel;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.initClient;
@@ -28,9 +27,8 @@ import static com.google.jenkins.plugins.computeengine.integration.ITUtil.initCl
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.initCredentials;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.instanceConfigurationBuilder;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.teardownResources;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotEquals;
-import static org.junit.Assert.assertNotNull;
+import static org.awaitility.Awaitility.await;
+import static org.junit.jupiter.api.Assertions.*;
 
 import com.google.cloud.graphite.platforms.plugin.client.ComputeClient;
 import com.google.common.collect.ImmutableList;
@@ -47,31 +45,29 @@ import java.util.Map;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
-import org.awaitility.Awaitility;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.rules.Timeout;
-import org.jvnet.hudson.test.BuildWatcher;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
+import org.junit.jupiter.api.extension.RegisterExtension;
 import org.jvnet.hudson.test.JenkinsRule;
+import org.jvnet.hudson.test.junit.jupiter.BuildWatcherExtension;
+import org.jvnet.hudson.test.junit.jupiter.WithJenkins;
 
 /**
  * Integration test suite for {@link ComputeEngineCloud}. Verifies that one shot instances are
  * terminated after finishing a build and removed from both GCP and the set of Jenkins nodes.
  */
-public class ComputeEngineCloudOneShotInstanceIT {
+@WithJenkins
+@Timeout(value = 30, unit = TimeUnit.MINUTES)
+class ComputeEngineCloudOneShotInstanceIT {
     private static Logger log = Logger.getLogger(ComputeEngineCloudOneShotInstanceIT.class.getName());
     private static final int QUIET_PERIOD_SECS = 30;
 
-    @ClassRule
-    public static Timeout timeout = new Timeout(10L * TEST_TIMEOUT_MULTIPLIER, TimeUnit.MINUTES);
+    private static JenkinsRule jenkinsRule;
 
-    @ClassRule
-    public static JenkinsRule jenkinsRule = new JenkinsRule();
-
-    @ClassRule
-    public static BuildWatcher bw = new BuildWatcher();
+    @RegisterExtension
+    private static final BuildWatcherExtension bw = new BuildWatcherExtension();
 
     private static ComputeClient client;
     private static final Map<String, String> label = getLabel(ComputeEngineCloudOneShotInstanceIT.class);
@@ -80,9 +76,10 @@ public class ComputeEngineCloudOneShotInstanceIT {
     private static Future<FreeStyleBuild> otherBuildFuture;
     private static Node otherNode;
 
-    @BeforeClass
-    public static void init() throws Exception {
+    @BeforeAll
+    static void init(JenkinsRule rule) throws Exception {
         log.info("init");
+        jenkinsRule = rule;
         initCredentials(jenkinsRule);
         ComputeEngineCloud cloud = initCloud(jenkinsRule);
         client = initClient(jenkinsRule, label, log);
@@ -116,31 +113,30 @@ public class ComputeEngineCloudOneShotInstanceIT {
         nodeName = build.getBuiltOn().getNodeName();
     }
 
-    @AfterClass
-    public static void teardown() throws IOException {
+    @AfterAll
+    static void teardown() throws IOException {
         teardownResources(client, label, log);
     }
 
     @Test
-    public void testOneShotInstanceLogContainsExpectedOutput() throws Exception {
+    void testOneShotInstanceLogContainsExpectedOutput() throws Exception {
         jenkinsRule.assertLogContains("works", build);
     }
 
     @Test
-    public void testOneShotInstanceNodeDeletedFromJenkins() {
-        Awaitility.await().timeout(10, TimeUnit.SECONDS).until(() -> jenkinsRule.jenkins.getNode(nodeName) == null);
+    void testOneShotInstanceNodeDeletedFromJenkins() {
+        await().timeout(10, TimeUnit.SECONDS).until(() -> jenkinsRule.jenkins.getNode(nodeName) == null);
     }
 
     @Test
-    public void testOneShotInstanceDeletedFromGCP() {
-        Awaitility.await()
-                .timeout(3, TimeUnit.MINUTES)
+    void testOneShotInstanceDeletedFromGCP() {
+        await().timeout(3, TimeUnit.MINUTES)
                 .pollInterval(10, TimeUnit.SECONDS)
                 .until(() -> client.listInstancesWithLabel(PROJECT_ID, label).isEmpty());
     }
 
     @Test
-    public void testOtherInstanceSuccessful() throws Exception {
+    void testOtherInstanceSuccessful() throws Exception {
         FreeStyleBuild otherBuild = otherBuildFuture.get();
         assertNotNull(otherBuild);
         assertEquals(Result.SUCCESS, otherBuild.getResult());
@@ -149,7 +145,7 @@ public class ComputeEngineCloudOneShotInstanceIT {
     }
 
     @Test
-    public void testOtherInstanceRanOnDifferentNode() throws Exception {
+    void testOtherInstanceRanOnDifferentNode() {
         assertNotNull(otherNode);
         assertNotEquals(nodeName, otherNode.getNodeName());
     }

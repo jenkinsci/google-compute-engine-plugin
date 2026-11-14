@@ -16,35 +16,35 @@
 
 package com.google.jenkins.plugins.computeengine;
 
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.time.Clock;
 import java.time.LocalDateTime;
 import java.time.Month;
 import java.time.ZoneId;
-import org.junit.After;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Test;
 
 /**
  * Tests for {@link MinimumInstanceChecker#isActiveTimeRange} — the time range logic that
  * determines whether minimum instance requirements should be enforced based on time of day
  * and day of week. Uses clock injection for deterministic testing.
  */
-public class MinimumInstanceCheckerTimeRangeTest {
+class MinimumInstanceCheckerTimeRangeTest {
 
-    @After
-    public void resetClock() {
+    @AfterEach
+    void resetClock() {
         MinimumInstanceChecker.clock = Clock.systemDefaultZone();
     }
 
     @Test
-    public void nullConfig_alwaysActive() {
+    void nullConfig_alwaysActive() {
         assertTrue(MinimumInstanceChecker.isActiveTimeRange(null));
     }
 
     @Test
-    public void sameDayRange_withinRange_activeDay() {
+    void sameDayRange_withinRange_activeDay() {
         var config = timeRange("09:00", "17:00");
         config.setTuesday(true);
 
@@ -53,7 +53,7 @@ public class MinimumInstanceCheckerTimeRangeTest {
     }
 
     @Test
-    public void sameDayRange_withinRange_inactiveDay() {
+    void sameDayRange_withinRange_inactiveDay() {
         var config = timeRange("09:00", "17:00");
         config.setMonday(true);
         config.setTuesday(false);
@@ -63,7 +63,7 @@ public class MinimumInstanceCheckerTimeRangeTest {
     }
 
     @Test
-    public void sameDayRange_outsideRange() {
+    void sameDayRange_outsideRange() {
         var config = timeRange("09:00", "17:00");
         config.setTuesday(true);
 
@@ -72,7 +72,7 @@ public class MinimumInstanceCheckerTimeRangeTest {
     }
 
     @Test
-    public void sameDayRange_beforeRange() {
+    void sameDayRange_beforeRange() {
         var config = timeRange("09:00", "17:00");
         config.setTuesday(true);
 
@@ -81,7 +81,7 @@ public class MinimumInstanceCheckerTimeRangeTest {
     }
 
     @Test
-    public void halfOpen_exactFromIncluded() {
+    void halfOpen_exactFromIncluded() {
         var config = timeRange("09:00", "17:00");
         config.setTuesday(true);
 
@@ -90,7 +90,7 @@ public class MinimumInstanceCheckerTimeRangeTest {
     }
 
     @Test
-    public void halfOpen_exactToExcluded() {
+    void halfOpen_exactToExcluded() {
         var config = timeRange("09:00", "17:00");
         config.setTuesday(true);
 
@@ -99,7 +99,7 @@ public class MinimumInstanceCheckerTimeRangeTest {
     }
 
     @Test
-    public void halfOpen_oneMinuteBeforeTo() {
+    void halfOpen_oneMinuteBeforeTo() {
         var config = timeRange("09:00", "17:00");
         config.setTuesday(true);
 
@@ -108,7 +108,7 @@ public class MinimumInstanceCheckerTimeRangeTest {
     }
 
     @Test
-    public void midnightCrossing_beforeMidnight() {
+    void midnightCrossing_beforeMidnight() {
         var config = timeRange("22:00", "06:00");
         config.setTuesday(true);
 
@@ -117,7 +117,7 @@ public class MinimumInstanceCheckerTimeRangeTest {
     }
 
     @Test
-    public void midnightCrossing_afterMidnight_attributedToPreviousDay() {
+    void midnightCrossing_afterMidnight_attributedToPreviousDay() {
         var config = timeRange("22:00", "06:00");
         config.setTuesday(true);
 
@@ -127,7 +127,7 @@ public class MinimumInstanceCheckerTimeRangeTest {
     }
 
     @Test
-    public void midnightCrossing_outsideBothWindows() {
+    void midnightCrossing_outsideBothWindows() {
         var config = timeRange("22:00", "06:00");
         config.setTuesday(true);
 
@@ -136,7 +136,7 @@ public class MinimumInstanceCheckerTimeRangeTest {
     }
 
     @Test
-    public void midnightCrossing_exactToExcluded() {
+    void midnightCrossing_exactToExcluded() {
         var config = timeRange("22:00", "06:00");
         config.setTuesday(true);
 
@@ -146,7 +146,7 @@ public class MinimumInstanceCheckerTimeRangeTest {
     }
 
     @Test
-    public void midnightCrossing_inactiveStartDay() {
+    void midnightCrossing_inactiveStartDay() {
         var config = timeRange("22:00", "06:00");
         config.setTuesday(false);
         config.setWednesday(true);
@@ -157,7 +157,7 @@ public class MinimumInstanceCheckerTimeRangeTest {
     }
 
     @Test
-    public void midnightCrossing_postMidnight_inactiveStartDay() {
+    void midnightCrossing_postMidnight_inactiveStartDay() {
         var config = timeRange("22:00", "06:00");
         config.setTuesday(false);
         config.setWednesday(true);
@@ -168,7 +168,7 @@ public class MinimumInstanceCheckerTimeRangeTest {
     }
 
     @Test
-    public void midnightCrossing_exactFromIncluded() {
+    void midnightCrossing_exactFromIncluded() {
         var config = timeRange("22:00", "06:00");
         config.setTuesday(true);
 
@@ -177,7 +177,7 @@ public class MinimumInstanceCheckerTimeRangeTest {
     }
 
     @Test
-    public void midnightCrossing_sundayMondayWrap() {
+    void midnightCrossing_sundayMondayWrap() {
         var config = timeRange("22:00", "06:00");
         config.setSunday(true);
 
@@ -187,7 +187,7 @@ public class MinimumInstanceCheckerTimeRangeTest {
     }
 
     @Test
-    public void weekday_allDaysActive() {
+    void weekday_allDaysActive() {
         var config = timeRange("09:00", "17:00");
         config.setMonday(true);
         config.setTuesday(true);
@@ -200,7 +200,7 @@ public class MinimumInstanceCheckerTimeRangeTest {
     }
 
     @Test
-    public void weekend_inactive() {
+    void weekend_inactive() {
         var config = timeRange("09:00", "17:00");
         config.setMonday(true);
         config.setTuesday(true);

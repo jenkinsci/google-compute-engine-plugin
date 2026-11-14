@@ -29,8 +29,8 @@ import static com.google.jenkins.plugins.computeengine.integration.ITUtil.initCr
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.instanceConfigurationBuilder;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.teardownResources;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.windows;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assume.assumeFalse;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assumptions.assumeFalse;
 
 import com.google.cloud.graphite.platforms.plugin.client.ComputeClient;
 import com.google.common.collect.ImmutableList;
@@ -42,40 +42,40 @@ import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
 import org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition;
 import org.jenkinsci.plugins.workflow.job.WorkflowJob;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.rules.Timeout;
-import org.jvnet.hudson.test.BuildWatcher;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
+import org.junit.jupiter.api.extension.RegisterExtension;
 import org.jvnet.hudson.test.JenkinsRule;
+import org.jvnet.hudson.test.junit.jupiter.BuildWatcherExtension;
+import org.jvnet.hudson.test.junit.jupiter.WithJenkins;
 
 /**
  * Integration test suite for {@link ComputeEngineCloudNonStandardJavaIT}. Verifies that instances
  * can be created using a non-standard Java executable path.
  */
-public class ComputeEngineCloudNonStandardJavaIT {
+@WithJenkins
+@Timeout(value = 15, unit = TimeUnit.MINUTES)
+class ComputeEngineCloudNonStandardJavaIT {
 
     private static final String NON_STANDARD_JAVA_PATH = "/usr/bin/non-standard-java";
 
     private static final Logger log = Logger.getLogger(ComputeEngineCloudNonStandardJavaIT.class.getName());
 
-    @ClassRule
-    public static Timeout timeout = new Timeout(5, TimeUnit.MINUTES);
+    private static JenkinsRule jenkinsRule;
 
-    @ClassRule
-    public static JenkinsRule jenkinsRule = new JenkinsRule();
-
-    @ClassRule
-    public static BuildWatcher bw = new BuildWatcher();
+    @RegisterExtension
+    private static final BuildWatcherExtension bw = new BuildWatcherExtension();
 
     private static ComputeClient client;
     private static final Map<String, String> label = getLabel(ComputeEngineCloudNonStandardJavaIT.class);
 
-    @BeforeClass
-    public static void init() throws Exception {
+    @BeforeAll
+    static void init(JenkinsRule rule) throws Exception {
         assumeFalse(windows);
         log.info("init");
+        jenkinsRule = rule;
         initCredentials(jenkinsRule);
         ComputeEngineCloud cloud = initCloud(jenkinsRule);
         client = initClient(jenkinsRule, label, log);
@@ -92,13 +92,13 @@ public class ComputeEngineCloudNonStandardJavaIT {
         cloud.setConfigurations(ImmutableList.of(instanceConfiguration));
     }
 
-    @AfterClass
-    public static void teardown() throws IOException {
+    @AfterAll
+    static void teardown() throws IOException {
         teardownResources(client, label, log);
     }
 
     @Test
-    public void testBuildOnNonStandardJavaAgent() throws Exception {
+    void testBuildOnNonStandardJavaAgent() throws Exception {
         var p = jenkinsRule.createProject(WorkflowJob.class, "p");
         p.setDefinition(new CpsFlowDefinition("node('" + LABEL + "') { sh 'date' }", true));
         var r = jenkinsRule.buildAndAssertSuccess(p);

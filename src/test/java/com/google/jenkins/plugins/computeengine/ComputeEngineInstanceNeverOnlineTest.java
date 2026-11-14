@@ -16,10 +16,7 @@
 
 package com.google.jenkins.plugins.computeengine;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
@@ -31,22 +28,27 @@ import hudson.model.TaskListener;
 import hudson.slaves.ComputerLauncher;
 import hudson.slaves.RetentionStrategy;
 import hudson.slaves.SlaveComputer;
-import java.io.IOException;
 import java.lang.reflect.Field;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.jvnet.hudson.test.JenkinsRule;
+import org.jvnet.hudson.test.junit.jupiter.WithJenkins;
 
-public class ComputeEngineInstanceNeverOnlineTest {
+@WithJenkins
+class ComputeEngineInstanceNeverOnlineTest {
 
     private static final int LAUNCH_TIMEOUT_SECONDS = 30;
     private static final long TIMEOUT_MILLIS = LAUNCH_TIMEOUT_SECONDS * 1000L;
 
-    @Rule
-    public JenkinsRule r = new JenkinsRule();
+    private JenkinsRule r;
+
+    @BeforeEach
+    void init(JenkinsRule rule) {
+        r = rule;
+    }
 
     @Test
-    public void launchTimeoutSecondsMatchConfigMillis() throws Exception {
+    void launchTimeoutSecondsMatchConfigMillis() throws Exception {
         InstanceConfiguration config = InstanceConfigurationTest.instanceConfigurationBuilder()
                 .launchTimeoutSecondsStr(String.valueOf(LAUNCH_TIMEOUT_SECONDS))
                 .build();
@@ -58,7 +60,7 @@ public class ComputeEngineInstanceNeverOnlineTest {
     }
 
     @Test
-    public void hasEverConnected_falseUntilOnConnected() throws Exception {
+    void hasEverConnected_falseUntilOnConnected() throws Exception {
         ComputeEngineInstance node = createNode(LAUNCH_TIMEOUT_SECONDS);
         assertFalse(node.hasEverConnected());
 
@@ -67,7 +69,7 @@ public class ComputeEngineInstanceNeverOnlineTest {
     }
 
     @Test
-    public void isPastLaunchTimeout_respectsAge() throws Exception {
+    void isPastLaunchTimeout_respectsAge() throws Exception {
         ComputeEngineInstance node = createNode(LAUNCH_TIMEOUT_SECONDS);
         long provisionedAt = node.getProvisionedAtMillis();
 
@@ -76,7 +78,7 @@ public class ComputeEngineInstanceNeverOnlineTest {
     }
 
     @Test
-    public void isPastLaunchTimeout_unknownAgeIsNotPastTimeout() throws Exception {
+    void isPastLaunchTimeout_unknownAgeIsNotPastTimeout() throws Exception {
         // Nodes serialized before this field existed deserialize with provisionedAtMillis == 0.
         ComputeEngineInstance node = createNode(LAUNCH_TIMEOUT_SECONDS);
         setProvisionedAtMillis(node, 0);
@@ -85,17 +87,17 @@ public class ComputeEngineInstanceNeverOnlineTest {
     }
 
     @Test
-    public void terminateNeverOnline_removesJenkinsNode() throws Exception {
+    void terminateNeverOnline_removesJenkinsNode() throws Exception {
         ComputeEngineInstance node = createNode(LAUNCH_TIMEOUT_SECONDS);
         r.jenkins.addNode(node);
 
         node.terminateNeverOnline("test");
 
-        assertNull("never-online node should be removed from Jenkins", r.jenkins.getNode(node.getNodeName()));
+        assertNull(r.jenkins.getNode(node.getNodeName()), "never-online node should be removed from Jenkins");
     }
 
     @Test
-    public void shouldTerminateNeverOnline_onlyWhenNeverConnectedAndPastTimeout() throws Exception {
+    void shouldTerminateNeverOnline_onlyWhenNeverConnectedAndPastTimeout() throws Exception {
         ComputeEngineInstance node = createNode(LAUNCH_TIMEOUT_SECONDS);
         long provisionedAt = node.getProvisionedAtMillis();
         long pastTimeout = provisionedAt + node.getLaunchTimeoutMillis() + 1;
@@ -110,7 +112,7 @@ public class ComputeEngineInstanceNeverOnlineTest {
     }
 
     @Test
-    public void shouldTerminateNeverOnline_skipsWhenComputerAlreadyOnline() throws Exception {
+    void shouldTerminateNeverOnline_skipsWhenComputerAlreadyOnline() throws Exception {
         ComputeEngineInstance node = spy(createNode(LAUNCH_TIMEOUT_SECONDS));
         long pastTimeout = node.getProvisionedAtMillis() + node.getLaunchTimeoutMillis() + 1;
 
@@ -157,7 +159,7 @@ public class ComputeEngineInstanceNeverOnlineTest {
 
     private static final class NoOpLauncher extends ComputerLauncher {
         @Override
-        public void launch(SlaveComputer computer, TaskListener listener) throws IOException, InterruptedException {
+        public void launch(SlaveComputer computer, TaskListener listener) {
             // never connects
         }
     }

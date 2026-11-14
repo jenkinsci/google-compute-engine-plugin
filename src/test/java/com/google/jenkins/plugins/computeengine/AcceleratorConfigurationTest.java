@@ -18,7 +18,9 @@ package com.google.jenkins.plugins.computeengine;
 
 import static com.google.jenkins.plugins.computeengine.InstanceConfigurationTest.ACCELERATOR_COUNT;
 import static com.google.jenkins.plugins.computeengine.InstanceConfigurationTest.ACCELERATOR_NAME;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.when;
 
 import com.google.api.services.compute.model.AcceleratorType;
 import com.google.cloud.graphite.platforms.plugin.client.ComputeClient;
@@ -26,45 +28,45 @@ import com.google.common.collect.ImmutableList;
 import hudson.util.ListBoxModel;
 import java.util.ArrayList;
 import java.util.List;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.jvnet.hudson.test.JenkinsRule;
+import org.jvnet.hudson.test.junit.jupiter.WithJenkins;
 import org.mockito.Mock;
-import org.mockito.Mockito;
-import org.mockito.junit.MockitoJUnitRunner;
+import org.mockito.junit.jupiter.MockitoExtension;
 
-@RunWith(MockitoJUnitRunner.class)
-public class AcceleratorConfigurationTest {
-    @Rule
-    public JenkinsRule r = new JenkinsRule();
+@ExtendWith(MockitoExtension.class)
+@WithJenkins
+class AcceleratorConfigurationTest {
+    private JenkinsRule r;
 
     @Mock
-    public ComputeClient computeClient;
+    private ComputeClient computeClient;
 
-    @Before
-    public void init() {}
-
-    @Test
-    public void construction() {
-        // Test string->int conversion
-        AcceleratorConfiguration ac = new AcceleratorConfiguration("type", "2");
-        Assert.assertEquals((long) 2, (long) ac.gpuCount());
-
-        // Test toString
-        Assert.assertEquals("type (2)", ac.toString());
-
-        // Test equality
-        AcceleratorConfiguration ac2 = new AcceleratorConfiguration("type", "2");
-        Assert.assertTrue(ac.equals(ac2));
+    @BeforeEach
+    void init(JenkinsRule rule) {
+        r = rule;
     }
 
     @Test
-    public void clientCalls() throws Exception {
+    void construction() {
+        // Test string->int conversion
+        AcceleratorConfiguration ac = new AcceleratorConfiguration("type", "2");
+        assertEquals(2, (long) ac.gpuCount());
+
+        // Test toString
+        assertEquals("type (2)", ac.toString());
+
+        // Test equality
+        AcceleratorConfiguration ac2 = new AcceleratorConfiguration("type", "2");
+        assertEquals(ac, ac2);
+    }
+
+    @Test
+    void clientCalls() throws Exception {
         // Set up mock
-        List<AcceleratorType> acceleratorTypes = new ArrayList<AcceleratorType>();
+        List<AcceleratorType> acceleratorTypes = new ArrayList<>();
         acceleratorTypes.add(new AcceleratorType()
                 .setName(ACCELERATOR_NAME)
                 .setSelfLink(ACCELERATOR_NAME)
@@ -73,13 +75,13 @@ public class AcceleratorConfigurationTest {
                 .setName(ACCELERATOR_NAME + "2")
                 .setSelfLink(ACCELERATOR_NAME + "2")
                 .setMaximumCardsPerInstance(Integer.parseInt(ACCELERATOR_COUNT) + 1));
-        Mockito.when(computeClient.listAcceleratorTypes(anyString(), anyString()))
+        when(computeClient.listAcceleratorTypes(anyString(), anyString()))
                 .thenReturn(ImmutableList.copyOf(acceleratorTypes));
         AcceleratorConfiguration.DescriptorImpl.setComputeClient(computeClient);
 
         // Test items returned by dropdown filler
         AcceleratorConfiguration.DescriptorImpl d = new AcceleratorConfiguration.DescriptorImpl();
         ListBoxModel got = d.doFillGpuTypeItems(r.jenkins, "", "", "");
-        Assert.assertEquals(2, got.size());
+        assertEquals(2, got.size());
     }
 }

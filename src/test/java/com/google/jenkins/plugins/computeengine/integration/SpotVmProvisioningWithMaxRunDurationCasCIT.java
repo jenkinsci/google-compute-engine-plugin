@@ -29,8 +29,8 @@ import static org.awaitility.Awaitility.await;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.is;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assume.assumeFalse;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assumptions.assumeFalse;
 
 import com.google.api.client.util.ArrayMap;
 import com.google.api.services.compute.model.Instance;
@@ -55,41 +55,43 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition;
 import org.jenkinsci.plugins.workflow.job.WorkflowJob;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.jvnet.hudson.test.BuildWatcher;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.AutoClose;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 import org.jvnet.hudson.test.JenkinsRule;
-import org.jvnet.hudson.test.LoggerRule;
+import org.jvnet.hudson.test.LogRecorder;
+import org.jvnet.hudson.test.junit.jupiter.BuildWatcherExtension;
+import org.jvnet.hudson.test.junit.jupiter.WithJenkins;
 import org.jvnet.hudson.test.recipes.WithTimeout;
 
-public class SpotVmProvisioningWithMaxRunDurationCasCIT {
+@WithJenkins
+class SpotVmProvisioningWithMaxRunDurationCasCIT {
 
     private static final Logger LOGGER = Logger.getLogger(SpotVmProvisioningWithMaxRunDurationCasCIT.class.getName());
     private static final Map<String, String> GOOGLE_LABELS = getLabel(SpotVmProvisioningWithMaxRunDurationCasCIT.class);
 
-    @Rule
-    public JenkinsRule j = new JenkinsRule();
+    private JenkinsRule j;
 
-    @Rule
-    public LoggerRule lr = new LoggerRule().record(ComputeEngineComputer.class, Level.ALL);
+    @AutoClose
+    private final LogRecorder lr = new LogRecorder().record(ComputeEngineComputer.class, Level.ALL);
 
-    @ClassRule
-    public static final BuildWatcher bw = new BuildWatcher();
+    @RegisterExtension
+    private static final BuildWatcherExtension bw = new BuildWatcherExtension();
 
-    @Before
-    public void setUp() throws Exception {
+    @BeforeEach
+    void setUp(JenkinsRule rule) throws Exception {
         assumeFalse(windows);
         LOGGER.info("init");
+        j = rule;
         initCredentials(j);
         initCloud(j);
         LOGGER.info("init complete");
     }
 
-    @After
-    public void tearDown() throws IOException {
+    @AfterEach
+    void tearDown() throws IOException {
         teardownResources(
                 ((ComputeEngineCloud) j.jenkins.clouds.getByName("gce-integration")).getClient(),
                 GOOGLE_LABELS,
@@ -107,7 +109,7 @@ public class SpotVmProvisioningWithMaxRunDurationCasCIT {
      */
     @WithTimeout(600)
     @Test
-    public void testMaxRunDurationDeletesAndNoNewBuilds() throws Exception {
+    void testMaxRunDurationDeletesAndNoNewBuilds() throws Exception {
         assumeFalse(windows);
         ConfigurationAsCode.get()
                 .configure(Objects.requireNonNull(
@@ -152,13 +154,9 @@ public class SpotVmProvisioningWithMaxRunDurationCasCIT {
 
         // try to execute 2nd build, this time a pipeline type, and provisions a new agent.
         var run = j.buildAndAssertSuccess(j.jenkins.getItemByFullName("p", WorkflowJob.class));
-        assertEquals(
-                "jenkins is having more than agent", 1, j.jenkins.getNodes().size());
+        assertEquals(1, j.jenkins.getNodes().size(), "jenkins is having more than agent");
         String agentName = j.jenkins.getNodes().get(0).getNodeName();
-        assertEquals(
-                "agent not present in GCP",
-                agentName,
-                client.getInstance(PROJECT_ID, ZONE, agentName).getName());
+        assertEquals(agentName, client.getInstance(PROJECT_ID, ZONE, agentName).getName(), "agent not present in GCP");
         assertThat("Build didn't run on GCP", JenkinsRule.getLog(run), is(containsString(agentName)));
     }
 

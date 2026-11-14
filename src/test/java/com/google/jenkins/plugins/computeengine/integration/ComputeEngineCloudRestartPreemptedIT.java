@@ -20,7 +20,6 @@ import static com.google.jenkins.plugins.computeengine.integration.ITUtil.LABEL;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.NULL_TEMPLATE;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.NUM_EXECUTORS;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.PROJECT_ID;
-import static com.google.jenkins.plugins.computeengine.integration.ITUtil.TEST_TIMEOUT_MULTIPLIER;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.ZONE;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.execute;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.getLabel;
@@ -31,8 +30,9 @@ import static com.google.jenkins.plugins.computeengine.integration.ITUtil.instan
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.teardownResources;
 import static hudson.model.Result.FAILURE;
 import static hudson.model.Result.SUCCESS;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.awaitility.Awaitility.await;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.google.cloud.graphite.platforms.plugin.client.ComputeClient;
 import com.google.common.collect.Lists;
@@ -53,14 +53,14 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import lombok.extern.java.Log;
-import org.awaitility.Awaitility;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.rules.Timeout;
-import org.jvnet.hudson.test.BuildWatcher;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
+import org.junit.jupiter.api.extension.RegisterExtension;
 import org.jvnet.hudson.test.JenkinsRule;
+import org.jvnet.hudson.test.junit.jupiter.BuildWatcherExtension;
+import org.jvnet.hudson.test.junit.jupiter.WithJenkins;
 
 /**
  * Integration test suite for {@link ComputeEngineCloud}. Verifies that the build is rescheduled and
@@ -69,24 +69,23 @@ import org.jvnet.hudson.test.JenkinsRule;
  * {@code ComputeEngineRetentionStrategy#rescheduleTask} usages.
  */
 @Log
-public class ComputeEngineCloudRestartPreemptedIT {
+@WithJenkins
+@Timeout(value = 30, unit = TimeUnit.MINUTES)
+class ComputeEngineCloudRestartPreemptedIT {
 
-    @ClassRule
-    public static Timeout timeout = new Timeout(10L * TEST_TIMEOUT_MULTIPLIER, TimeUnit.MINUTES);
+    private static JenkinsRule jenkinsRule;
 
-    @ClassRule
-    public static JenkinsRule jenkinsRule = new JenkinsRule();
-
-    @ClassRule
-    public static BuildWatcher bw = new BuildWatcher();
+    @RegisterExtension
+    private static final BuildWatcherExtension bw = new BuildWatcherExtension();
 
     private static ComputeClient client;
     private static final Map<String, String> label = getLabel(ComputeEngineCloudRestartPreemptedIT.class);
     private static ComputeEngineCloud cloud;
 
-    @BeforeClass
-    public static void init() throws Exception {
+    @BeforeAll
+    static void init(JenkinsRule rule) throws Exception {
         log.info("init");
+        jenkinsRule = rule;
         initCredentials(jenkinsRule);
         cloud = initCloud(jenkinsRule);
         client = initClient(jenkinsRule, label, log);
@@ -103,8 +102,8 @@ public class ComputeEngineCloudRestartPreemptedIT {
         cloud.setConfigurations(Lists.newArrayList(configuration));
     }
 
-    @AfterClass
-    public static void teardown() throws IOException {
+    @AfterAll
+    static void teardown() throws IOException {
         teardownResources(client, label, log);
     }
 
@@ -124,7 +123,7 @@ public class ComputeEngineCloudRestartPreemptedIT {
      * It is just that in the test logs, the logs get mixed up and may seem confusing.
      */
     @Test
-    public void testIfNodeWasPreempted() throws Exception {
+    void testIfNodeWasPreempted() throws Exception {
         Collection<PlannedNode> planned = cloud.provision(new LabelAtom(LABEL), 1);
         Iterator<PlannedNode> iterator = planned.iterator();
         PlannedNode plannedNode = iterator.next();
@@ -133,7 +132,7 @@ public class ComputeEngineCloudRestartPreemptedIT {
         Node node = jenkinsRule.jenkins.getNode(name);
 
         ComputeEngineComputer computer = (ComputeEngineComputer) node.toComputer();
-        assertTrue("Configuration was set as preemptible but saw as not", computer.getPreemptible());
+        assertTrue(computer.getPreemptible(), "Configuration was set as preemptible but saw as not");
 
         FreeStyleProject project = jenkinsRule.createFreeStyleProject("p");
         Builder step = execute(Commands.SLEEP, "60");
@@ -142,20 +141,20 @@ public class ComputeEngineCloudRestartPreemptedIT {
         FreeStyleBuild freeStyleBuild;
         // build1 that gets failed due to preemption
         QueueTaskFuture<FreeStyleBuild> taskFuture = project.scheduleBuild2(0);
-        Awaitility.await().timeout(7, TimeUnit.MINUTES).until(() -> computer.getLog()
-                .contains("listening to metadata for preemption event"));
+        await().timeout(7, TimeUnit.MINUTES)
+                .until(() -> computer.getLog().contains("listening to metadata for preemption event"));
 
         client.simulateMaintenanceEvent(PROJECT_ID, ZONE, name);
-        Awaitility.await().timeout(8, TimeUnit.MINUTES).until(computer::getPreempted);
+        await().timeout(8, TimeUnit.MINUTES).until(computer::getPreempted);
 
         freeStyleBuild = taskFuture.get();
         assertEquals(FAILURE, freeStyleBuild.getResult());
 
-        Awaitility.await().timeout(5, TimeUnit.MINUTES).until(() -> freeStyleBuild.getNextBuild() != null);
+        await().timeout(5, TimeUnit.MINUTES).until(() -> freeStyleBuild.getNextBuild() != null);
 
         // build2 gets automatically scheduled and succeeds
         FreeStyleBuild nextBuild = freeStyleBuild.getNextBuild();
-        Awaitility.await().timeout(5, TimeUnit.MINUTES).until(() -> nextBuild.getResult() != null);
+        await().timeout(5, TimeUnit.MINUTES).until(() -> nextBuild.getResult() != null);
         assertEquals(SUCCESS, nextBuild.getResult());
     }
 }

@@ -16,11 +16,10 @@ package com.google.jenkins.plugins.computeengine;
 
 import static com.google.jenkins.plugins.computeengine.InstanceConfigurationTest.A_LABEL;
 import static com.google.jenkins.plugins.computeengine.InstanceConfigurationTest.instanceConfigurationBuilder;
-import static org.hamcrest.Matchers.isEmptyOrNullString;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.emptyOrNullString;
 import static org.hamcrest.Matchers.not;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertThrows;
+import static org.junit.jupiter.api.Assertions.*;
 
 import com.cloudbees.plugins.credentials.Credentials;
 import com.cloudbees.plugins.credentials.CredentialsScope;
@@ -38,12 +37,13 @@ import hudson.util.ListBoxModel;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
-import org.junit.Assert;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.jvnet.hudson.test.JenkinsRule;
+import org.jvnet.hudson.test.junit.jupiter.WithJenkins;
 
-public class ComputeEngineCloudTest {
+@WithJenkins
+class ComputeEngineCloudTest {
     private static final String ACCOUNT_ID = "test-account-id";
     private static final byte[] PK_BYTES =
             "{\"client_email\": \"example@example.com\"}".getBytes(StandardCharsets.UTF_8);
@@ -53,11 +53,15 @@ public class ComputeEngineCloudTest {
     private static final String PROJECT_ID = ACCOUNT_ID;
     private static final String INSTANCE_CAP_STR = "1";
 
-    @Rule
-    public JenkinsRule r = new JenkinsRule();
+    private JenkinsRule r;
+
+    @BeforeEach
+    void init(JenkinsRule rule) {
+        r = rule;
+    }
 
     @Test
-    public void construction() throws Exception {
+    void construction() throws Exception {
         SecretBytes bytes = SecretBytes.fromBytes(PK_BYTES);
         JsonServiceAccountConfig serviceAccountConfig = new JsonServiceAccountConfig();
         serviceAccountConfig.setSecretJsonKey(bytes);
@@ -83,26 +87,25 @@ public class ComputeEngineCloudTest {
         assertEquals(ComputeEngineCloud.CLOUD_PREFIX + CLOUD_NAME, cloud.name);
         assertEquals(CLOUD_NAME, cloud.getCloudName());
         assertEquals(CLOUD_NAME, cloud.getDisplayName());
-        Assert.assertNotEquals(CLOUD_NAME, cloud.name);
+        assertNotEquals(CLOUD_NAME, cloud.name);
 
         // Ensure correct exception is thrown
         assertThrows(GoogleRobotPrivateKeyCredentials.PrivateKeyNotSetException.class, cloud::getClient);
 
         // Ensure transient properties were initialized
         for (InstanceConfiguration ic : ics) {
-            assertEquals("Cloud reference was not set on child InstanceConfiguration", ic.getCloud(), cloud);
+            assertEquals(ic.getCloud(), cloud, "Cloud reference was not set on child InstanceConfiguration");
         }
     }
 
     @Test
-    public void instanceIdWasGenerated() {
+    void instanceIdWasGenerated() {
         ComputeEngineCloud cloud = new ComputeEngineCloud(CLOUD_NAME, PROJECT_ID, PROJECT_ID, INSTANCE_CAP_STR);
-        Assert.assertThat(
-                "Instance ID was not generated in constructor", cloud.getInstanceId(), not(isEmptyOrNullString()));
+        assertThat("Instance ID was not generated in constructor", cloud.getInstanceId(), not(emptyOrNullString()));
     }
 
     @Test
-    public void getConfigurationsByLabelSimple() throws Exception {
+    void getConfigurationsByLabelSimple() throws Exception {
         // Add a few InstanceConfigurations
         List<InstanceConfiguration> ics =
                 Lists.newArrayList(instanceConfigurationBuilder().build());
@@ -116,14 +119,14 @@ public class ComputeEngineCloudTest {
 
         // Should be able to provision a label
         Label label = new LabelAtom(A_LABEL);
-        Assert.assertTrue("Should be able to provision for label " + A_LABEL, cloud.canProvision(label));
+        assertTrue(cloud.canProvision(label), "Should be able to provision for label " + A_LABEL);
 
         // Configuration for label should match
-        Assert.assertEquals(ics, cloud.getInstanceConfigurations(label));
+        assertEquals(ics, cloud.getInstanceConfigurations(label));
     }
 
     @Test
-    public void getConfigurationsByLabelMulti() throws Exception {
+    void getConfigurationsByLabelMulti() throws Exception {
         // Add a few InstanceConfigurations
         List<InstanceConfiguration> ics = Lists.newArrayList(
                 instanceConfigurationBuilder().build(),
@@ -133,32 +136,32 @@ public class ComputeEngineCloudTest {
 
         // Should be able to provision a label
         Label label = new LabelAtom(A_LABEL);
-        Assert.assertTrue("Should be able to provision for label " + A_LABEL, cloud.canProvision(label));
+        assertTrue(cloud.canProvision(label), "Should be able to provision for label " + A_LABEL);
 
         // Configuration for label should match
         assertEquals(ics, cloud.getInstanceConfigurations(label));
     }
 
     @Test
-    public void descriptorFillCredentials() throws Exception {
+    void descriptorFillCredentials() throws Exception {
         // Create a credential
         SecretBytes bytes = SecretBytes.fromBytes(PK_BYTES);
         JsonServiceAccountConfig serviceAccountConfig = new JsonServiceAccountConfig();
         serviceAccountConfig.setSecretJsonKey(bytes);
         assertNotNull(serviceAccountConfig.getAccountId());
-        Credentials c = (Credentials) new GoogleRobotPrivateKeyCredentials(ACCOUNT_ID, serviceAccountConfig, null);
+        Credentials c = new GoogleRobotPrivateKeyCredentials(ACCOUNT_ID, serviceAccountConfig, null);
         CredentialsStore store = new SystemCredentialsProvider.ProviderImpl().getStore(r.jenkins);
         store.addCredentials(Domain.global(), c);
 
         ComputeEngineCloud.GoogleCloudDescriptor d = new ComputeEngineCloud.GoogleCloudDescriptor();
         ListBoxModel got = d.doFillCredentialsIdItems(r.jenkins, PROJECT_ID);
-        assertEquals("Should have returned 1 credential", 2, got.size());
-        assertEquals("First credential should be - none -", "- none -", got.get(0).name);
-        assertEquals("Second credential should be " + PROJECT_ID, PROJECT_ID, got.get(1).name);
+        assertEquals(2, got.size(), "Should have returned 1 credential");
+        assertEquals("- none -", got.get(0).name, "First credential should be - none -");
+        assertEquals(PROJECT_ID, got.get(1).name, "Second credential should be " + PROJECT_ID);
     }
 
     @Test
-    public void descriptorProjectValidation() {
+    void descriptorProjectValidation() {
         ComputeEngineCloud.GoogleCloudDescriptor d = new ComputeEngineCloud.GoogleCloudDescriptor();
 
         // Validate project ID validation
@@ -171,17 +174,17 @@ public class ComputeEngineCloudTest {
     }
 
     @Test
-    public void toGcpLabelValue_nullReturnsEmpty() {
+    void toGcpLabelValue_nullReturnsEmpty() {
         assertEquals("", ComputeEngineCloud.toGcpLabelValue(null));
     }
 
     @Test
-    public void toGcpLabelValue_alreadyValidPassesThrough() {
+    void toGcpLabelValue_alreadyValidPassesThrough() {
         assertEquals("my-cloud_1", ComputeEngineCloud.toGcpLabelValue("my-cloud_1"));
     }
 
     @Test
-    public void toGcpLabelValue_urlSanitized() {
+    void toGcpLabelValue_urlSanitized() {
         // slashes, colons, dots all become underscores
         assertEquals(
                 "http___jenkins_example_com_8080_",
@@ -189,12 +192,12 @@ public class ComputeEngineCloudTest {
     }
 
     @Test
-    public void toGcpLabelValue_uppercaseLowered() {
+    void toGcpLabelValue_uppercaseLowered() {
         assertEquals("my-jenkins", ComputeEngineCloud.toGcpLabelValue("My-Jenkins"));
     }
 
     @Test
-    public void toGcpLabelValue_truncatedAt63Chars() {
+    void toGcpLabelValue_truncatedAt63Chars() {
         var input = "a".repeat(70);
         var result = ComputeEngineCloud.toGcpLabelValue(input);
         assertEquals(63, result.length());
@@ -202,7 +205,7 @@ public class ComputeEngineCloudTest {
     }
 
     @Test
-    public void toGcpLabelValue_exactly63CharsNotTruncated() {
+    void toGcpLabelValue_exactly63CharsNotTruncated() {
         var input = "a".repeat(63);
         assertEquals(input, ComputeEngineCloud.toGcpLabelValue(input));
     }

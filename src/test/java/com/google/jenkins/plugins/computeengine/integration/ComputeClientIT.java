@@ -20,44 +20,45 @@ import static com.google.jenkins.plugins.computeengine.integration.ITUtil.getLab
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.initClient;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.initCredentials;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.teardownResources;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 import com.google.api.services.compute.model.Image;
 import com.google.cloud.graphite.platforms.plugin.client.ComputeClient;
 import java.io.IOException;
 import java.util.Map;
 import java.util.logging.Logger;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 import org.jvnet.hudson.test.JenkinsRule;
+import org.jvnet.hudson.test.junit.jupiter.WithJenkins;
 
 /** Integration test suite for {@link ComputeClient}. */
-public class ComputeClientIT {
+@WithJenkins
+class ComputeClientIT {
     private static final Logger log = Logger.getLogger(ComputeClientIT.class.getName());
 
     private static final Map<String, String> label = getLabel(ComputeClientIT.class);
     private static ComputeClient client;
 
-    @ClassRule
-    public static JenkinsRule jenkinsRule = new JenkinsRule();
+    private static JenkinsRule jenkinsRule;
 
-    @BeforeClass
-    public static void init() throws Exception {
+    @BeforeAll
+    static void init(JenkinsRule rule) throws Exception {
         log.info("init");
+        jenkinsRule = rule;
         initCredentials(jenkinsRule);
         client = initClient(jenkinsRule, label, log);
     }
 
-    @AfterClass
-    public static void teardown() throws IOException {
+    @AfterAll
+    static void teardown() throws IOException {
         teardownResources(client, label, log);
     }
 
     @Test
-    public void testGetImage() throws Exception {
+    void testGetImage() throws Exception {
         Image image = client.getImage("debian-cloud", "debian-12-bookworm-v20241210");
         assertNotNull(image);
         assertEquals("READY", image.getStatus());

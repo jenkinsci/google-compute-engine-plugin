@@ -29,18 +29,18 @@ import org.hamcrest.Description;
 import org.hamcrest.Matcher;
 import org.hamcrest.TypeSafeMatcher;
 import org.hamcrest.core.Every;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.jvnet.hudson.test.JenkinsRule;
+import org.jvnet.hudson.test.junit.jupiter.WithJenkins;
 
-public class ComputeClientV2IT {
+@WithJenkins
+class ComputeClientV2IT {
 
     private static final Logger LOGGER = Logger.getLogger(ComputeClientV2IT.class.getName());
 
-    @Rule
-    public JenkinsRule j = new JenkinsRule();
+    private JenkinsRule j;
 
     private static final String RUNNING = "RUNNING";
     private static final String STOPPING = "STOPPING";
@@ -57,14 +57,15 @@ public class ComputeClientV2IT {
     private static final Map<String, String> GOOGLE_LABELS_CLOUD_B =
             Map.of(LABEL_FILTER_PRESENCE_KEY, "delete", ComputeEngineCloud.JENKINS_CLOUD_NAME_LABEL_KEY, CLOUD_B);
 
-    @Before
-    public void setUp() throws Exception {
+    @BeforeEach
+    void setUp(JenkinsRule rule) throws Exception {
+        j = rule;
         initCredentials(j);
         initCloud(j);
     }
 
-    @After
-    public void tearDown() throws IOException {
+    @AfterEach
+    void tearDown() throws IOException {
         teardownResources(getCloud(j).getClient(), GOOGLE_LABELS, LOGGER);
         teardownResources(getCloud(j).getClient(), GOOGLE_LABELS_NON_JENKINS, LOGGER);
         // merge googleLabels and newLabels for teardown purposes only
@@ -97,7 +98,7 @@ public class ComputeClientV2IT {
     }
 
     @Test
-    public void testRetrieveInstancesByLabelAndStatus() throws Exception {
+    void testRetrieveInstancesByLabelAndStatus() throws Exception {
         ComputeClientV2 clientV2 = getCloud(j).getClientV2();
         String jenkinsVm = createOneInstance(clientV2, GOOGLE_LABELS);
         String nonJenkinsVm = createOneInstance(clientV2, GOOGLE_LABELS_NON_JENKINS);
@@ -163,7 +164,7 @@ public class ComputeClientV2IT {
     }
 
     @Test
-    public void testUpdateInstanceLabels() throws Exception {
+    void testUpdateInstanceLabels() throws Exception {
         ComputeClientV2 clientV2 = getCloud(j).getClientV2();
         String instance1 = createOneInstance(clientV2, GOOGLE_LABELS);
         await().atMost(2, TimeUnit.MINUTES).until(() -> Objects.nonNull(getInstance(clientV2, instance1)));

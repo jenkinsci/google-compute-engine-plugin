@@ -28,8 +28,9 @@ import static com.google.jenkins.plugins.computeengine.integration.ITUtil.initCl
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.initCredentials;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.instanceConfigurationBuilder;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.teardownResources;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
+import static org.awaitility.Awaitility.await;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 import com.google.api.client.googleapis.json.GoogleJsonResponseException;
 import com.google.cloud.graphite.platforms.plugin.client.ComputeClient;
@@ -44,17 +45,17 @@ import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import lombok.extern.java.Log;
-import org.awaitility.Awaitility;
 import org.awaitility.core.ConditionTimeoutException;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.Timeout;
-import org.jvnet.hudson.test.BuildWatcher;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.AutoClose;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
+import org.junit.jupiter.api.extension.RegisterExtension;
 import org.jvnet.hudson.test.JenkinsRule;
-import org.jvnet.hudson.test.LoggerRule;
+import org.jvnet.hudson.test.LogRecorder;
+import org.jvnet.hudson.test.junit.jupiter.BuildWatcherExtension;
+import org.jvnet.hudson.test.junit.jupiter.WithJenkins;
 
 /**
  * Integration test suite for {@link ComputeEngineCloud}. Provisions an agent and then terminates its
@@ -66,32 +67,31 @@ import org.jvnet.hudson.test.LoggerRule;
  * test asserts that Jenkins eventually drops that node.
  */
 @Log
-public class ComputeEngineCloudStopInstanceIT {
+@WithJenkins
+@Timeout(value = 45, unit = TimeUnit.MINUTES)
+class ComputeEngineCloudStopInstanceIT {
 
     private static final String RUNNING = "RUNNING";
     private static final String TERMINATED = "TERMINATED";
     private static final String DELETED = "DELETED";
 
-    @ClassRule
-    public static Timeout timeout = new Timeout(15L * TEST_TIMEOUT_MULTIPLIER, TimeUnit.MINUTES);
+    private JenkinsRule jenkinsRule;
 
-    @Rule
-    public JenkinsRule jenkinsRule = new JenkinsRule();
+    @RegisterExtension
+    private static final BuildWatcherExtension bw = new BuildWatcherExtension();
 
-    @ClassRule
-    public static BuildWatcher bw = new BuildWatcher();
-
-    @ClassRule
-    public static LoggerRule logRule =
-            new LoggerRule().record("com.google.jenkins.plugins.computeengine", Level.FINEST);
+    @AutoClose
+    private static final LogRecorder logRule =
+            new LogRecorder().record("com.google.jenkins.plugins.computeengine", Level.FINEST);
 
     private static ComputeClient client;
     private static ComputeEngineCloud cloud;
     private static final Map<String, String> label = getLabel(ComputeEngineCloudStopInstanceIT.class);
 
-    @Before
-    public void init() throws Exception {
+    @BeforeEach
+    void init(JenkinsRule rule) throws Exception {
         log.info("init");
+        jenkinsRule = rule;
         initCredentials(jenkinsRule);
         cloud = initCloud(jenkinsRule);
         client = initClient(jenkinsRule, label, log);
@@ -107,21 +107,21 @@ public class ComputeEngineCloudStopInstanceIT {
                 .build()));
     }
 
-    @After
-    public void teardown() throws IOException {
+    @AfterEach
+    void teardown() throws IOException {
         teardownResources(client, label, log);
     }
 
     @Test
-    public void testNodeRemovedAfterInstanceStopped() throws Exception {
+    void testNodeRemovedAfterInstanceStopped() throws Exception {
         var planned = cloud.provision(new LabelAtom(LABEL), 1);
-        assertEquals("one instance should be provisioned", 1, planned.size());
+        assertEquals(1, planned.size(), "one instance should be provisioned");
         var plannedNode = planned.iterator().next();
         String name = plannedNode.displayName;
         plannedNode.future.get();
 
-        assertNotNull("agent should be registered with Jenkins", jenkinsRule.jenkins.getNode(name));
-        assertEquals("GCP VM should be running once provisioned", RUNNING, instanceStatus(name));
+        assertNotNull(jenkinsRule.jenkins.getNode(name), "agent should be registered with Jenkins");
+        assertEquals(RUNNING, instanceStatus(name), "GCP VM should be running once provisioned");
 
         // Terminate the VM out of band, with stop rather than delete: the instance stays around.
         log.info("stopping instance " + name);
@@ -131,14 +131,14 @@ public class ComputeEngineCloudStopInstanceIT {
                 .stop(PROJECT_ID, ZONE, name)
                 .execute();
 
-        Awaitility.await("instance reaches TERMINATED")
+        await("instance reaches TERMINATED")
                 .timeout(5L * TEST_TIMEOUT_MULTIPLIER, TimeUnit.MINUTES)
                 .pollInterval(10, TimeUnit.SECONDS)
                 .until(() -> TERMINATED.equals(instanceStatus(name)));
 
         // The agent is now unreachable, so Jenkins should not keep the node registered.
         try {
-            Awaitility.await("Jenkins drops the node whose VM was stopped")
+            await("Jenkins drops the node whose VM was stopped")
                     .timeout(5L * TEST_TIMEOUT_MULTIPLIER, TimeUnit.MINUTES)
                     .pollInterval(10, TimeUnit.SECONDS)
                     .until(() -> jenkinsRule.jenkins.getNode(name) == null);
@@ -165,7 +165,7 @@ public class ComputeEngineCloudStopInstanceIT {
                         + computer.getOfflineCause() + ", computer.getNode()=" + computer.getNode());
                 if (computer instanceof SlaveComputer) {
                     try {
-                        log.warning("DIAG agent launch log:\n" + ((SlaveComputer) computer).getLog());
+                        log.warning("DIAG agent launch log:\n" + computer.getLog());
                     } catch (IOException ioe) {
                         log.warning("DIAG could not read agent launch log: " + ioe);
                     }

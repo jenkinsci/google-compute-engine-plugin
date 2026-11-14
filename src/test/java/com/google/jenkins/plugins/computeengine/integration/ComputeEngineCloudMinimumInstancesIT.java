@@ -18,7 +18,6 @@ package com.google.jenkins.plugins.computeengine.integration;
 
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.LABEL;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.PROJECT_ID;
-import static com.google.jenkins.plugins.computeengine.integration.ITUtil.TEST_TIMEOUT_MULTIPLIER;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.ZONE;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.initCredentials;
 import static org.awaitility.Awaitility.await;
@@ -34,7 +33,7 @@ import hudson.model.listeners.SaveableListener;
 import hudson.slaves.OfflineCause;
 import io.jenkins.plugins.casc.misc.ConfiguredWithCode;
 import io.jenkins.plugins.casc.misc.JenkinsConfiguredWithCodeRule;
-import java.io.IOException;
+import io.jenkins.plugins.casc.misc.junit.jupiter.WithJenkinsConfiguredWithCode;
 import java.time.DayOfWeek;
 import java.time.Duration;
 import java.time.LocalDateTime;
@@ -45,41 +44,39 @@ import java.util.logging.Logger;
 import java.util.stream.Collectors;
 import org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition;
 import org.jenkinsci.plugins.workflow.job.WorkflowJob;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.Timeout;
-import org.jvnet.hudson.test.BuildWatcher;
-import org.jvnet.hudson.test.FlagRule;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.AutoClose;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
+import org.junit.jupiter.api.extension.RegisterExtension;
 import org.jvnet.hudson.test.JenkinsRule;
-import org.jvnet.hudson.test.LoggerRule;
+import org.jvnet.hudson.test.LogRecorder;
+import org.jvnet.hudson.test.junit.jupiter.BuildWatcherExtension;
+import org.jvnet.hudson.test.junit.jupiter.FlagExtension;
 
-public class ComputeEngineCloudMinimumInstancesIT {
+@WithJenkinsConfiguredWithCode
+@Timeout(value = 75, unit = TimeUnit.MINUTES)
+class ComputeEngineCloudMinimumInstancesIT {
     private static final Logger log = Logger.getLogger(ComputeEngineCloudMinimumInstancesIT.class.getName());
 
-    @ClassRule
-    public static Timeout timeout = new Timeout(25L * TEST_TIMEOUT_MULTIPLIER, TimeUnit.MINUTES);
+    private static JenkinsConfiguredWithCodeRule j;
 
-    @Rule
-    public JenkinsConfiguredWithCodeRule j = new JenkinsConfiguredWithCodeRule();
+    @AutoClose
+    private static final LogRecorder logRule =
+            new LogRecorder().record("com.google.jenkins.plugins.computeengine", Level.FINEST);
 
-    @ClassRule
-    public static LoggerRule logRule =
-            new LoggerRule().record("com.google.jenkins.plugins.computeengine", Level.FINEST);
+    @RegisterExtension
+    private static final BuildWatcherExtension bw = new BuildWatcherExtension();
 
-    @ClassRule
-    public static BuildWatcher bw = new BuildWatcher();
-
-    @ClassRule
-    public static FlagRule<String> minimumCheckPeriodPropRule = FlagRule.systemProperty(
+    @RegisterExtension
+    private static final FlagExtension<String> minimumCheckPeriodPropRule = FlagExtension.systemProperty(
             "com.google.jenkins.plugins.computeengine.ComputeEngineMonitor.minimumInstanceCheckPeriod", "PT2M");
 
     private ComputeClient client;
 
-    @Before
-    public void init() throws Exception {
+    @BeforeEach
+    void init() throws Exception {
         log.info("init");
         initCredentials(j);
         client = ClientUtil.getClientFactory(j.jenkins, PROJECT_ID).computeClient();
@@ -87,8 +84,8 @@ public class ComputeEngineCloudMinimumInstancesIT {
         SaveableListener.fireOnChange(j.jenkins, null);
     }
 
-    @After
-    public void teardown() throws IOException {
+    @AfterEach
+    void teardown() {
         log.info("teardown");
         if (client != null) {
             for (Node node : j.jenkins.getNodes()) {
@@ -121,7 +118,7 @@ public class ComputeEngineCloudMinimumInstancesIT {
 
     @Test
     @ConfiguredWithCode("minimum-instances-oneshot-casc.yml")
-    public void testSpareInstancesProvisionedAndReplenished() throws Exception {
+    void testSpareInstancesProvisionedAndReplenished() throws Exception {
         waitForSpareAgents(2);
 
         var initialNames = currentNodeNames();
@@ -155,7 +152,7 @@ public class ComputeEngineCloudMinimumInstancesIT {
 
     @Test
     @ConfiguredWithCode("minimum-instances-retention-casc.yml")
-    public void testRetentionAgentsPreservedAcrossBuilds() throws Exception {
+    void testRetentionAgentsPreservedAcrossBuilds() throws Exception {
         waitForSpareAgents(2);
 
         var initialNames = currentNodeNames();
@@ -184,7 +181,7 @@ public class ComputeEngineCloudMinimumInstancesIT {
 
     @Test
     @ConfiguredWithCode("minimum-instances-retention-spare-casc.yml")
-    public void testVmTerminated_periodicCheckReprovisions() throws Exception {
+    void testVmTerminated_periodicCheckReprovisions() throws Exception {
         waitForSpareAgents(2);
         var initialNames = currentNodeNames();
         log.info("Initial agents: " + initialNames);
@@ -216,7 +213,7 @@ public class ComputeEngineCloudMinimumInstancesIT {
      */
     @Test
     @ConfiguredWithCode("minimum-instances-offline-spare-casc.yml")
-    public void testAgentTemporarilyOffline_notCountedAsSpare() throws Exception {
+    void testAgentTemporarilyOffline_notCountedAsSpare() {
         waitForSpareAgents(2);
 
         var node = j.jenkins.getNodes().get(0);
@@ -259,7 +256,7 @@ public class ComputeEngineCloudMinimumInstancesIT {
      */
     @Test
     @ConfiguredWithCode("minimum-instances-retention-spare-casc.yml")
-    public void testConfigReduction_spareReduced() throws Exception {
+    void testConfigReduction_spareReduced() {
         waitForSpareAgents(2);
 
         log.info("Increasing minimumNumberOfSpareInstances from 2 to 3");
@@ -297,7 +294,7 @@ public class ComputeEngineCloudMinimumInstancesIT {
      */
     @Test
     @ConfiguredWithCode("minimum-instances-timerange-casc.yml")
-    public void testTimeRange_provisioningOnlyDuringActiveRange() throws Exception {
+    void testTimeRange_provisioningOnlyDuringActiveRange() throws Exception {
         var cloud = (ComputeEngineCloud) j.jenkins.clouds.getByName("gce-integration");
         var config = cloud.getConfigurations().get(0);
         var timeRangeConfig = config.getMinimumNumberOfInstancesTimeRangeConfig();

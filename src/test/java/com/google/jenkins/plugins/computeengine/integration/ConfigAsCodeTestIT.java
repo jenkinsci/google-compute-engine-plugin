@@ -2,14 +2,14 @@ package com.google.jenkins.plugins.computeengine.integration;
 
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.CONFIG_AS_CODE_PATH;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.PROJECT_ID;
-import static com.google.jenkins.plugins.computeengine.integration.ITUtil.TEST_TIMEOUT_MULTIPLIER;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.ZONE;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.getLabel;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.initClient;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.initCredentials;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.teardownResources;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
+import static org.awaitility.Awaitility.await;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 import com.google.api.services.compute.model.Instance;
 import com.google.cloud.graphite.platforms.plugin.client.ComputeClient;
@@ -22,31 +22,29 @@ import java.util.Collection;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
-import org.awaitility.Awaitility;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.rules.Timeout;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.jvnet.hudson.test.JenkinsRule;
+import org.jvnet.hudson.test.junit.jupiter.WithJenkins;
 
-public class ConfigAsCodeTestIT {
+@WithJenkins
+@Timeout(value = 30, unit = TimeUnit.MINUTES)
+class ConfigAsCodeTestIT {
     private static final Logger log = Logger.getLogger(ConfigAsCodeTestIT.class.getName());
 
-    @ClassRule
-    public static JenkinsRule jenkinsRule = new JenkinsRule();
-
-    @ClassRule
-    public static Timeout timeout = new Timeout(10L * TEST_TIMEOUT_MULTIPLIER, TimeUnit.MINUTES);
+    private static JenkinsRule jenkinsRule;
 
     private static ComputeClient client;
     private static Map<String, String> label = getLabel(ConfigAsCodeTestIT.class);
     private static final String DISABLE_NO_DELAY_SYSTEM_PROPERTY =
             "com.google.jenkins.plugins.computeengine.disableNoDelayProvisioning";
 
-    @BeforeClass
-    public static void init() throws Exception {
+    @BeforeAll
+    static void init(JenkinsRule rule) throws Exception {
         log.info("init");
+        jenkinsRule = rule;
         ConfigurationAsCode.get()
                 .configure(ConfigAsCodeTestIT.class
                         .getResource(CONFIG_AS_CODE_PATH)
@@ -55,20 +53,20 @@ public class ConfigAsCodeTestIT {
         client = initClient(jenkinsRule, label, log);
     }
 
-    @AfterClass
-    public static void teardown() throws IOException {
+    @AfterAll
+    static void teardown() throws IOException {
         teardownResources(client, label, log);
     }
 
     @Test
-    public void testWorkerCreatedWithoutNoDelayProvision() throws Exception {
+    void testWorkerCreatedWithoutNoDelayProvision() throws Exception {
         // Disable NoDelayProvision with the environment variable flag
         System.setProperty(DISABLE_NO_DELAY_SYSTEM_PROPERTY, "true");
         testWorkerCreated();
     }
 
     @Test
-    public void testWorkerCreatedWithNoDelayProvision() throws Exception {
+    void testWorkerCreatedWithNoDelayProvision() throws Exception {
         // Enable NoDelayProvision with the environment variable flag
         System.setProperty(DISABLE_NO_DELAY_SYSTEM_PROPERTY, "false");
         testWorkerCreated();
@@ -85,7 +83,7 @@ public class ConfigAsCodeTestIT {
         Collection<NodeProvisioner.PlannedNode> planned = cloud.provision(new LabelAtom("integration"), 1);
 
         // There should be a planned node
-        Awaitility.await().timeout(2, TimeUnit.MINUTES).until(() -> planned.size() == 1);
+        await().timeout(2, TimeUnit.MINUTES).until(() -> planned.size() == 1);
         String name = planned.iterator().next().displayName;
 
         // Wait for the node creation to finish

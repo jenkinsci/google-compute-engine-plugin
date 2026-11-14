@@ -19,7 +19,6 @@ package com.google.jenkins.plugins.computeengine.integration;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.LABEL;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.NULL_TEMPLATE;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.NUM_EXECUTORS;
-import static com.google.jenkins.plugins.computeengine.integration.ITUtil.TEST_TIMEOUT_MULTIPLIER;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.getLabel;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.initClient;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.initCloud;
@@ -27,6 +26,8 @@ import static com.google.jenkins.plugins.computeengine.integration.ITUtil.initCr
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.instanceConfigurationBuilder;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.teardownResources;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.windows;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assumptions.assumeFalse;
 
 import com.google.cloud.graphite.platforms.plugin.client.ComputeClient;
 import com.google.common.collect.ImmutableList;
@@ -39,35 +40,33 @@ import java.util.Map;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
-import org.junit.AfterClass;
-import org.junit.Assume;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.rules.Timeout;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.jvnet.hudson.test.JenkinsRule;
+import org.jvnet.hudson.test.junit.jupiter.WithJenkins;
 
 /**
  * Integration test suite for {@link ComputeEngineCloud}. Verifies that attempting to provision a
  * worker fails upon creation when Java is not installed.
  */
-public class ComputeEngineCloudWorkerFailedIT {
+@WithJenkins
+@Timeout(value = 21, unit = TimeUnit.MINUTES)
+class ComputeEngineCloudWorkerFailedIT {
     private static final Logger log = Logger.getLogger(ComputeEngineCloudWorkerFailedIT.class.getName());
 
-    @ClassRule
-    public static Timeout timeout = new Timeout(7L * TEST_TIMEOUT_MULTIPLIER, TimeUnit.MINUTES);
-
-    @ClassRule
-    public static JenkinsRule jenkinsRule = new JenkinsRule();
+    private static JenkinsRule jenkinsRule;
 
     private static ComputeClient client;
     private static final Map<String, String> label = getLabel(ComputeEngineCloudWorkerFailedIT.class);
     private static Collection<PlannedNode> planned;
 
-    @BeforeClass
-    public static void init() throws Exception {
-        Assume.assumeFalse(windows);
+    @BeforeAll
+    static void init(JenkinsRule rule) throws Exception {
+        assumeFalse(windows);
         log.info("init");
+        jenkinsRule = rule;
         initCredentials(jenkinsRule);
         ComputeEngineCloud cloud = initCloud(jenkinsRule);
         client = initClient(jenkinsRule, label, log);
@@ -87,13 +86,14 @@ public class ComputeEngineCloudWorkerFailedIT {
         planned = cloud.provision(new LabelAtom(LABEL), 1);
     }
 
-    @AfterClass
-    public static void teardown() throws IOException {
+    @AfterAll
+    static void teardown() throws IOException {
         teardownResources(client, label, log);
     }
 
-    @Test(expected = ExecutionException.class)
-    public void testWorkerFailedCreationFails() throws Exception {
-        planned.iterator().next().future.get();
+    @Test
+    void testWorkerFailedCreationFails() {
+        assertThrows(
+                ExecutionException.class, () -> planned.iterator().next().future.get());
     }
 }

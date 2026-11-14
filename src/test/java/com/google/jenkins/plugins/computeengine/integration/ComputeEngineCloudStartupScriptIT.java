@@ -19,7 +19,6 @@ package com.google.jenkins.plugins.computeengine.integration;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.NULL_TEMPLATE;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.NUM_EXECUTORS;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.PROJECT_ID;
-import static com.google.jenkins.plugins.computeengine.integration.ITUtil.TEST_TIMEOUT_MULTIPLIER;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.ZONE;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.getLabel;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.initCredentials;
@@ -27,7 +26,7 @@ import static com.google.jenkins.plugins.computeengine.integration.ITUtil.instan
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.teardownResources;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
-import static org.junit.Assume.assumeTrue;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 import com.cloudbees.plugins.credentials.CredentialsScope;
 import com.cloudbees.plugins.credentials.SystemCredentialsProvider;
@@ -43,6 +42,7 @@ import hudson.Util;
 import hudson.model.Node;
 import io.jenkins.plugins.casc.misc.ConfiguredWithCode;
 import io.jenkins.plugins.casc.misc.JenkinsConfiguredWithCodeRule;
+import io.jenkins.plugins.casc.misc.junit.jupiter.WithJenkinsConfiguredWithCode;
 import java.io.IOException;
 import java.util.Map;
 import java.util.Optional;
@@ -51,40 +51,37 @@ import java.util.logging.Logger;
 import org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition;
 import org.jenkinsci.plugins.workflow.job.WorkflowJob;
 import org.jenkinsci.plugins.workflow.test.steps.SemaphoreStep;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.Timeout;
-import org.jvnet.hudson.test.BuildWatcher;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
+import org.junit.jupiter.api.extension.RegisterExtension;
+import org.jvnet.hudson.test.junit.jupiter.BuildWatcherExtension;
 
-public class ComputeEngineCloudStartupScriptIT {
+@WithJenkinsConfiguredWithCode
+@Timeout(value = 60, unit = TimeUnit.MINUTES)
+class ComputeEngineCloudStartupScriptIT {
     private static final Logger log = Logger.getLogger(ComputeEngineCloudStartupScriptIT.class.getName());
 
     private static final String GCE_LABEL = "gce";
 
-    @ClassRule
-    public static Timeout timeout = new Timeout(20L * TEST_TIMEOUT_MULTIPLIER, TimeUnit.MINUTES);
+    private static JenkinsConfiguredWithCodeRule j;
 
-    @Rule
-    public JenkinsConfiguredWithCodeRule j = new JenkinsConfiguredWithCodeRule();
-
-    @ClassRule
-    public static BuildWatcher bw = new BuildWatcher();
+    @RegisterExtension
+    private static final BuildWatcherExtension bw = new BuildWatcherExtension();
 
     private ComputeClient client;
     private ComputeEngineCloud cloud;
     private final Map<String, String> label = getLabel(ComputeEngineCloudStartupScriptIT.class);
 
-    @Before
-    public void init() throws Exception {
+    @BeforeEach
+    void init() throws Exception {
         log.info("init");
         initCredentials(j);
     }
 
-    @After
-    public void teardown() throws IOException {
+    @AfterEach
+    void teardown() throws IOException {
         log.info("teardown");
         if (client != null) {
             teardownResources(client, label, log);
@@ -93,7 +90,7 @@ public class ComputeEngineCloudStartupScriptIT {
 
     @Test
     @ConfiguredWithCode("startup-script-wait-casc.yml")
-    public void testBuildWaitsForStartupScriptLinux() throws Exception {
+    void testBuildWaitsForStartupScriptLinux() throws Exception {
         cloud = (ComputeEngineCloud) j.jenkins.clouds.getByName(ComputeEngineCloud.CLOUD_PREFIX + ITUtil.CLOUD_NAME);
         cloud.getConfigurations().get(0).setGoogleLabels(label);
         client = ITUtil.initClient(j, label, log);
@@ -108,22 +105,24 @@ public class ComputeEngineCloudStartupScriptIT {
     }
 
     @Test
-    public void testBuildWaitsForStartupScriptWindows() throws Exception {
+    void testBuildWaitsForStartupScriptWindows() throws Exception {
         var windowsUsername = System.getenv("GOOGLE_WINDOWS_USERNAME");
         var windowsPassword = System.getenv("GOOGLE_WINDOWS_PASSWORD");
         assumeTrue(
-                "Skipping Windows test: GOOGLE_WINDOWS_USERNAME and GOOGLE_WINDOWS_PASSWORD must be set",
-                windowsUsername != null && windowsPassword != null);
+                windowsUsername != null && windowsPassword != null,
+                "Skipping Windows test: GOOGLE_WINDOWS_USERNAME and GOOGLE_WINDOWS_PASSWORD must be set");
 
         cloud = ITUtil.initCloud(j);
         client = ITUtil.initClient(j, label, log);
 
         var passwordCredId = initWindowsPasswordCredential(windowsUsername, windowsPassword);
 
-        var startupScript = "Set-Content -Path C:\\startup-output.txt -Value 'STARTUP_SCRIPT_BEGIN'\n"
-                + "Start-Sleep -Seconds 90\n"
-                + "Add-Content -Path C:\\startup-output.txt -Value 'STARTUP_COMPLETE'\n"
-                + "Add-Content -Path C:\\startup-output.txt -Value \"Finished at $(Get-Date)\"\n";
+        var startupScript = """
+                Set-Content -Path C:\\startup-output.txt -Value 'STARTUP_SCRIPT_BEGIN'
+                Start-Sleep -Seconds 90
+                Add-Content -Path C:\\startup-output.txt -Value 'STARTUP_COMPLETE'
+                Add-Content -Path C:\\startup-output.txt -Value "Finished at $(Get-Date)"
+                """;
 
         var pipelineScript = "node('" + GCE_LABEL + "') {\n"
                 + "  bat 'type C:\\\\startup-output.txt'\n"

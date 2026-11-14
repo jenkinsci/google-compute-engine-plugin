@@ -13,7 +13,7 @@ import static com.google.jenkins.plugins.computeengine.integration.ITUtil.teardo
 import static org.awaitility.Awaitility.await;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import com.google.api.client.googleapis.json.GoogleJsonResponseException;
 import com.google.common.collect.ImmutableList;
@@ -32,15 +32,15 @@ import org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition;
 import org.jenkinsci.plugins.workflow.job.WorkflowJob;
 import org.jenkinsci.plugins.workflow.steps.StepDescriptor;
 import org.jenkinsci.plugins.workflow.test.steps.SemaphoreStep;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 import org.jvnet.hudson.test.JenkinsRule;
 import org.jvnet.hudson.test.PrefixedOutputStream;
-import org.jvnet.hudson.test.RealJenkinsRule;
+import org.jvnet.hudson.test.junit.jupiter.RealJenkinsExtension;
 
-public class CleanLostNodesWorkIT {
+class CleanLostNodesWorkIT {
     private static final Logger LOGGER = Logger.getLogger(CleanLostNodesWorkIT.class.getName());
     private static final String RECORDER_CLASS_NAME = CleanLostNodesWork.class.getName();
     private static final int CLEAN_LOST_NODE_WORK_RECURRENCE_SECONDS = 5;
@@ -54,14 +54,14 @@ public class CleanLostNodesWorkIT {
 
     private static final Map<String, String> GOOGLE_LABELS = getLabel(CleanLostNodesWorkIT.class);
 
-    @Rule
-    public RealJenkinsRule rj1 = new RealJenkinsRule().withColor(PrefixedOutputStream.Color.BLUE);
+    @RegisterExtension
+    private final RealJenkinsExtension rj1 = new RealJenkinsExtension().withColor(PrefixedOutputStream.Color.BLUE);
 
-    @Rule
-    public RealJenkinsRule rj2 = new RealJenkinsRule().withColor(PrefixedOutputStream.Color.RED);
+    @RegisterExtension
+    private final RealJenkinsExtension rj2 = new RealJenkinsExtension().withColor(PrefixedOutputStream.Color.RED);
 
-    @Before
-    public void init() throws Throwable {
+    @BeforeEach
+    void init() throws Throwable {
         for (var rj : List.of(rj1, rj2)) {
             rj.javaOptions(RECURRENCE_PERIOD_PROP).withLogger(CleanLostNodesWork.class, Level.FINEST);
             rj.startJenkins();
@@ -85,8 +85,8 @@ public class CleanLostNodesWorkIT {
         }
     }
 
-    @After
-    public void tearDown() throws Throwable {
+    @AfterEach
+    void tearDown() throws Throwable {
         rj2.runRemotely(j -> {
             j.waitUntilNoActivity();
             var cloud = (ComputeEngineCloud) j.jenkins.clouds.getByName("gce-integration");
@@ -95,7 +95,7 @@ public class CleanLostNodesWorkIT {
     }
 
     @Test
-    public void testOrphanedVmDeletedByOwningController() throws Throwable {
+    void testOrphanedVmDeletedByOwningController() throws Throwable {
         rj1.runRemotely(j -> {
             var p1 = createPipeline(j);
             var run = p1.scheduleBuild2(0).waitForStart();
@@ -104,7 +104,7 @@ public class CleanLostNodesWorkIT {
                     .timeout(PERIODIC_TASK_2_EXECUTIONS)
                     .untilAsserted(CleanLostNodesWorkIT::assertLocalControllerKnowsAgent);
 
-            assertEquals("Expecting only 1 agent node", 1, j.jenkins.getNodes().size());
+            assertEquals(1, j.jenkins.getNodes().size(), "Expecting only 1 agent node");
             var agentNode = (ComputeEngineInstance) Jenkins.get().getNodes().get(0);
             var agentName = agentNode.getNodeName();
 
@@ -134,7 +134,7 @@ public class CleanLostNodesWorkIT {
     }
 
     @Test
-    public void testNodeInUseWontDeleteByOtherController() throws Throwable {
+    void testNodeInUseWontDeleteByOtherController() throws Throwable {
         rj1.runRemotely(j -> {
             var p1 = createPipeline(j);
             var run = p1.scheduleBuild2(0).waitForStart();
@@ -160,7 +160,7 @@ public class CleanLostNodesWorkIT {
     }
 
     @Test
-    public void testOtherControllerDoesNotCleanOrphanedVm() throws Throwable {
+    void testOtherControllerDoesNotCleanOrphanedVm() throws Throwable {
         rj1.runRemotely(j -> {
             var p1 = createPipeline(j);
             var run = p1.scheduleBuild2(0).waitForStart();
@@ -183,11 +183,11 @@ public class CleanLostNodesWorkIT {
             // this doesn't mean the CleanLostNodesWork of rj2 can see the VM.
             var cloud = (ComputeEngineCloud) j.jenkins.clouds.getByName("gce-integration");
             assertEquals(
-                    "GCP has 1 VM",
                     1,
                     cloud.getClient()
                             .listInstancesWithLabel(cloud.getProjectId(), GOOGLE_LABELS)
-                            .size());
+                            .size(),
+                    "GCP has 1 VM");
         });
     }
 

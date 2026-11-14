@@ -1,7 +1,6 @@
 package com.google.jenkins.plugins.computeengine.integration;
 
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.PROJECT_ID;
-import static com.google.jenkins.plugins.computeengine.integration.ITUtil.TEST_TIMEOUT_MULTIPLIER;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.ZONE;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.execute;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.getLabel;
@@ -9,9 +8,9 @@ import static com.google.jenkins.plugins.computeengine.integration.ITUtil.initCl
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.initCredentials;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.teardownResources;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.windows;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assume.assumeFalse;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assumptions.assumeFalse;
 
 import com.google.api.services.compute.model.Instance;
 import com.google.cloud.graphite.platforms.plugin.client.ComputeClient;
@@ -26,48 +25,48 @@ import java.util.Collection;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.rules.Timeout;
-import org.jvnet.hudson.test.BuildWatcher;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
+import org.junit.jupiter.api.extension.RegisterExtension;
 import org.jvnet.hudson.test.JenkinsRule;
+import org.jvnet.hudson.test.junit.jupiter.BuildWatcherExtension;
+import org.jvnet.hudson.test.junit.jupiter.WithJenkins;
 
 /**
  * Integration tests for Jenkins agents configured with Configuration as Code with a non-standard
  * java path.
  */
-public class ConfigAsCodeNonStandardJavaIT {
+@WithJenkins
+@Timeout(value = 15, unit = TimeUnit.MINUTES)
+class ConfigAsCodeNonStandardJavaIT {
     private static final Logger log = Logger.getLogger(ConfigAsCodeNonStandardJavaIT.class.getName());
 
-    @ClassRule
-    public static JenkinsRule jenkinsRule = new JenkinsRule();
+    private static JenkinsRule jenkinsRule;
 
-    @ClassRule
-    public static Timeout timeout = new Timeout(5L * TEST_TIMEOUT_MULTIPLIER, TimeUnit.MINUTES);
-
-    @ClassRule
-    public static BuildWatcher bw = new BuildWatcher();
+    @RegisterExtension
+    private static final BuildWatcherExtension bw = new BuildWatcherExtension();
 
     private static ComputeClient client;
     private static final Map<String, String> label = getLabel(ConfigAsCodeNonStandardJavaIT.class);
 
-    @BeforeClass
-    public static void init() throws Exception {
+    @BeforeAll
+    static void init(JenkinsRule rule) throws Exception {
         assumeFalse(windows);
         log.info("init");
+        jenkinsRule = rule;
         initCredentials(jenkinsRule);
         client = initClient(jenkinsRule, label, log);
     }
 
-    @AfterClass
-    public static void teardown() throws IOException {
+    @AfterAll
+    static void teardown() throws IOException {
         teardownResources(client, label, log);
     }
 
     @Test
-    public void testNonStandardJavaWorkerCreated() throws Exception {
+    void testNonStandardJavaWorkerCreated() throws Exception {
         assumeFalse(windows);
         ConfigurationAsCode.get()
                 .configure(this.getClass()
