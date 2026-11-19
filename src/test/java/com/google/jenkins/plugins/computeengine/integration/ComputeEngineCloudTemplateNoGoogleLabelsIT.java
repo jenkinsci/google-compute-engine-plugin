@@ -70,6 +70,7 @@ class ComputeEngineCloudTemplateNoGoogleLabelsIT {
     private static Instance instance;
 
     @BeforeAll
+    @Timeout(value = 45, unit = TimeUnit.MINUTES)
     static void init(JenkinsRule rule) throws Exception {
         log.info("init");
         jenkinsRule = rule;

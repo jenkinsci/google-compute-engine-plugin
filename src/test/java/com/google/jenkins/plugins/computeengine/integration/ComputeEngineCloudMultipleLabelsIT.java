@@ -66,6 +66,7 @@ class ComputeEngineCloudMultipleLabelsIT {
     private static String name;
 
     @BeforeAll
+    @Timeout(value = 15, unit = TimeUnit.MINUTES)
     static void init(JenkinsRule rule) throws Exception {
         log.info("init");
         jenkinsRule = rule;

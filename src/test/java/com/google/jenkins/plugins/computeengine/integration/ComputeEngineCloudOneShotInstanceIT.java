@@ -77,6 +77,7 @@ class ComputeEngineCloudOneShotInstanceIT {
     private static Node otherNode;
 
     @BeforeAll
+    @Timeout(value = 30, unit = TimeUnit.MINUTES)
     static void init(JenkinsRule rule) throws Exception {
         log.info("init");
         jenkinsRule = rule;

@@ -65,6 +65,7 @@ class ComputeEngineCloud1WorkerCreatedFor2ExecutorsIT {
     private static final Map<String, String> label = getLabel(ComputeEngineCloud1WorkerCreatedFor2ExecutorsIT.class);
 
     @BeforeAll
+    @Timeout(value = 15, unit = TimeUnit.MINUTES)
     static void init(JenkinsRule rule) throws Exception {
         log.info("init");
         jenkinsRule = rule;

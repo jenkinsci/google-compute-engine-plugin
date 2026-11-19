@@ -90,6 +90,7 @@ class ComputeEngineCloudTemplateIT {
     private static Instance instance;
 
     @BeforeAll
+    @Timeout(value = 15, unit = TimeUnit.MINUTES)
     static void init(JenkinsRule rule) throws Exception {
         log.info("init");
         jenkinsRule = rule;

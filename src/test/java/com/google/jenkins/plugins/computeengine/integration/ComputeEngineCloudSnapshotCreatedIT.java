@@ -75,6 +75,7 @@ class ComputeEngineCloudSnapshotCreatedIT {
     private static Snapshot createdSnapshot = null;
 
     @BeforeAll
+    @Timeout(value = 45, unit = TimeUnit.MINUTES)
     static void init(JenkinsRule rule) throws Exception {
         log.info("init");
         jenkinsRule = rule;

@@ -59,12 +59,12 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.AutoClose;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.jvnet.hudson.test.JenkinsRule;
 import org.jvnet.hudson.test.LogRecorder;
 import org.jvnet.hudson.test.junit.jupiter.BuildWatcherExtension;
 import org.jvnet.hudson.test.junit.jupiter.WithJenkins;
-import org.jvnet.hudson.test.recipes.WithTimeout;
 
 @WithJenkins
 class SpotVmProvisioningWithMaxRunDurationCasCIT {
@@ -107,7 +107,7 @@ class SpotVmProvisioningWithMaxRunDurationCasCIT {
      * going to be in a wrong state, but gets deleted as well. Additionally, it also proves that spotVM provisioning
      * is working. Works in both Freestyle and Pipeline projects.
      */
-    @WithTimeout(600)
+    @Timeout(value = 600, unit = TimeUnit.SECONDS)
     @Test
     void testMaxRunDurationDeletesAndNoNewBuilds() throws Exception {
         assumeFalse(windows);
