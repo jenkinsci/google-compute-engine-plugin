@@ -73,10 +73,11 @@ class ComputeEngineCloudNoSnapshotCreatedIT {
     private static String name;
 
     @BeforeAll
+    @Timeout(value = 21, unit = TimeUnit.MINUTES)
     static void init(JenkinsRule rule) throws Exception {
         log.info("init");
-        initCredentials(jenkinsRule);
         jenkinsRule = rule;
+        initCredentials(jenkinsRule);
         ComputeEngineCloud cloud = initCloud(jenkinsRule);
         client = initClient(jenkinsRule, label, log);
 

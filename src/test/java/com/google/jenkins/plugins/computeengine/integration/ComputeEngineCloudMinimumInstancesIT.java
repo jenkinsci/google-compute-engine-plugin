@@ -60,7 +60,7 @@ import org.jvnet.hudson.test.junit.jupiter.FlagExtension;
 class ComputeEngineCloudMinimumInstancesIT {
     private static final Logger log = Logger.getLogger(ComputeEngineCloudMinimumInstancesIT.class.getName());
 
-    private static JenkinsConfiguredWithCodeRule j;
+    private JenkinsConfiguredWithCodeRule j;
 
     @AutoClose
     private static final LogRecorder logRule =
@@ -76,8 +76,9 @@ class ComputeEngineCloudMinimumInstancesIT {
     private ComputeClient client;
 
     @BeforeEach
-    void init() throws Exception {
+    void init(JenkinsConfiguredWithCodeRule rule) throws Exception {
         log.info("init");
+        j = rule;
         initCredentials(j);
         client = ClientUtil.getClientFactory(j.jenkins, PROJECT_ID).computeClient();
         // CasC loaded min/spare values but credentials weren't available yet so fails; trigger provisioning now

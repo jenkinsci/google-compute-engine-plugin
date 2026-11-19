@@ -65,7 +65,7 @@ class ComputeEngineCloudStartupScriptIT {
 
     private static final String GCE_LABEL = "gce";
 
-    private static JenkinsConfiguredWithCodeRule j;
+    private JenkinsConfiguredWithCodeRule j;
 
     @RegisterExtension
     private static final BuildWatcherExtension bw = new BuildWatcherExtension();
@@ -75,8 +75,9 @@ class ComputeEngineCloudStartupScriptIT {
     private final Map<String, String> label = getLabel(ComputeEngineCloudStartupScriptIT.class);
 
     @BeforeEach
-    void init() throws Exception {
+    void init(JenkinsConfiguredWithCodeRule rule) throws Exception {
         log.info("init");
+        j = rule;
         initCredentials(j);
     }
 

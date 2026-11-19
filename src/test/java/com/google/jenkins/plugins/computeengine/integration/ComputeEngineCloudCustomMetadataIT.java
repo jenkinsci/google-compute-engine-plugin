@@ -52,7 +52,7 @@ import org.jvnet.hudson.test.junit.jupiter.BuildWatcherExtension;
 class ComputeEngineCloudCustomMetadataIT {
     private static final Logger log = Logger.getLogger(ComputeEngineCloudCustomMetadataIT.class.getName());
 
-    private static JenkinsConfiguredWithCodeRule j;
+    private JenkinsConfiguredWithCodeRule j;
 
     @AutoClose
     private static final LogRecorder logRule =
@@ -64,8 +64,9 @@ class ComputeEngineCloudCustomMetadataIT {
     private ComputeClient client;
 
     @BeforeEach
-    void init() throws Exception {
+    void init(JenkinsConfiguredWithCodeRule rule) throws Exception {
         log.info("init");
+        j = rule;
         initCredentials(j);
         client = ClientUtil.getClientFactory(j.jenkins, PROJECT_ID).computeClient();
     }
