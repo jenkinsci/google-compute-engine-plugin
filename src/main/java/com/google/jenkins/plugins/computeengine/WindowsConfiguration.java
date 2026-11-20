@@ -16,7 +16,7 @@ package com.google.jenkins.plugins.computeengine;
 
 import static com.google.jenkins.plugins.computeengine.ComputeEngineCloud.checkPermissions;
 
-import com.cloudbees.jenkins.plugins.sshcredentials.impl.BasicSSHUserPrivateKey;
+import com.cloudbees.jenkins.plugins.sshcredentials.SSHUserPrivateKey;
 import com.cloudbees.plugins.credentials.CredentialsMatchers;
 import com.cloudbees.plugins.credentials.CredentialsProvider;
 import com.cloudbees.plugins.credentials.SystemCredentialsProvider;
@@ -92,15 +92,9 @@ public class WindowsConfiguration implements Describable<WindowsConfiguration>, 
             return null;
         }
         return CredentialsMatchers.firstOrNull(
-                new SystemCredentialsProvider.ProviderImpl()
-                        .getCredentials(BasicSSHUserPrivateKey.class, Jenkins.get(), ACL.SYSTEM),
-                CredentialsMatchers.withId(privateKeyCredentialsId));
-    }
-
-    @SuppressWarnings("unchecked")
-    @Override
-    public Descriptor<WindowsConfiguration> getDescriptor() {
-        return Jenkins.get().getDescriptor(WindowsConfiguration.class);
+            new SystemCredentialsProvider.ProviderImpl()
+                .getCredentials(SSHUserPrivateKey.class, Jenkins.get(), ACL.SYSTEM),
+            CredentialsMatchers.withId(privateKeyCredentialsId));
     }
 
     @Extension
@@ -108,21 +102,25 @@ public class WindowsConfiguration implements Describable<WindowsConfiguration>, 
         public ListBoxModel doFillPasswordCredentialsIdItems(@AncestorInPath Jenkins context) {
             checkPermissions(context, Jenkins.ADMINISTER);
             return new StandardListBoxModel()
-                    .withEmptySelection()
-                    .withMatching(
-                            CredentialsMatchers.instanceOf(StandardUsernamePasswordCredentials.class),
-                            CredentialsProvider.lookupCredentials(
-                                    StandardUsernamePasswordCredentials.class, context, ACL.SYSTEM, new ArrayList<>()));
+                    .includeEmptyValue()
+                    .includeMatchingAs(
+                            ACL.SYSTEM,
+                            context,
+                            StandardUsernamePasswordCredentials.class,
+                            new ArrayList<>(),
+                            CredentialsMatchers.instanceOf(StandardUsernamePasswordCredentials.class));
         }
 
         public ListBoxModel doFillPrivateKeyCredentialsIdItems(@AncestorInPath Jenkins context) {
             checkPermissions(context, Jenkins.ADMINISTER);
             return new StandardUsernameListBoxModel()
-                    .withEmptySelection()
-                    .withMatching(
-                            CredentialsMatchers.instanceOf(BasicSSHUserPrivateKey.class),
-                            CredentialsProvider.lookupCredentials(
-                                    StandardUsernameCredentials.class, context, ACL.SYSTEM, new ArrayList<>()));
+                    .includeEmptyValue()
+                    .includeMatchingAs(
+                            ACL.SYSTEM,
+                            context,
+                            SSHUserPrivateKey.class,
+                            new ArrayList<>(),
+                            CredentialsMatchers.instanceOf(SSHUserPrivateKey.class));
         }
 
         public FormValidation doCheckPrivateKeyCredentialsId(
