@@ -24,10 +24,7 @@ import static com.google.jenkins.plugins.computeengine.InstanceConfiguration.MET
 import static com.google.jenkins.plugins.computeengine.NetworkInterfaceIpStackMode.NAT_NAME;
 import static com.google.jenkins.plugins.computeengine.NetworkInterfaceIpStackMode.NAT_TYPE;
 import static hudson.Functions.isWindows;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.*;
 
 import com.cloudbees.jenkins.plugins.sshcredentials.impl.BasicSSHUserPrivateKey;
 import com.cloudbees.plugins.credentials.Credentials;
@@ -132,7 +129,7 @@ class ITUtil {
     private static String customsshPrivateKeyCredentialsId;
 
     static String format(String s) {
-        assertNotNull("GOOGLE_PROJECT_ID env var must be set", PROJECT_ID);
+        assertNotNull(PROJECT_ID, "GOOGLE_PROJECT_ID env var must be set");
         return String.format(s, PROJECT_ID);
     }
 
@@ -188,15 +185,15 @@ class ITUtil {
         // On windows, credentials must be read from a file
         String credsPath = System.getenv("GOOGLE_CREDENTIALS_FILE");
         assertFalse(
-                "Credentials must be provided through environment variable or file path.",
-                Strings.isNullOrEmpty(credsPath));
+                Strings.isNullOrEmpty(credsPath),
+                "Credentials must be provided through environment variable or file path.");
         try {
             creds = String.join("", Files.readAllLines(Paths.get(credsPath)));
         } catch (IOException ioe) {
             ioe.printStackTrace();
             fail("Could not read credentials from file path " + credsPath);
         }
-        assertFalse("GOOGLE_CREDENTIALS or GOOGLE_CREDENTIALS_FILE env vars must be set", Strings.isNullOrEmpty(creds));
+        assertFalse(Strings.isNullOrEmpty(creds), "GOOGLE_CREDENTIALS or GOOGLE_CREDENTIALS_FILE env vars must be set");
         return creds;
     }
 
@@ -209,7 +206,7 @@ class ITUtil {
                 CredentialsScope.SYSTEM, PROJECT_ID, PROJECT_ID, "integration", sac, null);
 
         CredentialsStore store = new SystemCredentialsProvider.ProviderImpl().getStore(r.jenkins);
-        assertNotNull("Credentials store can not be null", store);
+        assertNotNull(store, "Credentials store can not be null");
         store.addCredentials(Domain.global(), credentials);
         if (windows) {
             windowsPrivateKeyCredentialsId = initWindowsSshCredentials(store);
@@ -257,7 +254,7 @@ class ITUtil {
     static ComputeClient initClient(JenkinsRule jenkinsRule, Map<String, String> label, Logger log) throws IOException {
         ClientFactory clientFactory = ClientUtil.getClientFactory(jenkinsRule.jenkins, PROJECT_ID);
         ComputeClient client = clientFactory.computeClient();
-        assertNotNull("ComputeClient can not be null", client);
+        assertNotNull(client, "ComputeClient can not be null");
         deleteIntegrationInstances(true, client, label, log);
         return client;
     }

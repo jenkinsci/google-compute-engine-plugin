@@ -85,6 +85,7 @@
     <lombok.version>1.18.46</lombok.version>
     <delombok.output>${project.build.directory}/delombok</delombok.output>
     <spotless.check.skip>false</spotless.check.skip>
+    <ban-junit4-imports.skip>false</ban-junit4-imports.skip>
     <jenkins.test.timeout>600</jenkins.test.timeout>
   </properties>
 
@@ -301,7 +302,7 @@
     </dependency>
     <dependency>
       <groupId>org.mockito</groupId>
-      <artifactId>mockito-core</artifactId>
+      <artifactId>mockito-junit-jupiter</artifactId>
       <scope>test</scope>
     </dependency>
   </dependencies>

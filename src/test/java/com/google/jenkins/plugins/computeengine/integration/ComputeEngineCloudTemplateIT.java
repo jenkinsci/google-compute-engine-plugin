@@ -23,7 +23,6 @@ import static com.google.jenkins.plugins.computeengine.integration.ITUtil.NUM_EX
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.PROJECT_ID;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.RUN_AS_USER;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.SSH_PRIVATE_KEY;
-import static com.google.jenkins.plugins.computeengine.integration.ITUtil.TEST_TIMEOUT_MULTIPLIER;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.ZONE;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.createTemplate;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.customssh;
@@ -35,8 +34,8 @@ import static com.google.jenkins.plugins.computeengine.integration.ITUtil.initCr
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.instanceConfigurationBuilder;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.teardownResources;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.windows;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.google.api.services.compute.model.AccessConfig;
 import com.google.api.services.compute.model.Instance;
@@ -60,18 +59,20 @@ import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.rules.Timeout;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.jvnet.hudson.test.JenkinsRule;
+import org.jvnet.hudson.test.junit.jupiter.WithJenkins;
 
 /**
  * Integration test suite for {@link ComputeEngineCloud}. Verifies that instances can be created
  * using an instance template, and are provisioned with the labels configured on that template.
  */
-public class ComputeEngineCloudTemplateIT {
+@WithJenkins
+@Timeout(value = 15, unit = TimeUnit.MINUTES)
+class ComputeEngineCloudTemplateIT {
     private static Logger log = Logger.getLogger(ComputeEngineCloudTemplateIT.class.getName());
 
     private static final String TEMPLATE = format("projects/%s/global/instanceTemplates/test-template");
@@ -80,11 +81,7 @@ public class ComputeEngineCloudTemplateIT {
     private static final Integer SSH_PORT = 22;
     private static final Integer SSH_TIMEOUT = 10000;
 
-    @ClassRule
-    public static Timeout timeout = new Timeout(5 * TEST_TIMEOUT_MULTIPLIER, TimeUnit.MINUTES);
-
-    @ClassRule
-    public static JenkinsRule jenkinsRule = new JenkinsRule();
+    private static JenkinsRule jenkinsRule;
 
     private static ComputeClient client;
     private static Map<String, String> label = getLabel(ComputeEngineCloudTemplateIT.class);
@@ -92,9 +89,11 @@ public class ComputeEngineCloudTemplateIT {
     private static ComputeEngineCloud cloud;
     private static Instance instance;
 
-    @BeforeClass
-    public static void init() throws Exception {
+    @BeforeAll
+    @Timeout(value = 15, unit = TimeUnit.MINUTES)
+    static void init(JenkinsRule rule) throws Exception {
         log.info("init");
+        jenkinsRule = rule;
         initCredentials(jenkinsRule);
         cloud = initCloud(jenkinsRule);
         client = initClient(jenkinsRule, label, log);
@@ -125,8 +124,8 @@ public class ComputeEngineCloudTemplateIT {
         instance = client.getInstance(PROJECT_ID, ZONE, name);
     }
 
-    @AfterClass
-    public static void teardown() throws IOException {
+    @AfterAll
+    static void teardown() throws IOException {
         try {
             client.deleteTemplateAsync(cloud.getProjectId(), nameFromSelfLink(TEMPLATE));
         } catch (Exception e) {
@@ -137,17 +136,17 @@ public class ComputeEngineCloudTemplateIT {
     }
 
     @Test
-    public void testTemplateGoogleLabelKeyAndValue() {
+    void testTemplateGoogleLabelKeyAndValue() {
         assertEquals(GOOGLE_LABEL_VALUE, instance.getLabels().get(GOOGLE_LABEL_KEY));
     }
 
     @Test
-    public void testTemplateCloudIdLabelKeyAndValue() {
+    void testTemplateCloudIdLabelKeyAndValue() {
         assertEquals(cloud.getInstanceId(), instance.getLabels().get(ComputeEngineCloud.CLOUD_ID_LABEL_KEY));
     }
 
     @Test
-    public void testConnectionWithTemplateSshKey() throws IOException, Exception {
+    void testConnectionWithTemplateSshKey() throws Exception {
         Connection conn = null;
         try {
             NetworkInterface nic = instance.getNetworkInterfaces().get(0);

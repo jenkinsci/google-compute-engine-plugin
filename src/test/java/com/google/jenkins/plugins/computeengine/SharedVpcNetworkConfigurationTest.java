@@ -16,29 +16,33 @@
 
 package com.google.jenkins.plugins.computeengine;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
 import hudson.ExtensionList;
 import hudson.util.FormValidation;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.jvnet.hudson.test.JenkinsRule;
 import org.jvnet.hudson.test.WithoutJenkins;
+import org.jvnet.hudson.test.junit.jupiter.WithJenkins;
 
-public class SharedVpcNetworkConfigurationTest {
-    public final String PROJECT_ID = "test-project";
-    public final String SUBNETWORK_NAME = "test-subnetwork";
-    public final String BAD_SUBNETWORK_NAME = "projects/project/subnetworks/test-subnetwork";
-    public final String REGION = "test-region";
+@WithJenkins
+class SharedVpcNetworkConfigurationTest {
+    private static final String PROJECT_ID = "test-project";
+    private static final String SUBNETWORK_NAME = "test-subnetwork";
+    private static final String BAD_SUBNETWORK_NAME = "projects/project/subnetworks/test-subnetwork";
+    private static final String REGION = "test-region";
 
-    @Rule
-    public JenkinsRule r = new JenkinsRule();
+    private JenkinsRule r;
+
+    @BeforeEach
+    void init(JenkinsRule rule) {
+        r = rule;
+    }
 
     @Test
     @WithoutJenkins
-    public void construction() {
+    void construction() {
         // Empty constructor
         SharedVpcNetworkConfiguration anc = new SharedVpcNetworkConfiguration(PROJECT_ID, REGION, SUBNETWORK_NAME);
         assertTrue(anc.getNetwork().isEmpty());
@@ -49,7 +53,7 @@ public class SharedVpcNetworkConfigurationTest {
     }
 
     @Test
-    public void descriptorSubnetwork() {
+    void descriptorSubnetwork() {
         SharedVpcNetworkConfiguration.DescriptorImpl d =
                 ExtensionList.lookupSingleton(SharedVpcNetworkConfiguration.DescriptorImpl.class);
 
@@ -71,7 +75,7 @@ public class SharedVpcNetworkConfigurationTest {
     }
 
     @Test
-    public void descriptorProjectId() {
+    void descriptorProjectId() {
         SharedVpcNetworkConfiguration.DescriptorImpl d =
                 ExtensionList.lookupSingleton(SharedVpcNetworkConfiguration.DescriptorImpl.class);
 
@@ -89,7 +93,7 @@ public class SharedVpcNetworkConfigurationTest {
     }
 
     @Test
-    public void descriptorRegion() {
+    void descriptorRegion() {
         SharedVpcNetworkConfiguration.DescriptorImpl d =
                 ExtensionList.lookupSingleton(SharedVpcNetworkConfiguration.DescriptorImpl.class);
 

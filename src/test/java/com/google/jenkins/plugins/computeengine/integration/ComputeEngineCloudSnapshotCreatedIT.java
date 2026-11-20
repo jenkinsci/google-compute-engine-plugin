@@ -21,7 +21,6 @@ import static com.google.jenkins.plugins.computeengine.integration.ITUtil.NUM_EX
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.PROJECT_ID;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.SNAPSHOT_LABEL;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.SNAPSHOT_TIMEOUT;
-import static com.google.jenkins.plugins.computeengine.integration.ITUtil.TEST_TIMEOUT_MULTIPLIER;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.execute;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.getLabel;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.initClient;
@@ -29,9 +28,8 @@ import static com.google.jenkins.plugins.computeengine.integration.ITUtil.initCl
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.initCredentials;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.instanceConfigurationBuilder;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.teardownResources;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.awaitility.Awaitility.await;
+import static org.junit.jupiter.api.Assertions.*;
 
 import com.google.api.services.compute.model.Snapshot;
 import com.google.cloud.graphite.platforms.plugin.client.ComputeClient;
@@ -48,39 +46,39 @@ import java.io.IOException;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
-import org.awaitility.Awaitility;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.rules.Timeout;
-import org.jvnet.hudson.test.BuildWatcher;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
+import org.junit.jupiter.api.extension.RegisterExtension;
 import org.jvnet.hudson.test.JenkinsRule;
+import org.jvnet.hudson.test.junit.jupiter.BuildWatcherExtension;
+import org.jvnet.hudson.test.junit.jupiter.WithJenkins;
 
 /**
  * Integration test suite for {@link ComputeEngineCloud}. Verifies that when configured to use one
  * shot instances and create snapshots, a snapshot will be created upon instance termination when a
  * build fails.
  */
-public class ComputeEngineCloudSnapshotCreatedIT {
+@WithJenkins
+@Timeout(value = 45, unit = TimeUnit.MINUTES)
+class ComputeEngineCloudSnapshotCreatedIT {
     private static final Logger log = Logger.getLogger(ComputeEngineCloudSnapshotCreatedIT.class.getName());
 
-    @ClassRule
-    public static Timeout timeout = new Timeout(15L * TEST_TIMEOUT_MULTIPLIER, TimeUnit.MINUTES);
+    private static JenkinsRule jenkinsRule;
 
-    @ClassRule
-    public static JenkinsRule jenkinsRule = new JenkinsRule();
-
-    @ClassRule
-    public static BuildWatcher bw = new BuildWatcher();
+    @RegisterExtension
+    private static final BuildWatcherExtension bw = new BuildWatcherExtension();
 
     private static ComputeClient client;
     private static final Map<String, String> label = getLabel(ComputeEngineCloudSnapshotCreatedIT.class);
     private static Snapshot createdSnapshot = null;
 
-    @BeforeClass
-    public static void init() throws Exception {
+    @BeforeAll
+    @Timeout(value = 45, unit = TimeUnit.MINUTES)
+    static void init(JenkinsRule rule) throws Exception {
         log.info("init");
+        jenkinsRule = rule;
         initCredentials(jenkinsRule);
         ComputeEngineCloud cloud = initCloud(jenkinsRule);
         client = initClient(jenkinsRule, label, log);
@@ -108,16 +106,15 @@ public class ComputeEngineCloudSnapshotCreatedIT {
         assertNotNull(worker);
 
         // Need time for one-shot instance to terminate and create the snapshot
-        Awaitility.await()
-                .timeout(SNAPSHOT_TIMEOUT, TimeUnit.SECONDS)
+        await().timeout(SNAPSHOT_TIMEOUT, TimeUnit.SECONDS)
                 .pollInterval(10, TimeUnit.SECONDS)
                 .until(() -> jenkinsRule.jenkins.getNode(worker.getNodeName()) == null);
 
         createdSnapshot = client.getSnapshot(PROJECT_ID, worker.getNodeName());
     }
 
-    @AfterClass
-    public static void teardown() throws IOException {
+    @AfterAll
+    static void teardown() throws IOException {
         if (createdSnapshot != null) {
             client.deleteSnapshotAsync(PROJECT_ID, createdSnapshot.getName());
         }
@@ -126,19 +123,18 @@ public class ComputeEngineCloudSnapshotCreatedIT {
 
     /** Tests snapshot is created when we have failure builds for given node */
     @Test
-    public void testSnapshotCreatedNotNull() {
+    void testSnapshotCreatedNotNull() {
         assertNotNull(createdSnapshot);
     }
 
     @Test
-    public void testSnapshotCreatedStatusReady() {
+    void testSnapshotCreatedStatusReady() {
         assertEquals("READY", createdSnapshot.getStatus());
     }
 
     @Test
-    public void testSnapshotCreatedOneShotInstanceDeleted() {
-        Awaitility.await()
-                .timeout(SNAPSHOT_TIMEOUT, TimeUnit.SECONDS)
+    void testSnapshotCreatedOneShotInstanceDeleted() {
+        await().timeout(SNAPSHOT_TIMEOUT, TimeUnit.SECONDS)
                 .until(() -> client.listInstancesWithLabel(PROJECT_ID, label).isEmpty());
     }
 }

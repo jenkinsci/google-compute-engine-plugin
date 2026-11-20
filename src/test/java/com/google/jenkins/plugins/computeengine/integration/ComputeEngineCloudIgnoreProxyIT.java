@@ -18,7 +18,6 @@ package com.google.jenkins.plugins.computeengine.integration;
 
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.NULL_TEMPLATE;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.NUM_EXECUTORS;
-import static com.google.jenkins.plugins.computeengine.integration.ITUtil.TEST_TIMEOUT_MULTIPLIER;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.execute;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.getLabel;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.initClient;
@@ -26,8 +25,7 @@ import static com.google.jenkins.plugins.computeengine.integration.ITUtil.initCl
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.initCredentials;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.instanceConfigurationBuilder;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.teardownResources;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
 import com.google.cloud.graphite.platforms.plugin.client.ComputeClient;
 import com.google.common.collect.ImmutableList;
@@ -47,37 +45,37 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import jenkins.model.Jenkins;
 import lombok.extern.java.Log;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.rules.Timeout;
-import org.jvnet.hudson.test.BuildWatcher;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
+import org.junit.jupiter.api.extension.RegisterExtension;
 import org.jvnet.hudson.test.JenkinsRule;
+import org.jvnet.hudson.test.junit.jupiter.BuildWatcherExtension;
+import org.jvnet.hudson.test.junit.jupiter.WithJenkins;
 
 /**
  * Integration test suite for {@link ComputeEngineCloud}. Verifies that when the ignore proxy flag
  * is set to true, connections to GCE VMs bypass the proxy, and when set to false the proxy is used.
  */
 @Log
-public class ComputeEngineCloudIgnoreProxyIT {
+@WithJenkins
+@Timeout(value = 30, unit = TimeUnit.MINUTES)
+class ComputeEngineCloudIgnoreProxyIT {
 
-    @ClassRule
-    public static Timeout timeout = new Timeout(10L * TEST_TIMEOUT_MULTIPLIER, TimeUnit.MINUTES);
+    private static JenkinsRule jenkinsRule;
 
-    @ClassRule
-    public static JenkinsRule jenkinsRule = new JenkinsRule();
-
-    @ClassRule
-    public static BuildWatcher bw = new BuildWatcher();
+    @RegisterExtension
+    private static final BuildWatcherExtension bw = new BuildWatcherExtension();
 
     private static ComputeClient client;
     private static final Map<String, String> label = getLabel(ComputeEngineCloudIgnoreProxyIT.class);
     private static ComputeEngineCloud cloud;
 
-    @BeforeClass
-    public static void init() throws Exception {
+    @BeforeAll
+    static void init(JenkinsRule rule) throws Exception {
         log.info("init");
+        jenkinsRule = rule;
         initCredentials(jenkinsRule);
         cloud = initCloud(jenkinsRule);
         client = initClient(jenkinsRule, label, log);
@@ -88,8 +86,8 @@ public class ComputeEngineCloudIgnoreProxyIT {
         log.info("init completed");
     }
 
-    @AfterClass
-    public static void teardown() throws IOException {
+    @AfterAll
+    static void teardown() throws IOException {
         teardownResources(client, label, log);
     }
 
@@ -114,7 +112,7 @@ public class ComputeEngineCloudIgnoreProxyIT {
     }
 
     @Test
-    public void testWorkerIgnoringProxy() throws Exception {
+    void testWorkerIgnoringProxy() throws Exception {
         String identifier = "ignoreProxy";
         var instanceConfig = getConfiguration(true, identifier);
         cloud.setConfigurations(ImmutableList.of(instanceConfig));
@@ -132,18 +130,16 @@ public class ComputeEngineCloudIgnoreProxyIT {
 
     // Due to the proxy configured for Jenkins, the build fails because it is not able to connect to
     // the node through the proxy.
-    @Test(expected = TimeoutException.class)
-    public void testWorkerNotIgnoringProxyFails() throws Exception {
+    @Test
+    void testWorkerNotIgnoringProxyFails() throws Exception {
         String identifier = "notIgnoreProxy";
         var instanceConfig = getConfiguration(false, identifier);
         cloud.setConfigurations(ImmutableList.of(instanceConfig));
         jenkinsRule.getInstance().save();
-
         assertFalse(cloud.getInstanceConfigurationByDescription(instanceConfig.getDescription())
                 .isIgnoreProxy());
-
         var project = createProject(identifier);
         Future<FreeStyleBuild> build = project.scheduleBuild2(0);
-        build.get(300, TimeUnit.SECONDS);
+        assertThrows(TimeoutException.class, () -> build.get(300, TimeUnit.SECONDS));
     }
 }

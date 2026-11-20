@@ -20,7 +20,6 @@ import static com.google.jenkins.plugins.computeengine.integration.ITUtil.BOOT_D
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.NULL_TEMPLATE;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.NUM_EXECUTORS;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.PROJECT_ID;
-import static com.google.jenkins.plugins.computeengine.integration.ITUtil.TEST_TIMEOUT_MULTIPLIER;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.ZONE;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.format;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.getLabel;
@@ -29,6 +28,7 @@ import static com.google.jenkins.plugins.computeengine.integration.ITUtil.initCl
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.initCredentials;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.instanceConfigurationBuilder;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.teardownResources;
+import static org.awaitility.Awaitility.await;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.is;
@@ -54,18 +54,17 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
-import org.awaitility.Awaitility;
 import org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition;
 import org.jenkinsci.plugins.workflow.job.WorkflowJob;
 import org.jenkinsci.plugins.workflow.test.steps.SemaphoreStep;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.Timeout;
-import org.jvnet.hudson.test.BuildWatcher;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
+import org.junit.jupiter.api.extension.RegisterExtension;
 import org.jvnet.hudson.test.JenkinsRule;
+import org.jvnet.hudson.test.junit.jupiter.BuildWatcherExtension;
+import org.jvnet.hudson.test.junit.jupiter.WithJenkins;
 
 /**
  * Integration tests for the disk mapping feature, covering all three disk attachment modes:
@@ -78,7 +77,9 @@ import org.jvnet.hudson.test.JenkinsRule;
  * <p>Snapshot and existing-disk tests use a throwaway <em>prep VM</em> to write marker data to the
  * disk before snapshotting or attaching.
  */
-public class ComputeEngineCloudDiskMappingIT {
+@WithJenkins
+@Timeout(value = 75, unit = TimeUnit.MINUTES)
+class ComputeEngineCloudDiskMappingIT {
     private static final Logger log = Logger.getLogger(ComputeEngineCloudDiskMappingIT.class.getName());
 
     private static final String GCE_LABEL = "gce";
@@ -95,14 +96,10 @@ public class ComputeEngineCloudDiskMappingIT {
     /** Timeout in seconds for waiting on GCP resource cleanup (instance/disk deletion). */
     private static final int CLEANUP_TIMEOUT_SECONDS = 300;
 
-    @ClassRule
-    public static Timeout timeout = new Timeout(25L * TEST_TIMEOUT_MULTIPLIER, TimeUnit.MINUTES);
+    private JenkinsRule j;
 
-    @Rule
-    public JenkinsRule j = new JenkinsRule();
-
-    @ClassRule
-    public static BuildWatcher bw = new BuildWatcher();
+    @RegisterExtension
+    private static final BuildWatcherExtension bw = new BuildWatcherExtension();
 
     private ComputeClient client;
     private ComputeEngineCloud cloud;
@@ -111,17 +108,18 @@ public class ComputeEngineCloudDiskMappingIT {
     private final List<String> snapshotsToDelete = new ArrayList<>();
     private final List<String> disksToDelete = new ArrayList<>();
 
-    @Before
-    public void init() throws Exception {
+    @BeforeEach
+    void init(JenkinsRule rule) throws Exception {
         log.info("init");
+        j = rule;
         initCredentials(j);
         cloud = initCloud(j);
         client = initClient(j, label, log);
         compute = cloud.getClientV2().getCompute();
     }
 
-    @After
-    public void teardown() throws IOException {
+    @AfterEach
+    void teardown() throws IOException {
         log.info("teardown");
         teardownResources(client, label, log);
         deletePrepVm();
@@ -134,7 +132,7 @@ public class ComputeEngineCloudDiskMappingIT {
      * mountable via startup script, readable from a build step, and auto-deleted with the instance.
      */
     @Test
-    public void testSnapshotDisksAttachedMountedAndAutoDeleted() throws Exception {
+    void testSnapshotDisksAttachedMountedAndAutoDeleted() throws Exception {
         createTestSnapshots();
 
         var diskMapping = String.format(
@@ -211,7 +209,7 @@ public class ComputeEngineCloudDiskMappingIT {
      * readable from a build step, and auto-deleted with the instance.
      */
     @Test
-    public void testBlankDiskCreatedAndMounted() throws Exception {
+    void testBlankDiskCreatedAndMounted() throws Exception {
         var diskMapping = "size=10,type=pd-standard,device-name=scratch,auto-delete=yes";
 
         var startupScript = """
@@ -273,7 +271,7 @@ public class ComputeEngineCloudDiskMappingIT {
      * semantics ({@code name=...}), mountable via startup script, and readable from a build step.
      */
     @Test
-    public void testAttachExistingDiskMountedAndReadable() throws Exception {
+    void testAttachExistingDiskMountedAndReadable() throws Exception {
         createTestExistingDisk();
 
         var diskMapping = String.format("name=%s,device-name=data,auto-delete=no", existingDiskSelfLink());
@@ -337,14 +335,12 @@ public class ComputeEngineCloudDiskMappingIT {
     }
 
     private void waitForOneShotCleanup(String workerNodeName) {
-        Awaitility.await()
-                .timeout(CLEANUP_TIMEOUT_SECONDS, TimeUnit.SECONDS)
+        await().timeout(CLEANUP_TIMEOUT_SECONDS, TimeUnit.SECONDS)
                 .pollInterval(10, TimeUnit.SECONDS)
                 .until(() -> j.jenkins.getNode(workerNodeName) == null);
         log.info("One-shot node removed from Jenkins: " + workerNodeName);
 
-        Awaitility.await()
-                .timeout(CLEANUP_TIMEOUT_SECONDS, TimeUnit.SECONDS)
+        await().timeout(CLEANUP_TIMEOUT_SECONDS, TimeUnit.SECONDS)
                 .pollInterval(10, TimeUnit.SECONDS)
                 // GCP API throws 404 (wrapped in IOException) when the instance no longer exists
                 .until(() -> {
@@ -359,8 +355,7 @@ public class ComputeEngineCloudDiskMappingIT {
     }
 
     private void waitForDiskDeletion(String diskName) {
-        Awaitility.await()
-                .timeout(CLEANUP_TIMEOUT_SECONDS, TimeUnit.SECONDS)
+        await().timeout(CLEANUP_TIMEOUT_SECONDS, TimeUnit.SECONDS)
                 .pollInterval(10, TimeUnit.SECONDS)
                 // GCP API throws 404 (wrapped in IOException) when the disk no longer exists
                 .until(() -> {
@@ -539,8 +534,7 @@ public class ComputeEngineCloudDiskMappingIT {
         waitForZoneOperation(insertOp);
         log.info("Prep VM created, waiting for startup script to complete (TERMINATED status)");
 
-        Awaitility.await()
-                .timeout(CLEANUP_TIMEOUT_SECONDS, TimeUnit.SECONDS)
+        await().timeout(CLEANUP_TIMEOUT_SECONDS, TimeUnit.SECONDS)
                 .pollInterval(10, TimeUnit.SECONDS)
                 .until(() -> {
                     var vm = compute.instances()

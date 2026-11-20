@@ -23,12 +23,9 @@ import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.lessThan;
 import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.startsWith;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.when;
 
 import com.google.api.services.compute.model.AcceleratorType;
 import com.google.api.services.compute.model.DiskType;
@@ -55,19 +52,23 @@ import java.util.logging.Level;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.htmlunit.html.HtmlPage;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.AutoClose;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.jvnet.hudson.test.JenkinsRule;
-import org.jvnet.hudson.test.LoggerRule;
+import org.jvnet.hudson.test.LogRecorder;
+import org.jvnet.hudson.test.junit.jupiter.WithJenkins;
 import org.jvnet.hudson.test.recipes.LocalData;
 import org.mockito.Mock;
-import org.mockito.Mockito;
-import org.mockito.junit.MockitoJUnitRunner;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.mockito.junit.jupiter.MockitoSettings;
+import org.mockito.quality.Strictness;
 
-@RunWith(MockitoJUnitRunner.class)
-public class InstanceConfigurationTest {
+@ExtendWith(MockitoExtension.class)
+@MockitoSettings(strictness = Strictness.LENIENT)
+@WithJenkins
+class InstanceConfigurationTest {
     public static final String NAME_PREFIX = "test";
     public static final String PROJECT_ID = "test-project";
     public static final String REGION = "us-west1";
@@ -99,29 +100,29 @@ public class InstanceConfigurationTest {
     public static final String LAUNCH_TIMEOUT_SECONDS_STR = "100";
 
     @Mock
-    public ComputeEngineCloud cloud;
+    private ComputeEngineCloud cloud;
 
     @Mock
-    public ComputeClient computeClient;
+    private ComputeClient computeClient;
 
-    @Rule
-    public JenkinsRule r = new JenkinsRule();
+    private JenkinsRule r;
 
-    @Rule
-    public LoggerRule logs =
-            new LoggerRule().record(InstanceConfiguration.class, Level.INFO).capture(20);
+    @AutoClose
+    private final LogRecorder logs =
+            new LogRecorder().record(InstanceConfiguration.class, Level.INFO).capture(20);
 
-    @Before
-    public void init() throws Exception {
-        List<Region> regions = new ArrayList<Region>();
+    @BeforeEach
+    void init(JenkinsRule rule) throws Exception {
+        r = rule;
+        List<Region> regions = new ArrayList<>();
         regions.add(new Region().setName("").setSelfLink(""));
         regions.add(new Region().setName(REGION).setSelfLink(REGION));
 
-        List<Zone> zones = new ArrayList<Zone>();
+        List<Zone> zones = new ArrayList<>();
         zones.add(new Zone().setName("").setSelfLink(""));
         zones.add(new Zone().setName(ZONE).setSelfLink(ZONE));
 
-        List<MachineType> machineTypes = new ArrayList<MachineType>();
+        List<MachineType> machineTypes = new ArrayList<>();
         machineTypes.add(new MachineType().setName("").setSelfLink(""));
         machineTypes.add(new MachineType().setName(MACHINE_TYPE).setSelfLink(MACHINE_TYPE));
 
@@ -130,26 +131,26 @@ public class InstanceConfigurationTest {
         cpuPlatforms.add("Intel Skylake");
         cpuPlatforms.add("Intel Haswell");
 
-        List<DiskType> diskTypes = new ArrayList<DiskType>();
+        List<DiskType> diskTypes = new ArrayList<>();
         diskTypes.add(new DiskType().setName("").setSelfLink(""));
         diskTypes.add(new DiskType().setName(BOOT_DISK_TYPE).setSelfLink(BOOT_DISK_TYPE));
 
-        List<Image> imageTypes = new ArrayList<Image>();
+        List<Image> imageTypes = new ArrayList<>();
         imageTypes.add(new Image().setName("").setSelfLink(""));
         imageTypes.add(new Image().setName(BOOT_DISK_IMAGE_NAME).setSelfLink(BOOT_DISK_IMAGE_NAME));
 
         Image image = new Image();
         image.setName(BOOT_DISK_IMAGE_NAME).setSelfLink(BOOT_DISK_IMAGE_NAME).setDiskSizeGb(BOOT_DISK_SIZE_GB);
 
-        List<Network> networks = new ArrayList<Network>();
+        List<Network> networks = new ArrayList<>();
         networks.add(new Network().setName("").setSelfLink(""));
         networks.add(new Network().setName(NETWORK_NAME).setSelfLink(NETWORK_NAME));
 
-        List<Subnetwork> subnetworks = new ArrayList<Subnetwork>();
+        List<Subnetwork> subnetworks = new ArrayList<>();
         subnetworks.add(new Subnetwork().setName("").setSelfLink(""));
         subnetworks.add(new Subnetwork().setName(SUBNETWORK_NAME).setSelfLink(SUBNETWORK_NAME));
 
-        List<AcceleratorType> acceleratorTypes = new ArrayList<AcceleratorType>();
+        List<AcceleratorType> acceleratorTypes = new ArrayList<>();
         acceleratorTypes.add(new AcceleratorType().setName("").setSelfLink("").setMaximumCardsPerInstance(0));
         acceleratorTypes.add(new AcceleratorType()
                 .setName(ACCELERATOR_NAME)
@@ -165,28 +166,25 @@ public class InstanceConfigurationTest {
                                                 .set("value", "TEST"))
                                         .collect(Collectors.toList()))));
 
-        Mockito.when(computeClient.listRegions(anyString())).thenReturn(ImmutableList.copyOf(regions));
-        Mockito.when(computeClient.listZones(anyString(), anyString())).thenReturn(ImmutableList.copyOf(zones));
-        Mockito.when(computeClient.listMachineTypes(anyString(), anyString()))
-                .thenReturn(ImmutableList.copyOf(machineTypes));
-        Mockito.when(computeClient.listCpuPlatforms(anyString(), anyString()))
-                .thenReturn(ImmutableList.copyOf(cpuPlatforms));
-        Mockito.when(computeClient.listBootDiskTypes(anyString(), anyString()))
-                .thenReturn(ImmutableList.copyOf(diskTypes));
-        Mockito.when(computeClient.getImage(anyString(), anyString())).thenReturn(image);
-        Mockito.when(computeClient.listImages(anyString())).thenReturn(ImmutableList.copyOf(imageTypes));
-        Mockito.when(computeClient.listAcceleratorTypes(anyString(), anyString()))
+        when(computeClient.listRegions(anyString())).thenReturn(ImmutableList.copyOf(regions));
+        when(computeClient.listZones(anyString(), anyString())).thenReturn(ImmutableList.copyOf(zones));
+        when(computeClient.listMachineTypes(anyString(), anyString())).thenReturn(ImmutableList.copyOf(machineTypes));
+        when(computeClient.listCpuPlatforms(anyString(), anyString())).thenReturn(ImmutableList.copyOf(cpuPlatforms));
+        when(computeClient.listBootDiskTypes(anyString(), anyString())).thenReturn(ImmutableList.copyOf(diskTypes));
+        when(computeClient.getImage(anyString(), anyString())).thenReturn(image);
+        when(computeClient.listImages(anyString())).thenReturn(ImmutableList.copyOf(imageTypes));
+        when(computeClient.listAcceleratorTypes(anyString(), anyString()))
                 .thenReturn(ImmutableList.copyOf(acceleratorTypes));
-        Mockito.when(computeClient.listNetworks(anyString())).thenReturn(ImmutableList.copyOf(networks));
-        Mockito.when(computeClient.listSubnetworks(anyString(), anyString(), anyString()))
+        when(computeClient.listNetworks(anyString())).thenReturn(ImmutableList.copyOf(networks));
+        when(computeClient.listSubnetworks(anyString(), anyString(), anyString()))
                 .thenReturn(ImmutableList.copyOf(subnetworks));
-        Mockito.when(cloud.getProjectId()).thenReturn(PROJECT_ID);
-        Mockito.when(cloud.getClient()).thenReturn(computeClient);
-        Mockito.when(computeClient.getTemplate(anyString(), anyString())).thenReturn(instanceTemplate);
+        when(cloud.getProjectId()).thenReturn(PROJECT_ID);
+        when(cloud.getClient()).thenReturn(computeClient);
+        when(computeClient.getTemplate(anyString(), anyString())).thenReturn(instanceTemplate);
     }
 
     @Test
-    public void testClient() throws Exception {
+    void testClient() throws Exception {
         List<Region> regions = computeClient.listRegions(anyString());
         assert (regions.size() == 2);
         assert (regions.get(1).getName().equals(REGION));
@@ -198,7 +196,7 @@ public class InstanceConfigurationTest {
     }
 
     @Test
-    public void testConfigRoundtrip() throws Exception {
+    void testConfigRoundtrip() throws Exception {
         InstanceConfiguration want = instanceConfigurationBuilder()
                 .minCpuPlatform("")
                 .customLabels(List.of(new CustomLabelItem("team", "jenkins"), new CustomLabelItem("cost-center", "ci")))
@@ -227,7 +225,7 @@ public class InstanceConfigurationTest {
     }
 
     @Test
-    public void testInstanceModel() throws Exception {
+    void testInstanceModel() throws Exception {
         Instance instance = instanceConfigurationBuilder()
                 .minCpuPlatform(MIN_CPU_PLATFORM)
                 .build()
@@ -242,30 +240,30 @@ public class InstanceConfigurationTest {
         // Accelerators
         assertEquals(ACCELERATOR_NAME, instance.getGuestAccelerators().get(0).getAcceleratorType());
         // NOTE(craigatgoogle): Cast is required for disambiguation.
-        assertEquals((int) Integer.parseInt(ACCELERATOR_COUNT), (int)
+        assertEquals(Integer.parseInt(ACCELERATOR_COUNT), (int)
                 instance.getGuestAccelerators().get(0).getAcceleratorCount());
 
         // Metadata
         Optional<String> startupScript = instance.getMetadata().getItems().stream()
                 .filter(item -> item.getKey().equals(InstanceConfiguration.METADATA_LINUX_STARTUP_SCRIPT_KEY))
-                .map(item -> item.getValue())
+                .map(Metadata.Items::getValue)
                 .findFirst();
         assertTrue(startupScript.isPresent());
         assertEquals(STARTUP_SCRIPT, startupScript.get());
 
         Optional<String> sshKey = instance.getMetadata().getItems().stream()
                 .filter(item -> item.getKey().equals(InstanceConfiguration.SSH_METADATA_KEY))
-                .map(item -> item.getValue())
+                .map(Metadata.Items::getValue)
                 .findFirst();
         assertTrue(sshKey.isPresent());
         assertFalse(sshKey.get().isEmpty());
 
         Optional<String> guestAttributes = instance.getMetadata().getItems().stream()
                 .filter(item -> item.getKey().equals(InstanceConfiguration.GUEST_ATTRIBUTES_METADATA_KEY))
-                .map(item -> item.getValue())
+                .map(Metadata.Items::getValue)
                 .findFirst();
         assertTrue(guestAttributes.isPresent());
-        assertEquals(guestAttributes.get(), "TRUE");
+        assertEquals("TRUE", guestAttributes.get());
 
         // Network
         assertEquals(SUBNETWORK_NAME, instance.getNetworkInterfaces().get(0).getSubnetwork());
@@ -277,7 +275,7 @@ public class InstanceConfigurationTest {
                 instance.getNetworkInterfaces().get(0).getAccessConfigs().get(0).getName());
 
         // Tags
-        assertTrue(instance.getTags().getItems().size() == NETWORK_TAGS.split(" ").length);
+        assertEquals(instance.getTags().getItems().size(), NETWORK_TAGS.split(" ").length);
         assertEquals(NETWORK_TAGS.split(" ")[0], instance.getTags().getItems().get(0));
         assertEquals(NETWORK_TAGS.split(" ")[1], instance.getTags().getItems().get(1));
 
@@ -305,7 +303,7 @@ public class InstanceConfigurationTest {
     }
 
     @Test
-    public void testInstanceMetadata() throws Exception {
+    void testInstanceMetadata() throws Exception {
         InstanceConfiguration instanceConfiguration =
                 instanceConfigurationBuilder().template(TEMPLATE_NAME).build();
         instanceConfiguration.appendLabel("test", "test");
@@ -315,13 +313,13 @@ public class InstanceConfigurationTest {
 
         Object[] sshKeys = instance.getMetadata().getItems().stream()
                 .filter(item -> item.getKey().equals(InstanceConfiguration.SSH_METADATA_KEY))
-                .map(item -> item.getValue())
+                .map(Metadata.Items::getValue)
                 .toArray();
-        assertEquals(sshKeys.length, 1);
+        assertEquals(1, sshKeys.length);
     }
 
     @Test
-    public void testInstanceCustomMetadata() throws Exception {
+    void testInstanceCustomMetadata() throws Exception {
         List<CustomMetadataItem> metadata = List.of(
                 new CustomMetadataItem("test-key", "test-value"),
                 new CustomMetadataItem("test-multiline", "line1\nline2\nline3"));
@@ -334,14 +332,14 @@ public class InstanceConfigurationTest {
                 .filter(item -> item.getKey().equals("test-key"))
                 .map(Metadata.Items::getValue)
                 .findFirst();
-        assertTrue("custom metadata 'test-key' should be present", simpleValue.isPresent());
+        assertTrue(simpleValue.isPresent(), "custom metadata 'test-key' should be present");
         assertEquals("test-value", simpleValue.get());
 
         Optional<String> multilineValue = instance.getMetadata().getItems().stream()
                 .filter(item -> item.getKey().equals("test-multiline"))
                 .map(Metadata.Items::getValue)
                 .findFirst();
-        assertTrue("custom metadata 'test-multiline' should be present", multilineValue.isPresent());
+        assertTrue(multilineValue.isPresent(), "custom metadata 'test-multiline' should be present");
         assertEquals("line1\nline2\nline3", multilineValue.get());
 
         // Verify custom metadata coexists with programmatic metadata
@@ -349,17 +347,17 @@ public class InstanceConfigurationTest {
                 .filter(item -> item.getKey().equals(InstanceConfiguration.GUEST_ATTRIBUTES_METADATA_KEY))
                 .map(Metadata.Items::getValue)
                 .findFirst();
-        assertTrue("guest attributes should still be present", guestAttributes.isPresent());
+        assertTrue(guestAttributes.isPresent(), "guest attributes should still be present");
 
         Optional<String> startupScript = instance.getMetadata().getItems().stream()
                 .filter(item -> item.getKey().equals(InstanceConfiguration.METADATA_LINUX_STARTUP_SCRIPT_KEY))
                 .map(Metadata.Items::getValue)
                 .findFirst();
-        assertTrue("startup script should still be present", startupScript.isPresent());
+        assertTrue(startupScript.isPresent(), "startup script should still be present");
     }
 
     @Test
-    public void testInstanceCustomLabels() throws Exception {
+    void testInstanceCustomLabels() throws Exception {
         List<CustomLabelItem> labels = List.of(
                 new CustomLabelItem("team", "jenkins"),
                 new CustomLabelItem("cost-center", "ci-1234"),
@@ -374,12 +372,12 @@ public class InstanceConfigurationTest {
         assertEquals("ci-1234", instance.getLabels().get("cost-center"));
 
         // Entries with an empty key are skipped
-        assertFalse("empty-key label should be skipped", instance.getLabels().containsValue("skip-me"));
+        assertFalse(instance.getLabels().containsValue("skip-me"), "empty-key label should be skipped");
 
         // The system 'in use' label must always survive alongside custom labels
         assertTrue(
-                "system NODE_IN_USE label should still be present",
-                instance.getLabels().containsKey(CleanLostNodesWork.NODE_IN_USE_LABEL_KEY));
+                instance.getLabels().containsKey(CleanLostNodesWork.NODE_IN_USE_LABEL_KEY),
+                "system NODE_IN_USE label should still be present");
     }
 
     public static InstanceConfiguration.Builder instanceConfigurationBuilder() {
@@ -417,7 +415,7 @@ public class InstanceConfigurationTest {
     }
 
     @Test
-    public void testDiskMappingAttachesDisks() throws Exception {
+    void testDiskMappingAttachesDisks() throws Exception {
         var instance = instanceConfigurationBuilder()
                 .cloud(cloud)
                 .diskMapping("source-snapshot=snap-a,size=50,type=pd-ssd,auto-delete=yes\n"
@@ -449,14 +447,14 @@ public class InstanceConfigurationTest {
     }
 
     @Test
-    public void testNoDiskMappingOnlyBootDisk() throws Exception {
+    void testNoDiskMappingOnlyBootDisk() throws Exception {
         var instance = instanceConfigurationBuilder().build().instance();
         assertEquals(1, instance.getDisks().size());
         assertTrue(instance.getDisks().get(0).getBoot());
     }
 
     @Test
-    public void testShieldedInstanceConfigNotSet() throws Exception {
+    void testShieldedInstanceConfigNotSet() throws Exception {
         var instance = instanceConfigurationBuilder()
                 .shieldedVmConfiguration(null)
                 .build()
@@ -465,7 +463,7 @@ public class InstanceConfigurationTest {
     }
 
     @Test
-    public void testShieldedInstanceConfigAllOn() throws Exception {
+    void testShieldedInstanceConfigAllOn() throws Exception {
         var instance = instanceConfigurationBuilder()
                 .shieldedVmConfiguration(new ShieldedVmConfiguration(true, true, true))
                 .build()
@@ -479,7 +477,7 @@ public class InstanceConfigurationTest {
     }
 
     @Test
-    public void testShieldedInstanceConfigPartialExplicitDisable() throws Exception {
+    void testShieldedInstanceConfigPartialExplicitDisable() throws Exception {
         var instance = instanceConfigurationBuilder()
                 .shieldedVmConfiguration(new ShieldedVmConfiguration(true, false, false))
                 .build()
@@ -493,7 +491,7 @@ public class InstanceConfigurationTest {
     }
 
     @Test
-    public void testWrapLinuxStartupScriptWithShebang() {
+    void testWrapLinuxStartupScriptWithShebang() {
         var script = "#!/bin/sh\napt-get update\napt-get install -y nginx";
         var reporter = "curl -s -X PUT http://example.com -d \"$1\"";
         var wrapped = InstanceConfiguration.wrapLinuxStartupScript(script, reporter);
@@ -504,11 +502,11 @@ public class InstanceConfigurationTest {
         assertThat(wrapped, containsString(reporter));
         assertThat(wrapped, containsString("apt-get update"));
         assertThat(wrapped, containsString("apt-get install -y nginx"));
-        assertEquals("Shebang should appear exactly once", 1, wrapped.split("#!").length - 1);
+        assertEquals(1, wrapped.split("#!").length - 1, "Shebang should appear exactly once");
     }
 
     @Test
-    public void testWrapLinuxStartupScriptWithLeadingComments() {
+    void testWrapLinuxStartupScriptWithLeadingComments() {
         var script = "# This is a setup script\n# Author: team\napt-get update";
         var reporter = "curl -s -X PUT http://example.com -d \"$1\"";
         var wrapped = InstanceConfiguration.wrapLinuxStartupScript(script, reporter);
@@ -523,7 +521,7 @@ public class InstanceConfigurationTest {
     }
 
     @Test
-    public void testWrapLinuxStartupScriptNoShebang() {
+    void testWrapLinuxStartupScriptNoShebang() {
         var script = "apt-get update\napt-get install -y nginx";
         var reporter = "curl -s -X PUT http://example.com -d \"$1\"";
         var wrapped = InstanceConfiguration.wrapLinuxStartupScript(script, reporter);
@@ -534,7 +532,7 @@ public class InstanceConfigurationTest {
     }
 
     @Test
-    public void testWrapLinuxStartupScriptCustomReporter() {
+    void testWrapLinuxStartupScriptCustomReporter() {
         var script = "echo hello";
         var reporter = "wget -q --method=PUT http://example.com --body-data=\"$1\" -O /dev/null";
         var wrapped = InstanceConfiguration.wrapLinuxStartupScript(script, reporter);
@@ -545,14 +543,14 @@ public class InstanceConfigurationTest {
     }
 
     @Test
-    public void testWrapLinuxStartupScriptEmptyReporter() {
+    void testWrapLinuxStartupScriptEmptyReporter() {
         var script = "echo hello";
         assertThat(InstanceConfiguration.wrapLinuxStartupScript(script, null), is(script));
         assertThat(InstanceConfiguration.wrapLinuxStartupScript(script, ""), is(script));
     }
 
     @Test
-    public void testWrapWindowsStartupScript() {
+    void testWrapWindowsStartupScript() {
         var script = "Install-WindowsFeature -Name Web-Server";
         var reporter = "Invoke-RestMethod -Method PUT -Body \"$($args[0])\" -Uri http://example.com";
         var wrapped = InstanceConfiguration.wrapWindowsStartupScript(script, reporter);
@@ -566,28 +564,28 @@ public class InstanceConfigurationTest {
     }
 
     @Test
-    public void testWrapWindowsStartupScriptEmptyReporter() {
+    void testWrapWindowsStartupScriptEmptyReporter() {
         var script = "Install-WindowsFeature -Name Web-Server";
         assertThat(InstanceConfiguration.wrapWindowsStartupScript(script, null), is(script));
         assertThat(InstanceConfiguration.wrapWindowsStartupScript(script, ""), is(script));
     }
 
     @Test
-    public void testSshPortDefaultValue() {
+    void testSshPortDefaultValue() {
         InstanceConfiguration config = new InstanceConfiguration();
         config.setSshPort(null);
         assertEquals(InstanceConfiguration.DEFAULT_SSH_PORT, config.getSshPort());
     }
 
     @Test
-    public void testSshPortCustomValue() {
+    void testSshPortCustomValue() {
         InstanceConfiguration config = new InstanceConfiguration();
         config.setSshPort(2222);
         assertEquals(Integer.valueOf(2222), config.getSshPort());
     }
 
     @Test
-    public void testSshPortInvalidValuesFallBackToDefault() {
+    void testSshPortInvalidValuesFallBackToDefault() {
         InstanceConfiguration config = new InstanceConfiguration();
 
         config.setSshPort(0);
@@ -601,7 +599,7 @@ public class InstanceConfigurationTest {
     }
 
     @Test
-    public void testSshPortBoundaryValues() {
+    void testSshPortBoundaryValues() {
         InstanceConfiguration config = new InstanceConfiguration();
 
         config.setSshPort(1);
@@ -612,7 +610,7 @@ public class InstanceConfigurationTest {
     }
 
     @Test
-    public void descriptorSshPortValidation() {
+    void descriptorSshPortValidation() {
         InstanceConfiguration.DescriptorImpl d = new InstanceConfiguration.DescriptorImpl();
 
         assertEquals(FormValidation.Kind.OK, d.doCheckSshPort(null).kind);
@@ -629,7 +627,7 @@ public class InstanceConfigurationTest {
     }
 
     @Test
-    public void descriptorBootDiskSizeValidation() throws Exception {
+    void descriptorBootDiskSizeValidation() {
         InstanceConfiguration.DescriptorImpl.setComputeClient(computeClient);
         InstanceConfiguration.DescriptorImpl d = new InstanceConfiguration.DescriptorImpl();
 
@@ -649,7 +647,7 @@ public class InstanceConfigurationTest {
     }
 
     @Test
-    public void testRezoneSelfLink() {
+    void testRezoneSelfLink() {
         // full self-link URL
         assertEquals(
                 "https://www.googleapis.com/compute/v1/projects/my-project/zones/us-east1-d/machineTypes/n1-standard-1",
@@ -672,7 +670,7 @@ public class InstanceConfigurationTest {
     }
 
     @Test
-    public void testCandidateZonesNormalizesToShortNames() {
+    void testCandidateZonesNormalizesToShortNames() {
         var config = instanceConfigurationBuilder()
                 .zone("https://www.googleapis.com/compute/v1/projects/my-project/zones/us-west1-a")
                 .fallbackZones("us-west1-b, https://www.googleapis.com/compute/v1/projects/my-project/zones/us-west1-c")
@@ -682,7 +680,7 @@ public class InstanceConfigurationTest {
     }
 
     @Test
-    public void testMarkExhaustedLogsMachineTypeForInstanceBasedConfiguration() {
+    void testMarkExhaustedLogsMachineTypeForInstanceBasedConfiguration() {
         for (String template : new String[] {null, "", " "}) {
             var config = instanceConfigurationBuilder()
                     .machineType("projects/" + PROJECT_ID + "/zones/" + ZONE + "/machineTypes/" + MACHINE_TYPE)
@@ -702,7 +700,7 @@ public class InstanceConfigurationTest {
     }
 
     @Test
-    public void testMarkExhaustedLogsTemplateForTemplateBasedConfiguration() {
+    void testMarkExhaustedLogsTemplateForTemplateBasedConfiguration() {
         for (String machineType : new String[] {null, "", MACHINE_TYPE}) {
             var config = instanceConfigurationBuilder()
                     .machineType(machineType)
@@ -722,7 +720,7 @@ public class InstanceConfigurationTest {
     }
 
     @Test
-    public void testMarkExhaustedLogsUnknownForMissingProvisioningSource() {
+    void testMarkExhaustedLogsUnknownForMissingProvisioningSource() {
         var config = instanceConfigurationBuilder().machineType(null).build();
 
         config.markExhausted(ZONE);
@@ -736,7 +734,7 @@ public class InstanceConfigurationTest {
 
     @Test
     @LocalData
-    public void testZoneExhaustionStateTransientFieldInitializedAfterLoad() {
+    void testZoneExhaustionStateTransientFieldInitializedAfterLoad() {
         var cloud = (ComputeEngineCloud) r.jenkins.clouds.getByName("gce-unit-tests");
         var config = cloud.getConfigurations().get(0);
 

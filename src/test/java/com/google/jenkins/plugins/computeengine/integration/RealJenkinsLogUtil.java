@@ -16,7 +16,7 @@ import java.util.logging.LogRecord;
 import java.util.logging.Logger;
 
 /**
- * Utility class for asserting log messages in Jenkins when using {@code RealJenkinsRule}.
+ * Utility class for asserting log messages in Jenkins when using {@code RealJenkinsExtension}.
  * If the test is only using {@code JenkinsRule}, then use the {@code LoggerRule} instead.
  * Note: Probably it is better to have these kind of utilities in the jenkins-test-harness itself instead, but at least as of now, such utilities are not available.
  */

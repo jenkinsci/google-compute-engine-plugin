@@ -20,7 +20,6 @@ import static com.google.jenkins.plugins.computeengine.integration.ITUtil.LABEL;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.NULL_TEMPLATE;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.NUM_EXECUTORS;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.PROJECT_ID;
-import static com.google.jenkins.plugins.computeengine.integration.ITUtil.TEST_TIMEOUT_MULTIPLIER;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.ZONE;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.getLabel;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.initClient;
@@ -29,9 +28,7 @@ import static com.google.jenkins.plugins.computeengine.integration.ITUtil.initCr
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.instanceConfigurationBuilder;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.teardownResources;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
 import com.google.api.services.compute.model.Instance;
 import com.google.api.services.compute.model.Metadata;
@@ -56,41 +53,40 @@ import org.hamcrest.Description;
 import org.hamcrest.TypeSafeMatcher;
 import org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition;
 import org.jenkinsci.plugins.workflow.job.WorkflowJob;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.Timeout;
-import org.jvnet.hudson.test.BuildWatcher;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
+import org.junit.jupiter.api.extension.RegisterExtension;
 import org.jvnet.hudson.test.Issue;
 import org.jvnet.hudson.test.JenkinsRule;
+import org.jvnet.hudson.test.junit.jupiter.BuildWatcherExtension;
+import org.jvnet.hudson.test.junit.jupiter.WithJenkins;
 
 /**
  * Integration test suite for {@link ComputeEngineCloud}. This verifies the default case for an
  * instance provisioned with the {@link ComputeEngineCloud}, and that all expected default labels
  * are provisioned properly.
  */
-public class ComputeEngineCloudWorkerCreatedIT {
+@WithJenkins
+@Timeout(value = 45, unit = TimeUnit.MINUTES)
+class ComputeEngineCloudWorkerCreatedIT {
     private static final Logger log = Logger.getLogger(ComputeEngineCloudWorkerCreatedIT.class.getName());
 
-    @ClassRule
-    public static Timeout timeout = new Timeout(15L * TEST_TIMEOUT_MULTIPLIER, TimeUnit.MINUTES);
+    private JenkinsRule jenkinsRule;
 
-    @Rule
-    public JenkinsRule jenkinsRule = new JenkinsRule();
-
-    @ClassRule
-    public static BuildWatcher bw = new BuildWatcher();
+    @RegisterExtension
+    private static final BuildWatcherExtension bw = new BuildWatcherExtension();
 
     private static ComputeClient client;
     private static ComputeEngineCloud cloud;
     private static final Map<String, String> label = getLabel(ComputeEngineCloudWorkerCreatedIT.class);
     private static InstanceConfiguration instanceConfiguration;
 
-    @Before
-    public void init() throws Exception {
+    @BeforeEach
+    void init(JenkinsRule rule) throws Exception {
         log.info("init");
+        jenkinsRule = rule;
         initCredentials(jenkinsRule);
         cloud = initCloud(jenkinsRule);
         client = initClient(jenkinsRule, label, log);
@@ -108,36 +104,36 @@ public class ComputeEngineCloudWorkerCreatedIT {
         cloud.setConfigurations(ImmutableList.of(instanceConfiguration));
     }
 
-    @After
-    public void teardown() throws IOException {
+    @AfterEach
+    void teardown() throws IOException {
         teardownResources(client, label, log);
     }
 
     @Test
-    public void smokes() throws IOException, ExecutionException, InterruptedException {
+    void smokes() throws IOException, ExecutionException, InterruptedException {
         var planned = cloud.provision(new LabelAtom(LABEL), 1);
         planned.iterator().next().future.get();
         var instance = cloud.getClient()
                 .getInstance(PROJECT_ID, ZONE, planned.iterator().next().displayName);
 
-        assertEquals("one instance should be provisioned", 1, planned.size());
+        assertEquals(1, planned.size(), "one instance should be provisioned");
         /* There are 7 labels,
          * actual code: jenkins_cloud_id, jenkins_config_name, jenkins_node_last_refresh
          *  jenkins_server_url, jenkins_cloud_name
          * test code: <current class name>, user
          * Total 7 labels here.
          * */
-        assertEquals("GCP VM should have 7 labels", 7, instance.getLabels().size());
+        assertEquals(7, instance.getLabels().size(), "GCP VM should have 7 labels");
         assertEquals(
-                "GCP VM name starts with the prefix configured",
                 instanceConfiguration.getNamePrefix(),
-                instance.getLabels().get(ComputeEngineCloud.CONFIG_LABEL_KEY));
+                instance.getLabels().get(ComputeEngineCloud.CONFIG_LABEL_KEY),
+                "GCP VM name starts with the prefix configured");
         // This is an important label to be present on the VM as it helps in `CleanLostNodesWork`
         assertEquals(
-                "GCP VM label has the cloud instanceId as value",
                 cloud.getInstanceId(),
-                instance.getLabels().get(ComputeEngineCloud.CLOUD_ID_LABEL_KEY));
-        assertEquals("GCP VM is running ", "RUNNING", instance.getStatus());
+                instance.getLabels().get(ComputeEngineCloud.CLOUD_ID_LABEL_KEY),
+                "GCP VM label has the cloud instanceId as value");
+        assertEquals("RUNNING", instance.getStatus(), "GCP VM is running ");
 
         // Verify that the guest-attributes are enabled on the VM
         Optional<String> guestAttributes = instance.getMetadata().getItems().stream()
@@ -149,7 +145,7 @@ public class ComputeEngineCloudWorkerCreatedIT {
     }
 
     @Test
-    public void testWorkerCanExecuteBuild() throws Exception {
+    void testWorkerCanExecuteBuild() throws Exception {
         var p = jenkinsRule.createProject(WorkflowJob.class, "p");
         p.setDefinition(new CpsFlowDefinition("node('" + LABEL + "') { sh 'date' }", true));
         var r = jenkinsRule.buildAndAssertSuccess(p);
@@ -161,7 +157,7 @@ public class ComputeEngineCloudWorkerCreatedIT {
 
     @Issue("https://github.com/jenkinsci/google-compute-engine-plugin/issues/512")
     @Test
-    public void testWorkerCreatedWithLatestLastRefresh() throws Exception {
+    void testWorkerCreatedWithLatestLastRefresh() throws Exception {
         // create node without running any job
         var planned = cloud.provision(new LabelAtom(LABEL), 1);
         planned.iterator().next().future.get();

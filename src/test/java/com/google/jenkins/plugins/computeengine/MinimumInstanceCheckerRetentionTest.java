@@ -16,19 +16,19 @@
 
 package com.google.jenkins.plugins.computeengine;
 
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.google.jenkins.plugins.computeengine.MinimumInstanceChecker.MinCheckerInput;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 /**
  * Tests for {@link MinimumInstanceChecker#shouldPreserveAgent} — the pure retention decision
  * that determines whether an agent should be preserved to meet minimum instance requirements.
  */
-public class MinimumInstanceCheckerRetentionTest {
+class MinimumInstanceCheckerRetentionTest {
 
     @Test
-    public void minInstances_atThreshold_preserve() {
+    void minInstances_atThreshold_preserve() {
         // 2 total = minInstances (2) → preserve
         var input = new MinCheckerInput(2, 2, 0, 0);
         assertTrue(MinimumInstanceChecker.shouldPreserveAgent(2, 0, input, 0, true, true)
@@ -36,7 +36,7 @@ public class MinimumInstanceCheckerRetentionTest {
     }
 
     @Test
-    public void minInstances_aboveThreshold_notPreserve() {
+    void minInstances_aboveThreshold_notPreserve() {
         // 3 total > minInstances (2) → not preserve
         var input = new MinCheckerInput(3, 2, 0, 0);
         assertTrue(MinimumInstanceChecker.shouldPreserveAgent(2, 0, input, 0, true, true)
@@ -44,7 +44,7 @@ public class MinimumInstanceCheckerRetentionTest {
     }
 
     @Test
-    public void minInstances_belowThreshold_preserve() {
+    void minInstances_belowThreshold_preserve() {
         // 1 total < minInstances (2) → preserve
         var input = new MinCheckerInput(1, 1, 0, 0);
         assertTrue(MinimumInstanceChecker.shouldPreserveAgent(2, 0, input, 0, true, true)
@@ -52,7 +52,7 @@ public class MinimumInstanceCheckerRetentionTest {
     }
 
     @Test
-    public void minSpare_idleOnline_preserve() {
+    void minSpare_idleOnline_preserve() {
         // 2 spare = minSpare (2), agent is idle+online → preserve
         var input = new MinCheckerInput(5, 2, 0, 0);
         assertTrue(MinimumInstanceChecker.shouldPreserveAgent(0, 2, input, 0, true, true)
@@ -60,7 +60,7 @@ public class MinimumInstanceCheckerRetentionTest {
     }
 
     @Test
-    public void minSpare_notIdle_notPreserve() {
+    void minSpare_notIdle_notPreserve() {
         // 2 spare = minSpare (2), but agent is busy (idle=false) → not preserve
         var input = new MinCheckerInput(5, 2, 0, 0);
         assertTrue(MinimumInstanceChecker.shouldPreserveAgent(0, 2, input, 0, false, true)
@@ -68,7 +68,7 @@ public class MinimumInstanceCheckerRetentionTest {
     }
 
     @Test
-    public void minSpare_offline_notPreserve() {
+    void minSpare_offline_notPreserve() {
         // 2 spare = minSpare (2), but agent is offline (online=false) → not preserve
         var input = new MinCheckerInput(5, 2, 0, 0);
         assertTrue(MinimumInstanceChecker.shouldPreserveAgent(0, 2, input, 0, true, false)
@@ -76,7 +76,7 @@ public class MinimumInstanceCheckerRetentionTest {
     }
 
     @Test
-    public void minSpare_aboveThreshold_notPreserve() {
+    void minSpare_aboveThreshold_notPreserve() {
         // 3 spare > minSpare (2) → not preserve
         var input = new MinCheckerInput(5, 3, 0, 0);
         assertTrue(MinimumInstanceChecker.shouldPreserveAgent(0, 2, input, 0, true, true)
@@ -84,7 +84,7 @@ public class MinimumInstanceCheckerRetentionTest {
     }
 
     @Test
-    public void pendingTerminations_pushBelowThreshold_preserve() {
+    void pendingTerminations_pushBelowThreshold_preserve() {
         // 3 total, min=2, 1 pending → effective = 2 → preserve
         var input = new MinCheckerInput(3, 3, 0, 0);
         assertTrue(MinimumInstanceChecker.shouldPreserveAgent(2, 0, input, 1, true, true)
@@ -92,7 +92,7 @@ public class MinimumInstanceCheckerRetentionTest {
     }
 
     @Test
-    public void pendingTerminations_stillAboveThreshold_notPreserve() {
+    void pendingTerminations_stillAboveThreshold_notPreserve() {
         // 4 total, min=2, 1 pending → effective = 3 → not preserve
         var input = new MinCheckerInput(4, 4, 0, 0);
         assertTrue(MinimumInstanceChecker.shouldPreserveAgent(2, 0, input, 1, true, true)
@@ -100,7 +100,7 @@ public class MinimumInstanceCheckerRetentionTest {
     }
 
     @Test
-    public void pendingTerminations_spareCheck() {
+    void pendingTerminations_spareCheck() {
         // 3 spare, minSpare=2, 1 pending → effective spare = 2 → preserve
         var input = new MinCheckerInput(5, 3, 0, 0);
         assertTrue(MinimumInstanceChecker.shouldPreserveAgent(0, 2, input, 1, true, true)
@@ -108,7 +108,7 @@ public class MinimumInstanceCheckerRetentionTest {
     }
 
     @Test
-    public void neitherRequired_notPreserve() {
+    void neitherRequired_notPreserve() {
         // minInstances=0, minSpare=0 → no requirements to satisfy → not preserve
         var input = new MinCheckerInput(1, 1, 0, 0);
         assertTrue(MinimumInstanceChecker.shouldPreserveAgent(0, 0, input, 0, true, true)
@@ -116,7 +116,7 @@ public class MinimumInstanceCheckerRetentionTest {
     }
 
     @Test
-    public void minInstances_takesPriority_busyAgentPreserved() {
+    void minInstances_takesPriority_busyAgentPreserved() {
         // 2 total = minInstances → preserve (even though agent is busy: idle=false)
         var input = new MinCheckerInput(2, 0, 0, 0);
         assertTrue(MinimumInstanceChecker.shouldPreserveAgent(2, 2, input, 0, false, true)
@@ -124,7 +124,7 @@ public class MinimumInstanceCheckerRetentionTest {
     }
 
     @Test
-    public void minInstances_takesPriority_offlineAgentPreserved() {
+    void minInstances_takesPriority_offlineAgentPreserved() {
         // 2 total = minInstances → preserve (even though agent is offline: online=false)
         var input = new MinCheckerInput(2, 0, 0, 0);
         assertTrue(MinimumInstanceChecker.shouldPreserveAgent(2, 0, input, 0, true, false)
@@ -132,7 +132,7 @@ public class MinimumInstanceCheckerRetentionTest {
     }
 
     @Test
-    public void bothChecks_minInstancesSatisfied_spareFallback() {
+    void bothChecks_minInstancesSatisfied_spareFallback() {
         // 3 total (min=2 satisfied), 2 spare (minSpare=2) → preserve via spare
         var input = new MinCheckerInput(3, 2, 0, 0);
         assertTrue(MinimumInstanceChecker.shouldPreserveAgent(2, 2, input, 0, true, true)
@@ -140,7 +140,7 @@ public class MinimumInstanceCheckerRetentionTest {
     }
 
     @Test
-    public void bothChecks_minInstancesSatisfied_spareExceeded() {
+    void bothChecks_minInstancesSatisfied_spareExceeded() {
         // 4 total (min=2 exceeded), 3 spare (minSpare=2 exceeded) → not preserve
         var input = new MinCheckerInput(4, 3, 0, 0);
         assertTrue(MinimumInstanceChecker.shouldPreserveAgent(2, 2, input, 0, true, true)

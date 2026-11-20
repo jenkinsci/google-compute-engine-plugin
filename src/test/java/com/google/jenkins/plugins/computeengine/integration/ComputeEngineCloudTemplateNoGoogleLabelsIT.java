@@ -20,7 +20,6 @@ import static com.google.cloud.graphite.platforms.plugin.client.util.ClientUtil.
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.LABEL;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.NUM_EXECUTORS;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.PROJECT_ID;
-import static com.google.jenkins.plugins.computeengine.integration.ITUtil.TEST_TIMEOUT_MULTIPLIER;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.ZONE;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.createTemplate;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.format;
@@ -30,7 +29,7 @@ import static com.google.jenkins.plugins.computeengine.integration.ITUtil.initCl
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.initCredentials;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.instanceConfigurationBuilder;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.teardownResources;
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import com.google.api.services.compute.model.Instance;
 import com.google.api.services.compute.model.InstanceTemplate;
@@ -44,37 +43,37 @@ import java.util.Collection;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.rules.Timeout;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.jvnet.hudson.test.JenkinsRule;
+import org.jvnet.hudson.test.junit.jupiter.WithJenkins;
 
 /**
  * Integration test suite for {@link ComputeEngineCloud}. Verifies that an instance can be created
  * from a template without any labels configured for it, and that the ComputeEngineCloud label is
  * still present on the created instance.
  */
-public class ComputeEngineCloudTemplateNoGoogleLabelsIT {
+@WithJenkins
+@Timeout(value = 45, unit = TimeUnit.MINUTES)
+class ComputeEngineCloudTemplateNoGoogleLabelsIT {
     private static final Logger log = Logger.getLogger(ComputeEngineCloudTemplateNoGoogleLabelsIT.class.getName());
 
     private static final String TEMPLATE = format("projects/%s/global/instanceTemplates/test-template-no-labels");
 
-    @ClassRule
-    public static Timeout timeout = new Timeout(5L * TEST_TIMEOUT_MULTIPLIER, TimeUnit.MINUTES);
-
-    @ClassRule
-    public static JenkinsRule jenkinsRule = new JenkinsRule();
+    private static JenkinsRule jenkinsRule;
 
     private static ComputeClient client;
     private static final Map<String, String> label = getLabel(ComputeEngineCloudTemplateNoGoogleLabelsIT.class);
     private static ComputeEngineCloud cloud;
     private static Instance instance;
 
-    @BeforeClass
-    public static void init() throws Exception {
+    @BeforeAll
+    @Timeout(value = 45, unit = TimeUnit.MINUTES)
+    static void init(JenkinsRule rule) throws Exception {
         log.info("init");
+        jenkinsRule = rule;
         initCredentials(jenkinsRule);
         cloud = initCloud(jenkinsRule);
         client = initClient(jenkinsRule, label, log);
@@ -97,8 +96,8 @@ public class ComputeEngineCloudTemplateNoGoogleLabelsIT {
         instance = client.getInstance(PROJECT_ID, ZONE, name);
     }
 
-    @AfterClass
-    public static void teardown() throws IOException {
+    @AfterAll
+    static void teardown() throws IOException {
         try {
             client.deleteTemplateAsync(cloud.getProjectId(), nameFromSelfLink(TEMPLATE));
         } catch (Exception e) {
@@ -109,12 +108,12 @@ public class ComputeEngineCloudTemplateNoGoogleLabelsIT {
     }
 
     @Test
-    public void testTemplateNoGoogleLabelsCloudIdLabelKeyAndValue() {
+    void testTemplateNoGoogleLabelsCloudIdLabelKeyAndValue() {
         assertEquals(cloud.getInstanceId(), instance.getLabels().get(ComputeEngineCloud.CLOUD_ID_LABEL_KEY));
     }
 
     @Test
-    public void testTemplateNoGoogleLabelsStatusRunning() {
+    void testTemplateNoGoogleLabelsStatusRunning() {
         assertEquals("RUNNING", instance.getStatus());
     }
 }

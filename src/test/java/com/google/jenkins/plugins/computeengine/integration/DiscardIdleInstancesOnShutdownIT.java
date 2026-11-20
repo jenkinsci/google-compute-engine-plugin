@@ -24,30 +24,32 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition;
 import org.jenkinsci.plugins.workflow.job.WorkflowJob;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 import org.jvnet.hudson.test.PrefixedOutputStream;
-import org.jvnet.hudson.test.RealJenkinsRule;
 import org.jvnet.hudson.test.TailLog;
+import org.jvnet.hudson.test.junit.jupiter.RealJenkinsExtension;
+import org.jvnet.hudson.test.junit.jupiter.WithJenkins;
 
 /**
  * Integration test verifying that idle GCE instances are terminated during Jenkins shutdown
  * when {@code terminateIdleDuringShutdown} is enabled on the instance configuration.
  * <p>
- * Uses {@link RealJenkinsRule} so that stopping Jenkins triggers the {@link DiscardIdleInstancesTerminator#discardIdleInstances()}
+ * Uses {@link RealJenkinsExtension} so that stopping Jenkins triggers the {@link DiscardIdleInstancesTerminator#discardIdleInstances()}
  * via the {@code @Terminator} lifecycle hook.
  */
-public class DiscardIdleInstancesOnShutdownIT {
+@WithJenkins
+class DiscardIdleInstancesOnShutdownIT {
     private static final Logger LOGGER = Logger.getLogger(DiscardIdleInstancesOnShutdownIT.class.getName());
     private static final Map<String, String> GOOGLE_LABELS = getLabel(DiscardIdleInstancesOnShutdownIT.class);
 
-    @Rule
-    public RealJenkinsRule rj = new RealJenkinsRule().withColor(PrefixedOutputStream.Color.BLUE);
+    @RegisterExtension
+    private final RealJenkinsExtension rj = new RealJenkinsExtension().withColor(PrefixedOutputStream.Color.BLUE);
 
-    @Before
-    public void init() throws Throwable {
+    @BeforeEach
+    void init() throws Throwable {
         rj.withLogger(DiscardIdleInstancesTerminator.class, Level.FINE);
         rj.startJenkins();
         rj.run(r -> {
@@ -67,11 +69,11 @@ public class DiscardIdleInstancesOnShutdownIT {
         });
     }
 
-    @After
-    public void tearDown() throws Throwable {
+    @AfterEach
+    void tearDown() throws Throwable {
         rj.runRemotely(j -> {
             var cloud = (ComputeEngineCloud) j.jenkins.clouds.getByName("gce-integration");
-            // In the success case, idle instances are already deleted during RealJenkinsRule#stopJenkins.
+            // In the success case, idle instances are already deleted during RealJenkinsExtension#stopJenkins.
             // This tearDown exists as a safety net to clean up any VMs left behind if the test fails mid-way.
             teardownResources(cloud.getClient(), GOOGLE_LABELS, LOGGER);
         });
@@ -83,7 +85,7 @@ public class DiscardIdleInstancesOnShutdownIT {
      * has no GCE agent nodes and that the VM was deleted from GCP.
      */
     @Test
-    public void testIdleInstanceTerminatedOnShutdown() throws Throwable {
+    void testIdleInstanceTerminatedOnShutdown() throws Throwable {
         rj.runRemotely(j -> {
             var p = j.createProject(WorkflowJob.class, "p1");
             p.setDefinition(new CpsFlowDefinition("node('integration') { echo 'hello' }", true));

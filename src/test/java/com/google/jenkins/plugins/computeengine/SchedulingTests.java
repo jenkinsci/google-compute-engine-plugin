@@ -18,21 +18,25 @@ package com.google.jenkins.plugins.computeengine;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
 import com.google.api.client.json.GenericJson;
 import com.google.api.services.compute.model.Scheduling;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.jvnet.hudson.test.JenkinsRule;
+import org.jvnet.hudson.test.junit.jupiter.WithJenkins;
 import org.jvnet.hudson.test.recipes.LocalData;
 
-public class SchedulingTests {
+@WithJenkins
+class SchedulingTests {
 
-    @Rule
-    public JenkinsRule j = new JenkinsRule();
+    private JenkinsRule j;
+
+    @BeforeEach
+    void init(JenkinsRule rule) {
+        j = rule;
+    }
 
     private Scheduling getScheduling() {
         ComputeEngineCloud cloud = (ComputeEngineCloud) j.jenkins.clouds.getByName("gce-unit-tests");
@@ -47,7 +51,7 @@ public class SchedulingTests {
      */
     @Test
     @LocalData
-    public void testPreemptibleCompatibility() {
+    void testPreemptibleCompatibility() {
         Scheduling sch = getScheduling();
         assertTrue(sch.getPreemptible());
         assertNull(sch.getProvisioningModel());
@@ -61,7 +65,7 @@ public class SchedulingTests {
      */
     @Test
     @LocalData
-    public void testNoProvisioningTypeCompatibility() {
+    void testNoProvisioningTypeCompatibility() {
         Scheduling sch = getScheduling();
         assertNull(sch.getPreemptible());
         assertNull(sch.getProvisioningModel());
@@ -75,7 +79,7 @@ public class SchedulingTests {
      */
     @Test
     @LocalData
-    public void testProvisioningTypeOverridesPreemptible() {
+    void testProvisioningTypeOverridesPreemptible() {
         Scheduling sch = getScheduling();
         assertNull(sch.getPreemptible());
         assertEquals("SPOT", sch.getProvisioningModel());
@@ -90,7 +94,7 @@ public class SchedulingTests {
      */
     @Test
     @LocalData
-    public void testMaxRunDurationStandard() {
+    void testMaxRunDurationStandard() {
         Scheduling sch = getScheduling();
         GenericJson maxRunDuration = (GenericJson) sch.get("maxRunDuration");
         assertEquals(100L, maxRunDuration.get("seconds"));
@@ -101,7 +105,7 @@ public class SchedulingTests {
 
     @Test
     @LocalData
-    public void testMaxRunDurationSpot() {
+    void testMaxRunDurationSpot() {
         Scheduling sch = getScheduling();
         GenericJson maxRunDuration = (GenericJson) sch.get("maxRunDuration");
         assertEquals(120L, maxRunDuration.get("seconds"));
@@ -119,7 +123,7 @@ public class SchedulingTests {
      */
     @Test
     @LocalData
-    public void testNoMaxRunDurationPreemptible() {
+    void testNoMaxRunDurationPreemptible() {
         Scheduling sch = getScheduling();
         assertNull(sch.get("maxRunDuration"));
         assertNull(sch.getProvisioningModel());

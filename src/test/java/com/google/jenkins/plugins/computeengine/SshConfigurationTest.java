@@ -16,9 +16,7 @@
 
 package com.google.jenkins.plugins.computeengine;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
 import com.cloudbees.jenkins.plugins.sshcredentials.SSHUserPrivateKey;
 import com.cloudbees.jenkins.plugins.sshcredentials.impl.BasicSSHUserPrivateKey;
@@ -30,23 +28,29 @@ import com.cloudbees.plugins.credentials.domains.Domain;
 import hudson.util.ListBoxModel;
 import java.io.IOException;
 import jenkins.model.Jenkins;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.jvnet.hudson.test.JenkinsRule;
+import org.jvnet.hudson.test.junit.jupiter.WithJenkins;
 
 /** Test suite to test functionality of SshConfiguration */
-public class SshConfigurationTest {
+@WithJenkins
+class SshConfigurationTest {
 
-    @Rule
-    public JenkinsRule r = new JenkinsRule();
+    private JenkinsRule r;
+
+    @BeforeEach
+    void init(JenkinsRule rule) {
+        r = rule;
+    }
 
     @Test
-    public void testCustomSshPrivateKey() throws IOException {
+    void testCustomSshPrivateKey() throws IOException {
         SshConfiguration.DescriptorImpl descriptor = new SshConfiguration.DescriptorImpl();
         assertNotNull(descriptor);
 
         ListBoxModel m = descriptor.doFillCustomPrivateKeyCredentialsIdItems(Jenkins.get(), "key1");
-        assertEquals(m.size(), 1);
+        assertEquals(1, m.size());
         BasicSSHUserPrivateKey customPrivateKeyCredentials = new BasicSSHUserPrivateKey(
                 CredentialsScope.SYSTEM,
                 "test-key",
@@ -62,7 +66,7 @@ public class SshConfigurationTest {
 
         // Test that new key has been added
         m = descriptor.doFillCustomPrivateKeyCredentialsIdItems(Jenkins.get(), "key2");
-        assertEquals(m.size(), 2);
+        assertEquals(2, m.size());
 
         // Test that new key can be retrieved
         SSHUserPrivateKey privateKey = SshConfiguration.getCustomPrivateKeyCredentials("test-key");

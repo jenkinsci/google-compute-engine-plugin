@@ -16,37 +16,41 @@
 
 package com.google.jenkins.plugins.computeengine;
 
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
 import com.google.jenkins.plugins.computeengine.ssh.GoogleKeyPair;
 import hudson.util.XStream2;
 import java.io.File;
 import java.nio.charset.StandardCharsets;
 import org.apache.commons.io.FileUtils;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.jvnet.hudson.test.Issue;
 import org.jvnet.hudson.test.JenkinsRule;
 import org.jvnet.hudson.test.WithoutJenkins;
+import org.jvnet.hudson.test.junit.jupiter.WithJenkins;
 
-public class GoogleKeyPairTest {
+@WithJenkins
+class GoogleKeyPairTest {
 
-    @Rule
-    public JenkinsRule r = new JenkinsRule();
+    private JenkinsRule r;
+
+    @BeforeEach
+    void init(JenkinsRule rule) {
+        r = rule;
+    }
 
     @WithoutJenkins
     @Test
-    public void KeyPairGeneration() {
+    void KeyPairGeneration() {
         GoogleKeyPair gkp = GoogleKeyPair.generate("user");
         assertNotNull(gkp.toString());
-        assert (gkp.getPublicKey().contains("user"));
+        assertTrue(gkp.getPublicKey().contains("user"));
     }
 
     @Issue("SECURITY-2045")
     @Test
-    public void privateKeyNotStoredAsPlainTextOnDisk() throws Exception {
+    void privateKeyNotStoredAsPlainTextOnDisk() throws Exception {
         GoogleKeyPair sshKeyPair = GoogleKeyPair.generate("test-user");
         File configFile = new File(r.jenkins.getRootDir(), sshKeyPair.getClass().getName() + ".xml");
         FileUtils.write(configFile, new XStream2().toXML(sshKeyPair), StandardCharsets.UTF_8);

@@ -16,109 +16,109 @@
 
 package com.google.jenkins.plugins.computeengine;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import com.google.jenkins.plugins.computeengine.MinimumInstanceChecker.MinCheckerInput;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 /**
  * Tests for {@link MinimumInstanceChecker#computeProvisionCount} — the pure provisioning math
  * that determines how many agents to spin up for a given config's minimum instance requirements.
  */
-public class MinimumInstanceCheckerProvisionTest {
+class MinimumInstanceCheckerProvisionTest {
 
     @Test
-    public void alreadySatisfied() {
+    void alreadySatisfied() {
         var input = new MinCheckerInput(2, 2, 0, 0);
         assertEquals(0, MinimumInstanceChecker.computeProvisionCount(2, 2, input));
     }
 
     @Test
-    public void minAgentsDeficit() {
+    void minAgentsDeficit() {
         // One agent short of minimum total - provision one more (which also becomes spare)
         var input = new MinCheckerInput(1, 1, 0, 0);
         assertEquals(1, MinimumInstanceChecker.computeProvisionCount(2, 2, input));
     }
 
     @Test
-    public void spareDeficitOnly() {
+    void spareDeficitOnly() {
         // Minimum total met but no spare agents available - provision 2 spares
         var input = new MinCheckerInput(2, 0, 0, 0);
         assertEquals(2, MinimumInstanceChecker.computeProvisionCount(2, 2, input));
     }
 
     @Test
-    public void provisioningOffsetsSpare() {
+    void provisioningOffsetsSpare() {
         // Agent already provisioning counts toward spare requirement
         var input = new MinCheckerInput(2, 0, 1, 0);
         assertEquals(1, MinimumInstanceChecker.computeProvisionCount(2, 2, input));
     }
 
     @Test
-    public void queuedBuildsIncreaseDemand() {
+    void queuedBuildsIncreaseDemand() {
         // Queued builds increase demand on top of spare deficit
         var input = new MinCheckerInput(2, 1, 0, 2);
         assertEquals(3, MinimumInstanceChecker.computeProvisionCount(2, 2, input));
     }
 
     @Test
-    public void bothDeficits_minCoversSpare() {
+    void bothDeficits_minCoversSpare() {
         // No agents exist - minimum total requirement covers spare need
         var input = new MinCheckerInput(0, 0, 0, 0);
         assertEquals(3, MinimumInstanceChecker.computeProvisionCount(3, 2, input));
     }
 
     @Test
-    public void bothDeficits_spareExceedsMin() {
+    void bothDeficits_spareExceedsMin() {
         // No agents exist - spare requirement exceeds minimum total
         var input = new MinCheckerInput(0, 0, 0, 0);
         assertEquals(3, MinimumInstanceChecker.computeProvisionCount(2, 3, input));
     }
 
     @Test
-    public void minAgentsZero_onlySpare() {
+    void minAgentsZero_onlySpare() {
         // No minimum total configured - only enforce spare requirement
         var input = new MinCheckerInput(5, 1, 0, 0);
         assertEquals(1, MinimumInstanceChecker.computeProvisionCount(0, 2, input));
     }
 
     @Test
-    public void spareZero_onlyMinAgents() {
+    void spareZero_onlyMinAgents() {
         // No spare configured - only enforce minimum total
         var input = new MinCheckerInput(1, 0, 0, 0);
         assertEquals(1, MinimumInstanceChecker.computeProvisionCount(2, 0, input));
     }
 
     @Test
-    public void neitherRequired() {
+    void neitherRequired() {
         // Neither minimum configured - no provisioning needed
         var input = new MinCheckerInput(0, 0, 0, 0);
         assertEquals(0, MinimumInstanceChecker.computeProvisionCount(0, 0, input));
     }
 
     @Test
-    public void minAgentsProvisionOffsetsSpareCalculation() {
+    void minAgentsProvisionOffsetsSpareCalculation() {
         // Provisioning for minimum total also counts toward spare requirement
         var input = new MinCheckerInput(1, 0, 0, 0);
         assertEquals(2, MinimumInstanceChecker.computeProvisionCount(3, 2, input));
     }
 
     @Test
-    public void excessAgents_noProvisioning() {
+    void excessAgents_noProvisioning() {
         // More agents than required - no provisioning needed
         var input = new MinCheckerInput(10, 5, 0, 0);
         assertEquals(0, MinimumInstanceChecker.computeProvisionCount(2, 2, input));
     }
 
     @Test
-    public void queuedBuildsWithExistingSpare() {
+    void queuedBuildsWithExistingSpare() {
         // Enough spare capacity to handle queued builds - no additional provisioning
         var input = new MinCheckerInput(5, 3, 0, 1);
         assertEquals(0, MinimumInstanceChecker.computeProvisionCount(2, 2, input));
     }
 
     @Test
-    public void provisioningAndQueuedCombined() {
+    void provisioningAndQueuedCombined() {
         // Both in-progress provisioning and queued builds affect spare calculation
         var input = new MinCheckerInput(3, 0, 1, 2);
         assertEquals(3, MinimumInstanceChecker.computeProvisionCount(3, 2, input));

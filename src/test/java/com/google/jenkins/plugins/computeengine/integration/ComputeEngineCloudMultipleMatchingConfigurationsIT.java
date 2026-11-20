@@ -20,7 +20,6 @@ import static com.google.jenkins.plugins.computeengine.integration.ITUtil.LABEL;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.NULL_TEMPLATE;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.NUM_EXECUTORS;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.PROJECT_ID;
-import static com.google.jenkins.plugins.computeengine.integration.ITUtil.TEST_TIMEOUT_MULTIPLIER;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.ZONE;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.getLabel;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.initClient;
@@ -29,8 +28,8 @@ import static com.google.jenkins.plugins.computeengine.integration.ITUtil.initCr
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.instanceConfigurationBuilder;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.teardownResources;
 import static org.awaitility.Awaitility.await;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import com.google.cloud.graphite.platforms.plugin.client.ComputeClient;
 import com.google.common.collect.Lists;
@@ -45,37 +44,36 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.rules.Timeout;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.jvnet.hudson.test.JenkinsRule;
+import org.jvnet.hudson.test.junit.jupiter.WithJenkins;
 
 /**
  * Integration test suite for {@link ComputeEngineCloud}. Verifies that instances can be created
  * with multiple matching {@link InstanceConfiguration} and that these instances are provisioned in round-robin fashion.
  */
-public class ComputeEngineCloudMultipleMatchingConfigurationsIT {
+@WithJenkins
+@Timeout(value = 15, unit = TimeUnit.MINUTES)
+class ComputeEngineCloudMultipleMatchingConfigurationsIT {
     private static final Logger log =
             Logger.getLogger(ComputeEngineCloudMultipleMatchingConfigurationsIT.class.getName());
 
     private static final String DESC_1 = "type_1";
     private static final String DESC_2 = "type_2";
 
-    @ClassRule
-    public static Timeout timeout = new Timeout(5L * TEST_TIMEOUT_MULTIPLIER, TimeUnit.MINUTES);
-
-    @ClassRule
-    public static JenkinsRule jenkinsRule = new JenkinsRule();
+    private static JenkinsRule jenkinsRule;
 
     private static ComputeClient client;
     private static final Map<String, String> label = getLabel(ComputeEngineCloudMultipleMatchingConfigurationsIT.class);
     private static Collection<PlannedNode> planned;
 
-    @BeforeClass
-    public static void init() throws Exception {
+    @BeforeAll
+    static void init(JenkinsRule rule) throws Exception {
         log.info("init");
+        jenkinsRule = rule;
         initCredentials(jenkinsRule);
         ComputeEngineCloud cloud = initCloud(jenkinsRule);
         client = initClient(jenkinsRule, label, log);
@@ -101,13 +99,13 @@ public class ComputeEngineCloudMultipleMatchingConfigurationsIT {
         planned = cloud.provision(new LabelAtom(LABEL), 2);
     }
 
-    @AfterClass
-    public static void teardown() throws IOException {
+    @AfterAll
+    static void teardown() throws IOException {
         teardownResources(client, label, log);
     }
 
     @Test
-    public void testRoundRobinProvisioningWhenMultipleMatchingConfigurations() throws IOException {
+    void testRoundRobinProvisioningWhenMultipleMatchingConfigurations() throws IOException {
         assertEquals(2, planned.size());
 
         final Iterator<PlannedNode> iterator = planned.iterator();
@@ -134,17 +132,17 @@ public class ComputeEngineCloudMultipleMatchingConfigurationsIT {
         String agentName = plannedNode.displayName;
 
         assertEquals(
-                "Jenkins agent description is incorrect",
                 agentDesc,
-                jenkinsRule.jenkins.getNode(agentName).getNodeDescription());
+                jenkinsRule.jenkins.getNode(agentName).getNodeDescription(),
+                "Jenkins agent description is incorrect");
 
         // verify the corresponding instance is actually provisioned in GCP
         // and also has matching description
         await("Instance is in running status").timeout(2, TimeUnit.MINUTES).until(() -> "RUNNING"
                 .equals(client.getInstance(PROJECT_ID, ZONE, agentName).getStatus()));
         assertEquals(
-                "Instance description is incorrect",
                 agentDesc,
-                client.getInstance(PROJECT_ID, ZONE, agentName).getDescription());
+                client.getInstance(PROJECT_ID, ZONE, agentName).getDescription(),
+                "Instance description is incorrect");
     }
 }

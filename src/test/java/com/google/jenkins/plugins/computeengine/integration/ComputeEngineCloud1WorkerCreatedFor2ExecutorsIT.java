@@ -19,7 +19,6 @@ package com.google.jenkins.plugins.computeengine.integration;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.LABEL;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.NULL_TEMPLATE;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.PROJECT_ID;
-import static com.google.jenkins.plugins.computeengine.integration.ITUtil.TEST_TIMEOUT_MULTIPLIER;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.getLabel;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.initClient;
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.initCloud;
@@ -28,7 +27,7 @@ import static com.google.jenkins.plugins.computeengine.integration.ITUtil.instan
 import static com.google.jenkins.plugins.computeengine.integration.ITUtil.teardownResources;
 import static org.awaitility.Awaitility.await;
 import static org.hamcrest.Matchers.is;
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import com.google.cloud.graphite.platforms.plugin.client.ComputeClient;
 import com.google.common.collect.ImmutableList;
@@ -42,34 +41,34 @@ import java.util.Collection;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.rules.Timeout;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.jvnet.hudson.test.JenkinsRule;
+import org.jvnet.hudson.test.junit.jupiter.WithJenkins;
 
 /**
  * Integration test suite for {@link ComputeEngineCloud}. Verifies that only 1 worker is created
  * when configured to support multiple executors if the second executor is not required.
  */
-public class ComputeEngineCloud1WorkerCreatedFor2ExecutorsIT {
+@WithJenkins
+@Timeout(value = 15, unit = TimeUnit.MINUTES)
+class ComputeEngineCloud1WorkerCreatedFor2ExecutorsIT {
     private static final Logger log = Logger.getLogger(ComputeEngineCloud1WorkerCreatedFor2ExecutorsIT.class.getName());
 
     private static final String MULTIPLE_NUM_EXECUTORS = "2";
 
-    @ClassRule
-    public static Timeout timeout = new Timeout(5L * TEST_TIMEOUT_MULTIPLIER, TimeUnit.MINUTES);
-
-    @ClassRule
-    public static JenkinsRule jenkinsRule = new JenkinsRule();
+    private static JenkinsRule jenkinsRule;
 
     private static ComputeClient client;
     private static final Map<String, String> label = getLabel(ComputeEngineCloud1WorkerCreatedFor2ExecutorsIT.class);
 
-    @BeforeClass
-    public static void init() throws Exception {
+    @BeforeAll
+    @Timeout(value = 15, unit = TimeUnit.MINUTES)
+    static void init(JenkinsRule rule) throws Exception {
         log.info("init");
+        jenkinsRule = rule;
         initCredentials(jenkinsRule);
         ComputeEngineCloud cloud = initCloud(jenkinsRule);
         client = initClient(jenkinsRule, label, log);
@@ -87,13 +86,13 @@ public class ComputeEngineCloud1WorkerCreatedFor2ExecutorsIT {
         planned.iterator().next().future.get();
     }
 
-    @AfterClass
-    public static void teardown() throws IOException {
+    @AfterAll
+    static void teardown() throws IOException {
         teardownResources(client, label, log);
     }
 
     @Test
-    public void test1WorkerCreatedFor2ExecutorsStatusRunning() throws IOException {
+    void test1WorkerCreatedFor2ExecutorsStatusRunning() throws IOException {
         // assert on jenkins side
         assertEquals(1, jenkinsRule.jenkins.getNodes().size());
         assertEquals(2, jenkinsRule.jenkins.getNodes().get(0).getNumExecutors());
