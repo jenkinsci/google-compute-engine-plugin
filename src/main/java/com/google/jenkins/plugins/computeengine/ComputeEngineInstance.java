@@ -66,6 +66,12 @@ public class ComputeEngineInstance extends AbstractCloudSlave {
     private Boolean connected;
     /** Wall-clock time when this node was provisioned; used for never-online cleanup. */
     private final long provisionedAtMillis;
+    /**
+     * Wall-clock time when this node was loaded from disk, e.g. after a controller restart; 0 if it was
+     * provisioned in this session. A restart interrupts any launch in progress, so the launch timeout
+     * is measured from here rather than from {@link #provisionedAtMillis}.
+     */
+    private transient long loadedAtMillis;
 
     private transient ComputeEngineCloud cloud;
 
@@ -173,7 +179,17 @@ public class ComputeEngineInstance extends AbstractCloudSlave {
     }
 
     public void onConnected() {
+        if (hasEverConnected()) {
+            return;
+        }
         this.connected = true;
+        // Persist the flag, otherwise after a controller restart this agent looks like it never came online
+        // and is terminated by the launch timeout cleanup before it can reconnect.
+        try {
+            save();
+        } catch (IOException e) {
+            LOGGER.log(Level.WARNING, "Failed to save connected state of node " + getNodeName(), e);
+        }
     }
 
     /** Initializes fields that may be missing after deserialization. */
@@ -181,6 +197,7 @@ public class ComputeEngineInstance extends AbstractCloudSlave {
         if (launchTimeout == null) {
             launchTimeout = InstanceConfiguration.DEFAULT_LAUNCH_TIMEOUT_SECONDS;
         }
+        loadedAtMillis = System.currentTimeMillis();
         return super.readResolve();
     }
 
@@ -191,13 +208,16 @@ public class ComputeEngineInstance extends AbstractCloudSlave {
 
     /**
      * @return true if this node has been waiting longer than the configured launch timeout without
-     *     coming online. Returns false when provision time is unknown (e.g. pre-upgrade deserialize).
+     *     coming online, counted from when it was provisioned or, if later, from when it was loaded
+     *     after a controller restart. Returns false when provision time is unknown (e.g. pre-upgrade
+     *     deserialize).
      */
     boolean isPastLaunchTimeout(long nowMillis) {
         if (provisionedAtMillis <= 0) {
             return false;
         }
-        return nowMillis - provisionedAtMillis > getLaunchTimeoutMillis();
+        long launchStartedAtMillis = Math.max(provisionedAtMillis, loadedAtMillis);
+        return nowMillis - launchStartedAtMillis > getLaunchTimeoutMillis();
     }
 
     /** Terminates this node (and any corresponding GCP VM) after it failed to ever come online. */
